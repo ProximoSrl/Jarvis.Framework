@@ -3,12 +3,9 @@ using System.Threading;
 using Castle.Core.Logging;
 using CommonDomain.Persistence;
 using Jarvis.Framework.Kernel.Commands;
-using Jarvis.Framework.Kernel.Engine;
-using Jarvis.Framework.Kernel.Store;
 using Jarvis.Framework.Shared.Commands;
 using Jarvis.Framework.Shared.Messages;
 using Jarvis.Framework.Shared.ReadModel;
-using Jarvis.NEventStoreEx.CommonDomainEx;
 using Jarvis.NEventStoreEx.CommonDomainEx.Core;
 using Rebus;
 
