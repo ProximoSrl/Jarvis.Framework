@@ -1,0 +1,252 @@
+﻿using System.Linq;
+using System.Linq.Expressions;
+using System.Runtime.InteropServices;
+using Jarvis.Framework.MongoAppender;
+using log4net;
+using log4net.Appender;
+using log4net.Core;
+using log4net.Repository;
+using log4net.Repository.Hierarchy;
+using MongoDB.Bson;
+using MongoDB.Driver;
+using MongoDB.Driver.Linq;
+using NUnit.Framework;
+using System.Diagnostics;
+using System;
+using log4net.Layout;
+
+namespace Jarvis.Framework.LoggingTests
+{
+    [TestFixture]
+    public class MongoAppenderTests
+    {
+        private MongoCollection _logCollection;
+        private BufferedMongoDBAppender _appender;
+        private MongoDBAppender _mongoAppender;
+        private FileAppender _fileAppender;
+        private ILog _sut;
+        private Logger _logger;
+
+        [TestFixtureSetUp]
+        public void TestFixtureSetup()
+        {
+            var hierarchy = (Hierarchy)LogManager.GetRepository();
+            _logger = hierarchy.LoggerFactory.CreateLogger("logname");
+            _logger.Hierarchy = hierarchy;
+
+            _logger.AddAppender(CreateMongoAppender(false, false));
+
+            _logger.Repository.Configured = true;
+
+            // alternative use the LevelMap to set the Log level based on a string
+            // hierarchy.LevelMap["ERROR"]
+            hierarchy.Threshold = Level.Debug;
+            _logger.Level = Level.Debug;
+
+            _sut = new LogImpl(_logger);
+
+            var client = new MongoClient("mongodb://localhost");
+            var db = client.GetServer().GetDatabase("test-db-log");
+            _logCollection = db.GetCollection("logs");
+        }
+
+        [SetUp]
+        public void SetUp()
+        {
+            _logCollection.Drop();
+        }
+
+        private IAppender CreateMongoAppender(Boolean looseFix, Boolean multiThreadSave)
+        {
+            _appender = new BufferedMongoDBAppender
+            {
+                Settings = new MongoLog()
+                {
+                    ConnectionString = "mongodb://localhost/test-db-log",
+                    CollectionName = "logs",
+                    LooseFix = looseFix,
+                },
+                SaveOnDifferentThread = multiThreadSave,
+            };
+            _appender.ActivateOptions();
+            return _appender;
+        }
+
+        private IAppender CreateMongoUnbufferedAppender(Boolean looseFix)
+        {
+            _mongoAppender = new MongoDBAppender
+            {
+                Settings = new MongoLog()
+                {
+                    ConnectionString = "mongodb://localhost/test-db-log",
+                    CollectionName = "logs",
+                    LooseFix = looseFix,
+                }
+            };
+            _mongoAppender.ActivateOptions();
+            return _mongoAppender;
+        }
+
+        
+
+        private IAppender CreateFileAppender()
+        {
+            _fileAppender = new FileAppender
+            {
+               AppendToFile = false,
+               File = "test.log",
+               Layout = new PatternLayout("%date %username [%thread] %-5level %logger [%property{NDC}] - %message%newline"),
+            };
+            _fileAppender.ActivateOptions();
+            return _fileAppender;
+        }
+
+        [Test]
+        public void verify_single_log()
+        {
+            _sut.Debug("This is a logger");
+            _appender.Flush();
+            Assert.That(_logCollection.Count(), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void verify_file_name()
+        {
+            _sut.Debug("This is a logger");
+            _appender.Flush();
+            var log = _logCollection.FindAllAs<BsonDocument>().Single();
+            Assert.That(log["fi"].ToString(), Is.StringEnding("MongoAppenderTests.cs"));
+        }
+
+        [Test]
+        public void verify_lots_of_log()
+        {
+            for (int i = 0; i < 1000; i++)
+            {
+                _sut.Debug("This is a logger");
+            }
+            _appender.Flush();
+            var log = _logCollection.FindAllAs<BsonDocument>().Count();
+            Assert.That(log, Is.EqualTo(1000));
+        }
+
+        [Explicit]
+        [Test]
+        public void verify_speed_of_multiple_logs()
+        {
+            Int32 iterationCount = 11000;
+            Stopwatch w = new Stopwatch();
+            w.Start();
+            for (int i = 0; i < iterationCount; i++)
+            {
+                _sut.Debug("This is a logger");
+            }
+            Console.WriteLine("With MongoAppender - Before flush {0} ms", w.ElapsedMilliseconds);
+            _appender.Flush();
+            w.Stop();
+            Console.WriteLine("With MongoAppender - Iteration took {0} ms", w.ElapsedMilliseconds);
+
+            _logger.RemoveAllAppenders();
+            _logger.AddAppender(CreateMongoAppender(true, false));
+            w.Reset();
+            w.Start();
+            for (int i = 0; i < iterationCount; i++)
+            {
+                _sut.Debug("This is a logger");
+            }
+            Console.WriteLine("With MongoAppender Loose Fix - Before flush {0} ms", w.ElapsedMilliseconds);
+            _appender.Flush();
+            w.Stop();
+            Console.WriteLine("With MongoAppender Loose Fix - Iteration took {0} ms", w.ElapsedMilliseconds);
+
+            _logger.RemoveAllAppenders();
+            _logger.AddAppender(CreateMongoAppender(false, true));
+            w.Reset();
+            w.Start();
+            for (int i = 0; i < iterationCount; i++)
+            {
+                _sut.Debug("This is a logger");
+            }
+            Console.WriteLine("With MongoAppender save on different thread - Before flush {0} ms", w.ElapsedMilliseconds);
+            _appender.Flush();
+            w.Stop();
+            Console.WriteLine("With MongoAppender save on different thread - Iteration took {0} ms", w.ElapsedMilliseconds);
+
+            _logger.RemoveAllAppenders();
+            _logger.AddAppender(CreateMongoAppender(true, true));
+            w.Reset();
+            w.Start();
+            for (int i = 0; i < iterationCount; i++)
+            {
+                _sut.Debug("This is a logger");
+            }
+            Console.WriteLine("With MongoAppender Loose fix and save on different thread - Before flush {0} ms", w.ElapsedMilliseconds);
+            _appender.Flush();
+            w.Stop();
+            Console.WriteLine("With MongoAppender Loose fix and  save on different thread - Iteration took {0} ms", w.ElapsedMilliseconds);
+
+
+            _logger.RemoveAllAppenders();
+            _logger.AddAppender(CreateMongoUnbufferedAppender(false));
+            w.Reset();
+            w.Start();
+            for (int i = 0; i < iterationCount; i++)
+            {
+                _sut.Debug("This is a logger");
+            }
+            w.Stop();
+            Console.WriteLine("With Mongo Unbuffered - Iteration took {0} ms", w.ElapsedMilliseconds);
+
+            _logger.RemoveAllAppenders();
+            _logger.AddAppender(CreateMongoUnbufferedAppender(true));
+            w.Reset();
+            w.Start();
+            for (int i = 0; i < iterationCount; i++)
+            {
+                _sut.Debug("This is a logger");
+            }
+            w.Stop();
+            Console.WriteLine("With Mongo Unbuffered loose fix - Iteration took {0} ms", w.ElapsedMilliseconds);
+           
+
+            _logger.RemoveAllAppenders();
+            _logger.AddAppender(CreateFileAppender());
+            w.Reset();
+            w.Start();
+            for (int i = 0; i < iterationCount; i++)
+            {
+                _sut.Debug("This is a logger");
+            }
+            Console.WriteLine("With FileAppender - Before flush {0} ms", w.ElapsedMilliseconds);
+            _fileAppender.Close();
+            w.Stop();
+            Console.WriteLine("With FileAppender - Iteration took {0} ms", w.ElapsedMilliseconds);
+           
+
+            _logger.RemoveAllAppenders();
+            w.Reset();
+            w.Start();
+            for (int i = 0; i < iterationCount; i++)
+            {
+                _sut.Debug("This is a logger");
+            }
+            w.Stop();
+            Console.WriteLine("Without MongoAppender - Iteration took {0} ms", w.ElapsedMilliseconds);
+           
+        }
+
+        [Explicit]
+        [Test]
+        public void hammering_logger_to_verify_memory_consumption()
+        {
+            _logger.RemoveAllAppenders();
+            _logger.AddAppender(CreateMongoAppender(true, true));
+            String bigMessage = new String('X', 200000);
+            var iterationCount = 1 * 1000 * 1000;
+            for (int i = 0; i < iterationCount; i++)
+            {
+                _sut.Debug(bigMessage);
+            }
+        }
+    }
+}

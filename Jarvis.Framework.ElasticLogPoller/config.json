@@ -1,0 +1,11 @@
+﻿{
+    "Importers": [
+        {
+            "Connection": "mongodb://localhost/jarvis-logs",
+            "Collection": "logs",
+            "EsIndex": "logs",
+            "EsServer" :  "http://localhost:9200",
+            "Type": "mongo"
+        }
+    ]
+}

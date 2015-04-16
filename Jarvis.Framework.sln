@@ -1,0 +1,96 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.31101.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jarvis.Framework.Shared", "Jarvis.Framework.Shared\Jarvis.Framework.Shared.csproj", "{70B179ED-C419-4782-B080-0D1678C90279}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jarvis.Framework.Kernel", "Jarvis.Framework.Kernel\Jarvis.Framework.Kernel.csproj", "{203AD69F-E839-46CF-A25A-0ED22EA1ABF8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jarvis.Framework.Bus.Rebus.Integration", "Jarvis.Framework.Bus.Rebus.Integration\Jarvis.Framework.Bus.Rebus.Integration.csproj", "{804D09EF-0E40-4C7C-8064-ADD92B7DE03F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jarvis.Framework.TestHelpers", "Jarvis.Framework.TestHelpers\Jarvis.Framework.TestHelpers.csproj", "{DF7EF8CC-CDA7-4299-8769-62FDD1654FB9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jarvis.Framework.Tests", "Jarvis.Framework.Tests\Jarvis.Framework.Tests.csproj", "{D5D90909-CFEF-443E-BDDE-318FE638E5C0}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{9870ACBB-CEEB-4C95-9A2F-A0C475F24D27}"
+	ProjectSection(SolutionItems) = preProject
+		.nuget\packages.config = .nuget\packages.config
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Logging", "Logging", "{1478AFD6-4740-4E37-9A4D-61B2151AF663}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jarvis.Framework.MongoAppender", "Logging\Jarvis.Framework.MongoAppender\Jarvis.Framework.MongoAppender.csproj", "{C4ED6087-35D8-408B-A638-0153ADBB2FD7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jarvis.Framework.UdpAppender", "Logging\Jarvis.Framework.UdpAppender\Jarvis.Framework.UdpAppender.csproj", "{F37284CA-EF9C-4505-9C21-363F15F2E525}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jarvis.Framework.LogViewer.Host", "Logging\Jarvis.Framework.LogViewer.Host\Jarvis.Framework.LogViewer.Host.csproj", "{8D656BB6-54B2-4F50-B2A1-237C7FE3EC8D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jarvis.NEventStoreEx", "Jarvis.NEventStoreEx\Jarvis.NEventStoreEx.csproj", "{68A4D5D2-C860-48A5-9189-60BB2A9A7ED1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jarvis.Framework.LoggingTests", "Logging\Jarvis.Framework.LoggingTests\Jarvis.Framework.LoggingTests.csproj", "{071D9E61-A404-4FA2-915A-3A9F01AAEE8C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jarvis.Framework.ElasticLogPoller", "Jarvis.Framework.ElasticLogPoller\Jarvis.Framework.ElasticLogPoller.csproj", "{A3A2F347-F91A-4C31-BE79-4D6132B57812}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{70B179ED-C419-4782-B080-0D1678C90279}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{70B179ED-C419-4782-B080-0D1678C90279}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{70B179ED-C419-4782-B080-0D1678C90279}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{70B179ED-C419-4782-B080-0D1678C90279}.Release|Any CPU.Build.0 = Release|Any CPU
+		{203AD69F-E839-46CF-A25A-0ED22EA1ABF8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{203AD69F-E839-46CF-A25A-0ED22EA1ABF8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{203AD69F-E839-46CF-A25A-0ED22EA1ABF8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{203AD69F-E839-46CF-A25A-0ED22EA1ABF8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{804D09EF-0E40-4C7C-8064-ADD92B7DE03F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{804D09EF-0E40-4C7C-8064-ADD92B7DE03F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{804D09EF-0E40-4C7C-8064-ADD92B7DE03F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{804D09EF-0E40-4C7C-8064-ADD92B7DE03F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DF7EF8CC-CDA7-4299-8769-62FDD1654FB9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DF7EF8CC-CDA7-4299-8769-62FDD1654FB9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DF7EF8CC-CDA7-4299-8769-62FDD1654FB9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DF7EF8CC-CDA7-4299-8769-62FDD1654FB9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D5D90909-CFEF-443E-BDDE-318FE638E5C0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D5D90909-CFEF-443E-BDDE-318FE638E5C0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D5D90909-CFEF-443E-BDDE-318FE638E5C0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D5D90909-CFEF-443E-BDDE-318FE638E5C0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C4ED6087-35D8-408B-A638-0153ADBB2FD7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C4ED6087-35D8-408B-A638-0153ADBB2FD7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C4ED6087-35D8-408B-A638-0153ADBB2FD7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C4ED6087-35D8-408B-A638-0153ADBB2FD7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F37284CA-EF9C-4505-9C21-363F15F2E525}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F37284CA-EF9C-4505-9C21-363F15F2E525}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F37284CA-EF9C-4505-9C21-363F15F2E525}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F37284CA-EF9C-4505-9C21-363F15F2E525}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8D656BB6-54B2-4F50-B2A1-237C7FE3EC8D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8D656BB6-54B2-4F50-B2A1-237C7FE3EC8D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8D656BB6-54B2-4F50-B2A1-237C7FE3EC8D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8D656BB6-54B2-4F50-B2A1-237C7FE3EC8D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{68A4D5D2-C860-48A5-9189-60BB2A9A7ED1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{68A4D5D2-C860-48A5-9189-60BB2A9A7ED1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{68A4D5D2-C860-48A5-9189-60BB2A9A7ED1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{68A4D5D2-C860-48A5-9189-60BB2A9A7ED1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{071D9E61-A404-4FA2-915A-3A9F01AAEE8C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{071D9E61-A404-4FA2-915A-3A9F01AAEE8C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{071D9E61-A404-4FA2-915A-3A9F01AAEE8C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{071D9E61-A404-4FA2-915A-3A9F01AAEE8C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A3A2F347-F91A-4C31-BE79-4D6132B57812}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A3A2F347-F91A-4C31-BE79-4D6132B57812}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A3A2F347-F91A-4C31-BE79-4D6132B57812}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A3A2F347-F91A-4C31-BE79-4D6132B57812}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{C4ED6087-35D8-408B-A638-0153ADBB2FD7} = {1478AFD6-4740-4E37-9A4D-61B2151AF663}
+		{F37284CA-EF9C-4505-9C21-363F15F2E525} = {1478AFD6-4740-4E37-9A4D-61B2151AF663}
+		{8D656BB6-54B2-4F50-B2A1-237C7FE3EC8D} = {1478AFD6-4740-4E37-9A4D-61B2151AF663}
+		{071D9E61-A404-4FA2-915A-3A9F01AAEE8C} = {1478AFD6-4740-4E37-9A4D-61B2151AF663}
+		{A3A2F347-F91A-4C31-BE79-4D6132B57812} = {1478AFD6-4740-4E37-9A4D-61B2151AF663}
+	EndGlobalSection
+EndGlobal
