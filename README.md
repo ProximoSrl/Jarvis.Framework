@@ -1,6 +1,8 @@
 J.A.R.V.I.S. Framework - Proximo srl (c)
 ====
-Licensed under AGPL - Affero General Public Licens
+Licenses:
+- Framework: AGPL - Affero General Public License
+- NEventStoreEx: MIT
 
 Docs:
 
