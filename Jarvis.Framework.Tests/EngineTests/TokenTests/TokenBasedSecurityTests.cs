@@ -1,4 +1,6 @@
-﻿using Jarvis.Framework.TestHelpers;
+﻿using System;
+using Jarvis.Framework.Kernel.Engine;
+using Jarvis.Framework.TestHelpers;
 using Machine.Specifications;
 using NUnit.Framework;
 
@@ -12,19 +14,46 @@ namespace Jarvis.Framework.Tests.EngineTests.TokenTests
     [Subject("lock")]
     public class lock_file : token_tests
     {
+        Establish context = () => Create(new FileId(1));
+        Because of = () => Aggregate.Lock();
+        It is_locked = () => State.IsLocked.ShouldBeTrue();
+    }
+
+    [Subject("unlock")]
+    public class unlock_file_with_grant : token_tests
+    {
         Establish context = () =>
         {
             Create(new FileId(1));
-        };
-
-        Because of = () =>
-        {
             Aggregate.Lock();
+
+            var e = RaisedEvent<FileLocked>();
+            Aggregate.AddContextGrant(
+                new GrantName("lock"),
+                new Token(e.MessageId.ToString())
+            );
         };
 
-        It is_locked = () =>
+        Because of = () => Aggregate.UnLock();
+        It should_unlock = () => State.IsLocked.ShouldBeFalse();
+    }
+    
+    [Subject("unlock")]
+    public class unlock_file_without_grant : token_tests
+    {
+        private static Exception _ex;
+        Establish context = () =>
         {
-            State.IsLocked.ShouldBeTrue();
+            Create(new FileId(1));
+            Aggregate.Lock();
+
+            Aggregate.AddContextGrant(
+                new GrantName("lock"),
+                new Token("123")
+            );
         };
+
+        Because of = () => _ex = Catch.Exception(()=> Aggregate.UnLock());
+        It should_throw_security_exception = () => _ex.ShouldNotBeNull();
     }
 }

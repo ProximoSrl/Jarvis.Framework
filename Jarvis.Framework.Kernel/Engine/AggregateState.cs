@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.Remoting.Messaging;
 using Fasterflect;
 using Jarvis.Framework.Shared.Domain;
 using Jarvis.Framework.Shared.Events;
@@ -88,6 +89,7 @@ namespace Jarvis.Framework.Kernel.Engine
             if (method != null)
             {
                 method.Invoke(this, new object[] { evt });
+
             }
         }
 
@@ -96,7 +98,7 @@ namespace Jarvis.Framework.Kernel.Engine
             return InvariantCheckResult.Success;
         }
 
-        private void AddGrant(GrantName name, Token token)
+        protected void AddGrant(GrantName name, Token token)
         {
             var grant = new Grant(token, name);
             _grants.Add(grant);

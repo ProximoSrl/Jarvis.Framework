@@ -68,7 +68,7 @@ namespace Jarvis.Framework.TestHelpers
             _disposeOnCleanup.Clear();
         };
 
-        protected void RegisterForCleanup(IDisposable disposable)
+        protected static void RegisterForCleanup(IDisposable disposable)
         {
             _disposeOnCleanup.Add(disposable);
         }

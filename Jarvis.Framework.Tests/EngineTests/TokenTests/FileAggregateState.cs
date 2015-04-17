@@ -9,6 +9,7 @@ namespace Jarvis.Framework.Tests.EngineTests.TokenTests
         private void When(FileLocked e)
         {
             IsLocked = true;
+            AddGrant(new GrantName("file-lock"), new Token(e.MessageId.ToString()));
         }
 
         private void When(FileUnLocked e)
