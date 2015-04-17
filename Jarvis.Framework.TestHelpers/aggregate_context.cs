@@ -16,11 +16,8 @@ namespace Jarvis.Framework.TestHelpers
         where TAggregate : AggregateRoot<TState>
         where TState : AggregateState, new()
     {
+        private static List<IDisposable> _disposeOnCleanup = new List<IDisposable>();
         private static TAggregate aggregate;
-        // ReSharper disable StaticFieldInGenericType
-        private static IDisposable test_executions_context;
-        private static string impersonatig_use_id = "prxm\\prxdev";
-        // ReSharper restore StaticFieldInGenericType
         protected static TAggregate Aggregate
         {
             get
@@ -41,7 +38,6 @@ namespace Jarvis.Framework.TestHelpers
         Establish context = () =>
         {
             aggregate = null;
-//            test_executions_context = new ImpersonatedContext(impersonatig_use_id);
         };
 
         private static TState _State;
@@ -62,7 +58,20 @@ namespace Jarvis.Framework.TestHelpers
             aggregate = TestAggregateFactory.Create<TAggregate, TState>(_State, id, 99999);
         }
 
-        private Cleanup stuff = () => test_executions_context.Dispose();
+        private Cleanup stuff = () =>
+        {
+            foreach (var disposable in _disposeOnCleanup)
+            {
+                disposable.Dispose();
+            }
+            
+            _disposeOnCleanup.Clear();
+        };
+
+        protected void RegisterForCleanup(IDisposable disposable)
+        {
+            _disposeOnCleanup.Add(disposable);
+        }
 
         protected static bool EventHasBeenRaised<T>()
         {

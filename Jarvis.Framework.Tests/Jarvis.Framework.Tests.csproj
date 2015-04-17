@@ -46,11 +46,16 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\log4net.1.2.10\lib\2.0\log4net.dll</HintPath>
     </Reference>
-    <Reference Include="Machine.Specifications">
-      <HintPath>..\packages\Machine.Specifications.0.9.1\lib\net45\Machine.Specifications.dll</HintPath>
+    <Reference Include="Machine.Specifications, Version=0.9.1.0, Culture=neutral, PublicKeyToken=e2091e5cc31f01f1, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\SignedBuild-Machine.Specifications.0.9.1\lib\net45\Machine.Specifications.dll</HintPath>
     </Reference>
-    <Reference Include="Machine.Specifications.Clr4">
-      <HintPath>..\packages\Machine.Specifications.0.9.1\lib\net45\Machine.Specifications.Clr4.dll</HintPath>
+    <Reference Include="Machine.Specifications.Clr4, Version=0.9.1.0, Culture=neutral, PublicKeyToken=e2091e5cc31f01f1, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\SignedBuild-Machine.Specifications.0.9.1\lib\net45\Machine.Specifications.Clr4.dll</HintPath>
+    </Reference>
+    <Reference Include="Machine.Specifications.Should">
+      <HintPath>..\packages\Machine.Specifications.Should.0.7.2\lib\net45\Machine.Specifications.Should.dll</HintPath>
     </Reference>
     <Reference Include="MongoDB.Bson, Version=1.10.0.62, Culture=neutral, PublicKeyToken=f686731cfb9cc103, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -126,6 +131,9 @@
     <Compile Include="EngineTests\SagaTests\SagaTests.cs" />
     <Compile Include="EngineTests\SampleAggregate.cs" />
     <Compile Include="EngineTests\StringIdTests.cs" />
+    <Compile Include="EngineTests\TokenTests\FileAggregate.cs" />
+    <Compile Include="EngineTests\TokenTests\FileAggregateState.cs" />
+    <Compile Include="EngineTests\TokenTests\TokenBasedSecurityTests.cs" />
     <Compile Include="MultitenantSupportTests\MultiTenantSubDependencyResolverTests.cs" />
     <Compile Include="MultitenantSupportTests\TenantManagerTests.cs" />
     <Compile Include="ProjectionEngineTests\AbstractProjectionEngineTests.cs" />
