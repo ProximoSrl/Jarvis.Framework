@@ -20,13 +20,6 @@ namespace Jarvis.Framework.Tests.EngineTests.TokenTests
 
     public class FileAggregate : AggregateRoot<FileAggregateState>
     {
-        public FileAggregate()
-        {
-            this.ExecutionGrants = new HashSet<Grant>();
-        }
-
-        private HashSet<Grant> ExecutionGrants { get; set; }
-
         public void Lock()
         {
             if(!InternalState.IsLocked)
@@ -40,27 +33,9 @@ namespace Jarvis.Framework.Tests.EngineTests.TokenTests
             if (InternalState.IsLocked)
                 RaiseEvent(new FileUnLocked());
         }
-
-        private void RequireGrant(GrantName grant)
-        {
-            var contextGrant = ExecutionGrants.SingleOrDefault(x => x.GrantName == grant);
-            if(contextGrant == null || !InternalState.ValidateGrant(contextGrant))
-                throw new MissingGrantException(grant);
-        }
-
-        public void AddContextGrant(GrantName grantName, Token token)
-        {
-            this.ExecutionGrants.Add(new Grant(token, grantName));
-        }
     }
 
-    internal class MissingGrantException : Exception
-    {
-        public MissingGrantException(GrantName grant)
-        {
-            
-        }
-    }
+
 
     public class FileLocked : DomainEvent
     {

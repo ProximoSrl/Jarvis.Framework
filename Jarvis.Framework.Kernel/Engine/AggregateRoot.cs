@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Castle.Core.Logging;
 using Jarvis.Framework.Kernel.Store;
@@ -69,6 +70,8 @@ namespace Jarvis.Framework.Kernel.Engine
         where TState : AggregateState, new()
     {
         private TState _internalState;
+        private HashSet<Grant> ExecutionGrants { get; set; }
+
 
         protected TState InternalState
         {
@@ -80,6 +83,7 @@ namespace Jarvis.Framework.Kernel.Engine
         {
             ((AggregateRootEventRouter<TState>)RegisteredRoutes).AttachAggregateRoot(this);
             _internalState = new TState();
+            ExecutionGrants = new HashSet<Grant>();
         }
 
         protected override IMementoEx GetSnapshot()
@@ -138,6 +142,26 @@ namespace Jarvis.Framework.Kernel.Engine
                 throw new DomainException(Id, string.Format(format, p));
             }
             throw new DomainException(Id, format);
+        }
+
+        protected void RequireGrant(GrantName grant)
+        {
+            var contextGrant = Enumerable.SingleOrDefault<Grant>(ExecutionGrants, x => x.GrantName == grant);
+            if(contextGrant == null || !InternalState.ValidateGrant(contextGrant))
+                throw new MissingGrantException(grant);
+        }
+
+        public void AddContextGrant(GrantName grantName, Token token)
+        {
+            this.ExecutionGrants.Add(new Grant(token, grantName));
+        }
+    }
+
+    public class MissingGrantException : Exception
+    {
+        public MissingGrantException(GrantName grant)
+        {
+
         }
     }
 }
