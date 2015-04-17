@@ -19,8 +19,8 @@ namespace Jarvis.Framework.Tests.EngineTests.TokenTests
         It is_locked = () => State.IsLocked.ShouldBeTrue();
     }
 
-    [Subject("unlock")]
-    public class unlock_file_with_grant : token_tests
+    [Subject("With a locked file")]
+    public class when_unlock_file_with_grant : token_tests
     {
         Establish context = () =>
         {
@@ -29,7 +29,7 @@ namespace Jarvis.Framework.Tests.EngineTests.TokenTests
 
             var e = RaisedEvent<FileLocked>();
             Aggregate.AddContextGrant(
-                new GrantName("lock"),
+                new GrantName("file-lock"),
                 new Token(e.MessageId.ToString())
             );
         };
@@ -37,9 +37,9 @@ namespace Jarvis.Framework.Tests.EngineTests.TokenTests
         Because of = () => Aggregate.UnLock();
         It should_unlock = () => State.IsLocked.ShouldBeFalse();
     }
-    
-    [Subject("unlock")]
-    public class unlock_file_without_grant : token_tests
+
+    [Subject("With a locked file")]
+    public class when_unlock_file_without_grant : token_tests
     {
         private static Exception _ex;
         Establish context = () =>
@@ -48,7 +48,7 @@ namespace Jarvis.Framework.Tests.EngineTests.TokenTests
             Aggregate.Lock();
 
             Aggregate.AddContextGrant(
-                new GrantName("lock"),
+                new GrantName("file-lock"),
                 new Token("123")
             );
         };

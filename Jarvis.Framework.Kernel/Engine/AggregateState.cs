@@ -103,5 +103,10 @@ namespace Jarvis.Framework.Kernel.Engine
             var grant = new Grant(token, name);
             _grants.Add(grant);
         }
+
+        public bool ValidateGrant(Grant grant)
+        {
+            return _grants.Contains(grant);
+        }
     }
 }

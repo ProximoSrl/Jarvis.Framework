@@ -35,7 +35,7 @@ namespace Jarvis.Framework.Tests.EngineTests.TokenTests
 
         public void UnLock()
         {
-            RequireGrant(new GrantName("lock"));
+            RequireGrant(new GrantName("file-lock"));
 
             if (InternalState.IsLocked)
                 RaiseEvent(new FileUnLocked());
@@ -43,7 +43,8 @@ namespace Jarvis.Framework.Tests.EngineTests.TokenTests
 
         private void RequireGrant(GrantName grant)
         {
-            if (ExecutionGrants.All(x => x.GrantName != grant))
+            var contextGrant = ExecutionGrants.SingleOrDefault(x => x.GrantName == grant);
+            if(contextGrant == null || !InternalState.ValidateGrant(contextGrant))
                 throw new MissingGrantException(grant);
         }
 
