@@ -148,7 +148,7 @@ namespace Jarvis.Framework.Kernel.Engine
         {
             var grant = ExecutionGrants.SingleOrDefault(x => x.GrantName == grantName);
             if(grant == null || !InternalState.ValidateGrant(grant))
-                throw new MissingGrantException(grantName);
+                throw new MissingGrantException(this.Id, grantName);
 
             return grant;
         }
@@ -156,7 +156,7 @@ namespace Jarvis.Framework.Kernel.Engine
         protected void ThrowIfAlreadyGranted(GrantName name)
         {
             if(InternalState.HasGrant(name))
-                throw new GrantViolationException(name);
+                throw new GrantViolationException(this.Id, name);
         }
 
         protected Grant CreateGrant(GrantName name, Token token)
@@ -176,19 +176,24 @@ namespace Jarvis.Framework.Kernel.Engine
         }
     }
 
-    public class MissingGrantException : Exception
+    public class MissingGrantException : DomainException
     {
-        public MissingGrantException(GrantName grant)
-        {
+        public GrantName Grant { get; private set; }
 
+        public MissingGrantException(IIdentity id, GrantName grant) : base(id)
+        {
+            Grant = grant;
         }
-    }   
-    
-    public class GrantViolationException : Exception
-    {
-        public GrantViolationException(GrantName grant)
-        {
+    }
 
+    public class GrantViolationException : DomainException
+    {
+        public GrantName Grant { get; private set; }
+
+        public GrantViolationException(IIdentity id, GrantName grant)
+            : base(id)
+        {
+            Grant = grant;
         }
     }
 }

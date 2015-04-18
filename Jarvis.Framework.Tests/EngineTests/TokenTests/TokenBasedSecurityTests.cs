@@ -12,12 +12,25 @@ namespace Jarvis.Framework.Tests.EngineTests.TokenTests
         protected static Token LockToken = new Token("user_1_lock");
     }
 
-    [Subject("lock")]
-    public class lock_file : token_tests
+    [Subject("With an unlocked file")]
+    public class when_lock_is_called : token_tests
     {
         Establish context = () => Create(new FileId(1));
         Because of = () => Aggregate.Lock(LockToken);
-        It is_locked = () => State.IsLocked.ShouldBeTrue();
+        It should_be_locked = () => State.IsLocked.ShouldBeTrue();
+    }
+
+    [Subject("With an unlocked file")]
+    public class when_unlock_is_called : token_tests
+    {
+        private static Exception ex;
+        Establish context = () => Create(new FileId(1));
+        Because of = () => ex = Catch.Exception(()=> Aggregate.UnLock());
+        It should_throw_missing_grant_exception = () =>
+        {
+            ex.ShouldNotBeNull();
+            ex.ShouldBeAssignableTo<MissingGrantException>();
+        };
     }
 
     [Subject("With a locked file")]
@@ -54,11 +67,10 @@ namespace Jarvis.Framework.Tests.EngineTests.TokenTests
         };
 
         Because of = () => _ex = Catch.Exception(()=> Aggregate.UnLock());
-        It should_throw_security_exception = () =>
+        It should_throw_missing_grant_exception = () =>
         {
             _ex.ShouldNotBeNull();
             _ex.ShouldBeAssignableTo<MissingGrantException>();
-
         };
     }  
     
@@ -74,7 +86,7 @@ namespace Jarvis.Framework.Tests.EngineTests.TokenTests
 
         Because of = () => _ex = Catch.Exception(()=> Aggregate.Lock(LockToken));
 
-        private It should_throw_security_exception = () =>
+        private It should_throw_grant_violation_exception = () =>
         {
             _ex.ShouldNotBeNull();
             _ex.ShouldBeAssignableTo<GrantViolationException>();
