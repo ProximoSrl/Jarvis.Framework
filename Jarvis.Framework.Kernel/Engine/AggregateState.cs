@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.Remoting.Messaging;
 using Fasterflect;
 using Jarvis.Framework.Shared.Domain;
@@ -72,7 +73,7 @@ namespace Jarvis.Framework.Kernel.Engine
     /// </summary>
     public abstract class AggregateState : ICloneable, IInvariantsChecker
     {
-        private HashSet<Grant> _grants = new HashSet<Grant>();
+        private readonly HashSet<Grant> _grants = new HashSet<Grant>();
 
         /// <summary>
         /// Clona lo stato con una copia secca dei valori. Va reimplementata nel caso di utilizzo di strutture o referenze ad oggetti
@@ -89,7 +90,6 @@ namespace Jarvis.Framework.Kernel.Engine
             if (method != null)
             {
                 method.Invoke(this, new object[] { evt });
-
             }
         }
 
@@ -98,15 +98,19 @@ namespace Jarvis.Framework.Kernel.Engine
             return InvariantCheckResult.Success;
         }
 
-        protected void AddGrant(GrantName name, Token token)
+        protected void AddGrant(Grant grant)
         {
-            var grant = new Grant(token, name);
             _grants.Add(grant);
         }
 
         public bool ValidateGrant(Grant grant)
         {
             return _grants.Contains(grant);
+        }
+
+        public bool HasGrant(GrantName name)
+        {
+            return _grants.Any(x => x.GrantName == name);
         }
     }
 }

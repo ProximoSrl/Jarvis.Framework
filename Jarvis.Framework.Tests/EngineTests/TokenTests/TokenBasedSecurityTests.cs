@@ -9,13 +9,14 @@ namespace Jarvis.Framework.Tests.EngineTests.TokenTests
     [Subject("Token based security")]
     public abstract class token_tests : AggregateSpecification<FileAggregate, FileAggregateState>
     {
+        protected static Token LockToken = new Token("user_1_lock");
     }
 
     [Subject("lock")]
     public class lock_file : token_tests
     {
         Establish context = () => Create(new FileId(1));
-        Because of = () => Aggregate.Lock();
+        Because of = () => Aggregate.Lock(LockToken);
         It is_locked = () => State.IsLocked.ShouldBeTrue();
     }
 
@@ -25,12 +26,11 @@ namespace Jarvis.Framework.Tests.EngineTests.TokenTests
         Establish context = () =>
         {
             Create(new FileId(1));
-            Aggregate.Lock();
+            Aggregate.Lock(LockToken);
 
-            var e = RaisedEvent<FileLocked>();
             Aggregate.AddContextGrant(
-                FileAggregateState.LockGrant,
-                new Token(e.MessageId.ToString())
+                FileAggregate.LockGrant,
+                LockToken
             );
         };
 
@@ -45,15 +45,29 @@ namespace Jarvis.Framework.Tests.EngineTests.TokenTests
         Establish context = () =>
         {
             Create(new FileId(1));
-            Aggregate.Lock();
+            Aggregate.Lock(LockToken);
 
             Aggregate.AddContextGrant(
-                FileAggregateState.LockGrant,
+                FileAggregate.LockGrant,
                 new Token("123")
             );
         };
 
         Because of = () => _ex = Catch.Exception(()=> Aggregate.UnLock());
+        It should_throw_security_exception = () => _ex.ShouldNotBeNull();
+    }  
+    
+    [Subject("With a locked file")]
+    public class when_a_new_lock_is_requested : token_tests
+    {
+        private static Exception _ex;
+        Establish context = () =>
+        {
+            Create(new FileId(1));
+            Aggregate.Lock(new Token("user_2_lock"));
+        };
+
+        Because of = () => _ex = Catch.Exception(()=> Aggregate.Lock(LockToken));
         It should_throw_security_exception = () => _ex.ShouldNotBeNull();
     }
 }

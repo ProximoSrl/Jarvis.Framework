@@ -20,18 +20,26 @@ namespace Jarvis.Framework.Tests.EngineTests.TokenTests
 
     public class FileAggregate : AggregateRoot<FileAggregateState>
     {
-        public void Lock()
+        public static GrantName LockGrant = new GrantName("file-lock");
+
+
+        public void Lock(Token lockToken)
         {
-            if(!InternalState.IsLocked)
-                RaiseEvent(new FileLocked());
+            ThrowIfAlreadyGranted(LockGrant);
+
+            var grant = CreateGrant(LockGrant, lockToken);
+            if (grant == null)
+                return;
+
+            RaiseEvent(new FileLocked(grant));
         }
 
         public void UnLock()
         {
-            RequireGrant(FileAggregateState.LockGrant);
+            var grant = RequireGrant(LockGrant);
 
             if (InternalState.IsLocked)
-                RaiseEvent(new FileUnLocked());
+                RaiseEvent(new FileUnLocked(grant));
         }
     }
 
@@ -39,9 +47,21 @@ namespace Jarvis.Framework.Tests.EngineTests.TokenTests
 
     public class FileLocked : DomainEvent
     {
+        public Grant LockGrant { get; private set; }
+
+        public FileLocked(Grant lockGrant)
+        {
+            LockGrant = lockGrant;
+        }
     }
 
     public class FileUnLocked : DomainEvent
     {
+        public Grant UnlockGrant { get; private set; }
+
+        public FileUnLocked(Grant unlockGrant)
+        {
+            UnlockGrant = unlockGrant;
+        }
     }
 }
