@@ -54,7 +54,12 @@ namespace Jarvis.Framework.Tests.EngineTests.TokenTests
         };
 
         Because of = () => _ex = Catch.Exception(()=> Aggregate.UnLock());
-        It should_throw_security_exception = () => _ex.ShouldNotBeNull();
+        It should_throw_security_exception = () =>
+        {
+            _ex.ShouldNotBeNull();
+            _ex.ShouldBeAssignableTo<MissingGrantException>();
+
+        };
     }  
     
     [Subject("With a locked file")]
@@ -68,6 +73,11 @@ namespace Jarvis.Framework.Tests.EngineTests.TokenTests
         };
 
         Because of = () => _ex = Catch.Exception(()=> Aggregate.Lock(LockToken));
-        It should_throw_security_exception = () => _ex.ShouldNotBeNull();
+
+        private It should_throw_security_exception = () =>
+        {
+            _ex.ShouldNotBeNull();
+            _ex.ShouldBeAssignableTo<GrantViolationException>();
+        };
     }
 }
