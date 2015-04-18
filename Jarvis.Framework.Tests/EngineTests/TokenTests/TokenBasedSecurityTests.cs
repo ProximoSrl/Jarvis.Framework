@@ -29,7 +29,7 @@ namespace Jarvis.Framework.Tests.EngineTests.TokenTests
 
             var e = RaisedEvent<FileLocked>();
             Aggregate.AddContextGrant(
-                new GrantName("file-lock"),
+                FileAggregateState.LockGrant,
                 new Token(e.MessageId.ToString())
             );
         };
@@ -48,7 +48,7 @@ namespace Jarvis.Framework.Tests.EngineTests.TokenTests
             Aggregate.Lock();
 
             Aggregate.AddContextGrant(
-                new GrantName("file-lock"),
+                FileAggregateState.LockGrant,
                 new Token("123")
             );
         };

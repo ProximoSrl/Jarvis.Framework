@@ -28,7 +28,7 @@ namespace Jarvis.Framework.Tests.EngineTests.TokenTests
 
         public void UnLock()
         {
-            RequireGrant(new GrantName("file-lock"));
+            RequireGrant(FileAggregateState.LockGrant);
 
             if (InternalState.IsLocked)
                 RaiseEvent(new FileUnLocked());
