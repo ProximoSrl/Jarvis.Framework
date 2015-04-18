@@ -93,14 +93,19 @@ namespace Jarvis.Framework.Kernel.Engine
             }
         }
 
+        private void When(GrantAdded e)
+        {
+            _grants.Add(e.Grant);
+        }     
+        
+        private void When(GrantRevoked e)
+        {
+            _grants.Remove(e.Grant);
+        }
+
         public virtual InvariantCheckResult CheckInvariants()
         {
             return InvariantCheckResult.Success;
-        }
-
-        protected void AddGrant(Grant grant)
-        {
-            _grants.Add(grant);
         }
 
         public bool ValidateGrant(Grant grant)

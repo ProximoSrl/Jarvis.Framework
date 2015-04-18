@@ -159,7 +159,7 @@ namespace Jarvis.Framework.Kernel.Engine
                 throw new GrantViolationException(this.Id, name);
         }
 
-        protected Grant CreateGrant(GrantName name, Token token)
+        protected Grant CreateGrant<T>(T  name, Token token) where T : GrantName
         {
             var grant = new Grant(token, name);
             if (ExecutionGrants.Contains(grant))
@@ -167,12 +167,19 @@ namespace Jarvis.Framework.Kernel.Engine
                 return null;
             }
 
+            RaiseEvent(new GrantAdded(grant));
+
             return grant;
         }
 
-        public void AddContextGrant(GrantName grantName, Token token)
+        protected void RevokeGrant(Grant grant)
         {
-            this.ExecutionGrants.Add(new Grant(token, grantName));
+            RaiseEvent(new GrantRevoked(grant));
+        }
+
+        public void AddContextGrant(Grant grant)
+        {
+            this.ExecutionGrants.Add(grant);
         }
     }
 
@@ -195,5 +202,25 @@ namespace Jarvis.Framework.Kernel.Engine
         {
             Grant = grant;
         }
+    }
+
+    public class GrantAdded : DomainEvent 
+    {
+        public GrantAdded(Grant grant)
+        {
+            Grant = grant;
+        }
+
+        public Grant Grant { get; private set; }
+    }
+
+    public class GrantRevoked : DomainEvent 
+    {
+        public GrantRevoked(Grant grant)
+        {
+            Grant = grant;
+        }
+
+        public Grant Grant { get; private set; }
     }
 }

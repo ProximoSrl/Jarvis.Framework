@@ -9,7 +9,6 @@ namespace Jarvis.Framework.Tests.EngineTests.TokenTests
         private void When(FileLocked e)
         {
             IsLocked = true;
-            AddGrant(e.LockGrant);
         }
 
         private void When(FileUnLocked e)

@@ -18,10 +18,17 @@ namespace Jarvis.Framework.Tests.EngineTests.TokenTests
         }
     }
 
+    public class FileLockGrant : GrantName
+    {
+        public FileLockGrant()
+            : base("file-lock")
+        {
+        }
+    }
+
     public class FileAggregate : AggregateRoot<FileAggregateState>
     {
-        public static GrantName LockGrant = new GrantName("file-lock");
-
+        public static readonly FileLockGrant LockGrant = new FileLockGrant();
 
         public void Lock(Token lockToken)
         {
@@ -38,8 +45,8 @@ namespace Jarvis.Framework.Tests.EngineTests.TokenTests
         {
             var grant = RequireGrant(LockGrant);
 
-            if (InternalState.IsLocked)
-                RaiseEvent(new FileUnLocked(grant));
+            RaiseEvent(new FileUnLocked(grant));
+            RevokeGrant(grant);
         }
     }
 

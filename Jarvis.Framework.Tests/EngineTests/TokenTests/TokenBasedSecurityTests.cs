@@ -24,8 +24,11 @@ namespace Jarvis.Framework.Tests.EngineTests.TokenTests
     public class when_unlock_is_called : token_tests
     {
         private static Exception ex;
+        
         Establish context = () => Create(new FileId(1));
+        
         Because of = () => ex = Catch.Exception(()=> Aggregate.UnLock());
+       
         It should_throw_missing_grant_exception = () =>
         {
             ex.ShouldNotBeNull();
@@ -36,34 +39,36 @@ namespace Jarvis.Framework.Tests.EngineTests.TokenTests
     [Subject("With a locked file")]
     public class when_unlock_file_with_grant : token_tests
     {
+        static Grant grant = new Grant(LockToken,FileAggregate.LockGrant);
         Establish context = () =>
         {
             Create(new FileId(1));
             Aggregate.Lock(LockToken);
 
-            Aggregate.AddContextGrant(
-                FileAggregate.LockGrant,
-                LockToken
-            );
+            Aggregate.AddContextGrant(grant);
         };
 
         Because of = () => Aggregate.UnLock();
         It should_unlock = () => State.IsLocked.ShouldBeFalse();
+
+        It grants_should_be_empty = () =>
+        {
+            State.ValidateGrant(grant).ShouldBeFalse();
+        };
     }
 
     [Subject("With a locked file")]
     public class when_unlock_file_without_grant : token_tests
     {
+        static Grant grant = new Grant(new Token("123"), FileAggregate.LockGrant);
+
         private static Exception _ex;
         Establish context = () =>
         {
             Create(new FileId(1));
             Aggregate.Lock(LockToken);
 
-            Aggregate.AddContextGrant(
-                FileAggregate.LockGrant,
-                new Token("123")
-            );
+            Aggregate.AddContextGrant(grant);
         };
 
         Because of = () => _ex = Catch.Exception(()=> Aggregate.UnLock());
