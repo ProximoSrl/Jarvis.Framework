@@ -5,12 +5,12 @@ using Castle.Core.Logging;
 using Jarvis.Framework.Kernel.Engine;
 using Jarvis.Framework.Kernel.Store;
 using Jarvis.NEventStoreEx.CommonDomainEx;
-using Jarvis.NEventStoreEx.CommonDomainEx.Persistence;
 using Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore;
 using MongoDB.Driver;
 using NSubstitute;
 using NUnit.Framework;
 using Jarvis.Framework.Shared.Events;
+using Jarvis.Framework.Tests.Support;
 using NEventStore;
 
 namespace Jarvis.Framework.Tests.EngineTests.SagaTests
@@ -21,15 +21,13 @@ namespace Jarvis.Framework.Tests.EngineTests.SagaTests
         private MongoServer _server;
         private EventStoreFactory _factory;
         string _connectionString;
-        private const string sagaDb = "intranet-saga-test";
 
         [SetUp]
         public void SetUp()
         {
-            _server = new MongoDB.Driver.MongoClient("mongodb://localhost").GetServer();
-            _server.GetDatabase(sagaDb).Drop();
-
             _connectionString = ConfigurationManager.ConnectionStrings["saga"].ConnectionString;
+            var db = TestHelper.CreateNew(_connectionString);
+
             var loggerFactory = Substitute.For<ILoggerFactory>();
             loggerFactory.Create(Arg.Any<Type>()).Returns(NullLogger.Instance);
             _factory = new EventStoreFactory(loggerFactory);
@@ -129,7 +127,6 @@ namespace Jarvis.Framework.Tests.EngineTests.SagaTests
         private MongoServer _server;
         private EventStoreFactory _factory;
         string _connectionString;
-        private const string sagaDb = "intranet-saga-test";
         protected IStoreEvents _eventStore;
         SagaEventStoreRepositoryEx _repo;
         DeliverPizzaSagaListener2 _listener;
@@ -137,10 +134,9 @@ namespace Jarvis.Framework.Tests.EngineTests.SagaTests
         [SetUp]
         public void SetUp()
         {
-            _server = new MongoDB.Driver.MongoClient("mongodb://localhost").GetServer();
-            _server.GetDatabase(sagaDb).Drop();
-
             _connectionString = ConfigurationManager.ConnectionStrings["saga"].ConnectionString;
+            var db = TestHelper.CreateNew(_connectionString);
+
             var loggerFactory = Substitute.For<ILoggerFactory>();
             loggerFactory.Create(Arg.Any<Type>()).Returns(NullLogger.Instance);
             _factory = new EventStoreFactory(loggerFactory);

@@ -54,6 +54,11 @@ namespace Jarvis.Framework.Tests.EngineTests
         {
             RaiseEvent(new SampleAggregateInvalidated());
         }
+
+        public void Touch()
+        {
+            RaiseEvent(new SampleAggregateTouched());
+        }
     }
 
     public class SampleAggregateForInspection : SampleAggregate
@@ -69,6 +74,10 @@ namespace Jarvis.Framework.Tests.EngineTests
         public SampleAggregateCreated()
         {
         }
+    }
+
+    public class SampleAggregateTouched : DomainEvent
+    {
     }
 
     public class SampleAggregateInvalidated : DomainEvent

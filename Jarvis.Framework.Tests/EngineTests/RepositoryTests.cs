@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Configuration;
+using System.Diagnostics;
 using Castle.Core.Logging;
 using CommonDomain.Core;
 using Jarvis.Framework.Kernel.Engine;
@@ -8,6 +9,7 @@ using Jarvis.Framework.Kernel.Store;
 using Jarvis.Framework.Shared.IdentitySupport;
 using Jarvis.Framework.Shared.MultitenantSupport;
 using Jarvis.Framework.TestHelpers;
+using Jarvis.NEventStoreEx.CommonDomainEx;
 using Jarvis.NEventStoreEx.CommonDomainEx.Core;
 using Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore;
 using MongoDB.Driver;
@@ -23,6 +25,7 @@ namespace Jarvis.Framework.Tests.EngineTests
         private RepositoryEx _repository;
         private MongoDatabase _db;
         private IStoreEvents _eventStore;
+        private IdentityManager _identityConverter;
 
         [SetUp]
         public void SetUp()
@@ -35,24 +38,74 @@ namespace Jarvis.Framework.Tests.EngineTests
             _db = client.GetServer().GetDatabase(url.DatabaseName);
             _db.Drop();
 
-            var identityConverter = new IdentityManager(new InMemoryCounterService());
-            identityConverter.RegisterIdentitiesFromAssembly(GetType().Assembly);
+            _identityConverter = new IdentityManager(new InMemoryCounterService());
+            _identityConverter.RegisterIdentitiesFromAssembly(GetType().Assembly);
             var loggerFactory = Substitute.For<ILoggerFactory>();
             loggerFactory.Create(Arg.Any<Type>()).Returns(NullLogger.Instance);
             _eventStore = new EventStoreFactory(loggerFactory).BuildEventStore(connectionString);
 
             _repository = new RepositoryEx(
                 _eventStore,
-                new AggregateFactory(null), new ConflictDetector(), identityConverter
-                );
+                new AggregateFactory(null), new ConflictDetector(), _identityConverter
+            );
         }
+
+        [TearDown]
+        public void TearDown()
+        {
+            _repository.Dispose();
+        }
+
+        [Test, Explicit]
+        public void profile_snapshot_opt_out()
+        {
+            var sampleAggregateId = new SampleAggregateId(1);
+            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregate.State(), sampleAggregateId);
+            aggregate.Create();
+
+            _repository.Save(aggregate, Guid.NewGuid(), null);
+
+            int max = 20;
+            for (int t = 1; t < max; t++)
+            {
+                aggregate.Touch();
+                _repository.Save(aggregate, Guid.NewGuid(), null);
+
+                if (t == max - 5)
+                {
+                    var snap = ((ISnapshotable)aggregate).GetSnapshot();
+                    _eventStore.Advanced.AddSnapshot(new Snapshot("Jarvis", sampleAggregateId.AsString(), aggregate.Version, snap));
+                }
+            }
+
+            var aggregateFactory = new AggregateFactory(null);
+            SnapshotsSettings.OptOut(typeof(SampleAggregate));
+
+            var sw = new Stopwatch();
+            sw.Start();
+            for (int c = 1; c <= 100; c++)
+            {
+                using (var repo = new RepositoryEx(
+                    _eventStore,
+                    aggregateFactory,
+                    new ConflictDetector(),
+                    _identityConverter))
+                {
+                    var loaded = repo.GetById<SampleAggregate>(sampleAggregateId);
+                }
+            }
+            sw.Stop();
+            SnapshotsSettings.ClearOptOut();
+            Debug.WriteLine("Read time {0} ms", sw.ElapsedMilliseconds);
+        }
+
 
         [Test]
         public void can_save_with_aggregate_identity()
         {
             var sampleAggregateId = new SampleAggregateId(1);
             var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(
-                new SampleAggregate.State(), 
+                new SampleAggregate.State(),
                 sampleAggregateId
             );
             aggregate.Create();
@@ -69,7 +122,7 @@ namespace Jarvis.Framework.Tests.EngineTests
         {
             var sampleAggregateId = new SampleAggregateId(1);
 
-            var aggregate = TestAggregateFactory.Create < SampleAggregate, SampleAggregate.State>(new SampleAggregate.State(), sampleAggregateId);
+            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregate.State(), sampleAggregateId);
             aggregate.Create();
             _repository.Save(aggregate, new Guid("135E4E5F-3D65-43AC-9D8D-8A8B0EFF8501"), null);
 

@@ -37,6 +37,17 @@ namespace Jarvis.Framework.Tests.EngineTests
 		}
 
 	    [Test]
+	    public void as_string_and_to_string_are_equal()
+	    {
+	        var id = new SampleAggregateId(555);
+
+	        var asString = id.AsString();
+	        var toString = id.ToString();
+
+            Assert.AreEqual(asString, toString);
+	    }
+
+	    [Test]
 	    public void null_string_should_be_transalted_to_null_identity()
 	    {
 	        var identity = _manager.ToIdentity(null);

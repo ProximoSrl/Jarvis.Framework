@@ -53,7 +53,7 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 
 		public TAggregate GetById<TAggregate>(string bucketId, IIdentity id, int versionToLoad) where TAggregate : class, IAggregateEx
 		{
-			ISnapshot snapshot = this.GetSnapshot(bucketId, id, versionToLoad);
+            ISnapshot snapshot = this.GetSnapshot<TAggregate>(bucketId, id, versionToLoad);
 			IEventStream stream = this.OpenStream(bucketId, id, versionToLoad, snapshot);
 			IAggregateEx aggregate = this.GetAggregate<TAggregate>(snapshot, stream);
 
@@ -141,13 +141,13 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 			return this._factory.Build(typeof(TAggregate), _identityConverter.ToIdentity(stream.StreamId), memento);
 		}
 
-		private ISnapshot GetSnapshot(string bucketId, IIdentity id, int version)
+        protected virtual ISnapshot GetSnapshot<TAggregate>(string bucketId, IIdentity id, int version)
 		{
 			ISnapshot snapshot;
-			var snapshotId = bucketId + id;
+			var snapshotId = bucketId + "@" + id;
 			if (!this._snapshots.TryGetValue(snapshotId, out snapshot))
 			{
-				this._snapshots[snapshotId] = snapshot = this._eventStore.Advanced.GetSnapshot(bucketId, _identityConverter.ToString(id), version);
+				this._snapshots[snapshotId] = snapshot = this._eventStore.Advanced.GetSnapshot(bucketId, id.AsString(), version);
 			}
 
 			return snapshot;
@@ -156,7 +156,6 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 		private IEventStream OpenStream(string bucketId, IIdentity id, int version, ISnapshot snapshot)
 		{
 			IEventStream stream;
-			//@@FIX on Nevenstore!
 			var streamsId = bucketId +"@"+id;
 			if (this._streams.TryGetValue(streamsId, out stream))
 			{
@@ -173,11 +172,10 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 		private IEventStream PrepareStream(string bucketId, IAggregateEx aggregate, Dictionary<string, object> headers)
 		{
 			IEventStream stream;
-			//@@FIX
 			var streamsId = bucketId +"@"+ aggregate.Id;
 			if (!this._streams.TryGetValue(streamsId, out stream))
 			{
-				this._streams[streamsId] = stream = this._eventStore.CreateStream(bucketId, _identityConverter.ToString(aggregate.Id));
+				this._streams[streamsId] = stream = this._eventStore.CreateStream(bucketId, aggregate.Id.AsString());
 			}
 
 			foreach (var item in headers)

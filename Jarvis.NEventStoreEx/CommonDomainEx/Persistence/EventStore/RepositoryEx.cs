@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using CommonDomain;
@@ -7,8 +8,28 @@ using NEventStore;
 
 namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 {
+    public static class SnapshotsSettings
+    {
+        static readonly HashSet<Type> SnapshotOptOut = new HashSet<Type>();
+        public static void OptOut(Type type)
+        {
+            SnapshotOptOut.Add(type);
+        }
+
+        public static void ClearOptOut()
+        {
+            SnapshotOptOut.Clear();
+        }
+
+        public static bool HasOptedOut(Type type)
+        {
+            return SnapshotOptOut.Contains(type);
+        }
+    }
+
     public class RepositoryEx : AbstractRepository, IRepositoryEx
     {
+
         public RepositoryEx(IStoreEvents eventStore, IConstructAggregatesEx factory, IDetectConflicts conflictDetector, IIdentityConverter identityConverter)
             : base(eventStore, factory, conflictDetector, identityConverter)
         {
@@ -64,6 +85,14 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
         {
             var aggregateType = typeof(TAggregate);
             return GetBucketFor(aggregateType, id);
+        }
+
+        protected override ISnapshot GetSnapshot<TAggregate>(string bucketId, IIdentity id, int version)
+        {
+            if (SnapshotsSettings.HasOptedOut(typeof(TAggregate)))
+                return null;
+
+            return base.GetSnapshot<TAggregate>(bucketId, id, version);
         }
 
     }
