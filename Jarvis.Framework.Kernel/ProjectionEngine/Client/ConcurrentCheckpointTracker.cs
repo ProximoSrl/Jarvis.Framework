@@ -122,7 +122,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                                     .Set(x => x.RebuildStop, null)
                                     .Set(x => x.RebuildTotalSeconds, 0)
                                     .Set(x => x.RebuildActualSeconds, 0)
-                                    .Set(x => x.Value, lastCommitId)
                                     .Set(x => x.Current, null)
                                     .Set(x => x.Events, 0)
                                     .Set(x => x.Details, null)
@@ -134,6 +133,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             if (lastCommitIdLong < trackerLastValue) 
             {
                 _checkpointTracker[projection.GetCommonName()] = lastCommitId;
+                _checkpoints.Update(
+                  Query.EQ("_id", projectionName),
+                  Update<Checkpoint>.Set(x => x.Value, lastCommitId));
             }
         }
 
