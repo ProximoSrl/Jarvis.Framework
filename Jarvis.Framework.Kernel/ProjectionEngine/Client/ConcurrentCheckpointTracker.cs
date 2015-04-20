@@ -19,8 +19,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         readonly MongoCollection<Checkpoint> _checkpoints;
         private ConcurrentDictionary<string, string> _checkpointTracker;
         private ConcurrentDictionary<string, Int64> _checkpointSlotTracker;
-        private Dictionary<String, String> _projectionToSlot; 
-        private Dictionary<String, Boolean> _slotRebuildTracker;
+        private ConcurrentDictionary<String, String> _projectionToSlot;
+        private ConcurrentDictionary<String, Boolean> _slotRebuildTracker;
 
         public ILogger Logger { get; set; }
 
@@ -30,8 +30,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             _checkpoints.CreateIndex(IndexKeys<Checkpoint>.Ascending(x => x.Slot));
             _checkpointTracker = new ConcurrentDictionary<string, string>();
             _checkpointSlotTracker = new ConcurrentDictionary<string, Int64>();
-            _projectionToSlot = new Dictionary<String, String>(); 
-            _slotRebuildTracker = new Dictionary<string, bool>();
+            _projectionToSlot = new ConcurrentDictionary<String, String>();
+            _slotRebuildTracker = new ConcurrentDictionary<string, bool>();
             Logger = NullLogger.Instance;
         }
 
