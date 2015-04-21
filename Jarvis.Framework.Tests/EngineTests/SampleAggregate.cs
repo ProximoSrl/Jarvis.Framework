@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
+using Jarvis.Framework.Kernel.Commands;
 using Jarvis.Framework.Kernel.Engine;
 using Jarvis.Framework.Kernel.Store;
+using Jarvis.Framework.Shared.Commands;
 using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.IdentitySupport;
 using Jarvis.NEventStoreEx.CommonDomainEx;
@@ -59,6 +62,11 @@ namespace Jarvis.Framework.Tests.EngineTests
         {
             RaiseEvent(new SampleAggregateTouched());
         }
+
+        public IDictionary<string, object> ExposeContext
+        {
+            get { return Context;}
+        }
     }
 
     public class SampleAggregateForInspection : SampleAggregate
@@ -85,5 +93,32 @@ namespace Jarvis.Framework.Tests.EngineTests
         public SampleAggregateInvalidated()
         {
         }
+    }
+
+    public class TouchSampleAggregate : Command<SampleAggregateId>
+    {
+        public TouchSampleAggregate(SampleAggregateId id)
+            :base(id)
+        {
+        }
+    }
+
+    public class TouchSampleAggregateHandler : RepositoryCommandHandler<SampleAggregate, TouchSampleAggregate>
+    {
+        protected override void Execute(TouchSampleAggregate cmd)
+        {
+            FindAndModify(cmd.AggregateId,
+                a =>
+                {
+                    if(!a.HasBeenCreated)
+                        a.Create();
+                    a.Touch();
+
+                    Aggregate = a;
+                }
+                ,true);
+        }
+
+        public SampleAggregate Aggregate { get; private set; }
     }
 }

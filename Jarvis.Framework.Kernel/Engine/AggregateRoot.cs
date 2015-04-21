@@ -1,9 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Castle.Core.Logging;
-using Jarvis.Framework.Kernel.Store;
 using Jarvis.Framework.Shared.Events;
-using Jarvis.Framework.Shared.IdentitySupport;
 using Jarvis.NEventStoreEx.CommonDomainEx;
 using Jarvis.NEventStoreEx.CommonDomainEx.Core;
 
@@ -68,8 +67,8 @@ namespace Jarvis.Framework.Kernel.Engine
     public abstract class AggregateRoot<TState> : AggregateRoot, ISnapshotable, IInvariantsChecker
         where TState : AggregateState, new()
     {
-        private TState _internalState;
 
+        private TState _internalState;
         protected TState InternalState
         {
             get { return _internalState; }
@@ -139,5 +138,7 @@ namespace Jarvis.Framework.Kernel.Engine
             }
             throw new DomainException(Id, format);
         }
+
+
     }
 }

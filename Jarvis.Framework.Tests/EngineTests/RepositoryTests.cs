@@ -3,6 +3,7 @@ using System.Configuration;
 using System.Diagnostics;
 using Castle.Core.Logging;
 using CommonDomain.Core;
+using Jarvis.Framework.Kernel.Commands;
 using Jarvis.Framework.Kernel.Engine;
 using Jarvis.Framework.Kernel.MultitenantSupport;
 using Jarvis.Framework.Kernel.Store;
@@ -26,6 +27,7 @@ namespace Jarvis.Framework.Tests.EngineTests
         private MongoDatabase _db;
         private IStoreEvents _eventStore;
         private IdentityManager _identityConverter;
+        private AggregateFactory _aggregateFactory = new AggregateFactory(null);
 
         [SetUp]
         public void SetUp()
@@ -46,7 +48,7 @@ namespace Jarvis.Framework.Tests.EngineTests
 
             _repository = new RepositoryEx(
                 _eventStore,
-                new AggregateFactory(null), new ConflictDetector(), _identityConverter
+                _aggregateFactory, new ConflictDetector(), _identityConverter
             );
         }
 
@@ -78,7 +80,6 @@ namespace Jarvis.Framework.Tests.EngineTests
                 }
             }
 
-            var aggregateFactory = new AggregateFactory(null);
             SnapshotsSettings.OptOut(typeof(SampleAggregate));
 
             var sw = new Stopwatch();
@@ -87,7 +88,7 @@ namespace Jarvis.Framework.Tests.EngineTests
             {
                 using (var repo = new RepositoryEx(
                     _eventStore,
-                    aggregateFactory,
+                    _aggregateFactory,
                     new ConflictDetector(),
                     _identityConverter))
                 {
@@ -152,6 +153,25 @@ namespace Jarvis.Framework.Tests.EngineTests
             {
                 Assert.Fail("We expect an exception of type InvariantNotSatifiedException but we catched " + ex.GetType().Name);
             }
+        }
+
+        [Test]
+        public void repository_command_handler_should_set_context()
+        {
+            var cmd = new TouchSampleAggregate(new SampleAggregateId(1));
+            cmd.SetContextData("key", "value");
+            var handler = new TouchSampleAggregateHandler
+            {
+                Repository = _repository,
+                AggregateFactory = _aggregateFactory
+            };
+
+            handler.Handle(cmd);
+
+            var context = handler.Aggregate.ExposeContext;
+            Assert.NotNull(context);
+            Assert.AreEqual("TouchSampleAggregate", context["command.name"]);
+            Assert.AreEqual("value", context["key"]);
         }
 
         public ITenant Current { get; private set; }

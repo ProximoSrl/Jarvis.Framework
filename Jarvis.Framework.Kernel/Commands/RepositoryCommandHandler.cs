@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Jarvis.Framework.Kernel.Engine;
 using Jarvis.Framework.Kernel.Store;
 using Jarvis.Framework.Shared.Commands;
@@ -34,11 +35,13 @@ namespace Jarvis.Framework.Kernel.Commands
             base.Handle(cmd);
             if (Logger.IsDebugEnabled) Logger.DebugFormat("Handled command type {0} id {1} with handler {2}", cmd.GetType().Name, cmd.MessageId, this.GetType().Name);
         }
+
         protected void FindAndModify(EventStoreIdentity id, Action<TAggregate> callback, bool createIfNotExists = false)
         {
             var aggregate = Repository.GetById<TAggregate>(id);
             if (!createIfNotExists && aggregate.Version == 0)
                 throw new UninitializedAggregateException();
+            SetupContext(aggregate);
             callback(aggregate);
             Repository.Save(aggregate, _commitId, StoreCommandHeaders);
         }
@@ -50,15 +53,28 @@ namespace Jarvis.Framework.Kernel.Commands
 
         protected TAggregate CreateNewAggregate(IIdentity identity)
         {
-            return (TAggregate)AggregateFactory.Build(typeof(TAggregate), identity, null);
+            var aggregate = (TAggregate)AggregateFactory.Build(typeof(TAggregate), identity, null);
+            SetupContext(aggregate);
+            return aggregate;
         }
 
-        protected void StoreCommandHeaders(IDictionary<string, object> headers)
+        private void StoreCommandHeaders(IDictionary<string, object> headers)
         {
             foreach (var key in _currentCommand.AllContextKeys)
             {
                 headers.Add(key, _currentCommand.GetContextData(key));
             }
+        }
+
+        protected void SetupContext(IAggregateEx aggregate)
+        {
+            var context = _currentCommand.AllContextKeys
+                .ToDictionary<string, string, object>(
+                    key => key, 
+                    key => _currentCommand.GetContextData(key)
+                );
+            context["command.name"] = _currentCommand.GetType().Name;
+            aggregate.EnterContext(context);
         }
     }
 }

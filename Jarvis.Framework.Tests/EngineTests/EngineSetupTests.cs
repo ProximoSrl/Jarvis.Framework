@@ -4,7 +4,6 @@ using Castle.Core.Logging;
 using CommonDomain.Core;
 using Jarvis.Framework.Kernel.Engine;
 using Jarvis.Framework.Shared.IdentitySupport;
-using Jarvis.Framework.Shared.MultitenantSupport;
 using Jarvis.Framework.TestHelpers;
 using Jarvis.Framework.Tests.Support;
 using Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore;
@@ -19,7 +18,6 @@ namespace Jarvis.Framework.Tests.EngineTests
     [TestFixture]
     public class EngineSetupTests
     {
-        private MongoServer _server;
         private EventStoreFactory _factory;
         string _connectionString;
         private MongoDatabase _db;
@@ -64,7 +62,5 @@ namespace Jarvis.Framework.Tests.EngineTests
                 null
             );
         }
-
-        public ITenant Current { get; private set; }
     }
 }

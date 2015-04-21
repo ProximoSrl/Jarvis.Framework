@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 
 namespace Jarvis.NEventStoreEx.CommonDomainEx
 {
@@ -12,5 +13,6 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx
         void ClearUncommittedEvents();
 
         IMementoEx GetSnapshot();
+        void EnterContext(IDictionary<string, object> context);
     }
 }

@@ -10,6 +10,8 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Core
 
 		private IRouteEventsEx registeredRoutes;
 
+        protected IDictionary<string, object> Context { get; private set; }
+
 		protected AggregateBaseEx()
 			: this(null)
 		{ }
@@ -69,7 +71,12 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Core
 			return snapshot;
 		}
 
-		public virtual bool Equals(IAggregateEx other)
+        public void EnterContext(IDictionary<string, object> context)
+        {
+            this.Context = context;
+        }
+
+        public virtual bool Equals(IAggregateEx other)
 		{
 			return null != other && other.Id == this.Id;
 		}
@@ -79,7 +86,7 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Core
 			this.RegisteredRoutes.Register(route);
 		}
 
-		protected void RaiseEvent(object @event)
+		protected virtual void RaiseEvent(object @event)
 		{
 			((IAggregateEx)this).ApplyEvent(@event);
 			this.uncommittedEvents.Add(@event);
