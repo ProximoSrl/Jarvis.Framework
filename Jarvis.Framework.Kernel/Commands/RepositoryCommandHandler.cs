@@ -58,7 +58,7 @@ namespace Jarvis.Framework.Kernel.Commands
             return aggregate;
         }
 
-        private void StoreCommandHeaders(IDictionary<string, object> headers)
+        protected void StoreCommandHeaders(IDictionary<string, object> headers)
         {
             foreach (var key in _currentCommand.AllContextKeys)
             {
