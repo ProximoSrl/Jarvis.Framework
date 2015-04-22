@@ -110,6 +110,7 @@ namespace Jarvis.Framework.Kernel.Engine
 
         protected void Dispatch(IMessage message)
         {
+            if (Logger.IsDebugEnabled) Logger.DebugFormat("Saga {0} dispatched command {1}", Id, message.Describe());
             _undispatched.Add(message);
         }
 

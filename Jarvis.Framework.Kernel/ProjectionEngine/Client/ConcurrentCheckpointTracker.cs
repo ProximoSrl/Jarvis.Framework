@@ -18,9 +18,26 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
     {
         readonly MongoCollection<Checkpoint> _checkpoints;
         private ConcurrentDictionary<string, string> _checkpointTracker;
+
+        /// <summary>
+        /// Used for Metrics.NET.
+        /// </summary>
         private ConcurrentDictionary<string, Int64> _checkpointSlotTracker;
+
         private ConcurrentDictionary<String, String> _projectionToSlot;
+
+        /// <summary>
+        /// Used to avoid writing on Current during rebuild, for each slot
+        /// it stores if it is in rebuild or not.
+        /// </summary>
         private ConcurrentDictionary<String, Boolean> _slotRebuildTracker;
+
+        /// <summary>
+        /// Useful for Metrics.Net, I need to keep track of maximum value of 
+        /// dispatched commit for each slot. For the rebuild to be considered
+        /// finished, all projection needs to reach this number,
+        /// </summary>
+        private Int64 _higherCheckpointToDispatchInRebuild;
 
         public ILogger Logger { get; set; }
 
@@ -137,6 +154,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                   Query.EQ("_id", projectionName),
                   Update<Checkpoint>.Set(x => x.Value, lastCommitId));
             }
+            _higherCheckpointToDispatchInRebuild = Math.Max(
+                _higherCheckpointToDispatchInRebuild,
+                Math.Min(trackerLastValue, lastCommitIdLong));
         }
 
   
@@ -200,7 +220,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
             bool isLast = currentCheckpointValue == lastDispatchedValue;
             bool isReplay = currentCheckpointValue <= lastDispatchedValue;
-            _checkpointSlotTracker[_projectionToSlot[id]] = lastDispatchedValue - currentCheckpointValue;
+            _checkpointSlotTracker[_projectionToSlot[id]] = _higherCheckpointToDispatchInRebuild - currentCheckpointValue;
             return new CheckPointReplayStatus(isLast, isReplay);
         }
 
