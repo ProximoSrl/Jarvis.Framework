@@ -70,7 +70,8 @@ namespace Jarvis.Framework.Kernel.Engine
 
         public void Transition(object message)
         {
-            ((dynamic) this).On((dynamic)message);
+            if (Logger.IsDebugEnabled) Logger.DebugFormat("Dispatching message {0} to saga {1} [{2}] IsReplay {3}", message.GetType().Name, this.GetType().Name, this.Id, IsInReplay);
+            ((dynamic)this).On((dynamic)message); 
             _uncommitted.Add(message);
             Version++;
         }
