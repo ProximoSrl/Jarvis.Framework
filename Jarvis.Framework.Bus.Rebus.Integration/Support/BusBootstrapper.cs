@@ -297,27 +297,19 @@ JarvisDetermineMessageOwnershipFromConfigurationManager offers the ability to sp
 in configuration file handled by configuration-manager, you need to configure rebus with endpoints 
 section that offer the ability to specify mapping from type to relative endpoint:
 
- 	'pm-rebus' : {
-		'inputQueue' : 'Intranet.ProcessManager.input',
-		'errorQueue' : 'intranet.health',
+ 	'pm-rebus' : {{
+		'inputQueue' : 'jarvis.ProcessManager.input',
+		'errorQueue' : 'jarvis.health',
 		'workers' : 2,
 		'maxRetries' : 2,
-		'endpoints' : [{
-				'messageType' : 'Intranet.Shared',
-				'endpoint' : 'intranet.events.input'
-			},
-			{
-				'messageType' : 'Auth.Shared',
-				'endpoint' : 'intranet.events.input'
-			},
-			{
-				'messageType' : 'DMS.Shared',
-				'endpoint' : 'intranet.events.input'
-			},
-			{
-				'messageType' : 'DMS.Engine',
-				'endpoint' : 'intranet.events.input'
-			},
+		'endpoints' : [{{
+				'messageType' : 'Jarvis.ProcessManager.Shared',
+				'endpoint' : 'jarvis.events.input'
+			}},
+			{{
+				'messageType' : 'Jarvis.Dms.Shared',
+				'endpoint' : 'jarvis.events.input'
+			}}.....
 
 ", messageType);
             throw new InvalidOperationException(message);

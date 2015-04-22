@@ -112,6 +112,18 @@ namespace Jarvis.Framework.Kernel.Engine
             _undispatched.Add(message);
         }
 
+        /// <summary>
+        /// Dispatch a standard <see cref="SagaTimeout" /> message to current
+        /// saga.
+        /// </summary>
+        /// <param name="dateTime"></param>
+        public void DispatchTimeout(DateTime dateTime)
+        {
+            var timeout = new SagaTimeout(this.Id);
+            var message = new SagaDeferredMessage(timeout, dateTime);
+            Dispatch(message);
+        }
+
         public override int GetHashCode()
         {
             return Id.GetHashCode();
@@ -131,5 +143,7 @@ namespace Jarvis.Framework.Kernel.Engine
         {
             throw new ApplicationException(String.Format(message, param), innerException);
         }
+
+
     }
 }
