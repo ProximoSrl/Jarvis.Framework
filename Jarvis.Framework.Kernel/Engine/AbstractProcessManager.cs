@@ -121,5 +121,15 @@ namespace Jarvis.Framework.Kernel.Engine
         {
             return Equals(obj as ISagaEx);
         }
+
+        protected void Throw(String message, params String[] param) 
+        {
+            throw new ApplicationException(String.Format(message, param));
+        }
+
+        protected void Throw(Exception innerException, String message, params String[] param)
+        {
+            throw new ApplicationException(String.Format(message, param), innerException);
+        }
     }
 }
