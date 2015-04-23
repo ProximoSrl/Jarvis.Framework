@@ -272,7 +272,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             {
                 foreach (var projection in slot.Value)
                 {
-                    if (_checkpointTracker.NeedsRebuild(projection))
+                    var checkpoint = _checkpointTracker.GetCheckpoint(projection);
+                    var longCheckpoint = LongCheckpoint.Parse(checkpoint);
+
+                    //A projection can be rebuilded only if it has at least one checkpoint dispatched.
+                    if (_checkpointTracker.NeedsRebuild(projection) &&
+                        longCheckpoint.LongValue > 0)
                     {
                         projection.Drop();
                         projection.StartRebuild(_rebuildContext);

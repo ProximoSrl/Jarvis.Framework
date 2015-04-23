@@ -132,7 +132,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         public void RebuildStarted(IProjection projection, String lastCommitId)
         {
             var projectionName = projection.GetCommonName();
-            _slotRebuildTracker[_projectionToSlot[projectionName]] = true;
             _checkpoints.Update(
                 Query.EQ("_id", projectionName),
                 Update<Checkpoint>.Set(x => x.RebuildStart, DateTime.UtcNow)
@@ -147,6 +146,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             //is lower than the latest dispatched commit.
             var trackerLastValue = LongCheckpoint.Parse(_checkpointTracker[projection.GetCommonName()]).LongValue;
             var lastCommitIdLong = LongCheckpoint.Parse(lastCommitId).LongValue;
+            if (trackerLastValue > 0) 
+            {
+                //new projection, it has no dispatched checkpoint.
+                _slotRebuildTracker[_projectionToSlot[projectionName]] = true;
+            }
             if (lastCommitIdLong < trackerLastValue) 
             {
                 _checkpointTracker[projection.GetCommonName()] = lastCommitId;
