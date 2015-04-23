@@ -270,15 +270,22 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             var lastCommit = GetLastCommitId();
             foreach (var slot in _projectionsBySlot)
             {
+                var maxCheckpointDispatchedInSlot = slot.Value
+                    .Select(projection =>
+                    {
+                        var checkpoint = _checkpointTracker.GetCheckpoint(projection);
+                        var longCheckpoint = LongCheckpoint.Parse(checkpoint);
+                        return longCheckpoint.LongValue;
+                    })
+                    .Max();
+
                 foreach (var projection in slot.Value)
                 {
-                    var checkpoint = _checkpointTracker.GetCheckpoint(projection);
-                    var longCheckpoint = LongCheckpoint.Parse(checkpoint);
-
-                    //A projection can be rebuilded only if it has at least one checkpoint dispatched.
-                    if (_checkpointTracker.NeedsRebuild(projection) &&
-                        longCheckpoint.LongValue > 0)
+                    //Rebuild the slot only if it has at least one dispatched commit
+                    if (_checkpointTracker.NeedsRebuild(projection) && maxCheckpointDispatchedInSlot >= 0)
                     {
+                        //be sure that projection in rebuild has the same Last dispatched commit fo the entire slot
+                        _checkpointTracker.SetCheckpoint(projection.GetCommonName(), maxCheckpointDispatchedInSlot.ToString());
                         projection.Drop();
                         projection.StartRebuild(_rebuildContext);
                         _checkpointTracker.RebuildStarted(projection, lastCommit);
@@ -286,6 +293,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
                     projection.SetUp();
                 }
+
+
             }
         }
 
@@ -461,7 +470,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             var collection = GetMongoCommitsCollection();
             int retryCount = 0;
             long lastDispatchedCheckpoint = 0;
-            
+
             while (true)
             {
                 var last = collection.FindAll().SetSortOrder(SortBy.Descending("_id")).SetLimit(1).SetFields("_id").FirstOrDefault();
@@ -492,7 +501,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                         checkpointId = last["_id"].AsInt64;
                         if (checkpointId == dispatched)
                         {
-                            if (Logger.IsDebugEnabled)Logger.Debug("Polling done!");
+                            if (Logger.IsDebugEnabled) Logger.Debug("Polling done!");
                             return;
                         }
                     }
