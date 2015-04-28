@@ -132,6 +132,7 @@
     <Compile Include="MultitenantSupport\Exceptions\TenantAlreadyPresentException.cs" />
     <Compile Include="MultitenantSupport\TenantContext.cs" />
     <Compile Include="MultitenantSupport\TenantManager.cs" />
+    <Compile Include="ProjectionEngine\CachedMongoStorage2.cs" />
     <Compile Include="ProjectionEngine\CachedMongoStorage.cs" />
     <Compile Include="ProjectionEngine\Client\Checkpoint.cs" />
     <Compile Include="ProjectionEngine\Client\CheckPointReplayStatus.cs" />

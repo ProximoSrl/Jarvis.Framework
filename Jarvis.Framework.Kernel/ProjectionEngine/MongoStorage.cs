@@ -85,6 +85,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             };
         }
 
+        public void Save(TModel model)
+        {
+            _collection.Save(model);
+        }
+
         public DeleteResult Delete(TKey id)
         {
             var result = _collection.Remove(Query.EQ("_id", BsonValue.Create(id)));

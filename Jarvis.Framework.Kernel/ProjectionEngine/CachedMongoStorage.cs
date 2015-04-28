@@ -117,6 +117,19 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             return _storage.SaveWithVersion(model, orignalVersion);
         }
 
+        public void Save(TModel model)
+        {
+            if (_inmemoryCollection.IsActive)
+            {
+                // non posso controllare le versioni perché l'istanza è la stessa
+                _inmemoryCollection.Save(model);
+            }
+            else
+            {
+                _storage.Save(model);
+            }
+        }
+
         public DeleteResult Delete(TKey id)
         {
             if (_inmemoryCollection.IsActive)

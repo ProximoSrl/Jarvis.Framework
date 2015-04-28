@@ -133,6 +133,7 @@
     <Compile Include="ProjectionEngineTests\ProjectionEnginePriorityTests.cs" />
     <Compile Include="ProjectionEngineTests\ProjectionEngineTestsPoller.cs" />
     <Compile Include="ProjectionEngineTests\SampleReadModel.cs" />
+    <Compile Include="ProjectionsTests\CachedMongoStorageTest.cs" />
     <Compile Include="ProjectionsTests\DeleteEvent.cs" />
     <Compile Include="ProjectionsTests\InsertEvent.cs" />
     <Compile Include="ProjectionsTests\MyAggregateId.cs" />

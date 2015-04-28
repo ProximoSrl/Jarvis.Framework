@@ -19,6 +19,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         bool Contains(Expression<Func<TModel, bool>> filter);
         InsertResult Insert(TModel model);
         SaveResult SaveWithVersion(TModel model, int orignalVersion);
+        void Save(TModel model);
         DeleteResult Delete(TKey id);
         void Drop();
         MongoCollection<TModel> Collection { get; }
