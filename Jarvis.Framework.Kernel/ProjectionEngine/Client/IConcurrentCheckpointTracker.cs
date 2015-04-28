@@ -10,6 +10,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         CheckPointReplayStatus GetCheckpointStatus(string id, string checkpoint);
         void Clear();
         string GetCheckpoint(IProjection projection);
+        Int64 GetMinCheckpoint();
         void SetUp(IProjection[] projections, int version);
         bool NeedsRebuild(IProjection projection);
 

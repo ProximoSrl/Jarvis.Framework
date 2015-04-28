@@ -72,8 +72,8 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             var factory = new EventStoreFactory(loggerFactory);
             _eventStore = factory.BuildEventStore(_eventStoreConnectionString);
             Repository = new RepositoryEx(
-                _eventStore, 
-                new AggregateFactory(), 
+                _eventStore,
+                new AggregateFactory(),
                 new ConflictDetector(),
                 _identityConverter
                 );
@@ -86,18 +86,18 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
 
             var config = new ProjectionEngineConfig()
             {
-                Slots = new[] {"*"},
+                Slots = new[] { "*" },
                 EventStoreConnectionString = _eventStoreConnectionString,
                 TenantId = tenantId
             };
 
             _rebuildContext = new RebuildContext(false);
-            StorageFactory = new MongoStorageFactory(Database,_rebuildContext);
+            StorageFactory = new MongoStorageFactory(Database, _rebuildContext);
 
             Engine = new ConcurrentProjectionsEngine(
                 tracker,
                 BuildProjections().ToArray(),
-                new PollingClientWrapper(new CommitEnhancer(_identityConverter), true),
+                new PollingClientWrapper(new CommitEnhancer(_identityConverter), true, tracker),
                 new NullHouseKeeper(),
                 _rebuildContext,
                 new NullNotifyCommitHandled(),
