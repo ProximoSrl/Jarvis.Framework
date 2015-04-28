@@ -7,6 +7,7 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using System.Threading.Tasks;
 using System.Threading;
+using System.Collections.Concurrent;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
 {
@@ -26,8 +27,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         #region Cache
 
-        private readonly IDictionary<TKey, TModel> _cache = new Dictionary<TKey, TModel>();
-        private readonly HashSet<TKey> _cacheDeleted = new HashSet<TKey>();
+        private readonly ConcurrentDictionary<TKey, TModel> _cache = new ConcurrentDictionary<TKey, TModel>();
+        private readonly ConcurrentDictionary<TKey, Boolean> _cacheDeleted = new ConcurrentDictionary<TKey, Boolean>();
 
         public Boolean IsCacheActive { get; private set; }
         //when collection is empty we can batch insert.
@@ -36,7 +37,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         private void AddInCache(TKey id, TModel value)
         {
             _cache[id] = value;
-            _cacheDeleted.Remove(id);
+            Boolean outRef;
+            _cacheDeleted.TryRemove(id, out outRef);
         }
 
         //  private class CacheEntry<TModel>
@@ -130,7 +132,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             {
                 try
                 {
-                    _cache.Add(model.Id, model);
+                    _cache[model.Id] = model;
                     return new InsertResult()
                     {
                         Ok = true
@@ -178,8 +180,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         {
             if (IsCacheActive)
             {
-                var removed = _cache.Remove(id);
-                _cacheDeleted.Add(id);
+                TModel outRef;
+                var removed = _cache.TryRemove(id, out outRef);
+                _cacheDeleted[id] = true;
                 return new DeleteResult
                 {
                     Ok = true,
@@ -215,28 +218,48 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             return _storage.Aggregate(aggregateArgs);
         }
 
+        Int32 flushExecuting = 0;
+
         public void Flush()
         {
             if (IsCacheActive)
             {
-                if (_cache.Any())
+                if (Interlocked.CompareExchange(ref flushExecuting, 1, 0) == 0)
                 {
-                    if (_isCollectionEmpty)
+                    try
                     {
-                        _storage.InsertBatch(_cache.Values);
+                        if (_cache.Any())
+                        {
+                            var toInsert = _cache.Values.ToList();
+                            if (_isCollectionEmpty)
+                            {
+                                _storage.InsertBatch(toInsert);
+                            }
+                            else
+                            {
+                                Parallel.ForEach(toInsert, e => _storage.Save(e));
+                            }
+                        }
+                        if (_cacheDeleted.Any() && !_isCollectionEmpty)
+                        {
+                            var toDeleted = _cacheDeleted.Keys.ToList();
+                            Parallel.ForEach(
+                                  _cacheDeleted,
+                                  entry => _storage.Delete(entry.Key));
+                            foreach (var deleted in toDeleted)
+                            {
+                                Boolean outRef;
+                                _cacheDeleted.TryRemove(deleted, out outRef);
+                            }
+                        }
+                        CheckCollectionEmpty();
                     }
-                    else
+                    finally
                     {
-                        Parallel.ForEach(_cache.Values, e => _storage.Save(e));
+                        Interlocked.Exchange(ref flushExecuting, 0);
                     }
                 }
-                if (_cacheDeleted.Any() && !_isCollectionEmpty)
-                {
-                    Parallel.ForEach(
-                          _cacheDeleted,
-                          key => _storage.Delete(key));
-                }
-                CheckCollectionEmpty();
+                
             }
         }
 

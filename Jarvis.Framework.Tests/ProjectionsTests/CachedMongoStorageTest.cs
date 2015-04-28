@@ -128,5 +128,21 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
             sut.Flush();
             Assert.That(collection.Count(), Is.EqualTo(2)); //now flushed
         }
+
+        [Test]
+        public void stress_multiple_threads()
+        {
+            Int32 iterationCount = 10000;
+            sut.EnableCache();
+            Parallel.For(1, 1 + iterationCount, new ParallelOptions() { MaxDegreeOfParallelism = 20 },
+                i => {
+                 sut.Insert(new MyReadModel() { Id = i.ToString(), Text = "Original" });
+                 if (i % 100 == 0) sut.Flush();
+            });
+            sut.Flush();
+            var count = collection.Count();
+            Assert.That(count, Is.EqualTo(iterationCount));
+        }
+
     }
 }
