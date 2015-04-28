@@ -1,4 +1,5 @@
-﻿using Metrics;
+﻿using Jarvis.Framework.Kernel.MultitenantSupport;
+using Metrics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,6 +25,10 @@ namespace Jarvis.Framework.Kernel.Support
             else
             {
                 gaugeName = _checkpointToDispatchGaugeName;
+            }
+            if (!String.IsNullOrWhiteSpace(TenantContext.CurrentTenantId)) 
+            {
+                gaugeName = "t[" + TenantContext.CurrentTenantId + "]" + gaugeName;
             }
             Metric.Gauge(gaugeName, valueProvider, Unit.Items);
         }
