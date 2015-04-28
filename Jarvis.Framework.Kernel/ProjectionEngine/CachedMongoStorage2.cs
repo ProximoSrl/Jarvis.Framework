@@ -39,18 +39,25 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             _cache[id] = value;
             Boolean outRef;
             _cacheDeleted.TryRemove(id, out outRef);
+            if (_autoFlushCount > 0 && _cache.Count >= _autoFlushCount)
+            {
+                Flush();
+                _cache.Clear();
+            }
         }
 
-        //  private class CacheEntry<TModel>
+        //private class CacheEntry<TModel>
         //{
         //    public TModel Entry { get; set; }
 
-        //    public CacheStatus Status { get; set; }
+        //    public DateTime LastAccess { get; set; }
+
+        //    //public CacheStatus Status { get; set; }
 
         //    public CacheEntry<TModel>(TModel entry)
         //    {
         //        Entry = entry;
-        //        Status = CacheStatus.Inserted;
+        //        LastAccess = DateTime.Now;
         //    }
         //}
 
@@ -59,6 +66,38 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         //    Inserted = 0,
         //    Deleted = 1
         //}
+
+        #endregion
+
+        #region AutoFlush
+
+        private Timer _timer;
+
+        private Int32 _autoFlushCount = -1;
+
+        /// <summary>
+        /// Set timeout in milliseconds for the autoflushing timer.
+        /// </summary>
+        /// <param name="timeoutInMilliseconds">Timeout in Milliseconds, 0 or negative
+        /// values if you want to disable autoflush.</param>
+        public void SetAutoFlush(Int32 timeoutInMilliseconds)
+        {
+            if (_timer != null)
+            {
+                _timer.Dispose();
+                _timer = null;
+            }
+            if (timeoutInMilliseconds >= 0)
+            {
+                _timer = new Timer(TimerCallbackFunction, null, timeoutInMilliseconds, timeoutInMilliseconds);
+            }
+        }
+
+        private void TimerCallbackFunction(object state)
+        {
+            Flush();
+        }
+
         #endregion
 
         void FlushBeforeMongoAccess()
@@ -132,7 +171,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             {
                 try
                 {
-                    _cache[model.Id] = model;
+                    AddInCache(model.Id, model);
                     return new InsertResult()
                     {
                         Ok = true
@@ -259,7 +298,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                         Interlocked.Exchange(ref flushExecuting, 0);
                     }
                 }
-                
+
             }
         }
 
@@ -283,6 +322,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         }
 
 
+        /// <summary>
+        /// When this variable is greater than 0 we want no more than approx
+        /// autoFlushCount objects in memory cache, when that threshold is reached
+        /// we want to flush and reduce number of objects in memory.
+        /// </summary>
+        /// <param name="autoFlushCount"></param>
+        public void SetAutoFlushOnCount(int autoFlushCount)
+        {
+            _autoFlushCount = autoFlushCount;
+        }
     }
 
 

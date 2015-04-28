@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.ProjectionsTests
@@ -142,6 +143,35 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
             sut.Flush();
             var count = collection.Count();
             Assert.That(count, Is.EqualTo(iterationCount));
+        }
+
+        [Test]
+        public void verify_autoflush_on_timer()
+        {
+            sut.EnableCache();
+            sut.SetAutoFlush(100);
+            sut.Insert(new MyReadModel() { Id = "1" });
+            sut.Insert(new MyReadModel() { Id = "2" });
+            sut.Insert(new MyReadModel() { Id = "3" });
+            Thread.Sleep(200); //Not so good for a test, 
+            Assert.That(collection.Count(), Is.EqualTo(3));
+        }
+
+        [Test]
+        public void verify_autoflush_on_count()
+        {
+            sut.EnableCache();
+            sut.SetAutoFlushOnCount(5);
+            sut.Insert(new MyReadModel() { Id = "1" });
+            sut.Insert(new MyReadModel() { Id = "2" });
+            sut.Insert(new MyReadModel() { Id = "3" });
+            sut.Insert(new MyReadModel() { Id = "4" });
+            //should not flush
+            Assert.That(collection.Count(), Is.EqualTo(0));
+
+            //flush
+            sut.Insert(new MyReadModel() { Id = "5" });
+            Assert.That(collection.Count(), Is.EqualTo(5));
         }
 
     }
