@@ -21,8 +21,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         private readonly int _interval;
         readonly CommitEnhancer _enhancer;
         readonly bool _boost;
+        private IConcurrentCheckpointTracker _tracker;
+        private Int32 bufferSize = 1000;
 
-        public JarvisPollingClient(IPersistStreams persistStreams, int interval, CommitEnhancer enhancer, bool boost)
+        public JarvisPollingClient(IPersistStreams persistStreams, int interval, CommitEnhancer enhancer, bool boost, IConcurrentCheckpointTracker tracker)
             : base(persistStreams)
         {
             if (persistStreams == null)
@@ -38,6 +40,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             _interval = interval;
             _enhancer = enhancer;
             _boost = boost;
+            _tracker = tracker;
         }
 
         /// <summary>
@@ -50,7 +53,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         /// </returns>
         public override IObserveCommits ObserveFrom(string checkpointToken = null)
         {
-            return new PollingObserveCommits(PersistStreams, _interval, checkpointToken, _enhancer, _boost);
+            return new PollingObserveCommits(PersistStreams, _interval, checkpointToken, _enhancer, _boost, _tracker);
         }
 
         private class PollingObserveCommits : IObserveCommits
@@ -66,14 +69,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             private TaskCompletionSource<Unit> _runningTaskCompletionSource;
             readonly bool _boost;
             private int _isPolling = 0;
+            private IConcurrentCheckpointTracker _tracker;
 
-            public PollingObserveCommits(IPersistStreams persistStreams, int interval, string checkpointToken, CommitEnhancer enhancer, bool boost)
+            public PollingObserveCommits(IPersistStreams persistStreams, int interval, string checkpointToken, CommitEnhancer enhancer, bool boost, IConcurrentCheckpointTracker tracker)
             {
                 _persistStreams = persistStreams;
                 _checkpointToken = checkpointToken;
                 _enhancer = enhancer;
                 _interval = interval;
                 _boost = boost;
+                _tracker = tracker;
             }
 
             public IDisposable Subscribe(IObserver<ICommit> observer)
@@ -117,7 +122,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
             private void PollLoop()
             {
-                if (_stopRequested.IsCancellationRequested || 
+                if (_stopRequested.IsCancellationRequested ||
                     _persistStreams.IsDisposed)
                 {
                     Dispose();
@@ -145,6 +150,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                         {
                             skippedPoolCount = 0;
                             IEnumerable<ICommit> commits = _persistStreams.GetFrom(_checkpointToken);
+                            Int64 i = 0;
                             foreach (var commit in commits)
                             {
                                 if (_stopRequested.IsCancellationRequested)
@@ -156,6 +162,17 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                                 _enhancer.Enhance(commit);
 
                                 _subject.OnNext(commit);
+                                i++;
+                                if (i % 1000 == 0)
+                                {
+                                    var minCheckpoint = _tracker.GetMinCheckpoint();
+                                    var actualCheckpoint = Int64.Parse(commit.CheckpointToken);
+                                    while (actualCheckpoint > minCheckpoint + 1000)
+                                    {
+                                        Thread.Sleep(500);
+                                        minCheckpoint = _tracker.GetMinCheckpoint();
+                                    }
+                                }
                                 _checkpointToken = commit.CheckpointToken;
                             }
                         }
@@ -173,7 +190,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                             {
                                 //conceptually if we have an exception and we are in manual poll we
                                 //are potentially skipping some commit so we need to reschedule a poll
-                                Interlocked.Increment(ref skippedPoolCount);   
+                                Interlocked.Increment(ref skippedPoolCount);
                             }
                         }
                     } while (skippedPoolCount > 0);
