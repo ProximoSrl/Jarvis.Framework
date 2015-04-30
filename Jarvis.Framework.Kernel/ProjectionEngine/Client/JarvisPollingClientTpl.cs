@@ -22,13 +22,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
     public class JarvisPollingClientTpl : ClientBase
     {
         private readonly int _interval;
-        readonly CommitEnhancer _enhancer;
+        readonly ICommitEnhancer _enhancer;
         readonly bool _boost;
 
         public JarvisPollingClientTpl(
             IPersistStreams persistStreams,
             int interval,
-            CommitEnhancer enhancer,
+            ICommitEnhancer enhancer,
             bool boost)
             : base(persistStreams)
         {
@@ -64,7 +64,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
             private readonly IPersistStreams _persistStreams;
             private string _checkpointToken;
-            readonly CommitEnhancer _enhancer;
+            readonly ICommitEnhancer _enhancer;
             private readonly int _interval;
 
             private readonly CancellationTokenSource _stopRequested = new CancellationTokenSource();
@@ -82,7 +82,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                 IPersistStreams persistStreams,
                 int interval,
                 string checkpointToken,
-                CommitEnhancer enhancer,
+                ICommitEnhancer enhancer,
                 bool boost)
             {
                 _persistStreams = persistStreams;

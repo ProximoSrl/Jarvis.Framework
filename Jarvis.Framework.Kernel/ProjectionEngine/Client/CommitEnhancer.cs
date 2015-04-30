@@ -5,10 +5,16 @@ using Jarvis.NEventStoreEx.CommonDomainEx;
 using Jarvis.Framework.Shared.Helpers;
 using NEventStore;
 using System.Linq;
+using System;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 {
-    public class CommitEnhancer 
+    public interface ICommitEnhancer
+    {
+        void Enhance(ICommit commit);
+    }
+
+    public class CommitEnhancer : ICommitEnhancer
     {
         readonly IIdentityConverter _converter;
 
@@ -39,6 +45,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                 evt.SetPropertyValue(d => d.Context, headers);
                 evt.SetPropertyValue(d => d.CheckpointToken, commit.CheckpointToken);
             }
+        }
+    }
+
+    public class NullCommitEnhancer : ICommitEnhancer
+    {
+        public void Enhance(ICommit commit)
+        {
+            
         }
     }
 }

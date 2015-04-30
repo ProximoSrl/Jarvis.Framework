@@ -19,12 +19,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
     public class JarvisPollingClient : ClientBase
     {
         private readonly int _interval;
-        readonly CommitEnhancer _enhancer;
+        readonly ICommitEnhancer _enhancer;
         readonly bool _boost;
         private IConcurrentCheckpointTracker _tracker;
         private Int32 bufferSize = 1000;
 
-        public JarvisPollingClient(IPersistStreams persistStreams, int interval, CommitEnhancer enhancer, bool boost, IConcurrentCheckpointTracker tracker)
+        public JarvisPollingClient(IPersistStreams persistStreams, int interval, ICommitEnhancer enhancer, bool boost, IConcurrentCheckpointTracker tracker)
             : base(persistStreams)
         {
             if (persistStreams == null)
@@ -62,7 +62,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
             private readonly IPersistStreams _persistStreams;
             private string _checkpointToken;
-            readonly CommitEnhancer _enhancer;
+            readonly ICommitEnhancer _enhancer;
             private readonly int _interval;
             private readonly Subject<ICommit> _subject = new Subject<ICommit>();
             private readonly CancellationTokenSource _stopRequested = new CancellationTokenSource();
@@ -71,7 +71,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             private int _isPolling = 0;
             private IConcurrentCheckpointTracker _tracker;
 
-            public PollingObserveCommits(IPersistStreams persistStreams, int interval, string checkpointToken, CommitEnhancer enhancer, bool boost, IConcurrentCheckpointTracker tracker)
+            public PollingObserveCommits(IPersistStreams persistStreams, int interval, string checkpointToken, ICommitEnhancer enhancer, bool boost, IConcurrentCheckpointTracker tracker)
             {
                 _persistStreams = persistStreams;
                 _checkpointToken = checkpointToken;

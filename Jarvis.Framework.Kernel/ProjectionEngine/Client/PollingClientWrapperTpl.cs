@@ -6,10 +6,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
     public class PollingClientWrapperTpl : IPollingClient
     {
         JarvisPollingClientTpl _client;
-        readonly CommitEnhancer _enhancer;
+        readonly ICommitEnhancer _enhancer;
         readonly bool _boost;
 
-        public PollingClientWrapperTpl(CommitEnhancer enhancer, bool boost)
+        public PollingClientWrapperTpl(ICommitEnhancer enhancer, bool boost)
         {
             _enhancer = enhancer;
             _boost = boost;

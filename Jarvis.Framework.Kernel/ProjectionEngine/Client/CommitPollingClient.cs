@@ -25,14 +25,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         private const string command_stop = "stop";
 
         private readonly int _interval;
-        readonly CommitEnhancer _enhancer;
+        readonly ICommitEnhancer _enhancer;
 
         readonly ILogger _logger;
         private IPersistStreams _persistStreams;
 
         public CommitPollingClient(
             IPersistStreams persistStreams,
-            CommitEnhancer enhancer,
+            ICommitEnhancer enhancer,
             ILogger logger)
         {
             if (persistStreams == null)
