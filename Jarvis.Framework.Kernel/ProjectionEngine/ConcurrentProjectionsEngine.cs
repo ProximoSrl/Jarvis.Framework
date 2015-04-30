@@ -34,6 +34,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         public String EngineVersion { get; set; }
 
+        public List<BucketInfo> BucketInfo { get; set; }
+
         public ProjectionEngineConfig()
         {
             PollingMsInterval = 100;

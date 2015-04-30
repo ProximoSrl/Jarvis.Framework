@@ -20,6 +20,7 @@ using NEventStore.Client;
 using NEventStore.Serialization;
 using NEventStore.Persistence;
 using Jarvis.Framework.Kernel.Support;
+using System.Collections.Concurrent;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
 {
@@ -27,13 +28,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
     {
         readonly Func<IPersistStreams, CommitPollingClient> _pollingClientFactory;
 
-        private CommitPollingClient _client;
+        private List<CommitPollingClient> _clients;
+        private Dictionary<BucketInfo, CommitPollingClient> _bucketToClient;
 
         readonly IConcurrentCheckpointTracker _checkpointTracker;
 
         readonly IHousekeeper _housekeeper;
         readonly INotifyCommitHandled _notifyCommitHandled;
-        
+
         private readonly ProjectionMetrics _metrics;
         private long _maxDispatchedCheckpoint = 0;
 
@@ -87,6 +89,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 .ToDictionary(x => x.Key, x => x.OrderByDescending(p => p.Priority).ToArray());
 
             _metrics = new ProjectionMetrics(_allProjections);
+            _clients = new List<CommitPollingClient>();
+            _bucketToClient = new Dictionary<BucketInfo, CommitPollingClient>();
         }
 
         private void DumpProjections()
@@ -117,7 +121,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         public void Poll()
         {
-            _client.Poll();
+            foreach (var client in _clients)
+            {
+                client.Poll();
+            }
         }
 
         public void Stop()
@@ -146,14 +153,25 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         private void InnerStartWithManualPoll()
         {
             Init();
-            _client.StartManualPolling(GetStartGlobalCheckpoint());
+            foreach (var client in _clients)
+            {
+                client.StartManualPolling(GetStartGlobalCheckpoint());
+            }
+
             Poll();
         }
 
         void StartPolling()
         {
             Init();
-            _client.StartAutomaticPolling(GetStartGlobalCheckpoint(), _config.PollingMsInterval);
+            foreach (var bucket in _bucketToClient)
+            {
+                bucket.Value.StartAutomaticPolling(
+                    GetStartGlobalCheckpoint(), 
+                    _config.PollingMsInterval,
+                    bucket.Key.BufferSize,
+                    "CommitPollingClient-" + bucket.Key.Slots.Aggregate((s1, s2) => s1 + ',' + s2));
+            }
         }
 
         private void Init()
@@ -179,7 +197,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
             var allSlots = _projectionsBySlot.Keys.ToArray();
 
-            _client = _pollingClientFactory(_eventstore.Advanced);
+            foreach (var bucket in _config.BucketInfo)
+            {
+                var client = _pollingClientFactory(_eventstore.Advanced);
+                _clients.Add(client);
+                _bucketToClient.Add(bucket, client);
+            }
 
             foreach (var slotName in allSlots)
             {
@@ -188,7 +211,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 Logger.InfoFormat("Slot {0} starts from {1}", slotName, startCheckpoint);
 
                 var name = slotName;
-                _client.AddConsumer(commit => DispatchCommit(commit, name, LongCheckpoint.Parse(startCheckpoint)));
+                //find right consumer
+                var slotBucket = _config.BucketInfo.SingleOrDefault(b =>
+                    b.Slots.Any(s => s.Equals(slotName, StringComparison.OrdinalIgnoreCase))) ??
+                    _config.BucketInfo.Single(b => b.Slots[0] == "*");
+                var client = _bucketToClient[slotBucket];
+                client.AddConsumer(commit => DispatchCommit(commit, name, LongCheckpoint.Parse(startCheckpoint)));
             }
         }
 
@@ -265,17 +293,35 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         void StopPolling()
         {
-            _client.StopPolling();
+            foreach (var client in _clients)
+            {
+                client.StopPolling();
+            }
             _eventstore.Dispose();
         }
 
+        private ConcurrentDictionary<String, Int64> lastCheckpointDispatched =
+            new ConcurrentDictionary<string, long>();
+
         void DispatchCommit(ICommit commit, string slotName, LongCheckpoint startCheckpoint)
         {
+            //Console.WriteLine("[{0:00}] - Slot {1}", Thread.CurrentThread.ManagedThreadId, slotName);
             if (Logger.IsDebugEnabled) Logger.ThreadProperties["commit"] = commit.CommitId;
 
             if (Logger.IsDebugEnabled) Logger.DebugFormat("Dispatching checkpoit {0} on tenant {1}", commit.CheckpointToken, _config.TenantId);
             TenantContext.Enter(_config.TenantId);
             var chkpoint = LongCheckpoint.Parse(commit.CheckpointToken);
+
+            if (!lastCheckpointDispatched.ContainsKey(slotName))
+            {
+                lastCheckpointDispatched[slotName] = 0;
+            }
+            Debug.Assert(lastCheckpointDispatched[slotName] == chkpoint.LongValue - 1,
+                String.Format("Sequence broken, last checkpoint for slot {0} was {1} and now we dispatched {2}",
+                slotName, lastCheckpointDispatched[slotName], chkpoint.LongValue));
+            lastCheckpointDispatched[slotName] = chkpoint.LongValue;
+
+
             if (chkpoint.LongValue <= startCheckpoint.LongValue)
             {
                 //Already dispatched, skip it.
@@ -476,5 +522,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             var collection = db.GetCollection("Commits");
             return collection;
         }
+    }
+
+    public class BucketInfo
+    {
+        public String[] Slots { get; set; }
+
+        public Int32 BufferSize { get; set; }
     }
 }

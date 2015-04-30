@@ -23,7 +23,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
     {
         private const string command_poll = "poll";
         private const string command_stop = "stop";
-
+        private int _bufferSize = 4000;
         private readonly int _interval;
         readonly ICommitEnhancer _enhancer;
 
@@ -49,7 +49,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         public void AddConsumer(IPollingClientConsumer consumer)
         {
             ExecutionDataflowBlockOptions consumerOptions = new ExecutionDataflowBlockOptions();
-            consumerOptions.BoundedCapacity = 1000;
+            consumerOptions.BoundedCapacity = _bufferSize;
             _consumers.Add(new ActionBlock<ICommit>(
                   commit =>
                   {
@@ -60,7 +60,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         public void AddConsumer(Action<ICommit> consumerAction)
         {
             ExecutionDataflowBlockOptions consumerOptions = new ExecutionDataflowBlockOptions();
-            consumerOptions.BoundedCapacity = 1000;
+            consumerOptions.BoundedCapacity = _bufferSize;
             _consumers.Add(new ActionBlock<ICommit>(consumerAction, consumerOptions));
         }
 
@@ -85,9 +85,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         public void StartAutomaticPolling(
             String checkpointTokenFrom,
             Int32 intervalInMilliseconds,
+            Int32 bufferSize = 4000,
             String pollerName = "CommitPollingClient")
         {
-            StartManualPolling(checkpointTokenFrom, pollerName);
+            StartManualPolling(checkpointTokenFrom, bufferSize, pollerName);
             _pollerTimer = new System.Timers.Timer(intervalInMilliseconds);
             _pollerTimer.Elapsed += TimerCallback;
             _pollerTimer.Start();
@@ -98,8 +99,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         public void StartManualPolling(
             String checkpointTokenFrom,
+            Int32 bufferSize = 4000,
             String pollerName = "CommitPollingClient")
         {
+            _bufferSize = bufferSize;
             _checkpointTokenCurrent = checkpointTokenFrom;
             //prepare single poller thread.
             CreateTplChain();
@@ -187,7 +190,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                     }
 
                     _enhancer.Enhance(commit);
-
                     while (!_buffer.SendAsync(commit).Wait(2000))
                     {
                         //maybe the mesh is full, but check for completion
@@ -202,8 +204,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             }
             catch (Exception ex)
             {
+                if (_stopRequested.IsCancellationRequested)
+                    return;
+
                 // These exceptions are expected to be transient, we can simply start a new poll immediately
                 _logger.ErrorFormat(ex, "Error in polling client {0}", ex.Message);
+
                 Poll();
             }
         }
@@ -219,28 +225,25 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         #region Tpl
 
         private BufferBlock<ICommit> _buffer;
-        private TransformBlock<ICommit, ICommit> _enhancerBlock;
+        //private TransformBlock<ICommit, ICommit> _enhancerBlock;
         private ITargetBlock<ICommit> _broadcaster;
 
         private void CreateTplChain()
         {
             DataflowBlockOptions bufferOptions = new DataflowBlockOptions();
-
-                bufferOptions.BoundedCapacity = 3000;
+            bufferOptions.BoundedCapacity = _bufferSize;
             _buffer = new BufferBlock<ICommit>(bufferOptions);
 
             ExecutionDataflowBlockOptions executionOption = new ExecutionDataflowBlockOptions();
-            executionOption.BoundedCapacity = 3000;
-            executionOption.MaxDegreeOfParallelism = 16;
-            _enhancerBlock = new TransformBlock<ICommit, ICommit>((Func<ICommit, ICommit>)Enhance, executionOption);
-
-            ExecutionDataflowBlockOptions consumerOptions = new ExecutionDataflowBlockOptions();
-            consumerOptions.BoundedCapacity = 3000;
+            executionOption.BoundedCapacity = _bufferSize;
+            //executionOption.MaxDegreeOfParallelism = 16;
+            //_enhancerBlock = new TransformBlock<ICommit, ICommit>((Func<ICommit, ICommit>)Enhance, executionOption);
 
             _broadcaster = GuaranteedDeliveryBroadcastBlock.Create(_consumers, 3000);
 
-            _buffer.LinkTo(_enhancerBlock, new DataflowLinkOptions() { PropagateCompletion = true });
-            _enhancerBlock.LinkTo(_broadcaster, new DataflowLinkOptions() { PropagateCompletion = true });
+            //_buffer.LinkTo(_enhancerBlock, new DataflowLinkOptions() { PropagateCompletion = true });
+            //_enhancerBlock.LinkTo(_broadcaster, new DataflowLinkOptions() { PropagateCompletion = true });
+            _buffer.LinkTo(_broadcaster, new DataflowLinkOptions() { PropagateCompletion = true });
         }
 
         private ICommit Enhance(ICommit arg)
@@ -256,7 +259,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         private static class GuaranteedDeliveryBroadcastBlock
         {
             public static ITargetBlock<T> Create<T>(
-                List<ITargetBlock<T>> targets,
+                IEnumerable<ITargetBlock<T>> targets,
                 Int32 boundedCapacity)
             {
                 var options = new ExecutionDataflowBlockOptions();
@@ -271,6 +274,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                         {
                             await target.SendAsync(item);
                         }
+                        //Parallel.ForEach(targets, async t => {
+                        //    await t.SendAsync(item);
+                        //});
                     }, options);
 
                 actionBlock.Completion.ContinueWith(t =>
