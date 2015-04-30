@@ -176,7 +176,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         public void UpdateSlot(string slotName, string checkpointToken)
         {
-            //if (_slotRebuildTracker[slotName] == false)
+            if (_slotRebuildTracker[slotName] == false)
             {
                 _checkpoints.Update(
                     Query.EQ("Slot", slotName),

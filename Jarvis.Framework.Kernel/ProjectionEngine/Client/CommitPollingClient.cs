@@ -1,4 +1,5 @@
 ﻿using Castle.Core.Logging;
+using Jarvis.Framework.Kernel.Support;
 using NEventStore;
 using NEventStore.Client;
 using NEventStore.Persistence;
@@ -25,7 +26,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         private readonly int _interval;
         readonly CommitEnhancer _enhancer;
-        readonly bool _boost;
+
         readonly ILogger _logger;
         private IPersistStreams _persistStreams;
 
@@ -106,6 +107,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             _pollerThread.IsBackground = true;
             _pollerThread.Name = pollerName;
             _pollerThread.Start();
+            MetricsHelper.SetCommitPollingClientBufferSize(pollerName, () => GetClientBufferSize());
         }
 
         public void StopPolling()
@@ -132,6 +134,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             //Add poll command if there are no other poll command in queuel
             if (!_commandList.Any(c => c.Equals(command_poll, StringComparison.OrdinalIgnoreCase)))
                 _commandList.Add(command_poll);
+        }
+
+        private double GetClientBufferSize()
+        {
+            if (_buffer != null)
+                return _buffer.Count;
+            return 0;
         }
 
         private void PollerFunc(object obj)
@@ -216,21 +225,19 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         private void CreateTplChain()
         {
             DataflowBlockOptions bufferOptions = new DataflowBlockOptions();
-            if (_boost)
-            {
-                bufferOptions.BoundedCapacity = 1000;
-            }
+
+                bufferOptions.BoundedCapacity = 3000;
             _buffer = new BufferBlock<ICommit>(bufferOptions);
 
             ExecutionDataflowBlockOptions executionOption = new ExecutionDataflowBlockOptions();
-            executionOption.BoundedCapacity = 1000;
+            executionOption.BoundedCapacity = 3000;
             executionOption.MaxDegreeOfParallelism = 16;
             _enhancerBlock = new TransformBlock<ICommit, ICommit>((Func<ICommit, ICommit>)Enhance, executionOption);
 
             ExecutionDataflowBlockOptions consumerOptions = new ExecutionDataflowBlockOptions();
-            consumerOptions.BoundedCapacity = 1000;
+            consumerOptions.BoundedCapacity = 3000;
 
-            _broadcaster = GuaranteedDeliveryBroadcastBlock.Create(_consumers, 1000);
+            _broadcaster = GuaranteedDeliveryBroadcastBlock.Create(_consumers, 3000);
 
             _buffer.LinkTo(_enhancerBlock, new DataflowLinkOptions() { PropagateCompletion = true });
             _enhancerBlock.LinkTo(_broadcaster, new DataflowLinkOptions() { PropagateCompletion = true });

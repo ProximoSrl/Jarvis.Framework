@@ -18,6 +18,7 @@ using MongoDB.Driver.Linq;
 using NEventStore;
 using NEventStore.Client;
 using NEventStore.Serialization;
+using Jarvis.Framework.Kernel.Support;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
 {
@@ -30,6 +31,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         public TenantId TenantId { get; set; }
 
         public Int32 DelayedStartInMilliseconds { get; set; }
+
+        public String EngineVersion { get; set; }
 
         public ProjectionEngineConfig()
         {
@@ -219,6 +222,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
             foreach (var slotName in allSlots)
             {
+                MetricsHelper.CreateMeterForDispatcherCountSlot(slotName);
                 var startCheckpoint = GetStartCheckpointForSlot(slotName);
                 Logger.InfoFormat("Slot {0} starts from {1}", slotName, startCheckpoint);
 
@@ -314,7 +318,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         void DispatchCommit(ICommit commit, string slotName, LongCheckpoint startCheckpoint)
         {
-            Logger.ThreadProperties["commit"] = commit.CommitId;
+            if (Logger.IsDebugEnabled) Logger.ThreadProperties["commit"] = commit.CommitId;
 
             if (Logger.IsDebugEnabled) Logger.DebugFormat("Dispatching checkpoit {0} on tenant {1}", commit.CheckpointToken, _config.TenantId);
             TenantContext.Enter(_config.TenantId);
@@ -338,14 +342,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 try
                 {
                     var evt = (DomainEvent)eventMessage.Body;
-                    Logger.ThreadProperties["evType"] = evt.GetType().Name;
-                    Logger.ThreadProperties["evMsId"] = evt.MessageId;
+                    if (Logger.IsDebugEnabled) Logger.ThreadProperties["evType"] = evt.GetType().Name;
+                    if (Logger.IsDebugEnabled) Logger.ThreadProperties["evMsId"] = evt.MessageId;
                     string eventName = evt.GetType().Name;
 
                     foreach (var projection in projections)
                     {
                         var cname = projection.GetCommonName();
-                        Logger.ThreadProperties["prj"] = cname;
+                        if (Logger.IsDebugEnabled) Logger.ThreadProperties["prj"] = cname;
                         var checkpointStatus = _checkpointTracker.GetCheckpointStatus(cname, commit.CheckpointToken);
 
                         bool handled;
@@ -405,21 +409,21 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                                 );
                             }
                         }
-                        Logger.ThreadProperties["prj"] = null;
+                        if (Logger.IsDebugEnabled) Logger.ThreadProperties["prj"] = null;
                     }
 
-                    Logger.ThreadProperties["evType"] = null;
-                    Logger.ThreadProperties["evMsId"] = null;
+                    if (Logger.IsDebugEnabled) Logger.ThreadProperties["evType"] = null;
+                    if (Logger.IsDebugEnabled) Logger.ThreadProperties["evMsId"] = null;
                 }
                 catch (Exception ex)
                 {
-                    Logger.ErrorFormat(ex, "{0} -> {1}", eventMessage.Body, ex.Message);
+                    if (Logger.IsDebugEnabled) Logger.ErrorFormat(ex, "{0} -> {1}", eventMessage.Body, ex.Message);
                     throw;
                 }
             }
 
             _checkpointTracker.UpdateSlot(slotName, commit.CheckpointToken);
-
+            MetricsHelper.MarkCommitDispatchedCount(slotName, 1);
             foreach (var cname in projectionToUpdate)
             {
                 _checkpointTracker.SetCheckpoint(cname, commit.CheckpointToken);
@@ -441,7 +445,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 _maxDispatchedCheckpoint = chkpoint.LongValue;
             }
 
-            Logger.ThreadProperties["commit"] = null;
+            if (Logger.IsDebugEnabled) Logger.ThreadProperties["commit"] = null;
         }
 
         public void Update()

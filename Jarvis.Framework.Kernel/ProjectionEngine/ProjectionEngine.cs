@@ -18,12 +18,14 @@ using MongoDB.Driver.Linq;
 using NEventStore;
 using NEventStore.Client;
 using NEventStore.Serialization;
+using NEventStore.Persistence;
+using Jarvis.Framework.Kernel.Support;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
 {
     public class ProjectionEngine
     {
-        readonly Func<CommitPollingClient> _pollingClientFactory;
+        readonly Func<IPersistStreams, CommitPollingClient> _pollingClientFactory;
 
         private CommitPollingClient _client;
 
@@ -57,7 +59,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         private readonly IRebuildContext _rebuildContext;
 
         public ProjectionEngine(
-            Func<CommitPollingClient> pollingClientFactory,
+            Func<IPersistStreams, CommitPollingClient> pollingClientFactory,
             IConcurrentCheckpointTracker checkpointTracker,
             IProjection[] projections,
             IHousekeeper housekeeper,
@@ -177,10 +179,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
             var allSlots = _projectionsBySlot.Keys.ToArray();
 
-            _client = _pollingClientFactory();
+            _client = _pollingClientFactory(_eventstore.Advanced);
 
             foreach (var slotName in allSlots)
             {
+                MetricsHelper.CreateMeterForDispatcherCountSlot(slotName);
                 var startCheckpoint = GetStartCheckpointForSlot(slotName);
                 Logger.InfoFormat("Slot {0} starts from {1}", slotName, startCheckpoint);
 
@@ -268,51 +271,46 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         void DispatchCommit(ICommit commit, string slotName, LongCheckpoint startCheckpoint)
         {
-            Logger.ThreadProperties["commit"] = commit.CommitId;
+            if (Logger.IsDebugEnabled) Logger.ThreadProperties["commit"] = commit.CommitId;
 
             if (Logger.IsDebugEnabled) Logger.DebugFormat("Dispatching checkpoit {0} on tenant {1}", commit.CheckpointToken, _config.TenantId);
             TenantContext.Enter(_config.TenantId);
             var chkpoint = LongCheckpoint.Parse(commit.CheckpointToken);
             if (chkpoint.LongValue <= startCheckpoint.LongValue)
             {
-                // già fatta
+                //Already dispatched, skip it.
                 return;
             }
 
             var projections = _projectionsBySlot[slotName];
 
             bool dispatchCommit = false;
-            var eventMessages = commit.Events.ToArray();
+            var eventCount = commit.Events.Count();
 
             var projectionToUpdate = new List<string>();
 
-            for (int index = 0; index < eventMessages.Length; index++)
+            for (int index = 0; index < eventCount; index++)
             {
-                var eventMessage = eventMessages[index];
+                var eventMessage = commit.Events.ElementAt(index);
                 try
                 {
                     var evt = (DomainEvent)eventMessage.Body;
-                    Logger.ThreadProperties["evType"] = evt.GetType().Name;
-                    Logger.ThreadProperties["evMsId"] = evt.MessageId;
+                    if (Logger.IsDebugEnabled) Logger.ThreadProperties["evType"] = evt.GetType().Name;
+                    if (Logger.IsDebugEnabled) Logger.ThreadProperties["evMsId"] = evt.MessageId;
                     string eventName = evt.GetType().Name;
 
                     foreach (var projection in projections)
                     {
                         var cname = projection.GetCommonName();
-                        Logger.ThreadProperties["prj"] = cname;
+                        if (Logger.IsDebugEnabled) Logger.ThreadProperties["prj"] = cname;
                         var checkpointStatus = _checkpointTracker.GetCheckpointStatus(cname, commit.CheckpointToken);
 
                         bool handled;
                         long ticks = 0;
+
                         try
                         {
-                            var sw = new Stopwatch();
-                            sw.Start();
-                            //if (Logger.IsDebugEnabled)Logger.DebugFormat("Handling {0} with {1}", commit.CheckpointToken, projection.GetType().Name);
                             handled = projection.Handle(evt, checkpointStatus.IsRebuilding);
-                            //if (Logger.IsDebugEnabled)Logger.DebugFormat("Handled {0} with {1}", commit.CheckpointToken, projection.GetType().Name);
-                            sw.Stop();
-                            ticks = sw.ElapsedTicks;
                         }
                         catch (Exception ex)
                         {
@@ -329,13 +327,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                         {
                             _metrics.Inc(cname, eventName, ticks);
 
-                            Logger.DebugFormat("[{3}] [{4}] Handled checkpoint {0}: {1} > {2}",
-                                commit.CheckpointToken,
-                                commit.StreamId,
-                                eventName,
-                                slotName,
-                                cname
-                            );
+                            if (Logger.IsDebugEnabled)
+                                Logger.DebugFormat("[{3}] [{4}] Handled checkpoint {0}: {1} > {2}",
+                                    commit.CheckpointToken,
+                                    commit.StreamId,
+                                    eventName,
+                                    slotName,
+                                    cname
+                                );
                         }
 
                         if (!checkpointStatus.IsRebuilding)
@@ -347,7 +346,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                         }
                         else
                         {
-                            if (checkpointStatus.IsLast && (index == eventMessages.Length - 1))
+                            if (checkpointStatus.IsLast && (index == eventCount - 1))
                             {
                                 projection.StopRebuild();
                                 var meter = _metrics.GetMeter(cname);
@@ -359,11 +358,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                                 );
                             }
                         }
-                        Logger.ThreadProperties["prj"] = null;
+                        if (Logger.IsDebugEnabled) Logger.ThreadProperties["prj"] = null;
                     }
 
-                    Logger.ThreadProperties["evType"] = null;
-                    Logger.ThreadProperties["evMsId"] = null;
+                    if (Logger.IsDebugEnabled) Logger.ThreadProperties["evType"] = null;
+                    if (Logger.IsDebugEnabled) Logger.ThreadProperties["evMsId"] = null;
                 }
                 catch (Exception ex)
                 {
@@ -373,7 +372,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             }
 
             _checkpointTracker.UpdateSlot(slotName, commit.CheckpointToken);
-
+            MetricsHelper.MarkCommitDispatchedCount(slotName, 1);
             foreach (var cname in projectionToUpdate)
             {
                 _checkpointTracker.SetCheckpoint(cname, commit.CheckpointToken);
@@ -395,7 +394,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 _maxDispatchedCheckpoint = chkpoint.LongValue;
             }
 
-            Logger.ThreadProperties["commit"] = null;
+            if (Logger.IsDebugEnabled) Logger.ThreadProperties["commit"] = null;
         }
 
         public void Update()
