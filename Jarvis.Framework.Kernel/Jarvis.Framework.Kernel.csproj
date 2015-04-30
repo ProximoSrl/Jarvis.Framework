@@ -136,6 +136,7 @@
     <Compile Include="ProjectionEngine\Client\Checkpoint.cs" />
     <Compile Include="ProjectionEngine\Client\CheckPointReplayStatus.cs" />
     <Compile Include="ProjectionEngine\Client\CommitEnhancer.cs" />
+    <Compile Include="ProjectionEngine\Client\CommitPollingClient.cs" />
     <Compile Include="ProjectionEngine\Client\ConcurrentCheckpointTracker.cs" />
     <Compile Include="ProjectionEngine\Client\IConcurrentCheckpointTracker.cs" />
     <Compile Include="ProjectionEngine\Client\INotifyCommitHandled.cs" />
@@ -161,6 +162,7 @@
     <Compile Include="ProjectionEngine\MongoReaderForProjections.cs" />
     <Compile Include="ProjectionEngine\MongoStorage.cs" />
     <Compile Include="ProjectionEngine\MongoStorageFactory.cs" />
+    <Compile Include="ProjectionEngine\ProjectionEngine.cs" />
     <Compile Include="ProjectionEngine\RebuildContext.cs" />
     <Compile Include="ProjectionEngine\RecycleBin\RecycleBin.cs" />
     <Compile Include="ProjectionEngine\SaveResult.cs" />
