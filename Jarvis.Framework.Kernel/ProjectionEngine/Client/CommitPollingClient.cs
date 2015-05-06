@@ -190,7 +190,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                     }
 
                     _enhancer.Enhance(commit);
-                    while (!_buffer.SendAsync(commit).Wait(2000))
+                    var task = _buffer.SendAsync(commit);
+                    while (!task.Wait(2000))
                     {
                         //maybe the mesh is full, but check for completion
                         if (_stopRequested.IsCancellationRequested)
