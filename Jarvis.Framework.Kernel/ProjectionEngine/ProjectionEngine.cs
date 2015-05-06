@@ -316,7 +316,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             {
                 lastCheckpointDispatched[slotName] = 0;
             }
-            Debug.Assert(lastCheckpointDispatched[slotName] == chkpoint.LongValue - 1,
+            Debug.Assert(lastCheckpointDispatched[slotName] < chkpoint.LongValue,
                 String.Format("Sequence broken, last checkpoint for slot {0} was {1} and now we dispatched {2}",
                 slotName, lastCheckpointDispatched[slotName], chkpoint.LongValue));
             lastCheckpointDispatched[slotName] = chkpoint.LongValue;
