@@ -1,14 +1,11 @@
 ﻿using System;
 using System.Security.Claims;
+using Jarvis.Framework.Kernel.Commands;
 using Jarvis.Framework.Shared.Commands;
 using Rebus;
 
 namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
 {
-	public class UserCannotSendCommandException : Exception
-	{
-	}
-
 	public class RebusCommandBus : ICommandBus
     {
         private IBus _bus;

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Security.Claims;
 using System.Text;
 using System.Threading;
 using Castle.Core.Logging;
@@ -15,6 +16,10 @@ using Jarvis.Framework.Shared.Messages;
 
 namespace Jarvis.Framework.Kernel.Commands
 {
+    public class UserCannotSendCommandException : Exception
+    {
+    }
+
     public interface IInProcessCommandBus : ICommandBus
     {
     }
@@ -50,12 +55,14 @@ namespace Jarvis.Framework.Kernel.Commands
      
         public ICommand Defer(TimeSpan delay, ICommand command, string impersonatingUser = null)
         {
+            PrepareCommand(command, impersonatingUser);
             Logger.WarnFormat("Sending command {0} without delay", command.MessageId);
             return SendLocal(command, impersonatingUser);
         }
 
         public ICommand SendLocal(ICommand command, string impersonatingUser = null)
         {
+            PrepareCommand(command, impersonatingUser);
             var msg = command as IMessage;
             if (msg != null) 
             {
@@ -96,6 +103,31 @@ namespace Jarvis.Framework.Kernel.Commands
             ReleaseHandlers(handlers);
 
             return command;
+        }
+
+        protected virtual  void PrepareCommand(ICommand command, string impersonatingUser = null)
+        {
+            var userId = command.GetContextData("user.id");
+
+            if (userId == null)
+            {
+                userId = impersonatingUser ?? ClaimsPrincipal.Current.Identity.Name;
+
+                if (String.IsNullOrWhiteSpace(userId))
+                    throw new Exception("Missing user id information in command context");
+
+                command.SetContextData("user.id", userId);
+            }
+
+            if (userId != "import" && !UserIsAllowedToSendCommand(command, userId))
+            {
+                throw new UserCannotSendCommandException();
+            }
+        }
+
+        protected virtual bool UserIsAllowedToSendCommand(ICommand command, string userName)
+        {
+            return true;
         }
 
         protected virtual void Handle(ICommandHandler handler, ICommand command)
