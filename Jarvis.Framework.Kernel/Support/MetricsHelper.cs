@@ -17,6 +17,16 @@ namespace Jarvis.Framework.Kernel.Support
 
         private const String _commitPollingClientBufferSizeGaugeName = "polling-client-buffer-size";
 
+        /// <summary>
+        /// Tells me how many concurrent commits we are dispatching.
+        /// </summary>
+        private const String _projectionEngineCurrentDispatchCount = "N° actual concurrent commit dispatch";
+
+        public static void SetProjectionEngineCurrentDispatchCount(Func<Double> valueProvider)
+        {
+            Metric.Gauge(_projectionEngineCurrentDispatchCount, valueProvider, Unit.Custom("Commits"));
+        }
+
         public static void SetCheckpointCountToDispatch(String slotName, Func<Double> valueProvider)
         {
             String gaugeName;

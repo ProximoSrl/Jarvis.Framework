@@ -38,6 +38,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         private readonly ProjectionMetrics _metrics;
         private long _maxDispatchedCheckpoint = 0;
+        private Int32 _countOfConcurrentDispatchingCommit = 0;
 
         public IExtendedLogger Logger
         {
@@ -218,6 +219,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 var client = _bucketToClient[slotBucket];
                 client.AddConsumer(commit => DispatchCommit(commit, name, LongCheckpoint.Parse(startCheckpoint)));
             }
+
+            MetricsHelper.SetProjectionEngineCurrentDispatchCount(() => _countOfConcurrentDispatchingCommit);
         }
 
         string GetStartGlobalCheckpoint()
@@ -305,6 +308,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         void DispatchCommit(ICommit commit, string slotName, LongCheckpoint startCheckpoint)
         {
+            Interlocked.Increment(ref _countOfConcurrentDispatchingCommit);
             //Console.WriteLine("[{0:00}] - Slot {1}", Thread.CurrentThread.ManagedThreadId, slotName);
             if (Logger.IsDebugEnabled) Logger.ThreadProperties["commit"] = commit.CommitId;
 
@@ -330,6 +334,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             if (chkpoint.LongValue <= startCheckpoint.LongValue)
             {
                 //Already dispatched, skip it.
+                Interlocked.Decrement(ref _countOfConcurrentDispatchingCommit);
                 return;
             }
 
@@ -361,7 +366,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
                         try
                         {
+                            //pay attention, stopwatch consumes time.
+                            var sw = new Stopwatch();
+                            sw.Start();
                             handled = projection.Handle(evt, checkpointStatus.IsRebuilding);
+                            sw.Stop();
+                            ticks = sw.ElapsedTicks;
                         }
                         catch (Exception ex)
                         {
@@ -446,6 +456,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             }
 
             if (Logger.IsDebugEnabled) Logger.ThreadProperties["commit"] = null;
+            Interlocked.Decrement(ref _countOfConcurrentDispatchingCommit);
         }
 
         public void Update()
