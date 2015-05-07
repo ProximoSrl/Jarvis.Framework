@@ -6,6 +6,7 @@ using NEventStore.Persistence;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -48,20 +49,28 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         public void AddConsumer(IPollingClientConsumer consumer)
         {
-            ExecutionDataflowBlockOptions consumerOptions = new ExecutionDataflowBlockOptions();
-            consumerOptions.BoundedCapacity = _bufferSize;
-            _consumers.Add(new ActionBlock<ICommit>(
-                  commit =>
-                  {
-                      consumer.Consume(commit);
-                  }, consumerOptions));
+            AddConsumer(commit => consumer.Consume(commit));
         }
 
         public void AddConsumer(Action<ICommit> consumerAction)
         {
             ExecutionDataflowBlockOptions consumerOptions = new ExecutionDataflowBlockOptions();
             consumerOptions.BoundedCapacity = _bufferSize;
-            _consumers.Add(new ActionBlock<ICommit>(consumerAction, consumerOptions));
+            Action<ICommit> wrapperAction = commit => 
+            {
+                try
+                {
+                    consumerAction(commit);
+                }
+                catch (Exception ex)
+                {
+                    _logger.ErrorFormat(ex, "Error during Commit consumer {0} ", ex.Message);
+                    CloseEverything();
+                }
+            };
+            var actionBlock = new ActionBlock<ICommit>(wrapperAction, consumerOptions);
+            
+            _consumers.Add(actionBlock);
         }
 
         #region Dispatching
@@ -119,6 +128,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             _pollerTimer.Stop();
             _pollerTimer.Dispose();
 
+            CloseEverything();
+        }
+
+        private void CloseEverything()
+        {
             _stopRequested.Cancel();
             _commandList.Add(command_stop);
         }
@@ -200,6 +214,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                             return;
                         }
                     };
+                    Debug.Assert(task.Result);
                     _checkpointTokenCurrent = commit.CheckpointToken;
                 }
             }
@@ -273,11 +288,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                     {
                         foreach (var target in targets)
                         {
-                            await target.SendAsync(item);
+                            var result = await target.SendAsync(item);
+                            Debug.Assert(result);
                         }
-                        //Parallel.ForEach(targets, async t => {
-                        //    await t.SendAsync(item);
-                        //});
                     }, options);
 
                 actionBlock.Completion.ContinueWith(t =>

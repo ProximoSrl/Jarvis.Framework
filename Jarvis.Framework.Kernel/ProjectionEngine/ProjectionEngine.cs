@@ -319,6 +319,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             Debug.Assert(lastCheckpointDispatched[slotName] < chkpoint.LongValue,
                 String.Format("Sequence broken, last checkpoint for slot {0} was {1} and now we dispatched {2}",
                 slotName, lastCheckpointDispatched[slotName], chkpoint.LongValue));
+            if (lastCheckpointDispatched[slotName] +1 != chkpoint.LongValue)
+            {
+                Logger.WarnFormat("Sequence of commit non consecutive, last dispatched {0} receiving {1}",
+                   lastCheckpointDispatched[slotName], chkpoint.LongValue);
+            }
             lastCheckpointDispatched[slotName] = chkpoint.LongValue;
 
 
