@@ -16,5 +16,14 @@ namespace Jarvis.Framework.TestHelpers
             evt.SetPropertyValue("AggregateId", id);
             return evt;
         }
+
+        public static T AssignIssuedByForTest<T>(this T evt, String issuedBy) where T : DomainEvent
+        {
+            if (evt.Context == null)
+                evt.SetPropertyValue("Context", new Dictionary<String, Object>());
+
+            evt.Context.Add("user.id", issuedBy);
+            return evt;
+        }
     }
 }
