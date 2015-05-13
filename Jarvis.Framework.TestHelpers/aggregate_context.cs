@@ -38,6 +38,12 @@ namespace Jarvis.Framework.TestHelpers
             }
         }
 
+        protected static void ClearUncommittedEvents()
+        {
+            IAggregateEx agg = Aggregate;
+            agg.ClearUncommittedEvents();
+        }
+
         Establish context = () =>
         {
             aggregate = null;
