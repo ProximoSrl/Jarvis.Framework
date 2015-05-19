@@ -1,4 +1,5 @@
-﻿using Jarvis.Framework.Shared.Domain;
+﻿using Castle.Core.Logging;
+using Jarvis.Framework.Shared.Domain;
 using Jarvis.Framework.Shared.Domain.Serialization;
 using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.IdentitySupport.Serialization;
@@ -16,8 +17,15 @@ namespace Jarvis.Framework.Shared.IdentitySupport
     public static class MongoFlatMapper
     {
         private static Boolean _enabled = false;
+        private static ILogger _logger = NullLogger.Instance;
 
-        public static void EnableFlatMapping(Boolean enableForAllId = true)
+        public static void SetLogger(ILogger logger)
+        {
+            _logger = logger;
+        }
+
+        public static void EnableFlatMapping(
+            Boolean enableForAllId = true)
         {
             if (_enabled) return;
 
@@ -45,11 +53,15 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         public static void AddSerializerForAllStringBasedIdFromAssembly(Assembly assembly)
         {
             var asmName = assembly.FullName;
+            _logger.InfoFormat("Scanning assembly {0} for Mongo flat mapping", asmName);
             foreach (var type in assembly.GetTypes()
                 .Where(t => typeof(IIdentity).IsAssignableFrom(t)  &&
                             t.IsAbstract == false
                       ))
             {
+                var fullName = type.FullName;
+                _logger.DebugFormat("Registered IIdentity type {0}", type.FullName);
+                BsonSerializer.RegisterSerializer(type, new EventStoreIdentityBsonSerializer());
                 EventStoreIdentityCustomBsonTypeMapper.Register(type);
             }
 
@@ -58,7 +70,9 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                           t.IsAbstract == false
                     ))
             {
+                _logger.DebugFormat("Registered LowercaseStringValue type {0}", type.FullName);
                 BsonSerializer.RegisterSerializer(type, new StringValueBsonSerializer());
+                StringValueCustomBsonTypeMapper.Register(type);
             }
         }
 

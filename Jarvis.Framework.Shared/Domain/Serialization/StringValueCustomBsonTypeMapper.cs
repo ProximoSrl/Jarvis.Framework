@@ -22,6 +22,11 @@ namespace Jarvis.Framework.Shared.Domain.Serialization
         public static void Register<T>() where T : StringValue
         {
             Type type = typeof(T);
+            Register(type);
+        }
+
+        public static void Register(Type type)
+        {
             if (_registrations.Contains(type))
                 return;
 
