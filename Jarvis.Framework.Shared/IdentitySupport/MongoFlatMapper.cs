@@ -55,9 +55,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             var asmName = assembly.FullName;
             _logger.InfoFormat("Scanning assembly {0} for Mongo flat mapping", asmName);
             foreach (var type in assembly.GetTypes()
-                .Where(t => typeof(IIdentity).IsAssignableFrom(t)  &&
-                            t.IsAbstract == false
-                      ))
+                .Where(t => typeof(IIdentity).IsAssignableFrom(t)))
             {
                 var fullName = type.FullName;
                 _logger.DebugFormat("Registered IIdentity type {0}", type.FullName);
@@ -66,9 +64,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             }
 
             foreach (var type in assembly.GetTypes()
-              .Where(t => typeof(LowercaseStringValue).IsAssignableFrom(t) &&
-                          t.IsAbstract == false
-                    ))
+              .Where(t => typeof(LowercaseStringValue).IsAssignableFrom(t)))
             {
                 _logger.DebugFormat("Registered LowercaseStringValue type {0}", type.FullName);
                 BsonSerializer.RegisterSerializer(type, new StringValueBsonSerializer());
