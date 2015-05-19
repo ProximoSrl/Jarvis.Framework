@@ -99,6 +99,7 @@
     <Compile Include="IdentitySupport\IdentitiesRegistration.cs" />
     <Compile Include="IdentitySupport\IdentityManager.cs" />
     <Compile Include="IdentitySupport\IIdentityConverter.cs" />
+    <Compile Include="IdentitySupport\MongoFlatMapper.cs" />
     <Compile Include="IdentitySupport\Serialization\EventStoreIdentityBsonSerializer.cs" />
     <Compile Include="IdentitySupport\Serialization\EventStoreIdentityCustomBsonTypeMapper.cs" />
     <Compile Include="IoC\TransientNotTrackingLifestyle.cs" />

@@ -48,7 +48,7 @@ namespace Jarvis.Framework.Shared.Events
         /// <summary>
         /// Identificativo dell'aggregato a cui appartiene l'evento
         /// </summary>
-        [BsonIgnore]
+        //[BsonIgnore]
         public EventStoreIdentity AggregateId { get; private set; }
 
         /// <summary>

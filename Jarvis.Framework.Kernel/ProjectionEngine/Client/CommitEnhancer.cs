@@ -40,7 +40,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                 }
                 evt.SetPropertyValue(d => d.CommitStamp, commit.CommitStamp);
                 evt.SetPropertyValue(d => d.CommitId, commit.CommitId);
-                evt.SetPropertyValue(d => d.AggregateId, esid);
+                //evt.SetPropertyValue(d => d.AggregateId, esid);
                 evt.SetPropertyValue(d => d.Version, commit.StreamRevision);
                 evt.SetPropertyValue(d => d.Context, headers);
                 evt.SetPropertyValue(d => d.CheckpointToken, commit.CheckpointToken);

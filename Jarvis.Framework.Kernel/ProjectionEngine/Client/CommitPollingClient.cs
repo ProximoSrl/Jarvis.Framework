@@ -66,6 +66,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                 {
                     _logger.ErrorFormat(ex, "Error during Commit consumer {0} ", ex.Message);
                     CloseEverything();
+                    throw;
                 }
             };
             var actionBlock = new ActionBlock<ICommit>(wrapperAction, consumerOptions);
