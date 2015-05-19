@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
+using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.IdentitySupport;
+using Jarvis.Framework.Shared.IdentitySupport.Serialization;
 using Jarvis.Framework.TestHelpers;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
@@ -14,12 +16,21 @@ namespace Jarvis.Framework.Tests.EngineTests
 		private SampleAggregateId _sampleAggregateId = new SampleAggregateId(1);
 
 	    const string Expected =
-            "{ \"MessageId\" : \"fc3e5f0a-c4f0-47d5-91cf-a1c87fee600f\" }";
+            "{ \"MessageId\" : \"fc3e5f0a-c4f0-47d5-91cf-a1c87fee600f\", \"AggregateId\" : \"SampleAggregate_1\" }";
 
 	    [TestFixtureSetUp]
 	    public void TestFixtureSetUp()
 	    {
             IdentitiesRegistration.RegisterFromAssembly(GetType().Assembly);
+            var identityConverter = new IdentityManager(new InMemoryCounterService());
+            EventStoreIdentityBsonSerializer.IdentityConverter = identityConverter;
+            identityConverter.RegisterIdentitiesFromAssembly(typeof(SampleAggregate).Assembly);
+
+            BsonClassMap.RegisterClassMap<DomainEvent>(map =>
+            {
+                map.AutoMap();
+                map.MapProperty(x => x.AggregateId).SetSerializer(new EventStoreIdentityBsonSerializer());
+            });
         }
 
 	    [Test]
