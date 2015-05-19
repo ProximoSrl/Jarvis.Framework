@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Castle.Core.Logging;
 using Jarvis.Framework.Shared.Messages;
 using Jarvis.NEventStoreEx.CommonDomainEx;
+using Jarvis.Framework.Shared.Commands;
 
 namespace Jarvis.Framework.Kernel.Engine
 {
@@ -114,6 +115,12 @@ namespace Jarvis.Framework.Kernel.Engine
             _undispatched.Add(message);
         }
 
+        protected void Dispatch(ICommand message, String issuedBy)
+        {
+            message.SetContextData("user.id", issuedBy);
+            Dispatch(message);
+        }
+
         /// <summary>
         /// Dispatch a standard <see cref="SagaTimeout" /> message to current
         /// saga.
@@ -124,6 +131,12 @@ namespace Jarvis.Framework.Kernel.Engine
             var timeout = new SagaTimeout(this.Id);
             var message = new SagaDeferredMessage(timeout, dateTime);
             Dispatch(message);
+        }
+
+        public void DispatchDeferred(DateTime dateTime, IMessage message)
+        {
+            var deferredMessage = new SagaDeferredMessage(message, dateTime);
+            Dispatch(deferredMessage);
         }
 
         public override int GetHashCode()
