@@ -46,14 +46,18 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         {
             var asmName = assembly.FullName;
             foreach (var type in assembly.GetTypes()
-                .Where(t => (
-                                typeof(LowercaseStringValue).IsAssignableFrom(t) ||
-                                typeof(IIdentity).IsAssignableFrom(t) 
-                             ) &&
-                             t.IsAbstract == false)
-                      )
+                .Where(t => typeof(IIdentity).IsAssignableFrom(t)  &&
+                            t.IsAbstract == false
+                      ))
             {
-                var typeName = type.FullName;
+                EventStoreIdentityCustomBsonTypeMapper.Register(type);
+            }
+
+            foreach (var type in assembly.GetTypes()
+              .Where(t => typeof(LowercaseStringValue).IsAssignableFrom(t) &&
+                          t.IsAbstract == false
+                    ))
+            {
                 BsonSerializer.RegisterSerializer(type, new StringValueBsonSerializer());
             }
         }

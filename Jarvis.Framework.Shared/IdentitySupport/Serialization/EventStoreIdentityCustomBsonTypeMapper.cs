@@ -22,11 +22,16 @@ namespace Jarvis.Framework.Shared.IdentitySupport.Serialization
         public static void Register<T>() where T : EventStoreIdentity
         {
             Type type = typeof(T);
+            Register(type);
+        }
+
+        public static void Register(Type type)
+        {
             if (_registrations.Contains(type))
                 return;
 
             BsonTypeMapper.RegisterCustomTypeMapper(
-                type, 
+                type,
                 new EventStoreIdentityCustomBsonTypeMapper()
             );
 

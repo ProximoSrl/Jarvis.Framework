@@ -5,7 +5,7 @@ using Castle.Core.Logging;
 using Jarvis.Framework.Shared.Events;
 using Jarvis.NEventStoreEx.CommonDomainEx;
 using Jarvis.NEventStoreEx.CommonDomainEx.Core;
-
+using Jarvis.Framework.Shared.Helpers;
 namespace Jarvis.Framework.Kernel.Engine
 {
     public abstract class AggregateRoot : AggregateBaseEx
@@ -79,6 +79,15 @@ namespace Jarvis.Framework.Kernel.Engine
         {
             ((AggregateRootEventRouter<TState>)RegisteredRoutes).AttachAggregateRoot(this);
             _internalState = new TState();
+        }
+
+        protected override void RaiseEvent(object @event)
+        {
+            var domainEvent = @event as DomainEvent;
+            if (domainEvent == null)
+                throw new ApplicationException("Raised Events should inherits from DomainEvent class, invalid event type: " + @event.GetType().FullName);
+            domainEvent.SetPropertyValue(d => d.AggregateId, Id);
+            base.RaiseEvent(@event);
         }
 
         protected override IMementoEx GetSnapshot()
