@@ -40,9 +40,9 @@ namespace Jarvis.Framework.ElasticLogPoller
                 x.RunAsLocalSystem();
                 x.DependsOnMsmq();
 
-                x.SetDescription("Intranet.ProcessManager service");
-                x.SetDisplayName("Intranet.ProcessManager service");
-                x.SetServiceName("IntranetProcessManager");
+                x.SetDescription("Jarvis - Elastic Poller Service");
+                x.SetDisplayName("Jarvis - Elastic Poller Service");
+                x.SetServiceName("JarvisElasticPoller");
             });
 
 
@@ -58,12 +58,12 @@ namespace Jarvis.Framework.ElasticLogPoller
             Console.WriteLine();
             Console.WriteLine();
             Console.WriteLine("===================================================================");
-            Console.WriteLine("Intranet.ProcessManager service - Proximo srl");
+            Console.WriteLine("Jarvis - Elastic Poller service - Proximo srl");
             Console.WriteLine("===================================================================");
             Console.WriteLine("  install                            -> Installa il servizio");
             Console.WriteLine("  uninstall                          -> Rimuove il servizio");
-            Console.WriteLine("  net start IntranetProcessManager   -> Avvia il servizio");
-            Console.WriteLine("  net stop IntranetProcessManager    -> Arresta il servizio");
+            Console.WriteLine("  net start JarvisElasticPoller   -> Avvia il servizio");
+            Console.WriteLine("  net stop JarvisElasticPoller    -> Arresta il servizio");
             Console.WriteLine("===================================================================");
             Console.WriteLine();
             Console.WriteLine();

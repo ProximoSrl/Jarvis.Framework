@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using MongoDB.Driver.Linq;
 using MongoDB.Bson.Serialization.Attributes;
+using System.Text.RegularExpressions;
 
 namespace Jarvis.Framework.ElasticLogPoller.Importers
 {
@@ -72,18 +73,29 @@ namespace Jarvis.Framework.ElasticLogPoller.Importers
            
              if (resultList.Count == 0) return PollResult.Empty;
 
-             DateTime lastCheckpoint = resultList.Select(b => b["ts"]. AsDateTime).Max(); 
+            DateTime lastCheckpoint = resultList.Select(b => b["ts"]. AsDateTime).Max(); 
             var ready = resultList.Select(b =>
             {
-                b["_id"] = b["_id"].ToString();
-                b["ts"] = b["ts"].ToString();
-                b["collection"] = Collection;
-                b["mongo-server"] = Connection;
-                b["source"] = Connection + "/" + Collection;
-                return (JObject)JsonConvert.DeserializeObject(b.ToJson());
+                try
+                {
+                    b["_id"] = b["_id"].ToString();
+                    b["ts"] = b["ts"].ToString();
+                    b["collection"] = Collection;
+                    b["mongo-server"] = Connection;
+                    b["source"] = Connection + "/" + Collection;
+                    var jsonString = b.ToJson();
+                    var replaced = Regex.Replace(jsonString, "CSUUID\\(\"(?<csuid>.+?)\"\\)", "\"${csuid}\"");
+                    
+                    return (JObject)JsonConvert.DeserializeObject(replaced);
+                }
+                catch (Exception ex)
+                {
+                    _log.Error("Error converting mongo log: " + b.ToString(), ex);
+                    return null;
+                }
             });
 
-            var results = ready.ToList();
+            var results = ready.Where(e => e!= null).ToList();
 
             //var request = new BulkRequest();
             //request.Index = importer.Index;

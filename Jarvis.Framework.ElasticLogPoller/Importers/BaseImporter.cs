@@ -74,7 +74,7 @@ namespace Jarvis.Framework.ElasticLogPoller.Importers
         {
             if (!Client.IndexExists(x => x.Index(EsIndex)).Exists)
             {
-                _log.Info("Create ES index");
+                _log.Info("Create ES index: " + EsIndex);
                 var response = Client.CreateIndex(EsIndex, id => id.NumberOfShards(2));
             }
             var indexDefinition = new RootObjectMapping
@@ -108,6 +108,7 @@ namespace Jarvis.Framework.ElasticLogPoller.Importers
             indexDefinition.Properties.Add("source", notAnalyzedProperty);
             Client.Map<object>(x => x
                 .InitializeUsing(indexDefinition)
+                .Index(EsIndex)
                 .Type("log")
             );
             _log.Info("ES Mapping set");
