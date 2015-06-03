@@ -3,6 +3,7 @@ using System.Security.Claims;
 using Jarvis.Framework.Kernel.Commands;
 using Jarvis.Framework.Shared.Commands;
 using Rebus;
+using Castle.Core.Logging;
 
 namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
 {
@@ -10,9 +11,12 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
     {
         private IBus _bus;
 
+        public ILogger Logger { get; set; }
+
         public RebusCommandBus(IBus bus)
         {
             _bus = bus;
+            Logger = NullLogger.Instance;
         }
 
         public ICommand Send(ICommand command, string impersonatingUser = null)
