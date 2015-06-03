@@ -133,6 +133,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         public void Drop()
         {
+            if (_inmemoryCollection.IsActive)
+            {
+                _inmemoryCollection.Clear();
+            }
             _storage.Drop();
         }
 
