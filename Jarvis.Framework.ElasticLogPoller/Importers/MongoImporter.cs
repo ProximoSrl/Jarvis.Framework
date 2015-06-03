@@ -45,8 +45,9 @@ namespace Jarvis.Framework.ElasticLogPoller.Importers
         {
             base.Configure();
             SetTtl("log", "30d");
+            _log.InfoFormat("Mongo: Starting log polling {0}", Connection);
             var url = new MongoUrl(Connection);
-            var client = new MongoClient();
+            var client = new MongoClient(url);
 
             var db = client.GetServer().GetDatabase(url.DatabaseName);
             _collection = db.GetCollection(Collection);

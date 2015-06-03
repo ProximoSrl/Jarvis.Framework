@@ -83,12 +83,14 @@ namespace Jarvis.Framework.ElasticLogPoller
             try
             {
                 var converter = new ImporterConverter();
-
+                var fi = new FileInfo("config.json");
+                Console.WriteLine("Configuration file: {0}", fi.FullName);
                 importer = JsonConvert.DeserializeObject<ImporterEngine>(
-                    File.ReadAllText("config.json"), converter);
+                    File.ReadAllText(fi.FullName), converter);
 
                 importer.Configure();
                 Console.WriteLine("Importing Started. CTRL+C to exit");
+                //ten second polling timer
                 timer = new Timer(Poll, null, 0, 60 * 1000);
 
             }

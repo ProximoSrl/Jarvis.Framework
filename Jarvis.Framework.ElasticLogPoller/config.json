@@ -1,7 +1,7 @@
 ﻿{
     "Importers": [
         {
-            "Connection": "mongodb://localhost/jarvis-logs",
+            "Connection": "mongodb://bigend/jarvis-logs",
             "Collection": "logs",
             "EsIndex": "logs",
             "EsServer" :  "http://localhost:9200",
