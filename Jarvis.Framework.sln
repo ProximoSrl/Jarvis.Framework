@@ -33,6 +33,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jarvis.Framework.LoggingTes
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jarvis.Framework.ElasticLogPoller", "Jarvis.Framework.ElasticLogPoller\Jarvis.Framework.ElasticLogPoller.csproj", "{A3A2F347-F91A-4C31-BE79-4D6132B57812}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Agents", "Agents", "{BE283BF2-A477-4DBB-8419-37AFB87E69D0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jarvis.MonitoringAgent", "Agents\Jarvis.MonitoringAgent\Jarvis.MonitoringAgent.csproj", "{6839C8C3-A351-48B6-95A3-203234A8FADC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -83,6 +87,10 @@ Global
 		{A3A2F347-F91A-4C31-BE79-4D6132B57812}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A3A2F347-F91A-4C31-BE79-4D6132B57812}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A3A2F347-F91A-4C31-BE79-4D6132B57812}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6839C8C3-A351-48B6-95A3-203234A8FADC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6839C8C3-A351-48B6-95A3-203234A8FADC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6839C8C3-A351-48B6-95A3-203234A8FADC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6839C8C3-A351-48B6-95A3-203234A8FADC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -93,5 +101,6 @@ Global
 		{8D656BB6-54B2-4F50-B2A1-237C7FE3EC8D} = {1478AFD6-4740-4E37-9A4D-61B2151AF663}
 		{071D9E61-A404-4FA2-915A-3A9F01AAEE8C} = {1478AFD6-4740-4E37-9A4D-61B2151AF663}
 		{A3A2F347-F91A-4C31-BE79-4D6132B57812} = {1478AFD6-4740-4E37-9A4D-61B2151AF663}
+		{6839C8C3-A351-48B6-95A3-203234A8FADC} = {BE283BF2-A477-4DBB-8419-37AFB87E69D0}
 	EndGlobalSection
 EndGlobal
