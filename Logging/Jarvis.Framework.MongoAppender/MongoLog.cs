@@ -140,6 +140,19 @@ namespace Jarvis.Framework.MongoAppender
             if (loggingEvent.ExceptionObject != null)
             {
                 toReturn[FieldNames.Exception] = ExceptionToBSON(loggingEvent.ExceptionObject);
+                if (loggingEvent.ExceptionObject.InnerException != null)
+                {
+                    //Serialize all inner exception in a bson array
+                    var innerExceptionList = new BsonArray();
+                    var actualEx = loggingEvent.ExceptionObject.InnerException;
+                    while (actualEx != null)
+                    {
+                        var ex = ExceptionToBSON(actualEx);
+                        innerExceptionList.Add(ex);
+                        actualEx = actualEx.InnerException;
+                    }
+                    toReturn[FieldNames.Innerexception] = innerExceptionList;
+                }
             }
 
             // properties
@@ -170,8 +183,8 @@ namespace Jarvis.Framework.MongoAppender
         }
 
         /// <summary>
-        ///     Create BSON representation of Exception
-        ///     Inner exceptions are handled recursively
+        /// Create BSON representation of Exception
+        ///     
         /// </summary>
         /// <param name="ex"></param>
         /// <returns></returns>
@@ -181,11 +194,6 @@ namespace Jarvis.Framework.MongoAppender
             toReturn[FieldNames.Message] = ex.Message;
             toReturn[FieldNames.Source] = ex.Source ?? string.Empty;
             toReturn[FieldNames.Stacktrace] = ex.StackTrace ?? string.Empty;
-
-            if (ex.InnerException != null)
-            {
-                toReturn[FieldNames.Innerexception] = ExceptionToBSON(ex.InnerException);
-            }
 
             return toReturn;
         }

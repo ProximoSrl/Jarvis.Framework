@@ -130,6 +130,29 @@ namespace Jarvis.Framework.LoggingTests
             Assert.That(log, Is.EqualTo(1000));
         }
 
+        [Test]
+        public void verify_inner_exception()
+        {
+            try
+            {
+                var inner1 = new ApplicationException("Inner 1");
+                var inner2 = new ApplicationException("Inner 2", inner1);
+                throw new ApplicationException("outer", inner2);
+            }
+            catch (Exception ex)
+            {
+                _sut.Error("Exception", ex);
+            }
+            _appender.Flush();
+            var log = _logCollection.FindAllAs<BsonDocument>().First();
+            var innerExceptionList = log["ie"] as BsonArray;
+            Assert.That(innerExceptionList.Count, Is.EqualTo(2));
+
+            var exception = log["ex"].ToString();
+            Assert.That(exception, Is.Not.StringContaining("Inner 1"), "Exception should not contain inner exception");
+            Assert.That(exception, Is.Not.StringContaining("Inner 2"), "Exception should not contain inner exception");
+        }
+
         [Explicit]
         [Test]
         public void verify_speed_of_multiple_logs()
