@@ -14,9 +14,19 @@
     <dependencies>
       <dependency id="NEventStore" version="[5.1.1]" />
       <dependency id="mongocsharpdriver" version="1.10.0" />
-      <dependency id="rebus" version="0.84.0" />
+      <dependency id="Rebus" version="0.71.1" />
+      <dependency id="Rebus.Castle.Windsor" version="0.71.1" />
+      <dependency id="Rebus.MongoDb" version="0.71.1" />
       <dependency id="Newtonsoft.Json" version="6.0.8" />
     </dependencies>
   </metadata>
+
+  <files>
+    <file src="publish\Jarvis.Framework.Bus.Rebus.Integration.dll" target="lib" />
+    <file src="publish\Jarvis.Framework.Kernel.dll" target="lib" />
+    <file src="publish\Jarvis.Framework.Shared.dll" target="lib" />
+    <file src="publish\Jarvis.NEventStoreEx.dll" target="lib" />
+    <file src="publish\Jarvis.Framework.TestHelpers.dll" target="lib" />
+  </files>
 
 </package>
