@@ -149,6 +149,11 @@ namespace Jarvis.Framework.MongoAppender
                     {
                         var ex = ExceptionToBSON(actualEx);
                         innerExceptionList.Add(ex);
+                        if (actualEx.InnerException == null)
+                        {
+                            //this is the first exception
+                            toReturn[FieldNames.FirstException] = ExceptionToBSON(actualEx);
+                        }
                         actualEx = actualEx.InnerException;
                     }
                     toReturn[FieldNames.Innerexception] = innerExceptionList;
