@@ -1,0 +1,22 @@
+﻿<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>Jarvis.Framework</id>
+    <version>1.0.0</version>
+    <authors>Proximo S.r.L.</authors>
+    <owners>Proximo S.r.L.</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Jarvis Framework</description>
+    <releaseNotes></releaseNotes>
+    <copyright>Copyright 2015 - Proximo S.r.L.</copyright>
+    <tags>Jarvis,Framework</tags>
+
+    <dependencies>
+      <dependency id="NEventStore" version="[5.1.1]" />
+      <dependency id="mongocsharpdriver" version="1.10.0" />
+      <dependency id="rebus" version="0.84.0" />
+      <dependency id="Newtonsoft.Json" version="6.0.8" />
+    </dependencies>
+  </metadata>
+
+</package>
