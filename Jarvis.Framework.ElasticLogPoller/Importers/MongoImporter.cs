@@ -41,15 +41,13 @@ namespace Jarvis.Framework.ElasticLogPoller.Importers
         private MongoCollection<BsonDocument> _collection;
         private MongoCollection<ImportCheckpoint> _checkpointCollection;
         private ImportCheckpoint _checkpoint;
+
         public override void Configure()
         {
             base.Configure();
             SetTtl("log", "30d");
             _log.InfoFormat("Mongo: Starting log polling {0}", Connection);
-            var url = new MongoUrl(Connection);
-            var client = new MongoClient(url);
-
-            var db = client.GetServer().GetDatabase(url.DatabaseName);
+            MongoDatabase db = GetDatabase();
             _collection = db.GetCollection(Collection);
             _checkpointCollection = db.GetCollection<ImportCheckpoint>("importer.checkpoints");
             _checkpoint = _checkpointCollection.AsQueryable()
@@ -58,6 +56,52 @@ namespace Jarvis.Framework.ElasticLogPoller.Importers
             {
                 _checkpoint = new ImportCheckpoint() { CollectionName = Collection, LastCheckpoint = DateTime.MinValue };
             }
+        }
+
+        public override List<BaseImporter> HandleWildcard()
+        {
+            if (Collection.Contains("*"))
+            {
+                //this is a wildcard importer.
+                List<BaseImporter> expanded = new List<BaseImporter>();
+                var collection = Collection;
+                var regex = collection
+                    .Replace(".", "\\.")
+                    .Replace("*", "(?<wildcards>.*)");
+                var db = GetDatabase();
+                var collections = db.GetCollectionNames();
+                foreach (var collectionName in collections)
+                {
+                    var match = Regex.Match(collectionName, regex);
+                    if (match.Success)
+                    {
+                        var wildcardValue = match.Groups["wildcards"].Value;
+                        MongoImporter importer = new MongoImporter()
+                        {
+                            Connection = this.Connection,
+                            Collection = collectionName,
+                            EsIndex = this.EsIndex.Replace("*", wildcardValue),
+                            EsServer = this.EsServer,
+                        };
+                        expanded.Add(importer);
+                    }
+
+                }
+                return expanded;
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+        private MongoDatabase GetDatabase()
+        {
+            var url = new MongoUrl(Connection);
+            var client = new MongoClient(url);
+
+            var db = client.GetServer().GetDatabase(url.DatabaseName);
+            return db;
         }
 
         protected override PollResult OnPoll()
@@ -84,6 +128,20 @@ namespace Jarvis.Framework.ElasticLogPoller.Importers
                     b["collection"] = Collection;
                     b["mongo-server"] = Connection;
                     b["source"] = Connection + "/" + Collection;
+                    var level = b["le"].AsString;
+                    String ttl = "30d";
+                    if (level == "DEBUG")
+                    {
+                        ttl = "2d";
+                    }
+                    else if (level == "INFO")
+                    {
+                        ttl = "5d";
+                    }
+                    else if (level == "WARN")
+                    {
+                        ttl = "15d";
+                    }
                     var jsonString = b.ToJson();
                     var replaced = Regex.Replace(jsonString, "CSUUID\\(\"(?<csuid>.+?)\"\\)", "\"${csuid}\"");
                     
