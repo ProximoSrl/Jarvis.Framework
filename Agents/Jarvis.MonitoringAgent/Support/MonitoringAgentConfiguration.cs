@@ -10,7 +10,10 @@ namespace Jarvis.MonitoringAgent.Support
 {
     public class MonitoringAgentConfiguration
     {
+        public String CustomerId { get; set; }
 
+        public String PublicEncryptionKey { get; set; }
+        
         /// <summary>
         /// this is the list of mongo database with logs that the agent
         /// should send to the server.
