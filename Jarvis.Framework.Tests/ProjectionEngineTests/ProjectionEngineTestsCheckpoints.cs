@@ -21,7 +21,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         {
             base.TestFixtureSetUp();
         }
-
+          
         protected override void RegisterIdentities(IdentityManager identityConverter)
         {
             identityConverter.RegisterIdentitiesFromAssembly(typeof(SampleAggregateId).Assembly);
@@ -69,7 +69,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregateId(1));
             aggregate.Create();
             Repository.Save(aggregate, Guid.NewGuid(), h => { });
-
+              
             aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregateId(2));
             aggregate.Create();
             Repository.Save(aggregate, Guid.NewGuid(), h => { });
