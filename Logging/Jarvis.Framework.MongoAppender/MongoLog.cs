@@ -53,9 +53,22 @@ namespace Jarvis.Framework.MongoAppender
             private set { _machineName = value; }
         }
 
+        public string CappedSizeInMb
+        {
+            get
+            {
+                if (_cappedSizeInMb == null)
+                    _cappedSizeInMb = (5 * 1024).ToString();
+
+                return _cappedSizeInMb;
+            }
+            private set { _cappedSizeInMb = value; }
+        }
+        private string _cappedSizeInMb;
 
         public string ConnectionString { get; set; }
         public string CollectionName { get; set; }
+
         public TimeToLive ExpireAfter { get; set; }
 
         public Boolean LooseFix { get; set; }
@@ -65,7 +78,18 @@ namespace Jarvis.Framework.MongoAppender
             var uri = new MongoUrl(ConnectionString);
             var client = new MongoClient(uri);
             MongoDatabase db = client.GetServer().GetDatabase(uri.DatabaseName);
-
+            Int64 cappedSize;
+            if (!Int64.TryParse(CappedSizeInMb, out cappedSize))
+            {
+                cappedSize = 5 * 1024L;
+            }
+            if (!db.CollectionExists(CollectionName))
+            {
+                CollectionOptionsBuilder options = CollectionOptions
+                    .SetCapped(true)
+                    .SetMaxSize(1024L * 1024L * cappedSize); //5 gb.
+                db.CreateCollection(CollectionName, options);
+            }
             LogCollection = db.GetCollection(CollectionName);
             var builder = new IndexOptionsBuilder();
 
