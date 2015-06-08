@@ -60,7 +60,7 @@ namespace Jarvis.MonitoringAgentServer
         {
             if (Environment.UserInteractive)
             {
-                Console.Title = "Jarvis - Monitoring Agent";
+                Console.Title = "Jarvis - Monitoring Agent Server";
                 Console.BackgroundColor = ConsoleColor.DarkYellow;
                 Console.Clear();
                 Banner();
@@ -95,9 +95,9 @@ namespace Jarvis.MonitoringAgentServer
                 x.RunAsLocalSystem();
                 x.DependsOnMsmq();
 
-                x.SetDescription("Jarvis - Monitoring Agent");
-                x.SetDisplayName("Jarvis - Monitoring Agent");
-                x.SetServiceName("JarvisMonitoringAgent");
+                x.SetDescription("Jarvis - Monitoring Agent Server");
+                x.SetDisplayName("Jarvis - Monitoring Agent Server");
+                x.SetServiceName("JarvisMonitoringAgentServer");
             });
         }
 
@@ -106,12 +106,12 @@ namespace Jarvis.MonitoringAgentServer
             Console.WriteLine();
             Console.WriteLine();
             Console.WriteLine("===================================================================");
-            Console.WriteLine("Jarvis - Monitoring Agent Service - Proximo srl");
+            Console.WriteLine("Jarvis - Monitoring Agent Server Service - Proximo srl");
             Console.WriteLine("===================================================================");
             Console.WriteLine("  install                            -> Installa il servizio");
             Console.WriteLine("  uninstall                          -> Rimuove il servizio");
-            Console.WriteLine("  net start JarvisMonitoringAgent   -> Avvia il servizio");
-            Console.WriteLine("  net stop JarvisMonitoringAgent    -> Arresta il servizio");
+            Console.WriteLine("  net start JarvisMonitoringAgentServer   -> Avvia il servizio");
+            Console.WriteLine("  net stop JarvisMonitoringAgentServer    -> Arresta il servizio");
             Console.WriteLine("===================================================================");
             Console.WriteLine();
             Console.WriteLine();

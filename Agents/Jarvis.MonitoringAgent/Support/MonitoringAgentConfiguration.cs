@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -16,6 +17,8 @@ namespace Jarvis.MonitoringAgent.Support
         /// </summary>
         public List<MongoLogDatabase> MongoLogDatabaseList { get; set; }
 
+        public DirectoryInfo UploadQueueFolder { get; set; }
+
         public class MongoLogDatabase
         {
             public String ConnectionString { get; set; }
@@ -28,8 +31,6 @@ namespace Jarvis.MonitoringAgent.Support
     {
         public AppConfigMonitoringAgentConfiguration()
         {
-           
-
             MongoLogDatabaseList = new List<MongoLogDatabase>();
             foreach (var mongoLogSetting in ConfigurationManager.AppSettings
                 .AllKeys.Where(k => k.StartsWith("mongo-log")))
@@ -41,6 +42,12 @@ namespace Jarvis.MonitoringAgent.Support
                     ConnectionString = splittedSetting[0],
                     CollectionName = splittedSetting[1],
                 });
+            }
+
+            UploadQueueFolder = new DirectoryInfo(ConfigurationManager.AppSettings["upload-temp-folder"]);
+            if (!UploadQueueFolder.Exists)
+            {
+                Directory.CreateDirectory(UploadQueueFolder.FullName);
             }
         }
     }

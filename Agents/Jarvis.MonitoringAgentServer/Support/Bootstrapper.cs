@@ -48,7 +48,7 @@ namespace Jarvis.MonitoringAgentServer.Support
 
         private bool StartServer()
         {
-            _logger.Info("Starting with server Role.");
+            _logger.Info("Starting Agent Server.");
 
             var url = new MongoUrl(_configuration.MongoConnectionString);
             var client = new MongoClient(url);

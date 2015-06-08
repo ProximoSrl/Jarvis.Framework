@@ -1,18 +1,10 @@
-﻿using Castle.Core.Logging;
+﻿using System;
+using System.Collections.Generic;
+using Castle.Core.Logging;
 using Castle.MicroKernel.Registration;
 using Castle.Windsor;
 using Jarvis.MonitoringAgent.Client.Jobs;
-using Jarvis.MonitoringAgent.Server;
-using Jarvis.MonitoringAgent.Server.Data;
-using Microsoft.Owin.Hosting;
-using MongoDB.Driver;
 using Quartz;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Web.Http;
 using Topshelf;
 
 namespace Jarvis.MonitoringAgent.Support
@@ -66,7 +58,7 @@ namespace Jarvis.MonitoringAgent.Support
 
             var trigger = TriggerBuilder.Create()
                 .WithIdentity("trigger-LogUploader")
-                .StartAt(DateTime.Now.AddSeconds(5))
+                .StartNow()
                 .WithSimpleSchedule(builder => builder.WithIntervalInMinutes(5)
                 .RepeatForever())
                 .Build();

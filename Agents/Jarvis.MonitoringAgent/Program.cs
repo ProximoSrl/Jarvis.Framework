@@ -66,7 +66,7 @@ namespace Jarvis.MonitoringAgent
             if (Environment.UserInteractive)
             {
                 Console.Title = "Jarvis - Monitoring Agent";
-                Console.BackgroundColor = ConsoleColor.DarkYellow;
+                Console.BackgroundColor = ConsoleColor.DarkRed;
                 Console.Clear();
                 Banner();
             }
