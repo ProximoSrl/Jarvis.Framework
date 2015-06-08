@@ -17,15 +17,14 @@ using log4net.Layout;
 
 namespace Jarvis.Framework.LoggingTests
 {
-    [TestFixture]
-    public class MongoAppenderTests
+    public class MongoAppenderTestsBaseClass
     {
-        private MongoCollection _logCollection;
-        private BufferedMongoDBAppender _appender;
-        private MongoDBAppender _mongoAppender;
-        private FileAppender _fileAppender;
-        private ILog _sut;
-        private Logger _logger;
+        protected MongoCollection _logCollection;
+        protected BufferedMongoDBAppender _appender;
+        protected MongoDBAppender _mongoAppender;
+        protected FileAppender _fileAppender;
+        protected ILog _sut;
+        protected Logger _logger;
 
         [TestFixtureSetUp]
         public void TestFixtureSetup()
@@ -56,7 +55,7 @@ namespace Jarvis.Framework.LoggingTests
             _logCollection.Drop();
         }
 
-        private IAppender CreateMongoAppender(Boolean looseFix, Boolean multiThreadSave)
+        protected IAppender CreateMongoAppender(Boolean looseFix, Boolean multiThreadSave)
         {
             _appender = new BufferedMongoDBAppender
             {
@@ -72,7 +71,7 @@ namespace Jarvis.Framework.LoggingTests
             return _appender;
         }
 
-        private IAppender CreateMongoUnbufferedAppender(Boolean looseFix)
+        protected IAppender CreateMongoUnbufferedAppender(Boolean looseFix)
         {
             _mongoAppender = new MongoDBAppender
             {
@@ -87,19 +86,25 @@ namespace Jarvis.Framework.LoggingTests
             return _mongoAppender;
         }
 
-        
 
-        private IAppender CreateFileAppender()
+
+        protected IAppender CreateFileAppender()
         {
             _fileAppender = new FileAppender
             {
-               AppendToFile = false,
-               File = "test.log",
-               Layout = new PatternLayout("%date %username [%thread] %-5level %logger [%property{NDC}] - %message%newline"),
+                AppendToFile = false,
+                File = "test.log",
+                Layout = new PatternLayout("%date %username [%thread] %-5level %logger [%property{NDC}] - %message%newline"),
             };
             _fileAppender.ActivateOptions();
             return _fileAppender;
         }
+
+    }
+
+    [TestFixture]
+    public class MongoAppenderTests : MongoAppenderTestsBaseClass
+    {
 
         [Test]
         public void verify_single_log()
@@ -172,7 +177,12 @@ namespace Jarvis.Framework.LoggingTests
             var firstException = log["fe"];
             Assert.That(firstException["me"].AsString, Is.EqualTo("Inner 1"));
         }
+    }
 
+    [TestFixture]
+    [Explicit]
+    public class MongoAppenderTestsLoadTest : MongoAppenderTestsBaseClass
+    {
         [Explicit]
         [Test]
         public void verify_speed_of_multiple_logs()
