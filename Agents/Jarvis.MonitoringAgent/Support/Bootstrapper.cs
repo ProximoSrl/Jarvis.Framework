@@ -1,10 +1,12 @@
 ﻿using Castle.Core.Logging;
 using Castle.MicroKernel.Registration;
 using Castle.Windsor;
+using Jarvis.MonitoringAgent.Client.Jobs;
 using Jarvis.MonitoringAgent.Server;
 using Jarvis.MonitoringAgent.Server.Data;
 using Microsoft.Owin.Hosting;
 using MongoDB.Driver;
+using Quartz;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -38,13 +40,13 @@ namespace Jarvis.MonitoringAgent.Support
                 {
                     case Role.Server:
                         return StartServer();
-                    case Role.Monitor:
+                    case Role.Agent:
                         return StartMonitor();
                     default:
                         _logger.ErrorFormat("Unknown role {0}.", _configuration.Role);
                         return false;
                 }
-                
+
             }
             catch (Exception ex)
             {
@@ -58,7 +60,42 @@ namespace Jarvis.MonitoringAgent.Support
 
         private bool StartMonitor()
         {
+            _container.AddFacility<QuartzFacility>(c =>
+                c.Configure(CreateDefaultConfiguration())
+            );
+            //Register quartz jobs
+            _container.Register(
+                Classes.FromThisAssembly()
+                    .BasedOn<IJob>()
+                    .WithServiceSelf()
+            );
+
+            var job = JobBuilder.Create<LogUploaderJob>()
+                                .WithIdentity("LogUploader")
+                                .Build();
+
+            var trigger = TriggerBuilder.Create()
+                .WithIdentity("trigger-LogUploader")
+                .StartAt(DateTime.Now.AddSeconds(5))
+                .WithSimpleSchedule(builder => builder.WithIntervalInMinutes(5)
+                .RepeatForever())
+                .Build();
+            var scheduler =            _container.Resolve<IScheduler>();
+            scheduler.ScheduleJob(job, trigger);
+            scheduler.Start();
+
             return true;
+        }
+
+        private IDictionary<string, string> CreateDefaultConfiguration()
+        {
+            var config = new Dictionary<string, string>();
+            config["quartz.scheduler.instanceId"] = Environment.MachineName + "-" + DateTime.Now.ToShortTimeString();
+            config["quartz.threadPool.type"] = "Quartz.Simpl.SimpleThreadPool, Quartz";
+            config["quartz.threadPool.threadCount"] = (Environment.ProcessorCount * 2).ToString();
+            config["quartz.threadPool.threadPriority"] = "Normal";
+            config["quartz.jobStore.type"] = "Quartz.Simpl.RAMJobStore, Quartz";
+            return config;
         }
 
         private bool StartServer()

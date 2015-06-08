@@ -121,17 +121,5 @@ namespace Jarvis.MonitoringAgent
             Console.WriteLine();
             Console.WriteLine();
         }
-
-        private void Stop()
-        {
-
-        }
-
-       
-        private void Start()
-        {
-            
-        }
-
     }
 }
