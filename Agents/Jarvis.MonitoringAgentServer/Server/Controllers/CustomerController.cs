@@ -1,17 +1,13 @@
-﻿using Jarvis.MonitoringAgent.Server.Controllers.Models;
-using Jarvis.MonitoringAgent.Server.Data;
-using Jarvis.MonitoringAgent.Server.Dto;
-using Jarvis.MonitoringAgent.Support;
+﻿using System.Linq;
+using System.Web.Http;
+using Jarvis.MonitoringAgentServer.Server.Controllers.Models;
+using Jarvis.MonitoringAgentServer.Server.Data;
+using Jarvis.MonitoringAgentServer.Server.Dto;
+using Jarvis.MonitoringAgentServer.Support;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Web.Http;
 
-namespace Jarvis.MonitoringAgent.Server.Controllers
+namespace Jarvis.MonitoringAgentServer.Server.Controllers
 {
     public class CustomerController : ApiController
     {

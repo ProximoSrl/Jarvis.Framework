@@ -36,17 +36,7 @@ namespace Jarvis.MonitoringAgent.Support
         {
             try
             {
-                switch (_configuration.Role)
-                {
-                    case Role.Server:
-                        return StartServer();
-                    case Role.Agent:
                         return StartMonitor();
-                    default:
-                        _logger.ErrorFormat("Unknown role {0}.", _configuration.Role);
-                        return false;
-                }
-
             }
             catch (Exception ex)
             {
@@ -96,28 +86,6 @@ namespace Jarvis.MonitoringAgent.Support
             config["quartz.threadPool.threadPriority"] = "Normal";
             config["quartz.jobStore.type"] = "Quartz.Simpl.RAMJobStore, Quartz";
             return config;
-        }
-
-        private bool StartServer()
-        {
-            _logger.Info("Starting with server Role.");
-
-            var url = new MongoUrl(_configuration.MongoConnectionString);
-            var client = new MongoClient(url);
-            var db = client.GetServer().GetDatabase(url.DatabaseName);
-
-            ServerWebAppInstaller.SetContainer(_container);
-            var customerCollection = db.GetCollection<Customer>("serv.customers");
-            _container.Register(
-                Component
-                    .For<MongoCollection<Customer>>()
-                    .Instance(customerCollection),
-                Classes.FromThisAssembly()
-                    .BasedOn<ApiController>()
-                    .LifestyleTransient());
-            _app = WebApp.Start<ServerWebAppInstaller>(
-                _configuration.ServerWebAppAddress);
-            return true;
         }
 
         public Boolean Stop(HostControl hostControl)

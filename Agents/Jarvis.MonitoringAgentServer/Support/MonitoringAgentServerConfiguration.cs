@@ -2,13 +2,18 @@
 using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace Jarvis.MonitoringAgent.Support
+namespace Jarvis.MonitoringAgentServer.Support
 {
-    public class MonitoringAgentConfiguration
+    public class MonitoringAgentServerConfiguration
     {
+        /// <summary>
+        /// this is the primary connection string, used to save data 
+        /// related to server or agents functionalities.
+        /// </summary>
+        public String MongoConnectionString { get; protected set; }
+
+        public String ServerWebAppAddress { get; protected set; }
 
         /// <summary>
         /// this is the list of mongo database with logs that the agent
@@ -24,11 +29,14 @@ namespace Jarvis.MonitoringAgent.Support
         }
     }
 
-    public class AppConfigMonitoringAgentConfiguration : MonitoringAgentConfiguration
+
+
+    public class AppConfigMonitoringAgentServerConfiguration : MonitoringAgentServerConfiguration
     {
-        public AppConfigMonitoringAgentConfiguration()
+        public AppConfigMonitoringAgentServerConfiguration()
         {
-           
+            MongoConnectionString = ConfigurationManager.ConnectionStrings["mongo"].ConnectionString;
+            ServerWebAppAddress = ConfigurationManager.AppSettings["server.appuri"];
 
             MongoLogDatabaseList = new List<MongoLogDatabase>();
             foreach (var mongoLogSetting in ConfigurationManager.AppSettings

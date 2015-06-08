@@ -68,7 +68,9 @@ namespace Jarvis.MonitoringAgent.Client.Jobs
 
         public void Execute(IJobExecutionContext context)
         {
-            throw new NotImplementedException();
+            //start creating zip file to upload.
+
+
         }
     }
 }

@@ -1,14 +1,11 @@
-﻿using Castle.MicroKernel;
-using Castle.Windsor;
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Web.Http.Dependencies;
+using Castle.Windsor;
 
-namespace Jarvis.MonitoringAgent.Support
+namespace Jarvis.MonitoringAgentServer.Support
 {
     public class WindsorDependencyScope : IDependencyScope
     {

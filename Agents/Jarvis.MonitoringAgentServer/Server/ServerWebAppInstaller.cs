@@ -2,16 +2,16 @@
 using System.IO;
 using System.Linq;
 using System.Web.Http;
-
+using Castle.Windsor;
+using Jarvis.MonitoringAgentServer.Server;
+using Jarvis.MonitoringAgentServer.Support;
 using Microsoft.Owin;
 using Microsoft.Owin.FileSystems;
 using Microsoft.Owin.StaticFiles;
 using Owin;
-using Castle.Windsor;
-using Jarvis.MonitoringAgent.Support;
 
-[assembly: OwinStartup(typeof(Jarvis.MonitoringAgent.Server.ServerWebAppInstaller))]
-namespace Jarvis.MonitoringAgent.Server
+[assembly: OwinStartup(typeof(ServerWebAppInstaller))]
+namespace Jarvis.MonitoringAgentServer.Server
 {
     public class ServerWebAppInstaller
     {

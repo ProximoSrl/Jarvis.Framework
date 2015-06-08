@@ -1,11 +1,7 @@
-﻿using MongoDB.Bson.Serialization.Attributes;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System;
+using MongoDB.Bson.Serialization.Attributes;
 
-namespace Jarvis.MonitoringAgent.Server.Data
+namespace Jarvis.MonitoringAgentServer.Server.Data
 {
     public class Customer
     {

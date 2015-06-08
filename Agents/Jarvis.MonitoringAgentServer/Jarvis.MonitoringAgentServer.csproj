@@ -4,11 +4,11 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{6839C8C3-A351-48B6-95A3-203234A8FADC}</ProjectGuid>
+    <ProjectGuid>{352BFB74-BD40-4884-8ABE-A0F42F57B4B2}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Jarvis.MonitoringAgent</RootNamespace>
-    <AssemblyName>Jarvis.MonitoringAgent</AssemblyName>
+    <RootNamespace>Jarvis.MonitoringAgentServer</RootNamespace>
+    <AssemblyName>Jarvis.MonitoringAgentServer</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -136,23 +136,30 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Client\Jobs\LogUploaderJob.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Server\Controllers\CustomerController.cs" />
+    <Compile Include="Server\Controllers\Models\Customers.cs" />
+    <Compile Include="Server\Data\Customer.cs" />
+    <Compile Include="Server\Dto\CustomerDto.cs" />
+    <Compile Include="Server\ServerApplication.cs" />
+    <Compile Include="Server\ServerWebAppInstaller.cs" />
     <Compile Include="Support\Bootstrapper.cs" />
     <Compile Include="Support\EncryptionUtils.cs" />
-    <Compile Include="Support\MonitoringAgentConfiguration.cs" />
-    <Compile Include="Support\QuartzFacility.cs" />
+    <Compile Include="Support\MonitoringAgentServerConfiguration.cs" />
+    <Compile Include="Support\WindsorResolver.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
-    <None Include="job_scheduling_data_2_0.xsd">
-      <SubType>Designer</SubType>
-    </None>
     <None Include="log4net.config">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="serverapp\index.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
