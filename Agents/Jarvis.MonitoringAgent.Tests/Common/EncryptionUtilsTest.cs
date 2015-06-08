@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -26,7 +27,7 @@ namespace Jarvis.MonitoringAgent.Tests.Common
 
 
         [Test]
-        public void verify_asimmetric_encryption()
+        public void verify_simmetric_file_encryption()
         {
             var fileName = "TestFiles\\SampleFile.txt";
             var encryptedFileName = "TestFiles\\SampleFile.encrypted";
@@ -41,6 +42,58 @@ namespace Jarvis.MonitoringAgent.Tests.Common
             var decryptedContent = EncryptionUtils.Decrypt(key, encryptedContent);
             var decryptedString = Encoding.UTF8.GetString(decryptedContent);
             Assert.That(decryptedString, Is.EqualTo("This is a sample text file."));
+        }
+
+        [Test]
+        public void verify_asimmetric_file_encryption()
+        {
+            var fileName = "TestFiles\\SampleFile.txt";
+            var encryptedFileName = "TestFiles\\SampleFile.encrypted";
+
+            if (File.Exists(encryptedFileName))
+            {
+                File.Delete(encryptedFileName);
+            }
+
+            var key = EncryptionUtils.GenerateAsimmetricKey();
+            var publicKey = key.GetPublicKey();
+
+            var encryptionKeyAsString = EncryptionUtils.EncryptFile(fileName, encryptedFileName, publicKey);
+            var encryptedContent = File.ReadAllBytes(encryptedFileName);
+
+            //now we need to decrypt the key used to encrypt the file
+            var encryptedKey = EncryptionKey.CreateFromSerializedString(encryptionKeyAsString);
+            var decryptedKey = EncryptionUtils.Decrypt(key, encryptedKey);
+
+            var decryptedContent = EncryptionUtils.Decrypt(decryptedKey, encryptedContent);
+            var decryptedString = Encoding.UTF8.GetString(decryptedContent);
+            Assert.That(decryptedString, Is.EqualTo("This is a sample text file."));
+        }
+
+
+        [Test]
+        public void Verify_asymmetric_encription()
+        {
+            var key = EncryptionUtils.GenerateAsimmetricKey();
+
+            var publicKey = key.GetPublicKey();
+            var encrypted = EncryptionUtils.Encrypt(publicKey, "This is a password");
+              
+            var decrypted = EncryptionUtils.Decrypt(key, encrypted);
+            Assert.That(decrypted, Is.EqualTo("This is a password"));
+        }
+
+        [Test]
+        [ExpectedException(typeof(CryptographicException))]
+        public void Verify_cannot_decrypt_with_public_key()
+        {
+            var key = EncryptionUtils.GenerateAsimmetricKey();
+
+            var publicKey = key.GetPublicKey();
+            var encrypted = EncryptionUtils.Encrypt(publicKey, "This is a password");
+
+            var decrypted = EncryptionUtils.Decrypt(publicKey, encrypted);
+  
         }
     }
 }

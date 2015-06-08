@@ -38,29 +38,54 @@ namespace Jarvis.MonitoringAgent.Common
             }
         }
 
-        public class AsimmetricEncryptionKey
+        public class AsymmetricEncryptionKey
         {
             public String PublicKey { get; private set; }
             public String PrivateKey { get; private set; }
 
-            public AsimmetricEncryptionKey(RSACryptoServiceProvider rsa)
+            public AsymmetricEncryptionKey(RSACryptoServiceProvider rsa)
             {
                 PublicKey = BitConverter.ToString(rsa.ExportCspBlob(false)).Replace("-", "");
                 PrivateKey = BitConverter.ToString(rsa.ExportCspBlob(true)).Replace("-", "");
+            }
+
+            private AsymmetricEncryptionKey() { }
+
+            public AsymmetricEncryptionKey GetPublicKey()
+            {
+                return new AsymmetricEncryptionKey() { PublicKey = this.PublicKey };
+            }
+
+            public RSACryptoServiceProvider GetProvider()
+            {
+                RSACryptoServiceProvider retValue = new RSACryptoServiceProvider();
+                Byte[] cspBlob;
+                if (!String.IsNullOrEmpty(PrivateKey))
+                {
+                    cspBlob = HexEncoding.GetBytes(PrivateKey);
+                }
+                else
+                {
+                    cspBlob = HexEncoding.GetBytes(PublicKey);
+                }
+                retValue.ImportCspBlob(cspBlob);
+                return retValue;
             }
         }
 
         public static class EncryptionUtils
         {
 
-            public static AsimmetricEncryptionKey GenerateAsimmetricKey()
+            public static AsymmetricEncryptionKey GenerateAsimmetricKey()
             {
                 //Generate a public/private key pair.
-                RSACryptoServiceProvider RSA = new RSACryptoServiceProvider();
-                //Save the public key information to an RSAParameters structure.
-                AsimmetricEncryptionKey key = new AsimmetricEncryptionKey(RSA);
+                using (RSACryptoServiceProvider RSA = new RSACryptoServiceProvider())
+                {
+                    //Save the public key information to an RSAParameters structure.
+                    AsymmetricEncryptionKey key = new AsymmetricEncryptionKey(RSA);
 
-                return key;
+                    return key;
+                }
             }
 
             public static EncryptionKey GenerateKey()
@@ -73,6 +98,48 @@ namespace Jarvis.MonitoringAgent.Common
                     key.Key = rm.Key;
                     key.IV = rm.IV;
                     return key;
+                }
+            }
+
+            public static EncryptionKey Encrypt(AsymmetricEncryptionKey asymmetricKey, EncryptionKey symmetricKey)
+            {
+                var IV = Encrypt(asymmetricKey, symmetricKey.IV);
+                var Key = Encrypt(asymmetricKey, symmetricKey.Key);
+                return new EncryptionKey() { IV = IV, Key = Key };
+            }
+
+            public static EncryptionKey Decrypt(AsymmetricEncryptionKey asymmetricKey, EncryptionKey encryptedSimmetricKey)
+            {
+                var IV = Decrypt(asymmetricKey, encryptedSimmetricKey.IV);
+                var Key = Decrypt(asymmetricKey, encryptedSimmetricKey.Key);
+                return new EncryptionKey() { IV = IV, Key = Key };
+            }
+
+            public static String Encrypt(AsymmetricEncryptionKey key, String data)
+            {
+                var encrypted = Encrypt(key, Encoding.UTF8.GetBytes(data));
+                return BitConverter.ToString(encrypted).Replace("-", "");
+            }
+
+            public static Byte[] Encrypt(AsymmetricEncryptionKey key, Byte[] data)
+            {
+                using (var rsa = key.GetProvider())
+                {
+                    return rsa.Encrypt(data, true);
+                }
+            }
+
+            public static String Decrypt(AsymmetricEncryptionKey key, String data)
+            {
+                var decrypted = Decrypt(key, HexEncoding.GetBytes(data));
+                return Encoding.UTF8.GetString(decrypted);
+            }
+
+            public static Byte[] Decrypt(AsymmetricEncryptionKey key, Byte[] data)
+            {
+                using (var rsa = key.GetProvider())
+                {
+                    return rsa.Decrypt(data, true);
                 }
             }
 
@@ -186,6 +253,33 @@ namespace Jarvis.MonitoringAgent.Common
                 }
                 return key.SerializeAsString();
             }
+
+            /// <summary>
+            /// Encrypt a file generating new simmetric key, the simmetric key is then 
+            /// encrypted with an asimmetric key
+            /// </summary>
+            /// <param name="fileName"></param>
+            /// <param name="destinationFileName"></param>
+            /// <param name="key"></param>
+            /// <returns></returns>
+            public static String EncryptFile(String fileName, String destinationFileName, AsymmetricEncryptionKey key)
+            {
+                var newSimmetricKey = GenerateKey();
+                using (FileStream sourceFs = new FileStream(fileName, FileMode.Open))
+                using (FileStream destinationFs = new FileStream(destinationFileName, FileMode.Create))
+                using (RijndaelManaged crypto = new RijndaelManaged())
+                {
+                    ICryptoTransform ct = crypto.CreateEncryptor(newSimmetricKey.Key, newSimmetricKey.IV);
+                    using (CryptoStream cs = new CryptoStream(destinationFs, ct, CryptoStreamMode.Write))
+                    {
+                        sourceFs.CopyTo(cs);
+                    }
+                }
+
+                var encryptedKey = Encrypt(key, newSimmetricKey);
+                return encryptedKey.SerializeAsString();
+            }
+
 
         }
 
