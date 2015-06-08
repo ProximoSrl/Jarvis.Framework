@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.IO;
 using System.Linq;
 
 namespace Jarvis.MonitoringAgentServer.Support
@@ -20,6 +21,8 @@ namespace Jarvis.MonitoringAgentServer.Support
         /// should send to the server.
         /// </summary>
         public List<MongoLogDatabase> MongoLogDatabaseList { get; set; }
+
+        public DirectoryInfo UploadQueueFolder { get; protected set; }
 
         public class MongoLogDatabase
         {
@@ -49,6 +52,12 @@ namespace Jarvis.MonitoringAgentServer.Support
                     ConnectionString = splittedSetting[0],
                     CollectionName = splittedSetting[1],
                 });
+            }
+
+            UploadQueueFolder = new DirectoryInfo(ConfigurationManager.AppSettings["upload-temp-folder"]);
+            if (!UploadQueueFolder.Exists)
+            {
+                Directory.CreateDirectory(UploadQueueFolder.FullName);
             }
         }
     }

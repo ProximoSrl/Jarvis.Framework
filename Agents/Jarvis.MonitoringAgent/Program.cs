@@ -36,7 +36,7 @@ namespace Jarvis.MonitoringAgent
             {
                 StandardStart();
             }
-
+            Console.WriteLine("Service is Stopped");
         }
 
         private static void StartForInstallOrUninstall()

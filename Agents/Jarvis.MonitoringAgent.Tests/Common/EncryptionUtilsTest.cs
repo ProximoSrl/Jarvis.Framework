@@ -70,6 +70,32 @@ namespace Jarvis.MonitoringAgent.Tests.Common
             Assert.That(decryptedString, Is.EqualTo("This is a sample text file."));
         }
 
+        [Test]
+        public void verify_asimmetric_file_encryption_file_decrypt()
+        {
+            var fileName = "TestFiles\\SampleFile.txt";
+            var encryptedFileName = "TestFiles\\SampleFile.encrypted";
+            var decryptedFileName = "TestFiles\\SampleFile.decrypted";
+
+            if (File.Exists(encryptedFileName))
+            {
+                File.Delete(encryptedFileName);
+            }
+
+            var key = EncryptionUtils.GenerateAsimmetricKey();
+            var publicKey = key.GetPublicKey();
+
+            var encryptionKeyAsString = EncryptionUtils.EncryptFile(fileName, encryptedFileName, publicKey);
+           
+            //now we need to decrypt the key used to encrypt the file
+            var encryptedKey = EncryptionKey.CreateFromSerializedString(encryptionKeyAsString);
+            var decryptedKey = EncryptionUtils.Decrypt(key, encryptedKey);
+
+            EncryptionUtils.DecryptFile(decryptedKey, encryptedFileName, decryptedFileName);
+            var decryptedString = File.ReadAllText(decryptedFileName);
+            Assert.That(decryptedString, Is.EqualTo("This is a sample text file."));
+        }
+
 
         [Test]
         public void Verify_asymmetric_encription()

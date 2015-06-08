@@ -44,11 +44,11 @@ namespace Jarvis.MonitoringAgentServer.Server
             // Web API routes
             config.MapHttpAttributeRoutes();
 
-            config.Routes.MapHttpRoute(
-                "DefaultServerApi",
-                "server/api/{controller}/{action}/{id}",
-                new { id = RouteParameter.Optional }
-            );
+            //config.Routes.MapHttpRoute(
+            //    "DefaultServerApi",
+            //    "api/{controller}/{action}/{id}",
+            //    new { id = RouteParameter.Optional }
+            //);
 
             appBuilder.UseWebApi(config);
         }

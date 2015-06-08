@@ -13,10 +13,11 @@ using System.Threading.Tasks;
 
 namespace Jarvis.MonitoringAgent.Support
 {
-    class QuartzFacility : AbstractFacility
+    public class QuartzFacility : AbstractFacility
     {
         IDictionary<string, string> _configuration;
         private ILogger _logger;
+        QuartzNetScheduler _scheduler;
         protected override void Init()
         {
             _logger = Kernel.Resolve<ILoggerFactory>().Create(GetType());
@@ -24,14 +25,19 @@ namespace Jarvis.MonitoringAgent.Support
             AddComponent<IJobScheduler, QuartzNetSimpleScheduler>();
             AddComponent<IJobFactory, CastleJobFactory>();
 
-            var scheduler = new QuartzNetScheduler(
+            _scheduler = new QuartzNetScheduler(
                 _configuration,
                 Kernel.Resolve<IJobFactory>(),
                 Kernel
             );
-            Kernel.Register(Component.For<IScheduler>().Instance(scheduler));
+            Kernel.Register(Component.For<IScheduler>().Instance(_scheduler));
         }
 
+        protected override void Dispose()
+        {
+            _scheduler.Dispose();
+            base.Dispose();
+        }
         internal string AddComponent<T>()
         {
             string key = typeof(T).AssemblyQualifiedName;

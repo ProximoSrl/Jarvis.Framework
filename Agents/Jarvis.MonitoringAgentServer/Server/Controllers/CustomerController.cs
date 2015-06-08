@@ -22,15 +22,21 @@ namespace Jarvis.MonitoringAgentServer.Server.Controllers
             _customers = customers;
         }
 
-        [Route("server/api/customers")]
+        [Route("api/customers")]
         [HttpGet]
         public object GetCustomers()
         {
+            if (base.RequestContext.Url.Request.RequestUri.Host == "localhost")
+            {
+                return Json(_customers.FindAll()
+                    .Select(c => new CustomerDto(c.Name, c.Enabled, c.PublicKey)));
+            }
+
             return Json(_customers.FindAll()
                 .Select(c => new CustomerDto(c.Name, c.Enabled)));
         }
 
-        [Route("server/api/customers")]
+        [Route("api/customers")]
         [HttpPut]
         public object AddCustomer(CreateCustomer createCustomer)
         {

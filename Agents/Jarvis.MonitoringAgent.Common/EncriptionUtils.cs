@@ -49,6 +49,25 @@ namespace Jarvis.MonitoringAgent.Common
                 PrivateKey = BitConverter.ToString(rsa.ExportCspBlob(true)).Replace("-", "");
             }
 
+            public static AsymmetricEncryptionKey CreateFromString(String key, Boolean containsPrivateKey)
+            {
+                var cspBlob = HexEncoding.GetBytes(key);
+                using (RSACryptoServiceProvider rsa = new RSACryptoServiceProvider())
+                {
+                    rsa.ImportCspBlob(cspBlob);
+                    var publicKey = BitConverter.ToString(rsa.ExportCspBlob(false)).Replace("-", "");
+                    String privateKey = "";
+                    if (containsPrivateKey)
+                    {
+                        privateKey = BitConverter.ToString(rsa.ExportCspBlob(true)).Replace("-", "");
+                    }
+                    return new AsymmetricEncryptionKey() {
+                        PublicKey = publicKey,
+                        PrivateKey = privateKey,
+                    };
+                }
+            }
+
             private AsymmetricEncryptionKey() { }
 
             public AsymmetricEncryptionKey GetPublicKey()
@@ -252,6 +271,26 @@ namespace Jarvis.MonitoringAgent.Common
                     }
                 }
                 return key.SerializeAsString();
+            }
+
+            /// <summary>
+            /// encrypt a file with a new fresh generated simmetric key.
+            /// </summary>
+            /// <param name="criptedFileName"></param>
+            /// <param name="destinationFileName"></param>
+            /// <returns></returns>
+            public static void DecryptFile(EncryptionKey key, String criptedFileName, String destinationFileName)
+            {
+                using (FileStream sourceFs = new FileStream(criptedFileName, FileMode.Open))
+                using (FileStream destinationFs = new FileStream(destinationFileName, FileMode.Create))
+                using (RijndaelManaged crypto = new RijndaelManaged())
+                {
+                    ICryptoTransform ct = crypto.CreateDecryptor(key.Key, key.IV);
+                    using (CryptoStream cs = new CryptoStream(destinationFs, ct, CryptoStreamMode.Write))
+                    {
+                        sourceFs.CopyTo(cs);
+                    }
+                }
             }
 
             /// <summary>

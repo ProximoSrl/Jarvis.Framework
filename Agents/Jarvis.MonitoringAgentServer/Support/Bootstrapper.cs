@@ -60,6 +60,9 @@ namespace Jarvis.MonitoringAgentServer.Support
                 Component
                     .For<MongoCollection<Customer>>()
                     .Instance(customerCollection),
+                  Component
+                    .For<MongoDatabase>()
+                    .Instance(db),
                 Classes.FromThisAssembly()
                     .BasedOn<ApiController>()
                     .LifestyleTransient());

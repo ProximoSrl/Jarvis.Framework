@@ -28,7 +28,7 @@ namespace Jarvis.MonitoringAgent.Support
         {
             try
             {
-                        return StartMonitor();
+                return StartMonitor();
             }
             catch (Exception ex)
             {
@@ -36,15 +36,20 @@ namespace Jarvis.MonitoringAgent.Support
                 hostControl.Stop();
                 return false;
             }
-
-            return true;
         }
+
+        private IScheduler _scheduler;
 
         private bool StartMonitor()
         {
+            
             _container.AddFacility<QuartzFacility>(c =>
                 c.Configure(CreateDefaultConfiguration())
             );
+
+            _scheduler = _container.Resolve<IScheduler>();
+
+           
             //Register quartz jobs
             _container.Register(
                 Classes.FromThisAssembly()
@@ -52,19 +57,30 @@ namespace Jarvis.MonitoringAgent.Support
                     .WithServiceSelf()
             );
 
-            var job = JobBuilder.Create<LogUploaderJob>()
-                                .WithIdentity("LogUploader")
+            var job = JobBuilder.Create<LogPollerJob>()
+                                .WithIdentity("LogPoller")
                                 .Build();
-
             var trigger = TriggerBuilder.Create()
-                .WithIdentity("trigger-LogUploader")
+                .WithIdentity("trigger-LogPoller")
                 .StartNow()
-                .WithSimpleSchedule(builder => builder.WithIntervalInMinutes(5)
+                .WithSimpleSchedule(builder => builder.WithIntervalInMinutes(1)
                 .RepeatForever())
                 .Build();
-            var scheduler =            _container.Resolve<IScheduler>();
-            scheduler.ScheduleJob(job, trigger);
-            scheduler.Start();
+            _scheduler.ScheduleJob(job, trigger);
+
+            job = JobBuilder.Create<LogUpdloaderJob>()
+                   .WithIdentity("LogUploader")
+                   .Build();
+
+            trigger = TriggerBuilder.Create()
+                .WithIdentity("trigger-LogUploader")
+                .StartAt(DateTimeOffset.Now.AddSeconds(0))
+                .WithSimpleSchedule(builder => builder.WithIntervalInMinutes(1)
+                .RepeatForever())
+                .Build();
+            _scheduler.ScheduleJob(job, trigger);
+
+            //_scheduler.Start();
 
             return true;
         }

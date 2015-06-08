@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Jarvis.MonitoringAgent.Common.Jarvis.MonitoringAgent.Common;
+using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.IO;
@@ -10,23 +11,25 @@ namespace Jarvis.MonitoringAgent.Support
 {
     public class MonitoringAgentConfiguration
     {
-        public String CustomerId { get; set; }
+        public String CustomerId { get; protected set; }
 
-        public String PublicEncryptionKey { get; set; }
-        
+        public AsymmetricEncryptionKey Key { get; protected set; }
+
+        public String ServerAddress { get; set; }
+
         /// <summary>
         /// this is the list of mongo database with logs that the agent
         /// should send to the server.
         /// </summary>
-        public List<MongoLogDatabase> MongoLogDatabaseList { get; set; }
+        public List<MongoLogDatabase> MongoLogDatabaseList { get; protected set; }
 
-        public DirectoryInfo UploadQueueFolder { get; set; }
+        public DirectoryInfo UploadQueueFolder { get; protected set; }
 
         public class MongoLogDatabase
         {
-            public String ConnectionString { get; set; }
+            public String ConnectionString { get; internal set; }
 
-            public String CollectionName { get; set; }
+            public String CollectionName { get; internal set; }
         }
     }
 
@@ -34,6 +37,12 @@ namespace Jarvis.MonitoringAgent.Support
     {
         public AppConfigMonitoringAgentConfiguration()
         {
+            CustomerId = ConfigurationManager.AppSettings["customer-id"];
+            var publicKey = ConfigurationManager.AppSettings["customer-key"];
+            Key = AsymmetricEncryptionKey.CreateFromString(publicKey, false);
+
+            ServerAddress = ConfigurationManager.AppSettings["server-address"].TrimEnd('/', '\\');
+
             MongoLogDatabaseList = new List<MongoLogDatabase>();
             foreach (var mongoLogSetting in ConfigurationManager.AppSettings
                 .AllKeys.Where(k => k.StartsWith("mongo-log")))

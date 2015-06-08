@@ -140,7 +140,8 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Client\Jobs\LogUploaderJob.cs" />
+    <Compile Include="Client\Jobs\LogPollerJob.cs" />
+    <Compile Include="Client\Jobs\LogUpdloaderJob.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Support\Bootstrapper.cs" />

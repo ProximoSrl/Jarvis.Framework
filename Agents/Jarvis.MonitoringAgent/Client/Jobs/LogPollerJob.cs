@@ -16,7 +16,8 @@ using MongoDB.Driver.Builders;
 
 namespace Jarvis.MonitoringAgent.Client.Jobs
 {
-    public class LogUploaderJob : IJob
+    [DisallowConcurrentExecution]
+    public class LogPollerJob : IJob
     {
         public ILogger Logger { get; set; }
 
@@ -102,7 +103,7 @@ namespace Jarvis.MonitoringAgent.Client.Jobs
 
         private List<LogCollectionInfo> _logCollectionInfoList = new List<LogCollectionInfo>();
 
-        public LogUploaderJob(MonitoringAgentConfiguration configuration)
+        public LogPollerJob(MonitoringAgentConfiguration configuration)
         {
             _configuration = configuration;
             foreach (var logDb in configuration.MongoLogDatabaseList)
@@ -125,7 +126,7 @@ namespace Jarvis.MonitoringAgent.Client.Jobs
                     //now create a file to upload.
                     String fileName = Path.Combine(
                         _configuration.UploadQueueFolder.FullName, 
-                        DateTime.UtcNow.ToString("yyyyMMdd_HHmmffff")
+                        DateTime.UtcNow.ToString("yyyyMMdd_HHmmffff") + ".logdump"
                     );
                     Logger.DebugFormat("Writing to {0}", fileName);
                     using (FileStream fs = new FileStream(fileName, FileMode.OpenOrCreate))
@@ -137,15 +138,6 @@ namespace Jarvis.MonitoringAgent.Client.Jobs
                             sw.WriteLine(serialized);
                         }
                     }
-
-                    //now file zipping
-                    var zippedFile = Path.ChangeExtension(fileName, ".zip");
-                    Logger.DebugFormat("Creating Zip File {0}", zippedFile);
-                    using (ZipArchive archive = ZipFile.Open(zippedFile, ZipArchiveMode.Create))
-                    {
-                        archive.CreateEntryFromFile(fileName, "logs.json");
-                    }
-                    File.Delete(fileName);
                     logs = logInfo.GetNextBlockOfLogs();
                 } ;
 
