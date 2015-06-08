@@ -146,6 +146,7 @@
     <Compile Include="ProjectionEngine\Client\PollingClientWrapperTpl.cs" />
     <Compile Include="ProjectionEngine\Client\PollingClientWrapper.cs" />
     <Compile Include="ProjectionEngine\Client\ProjectionMetrics.cs" />
+    <Compile Include="ProjectionEngine\Client\ConcurrentCheckpointStatusChecker.cs" />
     <Compile Include="ProjectionEngine\Client\RebuildSettings.cs" />
     <Compile Include="ProjectionEngine\Client\TaskHelpers.cs" />
     <Compile Include="ProjectionEngine\CollectionWrapper.cs" />

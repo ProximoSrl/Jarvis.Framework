@@ -25,10 +25,13 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         string _eventStoreConnectionString;
         IdentityManager _identityConverter;
         protected RepositoryEx Repository;
-        IStoreEvents _eventStore;
+        protected IStoreEvents _eventStore;
         protected MongoDatabase Database;
         RebuildContext _rebuildContext;
         protected MongoStorageFactory StorageFactory;
+
+        protected ConcurrentCheckpointTracker _tracker;
+        protected ConcurrentCheckpointStatusChecker _statusChecker;
 
         [TestFixtureSetUp]
         public virtual void TestFixtureSetUp()
@@ -65,7 +68,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             CollectionNames.Customize = name => name;
         }
 
-        void ConfigureEventStore()
+        protected void ConfigureEventStore()
         {
             var loggerFactory = Substitute.For<ILoggerFactory>();
             loggerFactory.Create(Arg.Any<Type>()).Returns(NullLogger.Instance);
@@ -79,9 +82,16 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
                 );
         }
 
-        void ConfigureProjectionEngine()
+
+        protected void ConfigureProjectionEngine()
         {
-            var tracker = new ConcurrentCheckpointTracker(Database);
+            if (Engine != null)
+            {
+                Engine.Stop();
+            }
+            _tracker = new ConcurrentCheckpointTracker(Database);
+            _statusChecker = new ConcurrentCheckpointStatusChecker(Database);
+
             var tenantId = new TenantId("engine");
 
             var config = new ProjectionEngineConfig()
@@ -95,9 +105,9 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             StorageFactory = new MongoStorageFactory(Database, _rebuildContext);
 
             Engine = new ConcurrentProjectionsEngine(
-                tracker,
+                _tracker,
                 BuildProjections().ToArray(),
-                new PollingClientWrapper(new CommitEnhancer(_identityConverter), true, tracker),
+                new PollingClientWrapper(new CommitEnhancer(_identityConverter), true, _tracker),
                 new NullHouseKeeper(),
                 _rebuildContext,
                 new NullNotifyCommitHandled(),

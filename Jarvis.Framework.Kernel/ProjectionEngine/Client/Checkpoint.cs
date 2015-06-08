@@ -12,7 +12,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         public string Signature { get; set; }
         public string Slot { get; set; }
 
-	    public DateTime? RebuildStart { get; set; }
+        /// <summary>
+        /// used to understand if a projection is still active.
+        /// </summary>
+        public Boolean Active { get; set; }
+
+        public DateTime? RebuildStart { get; set; }
 	    public DateTime? RebuildStop { get; set; }
         public long RebuildTotalSeconds { get; set; }
 

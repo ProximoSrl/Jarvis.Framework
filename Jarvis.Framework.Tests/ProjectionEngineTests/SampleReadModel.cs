@@ -12,4 +12,9 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
     {
         public Int64 Timestamp { get; set; }
     }
+
+    public class SampleReadModel3 : AbstractReadModel<string>
+    {
+        public Int64 Timestamp { get; set; }
+    }
 }

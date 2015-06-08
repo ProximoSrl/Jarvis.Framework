@@ -72,4 +72,44 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             });
         }
     }
+
+    public class Projection3 : AbstractProjection,
+     IEventHandler<SampleAggregateCreated>
+    {
+        readonly ICollectionWrapper<SampleReadModel3, string> _collection;
+
+        public Projection3(ICollectionWrapper<SampleReadModel3, string> collection)
+        {
+            _collection = collection;
+            _collection.Attach(this, false);
+        }
+
+        public override int Priority
+        {
+            get { return 3; } //higher priority than previous projection
+        }
+
+        public override void Drop()
+        {
+            _collection.Drop();
+        }
+        public override string GetSlotName()
+        {
+            return "OtherSlotName";
+        }
+
+        public override void SetUp()
+        {
+        }
+
+        public void On(SampleAggregateCreated e)
+        {
+            Thread.Sleep(0);
+            _collection.Insert(e, new SampleReadModel3()
+            {
+                Id = e.AggregateId,
+                Timestamp = DateTime.Now.Ticks
+            });
+        }
+    }
 }

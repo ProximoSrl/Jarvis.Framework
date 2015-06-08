@@ -61,6 +61,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
             checkPoint.Signature = projection.GetSignature();
             checkPoint.Slot = projection.GetSlotName();
+            checkPoint.Active = true;
             _checkpoints.Save(checkPoint);
             _checkpointTracker[id] = checkPoint.Value;
             _projectionToSlot[id] = checkPoint.Slot;
@@ -83,6 +84,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                 if (eventsVersion != null)
                     projectionStartFormCheckpointValue = eventsVersion.Value;
             }
+
+            //set all projection to active = false
+            _checkpoints.Update(
+                Query<Checkpoint>.NE(c => c.Slot, null),
+                Update<Checkpoint>.Set(c => c.Active, false),
+                UpdateFlags.Multi
+            );
 
             foreach (var projection in projections)
             {

@@ -131,6 +131,7 @@
     <Compile Include="ProjectionEngineTests\AbstractProjectionEngineTests.cs" />
     <Compile Include="ProjectionEngineTests\Projection.cs" />
     <Compile Include="ProjectionEngineTests\ProjectionEnginePriorityTests.cs" />
+    <Compile Include="ProjectionEngineTests\ProjectionEngineTestsCheckpoints.cs" />
     <Compile Include="ProjectionEngineTests\ProjectionEngineTestsPoller.cs" />
     <Compile Include="ProjectionEngineTests\SampleReadModel.cs" />
     <Compile Include="ProjectionsTests\DeleteEvent.cs" />
