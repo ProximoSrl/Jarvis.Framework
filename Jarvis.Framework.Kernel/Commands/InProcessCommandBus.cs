@@ -24,7 +24,7 @@ namespace Jarvis.Framework.Kernel.Commands
     {
     }
 
-    public class InProcessCommandBus : IInProcessCommandBus
+    public abstract class InProcessCommandBus : IInProcessCommandBus
     {
         private readonly IKernel _kernel;
         private ILogger _logger = NullLogger.Instance;
@@ -55,7 +55,6 @@ namespace Jarvis.Framework.Kernel.Commands
      
         public ICommand Defer(TimeSpan delay, ICommand command, string impersonatingUser = null)
         {
-            PrepareCommand(command, impersonatingUser);
             Logger.WarnFormat("Sending command {0} without delay", command.MessageId);
             return SendLocal(command, impersonatingUser);
         }
@@ -111,24 +110,29 @@ namespace Jarvis.Framework.Kernel.Commands
 
             if (userId == null)
             {
-                userId = impersonatingUser ?? ClaimsPrincipal.Current.Identity.Name;
-
-                if (String.IsNullOrWhiteSpace(userId))
-                    throw new Exception("Missing user id information in command context");
-
+                userId = ImpersonateUser(command, impersonatingUser);
                 command.SetContextData("user.id", userId);
             }
 
-            if (userId != "import" && !UserIsAllowedToSendCommand(command, userId))
+            if (!UserIsAllowedToSendCommand(command, userId))
             {
                 throw new UserCannotSendCommandException();
             }
         }
 
-        protected virtual bool UserIsAllowedToSendCommand(ICommand command, string userName)
+        protected virtual string ImpersonateUser(
+            ICommand command, 
+            string impersonatingUser)
         {
-            return true;
+            return impersonatingUser ?? GetCurrentExecutingUser();
         }
+
+        protected virtual string GetCurrentExecutingUser()
+        {
+            return null;
+        }
+
+        protected abstract bool UserIsAllowedToSendCommand(ICommand command, string userName);
 
         protected virtual void Handle(ICommandHandler handler, ICommand command)
         {
@@ -180,7 +184,7 @@ namespace Jarvis.Framework.Kernel.Commands
         }
     }
 
-    public class MultiTenantInProcessCommandBus : InProcessCommandBus
+    public abstract class MultiTenantInProcessCommandBus : InProcessCommandBus
     {
         readonly ITenantAccessor _tenantAccessor;
 
