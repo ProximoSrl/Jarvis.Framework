@@ -24,7 +24,7 @@ using System.Collections.Concurrent;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
 {
-    public class ProjectionEngine
+    public class ProjectionEngine : ITriggerProjectionsUpdate
     {
         readonly Func<IPersistStreams, CommitPollingClient> _pollingClientFactory;
 
