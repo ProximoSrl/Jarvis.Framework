@@ -115,12 +115,15 @@ namespace Jarvis.MonitoringAgent.Client.Jobs
         public void Execute(IJobExecutionContext context)
         {
             //start creating zip file to upload.
+            StringBuilder retMessage = new StringBuilder();
             foreach (var logInfo in _logCollectionInfoList)
             {
+                Int32 count = 0;
                 Logger.DebugFormat("Polling {0}", logInfo.Name);
                 List<BsonDocument> logs = logInfo.GetNextBlockOfLogs(); 
                 while (logs.Count > 0)
                 {
+                    count += logs.Count;
                     Logger.DebugFormat("Found {0} logs with logger {1}", logs.Count, logInfo.Name);
 
                     //now create a file to upload.
@@ -140,9 +143,15 @@ namespace Jarvis.MonitoringAgent.Client.Jobs
                     }
                     logs = logInfo.GetNextBlockOfLogs();
                 } ;
-
+                retMessage.AppendFormat("Poller {0} polled {1} logs.\n",
+                    logInfo.Name, count);
             }
-
+            if (retMessage.Length > 10000)
+            {
+                retMessage.Length = 10000;
+                retMessage.Append("...");
+            }
+            context.Result = retMessage.ToString();
         }
     }
 }

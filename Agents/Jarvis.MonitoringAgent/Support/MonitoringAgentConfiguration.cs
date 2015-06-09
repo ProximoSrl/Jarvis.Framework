@@ -23,6 +23,8 @@ namespace Jarvis.MonitoringAgent.Support
         /// </summary>
         public List<MongoLogDatabase> MongoLogDatabaseList { get; protected set; }
 
+        public String MongoConnectionString { get; protected set; }
+
         public DirectoryInfo UploadQueueFolder { get; protected set; }
 
         public class MongoLogDatabase
@@ -37,6 +39,8 @@ namespace Jarvis.MonitoringAgent.Support
     {
         public AppConfigMonitoringAgentConfiguration()
         {
+            MongoConnectionString = ConfigurationManager.ConnectionStrings["mongo"].ConnectionString;
+
             CustomerId = ConfigurationManager.AppSettings["customer-id"];
             var publicKey = ConfigurationManager.AppSettings["customer-key"];
             Key = AsymmetricEncryptionKey.CreateFromString(publicKey, false);

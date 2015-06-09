@@ -6,6 +6,8 @@ using Castle.Windsor;
 using Jarvis.MonitoringAgent.Client.Jobs;
 using Quartz;
 using Topshelf;
+using MongoDB.Driver;
+using Jarvis.MonitoringAgent.Common.Jobs;
 
 namespace Jarvis.MonitoringAgent.Support
 {
@@ -42,7 +44,15 @@ namespace Jarvis.MonitoringAgent.Support
 
         private bool StartMonitor()
         {
-            
+            var url = new MongoUrl(_configuration.MongoConnectionString);
+            var client = new MongoClient(url);
+            var db = client.GetServer().GetDatabase(url.DatabaseName);
+
+            _container.Register(
+                Component.For<MongoDatabase>()
+                .Instance(db)
+            );
+
             _container.AddFacility<QuartzFacility>(c =>
                 c.Configure(CreateDefaultConfiguration())
             );
@@ -56,6 +66,18 @@ namespace Jarvis.MonitoringAgent.Support
                     .BasedOn<IJob>()
                     .WithServiceSelf()
             );
+            //register listener
+            _container.Register(
+                Classes.FromAssemblyContaining<JobStatusListener>()
+                    .BasedOn<IJobListener>()
+                    .WithServiceFirstInterface()
+            );
+
+            var allListener = _container.ResolveAll<IJobListener>();
+            foreach (var listener in allListener)
+            {
+                _scheduler.ListenerManager.AddJobListener(listener);
+            }
 
             var job = JobBuilder.Create<LogPollerJob>()
                                 .WithIdentity("LogPoller")
@@ -80,7 +102,7 @@ namespace Jarvis.MonitoringAgent.Support
                 .Build();
             _scheduler.ScheduleJob(job, trigger);
 
-            //_scheduler.Start();
+            _scheduler.Start();
 
             return true;
         }
