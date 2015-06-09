@@ -16,7 +16,12 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 
         public Int32 MaxRetry { get; set; }
 
-        public Dictionary<String, String> endpointsMap = new Dictionary<string, string>();
+        public Dictionary<String, String> EndpointsMap { get; set; }
+
+        public JarvisRebusConfiguration()
+        {
+            EndpointsMap = new Dictionary<string, string>(); 
+        }
 
     }
 }

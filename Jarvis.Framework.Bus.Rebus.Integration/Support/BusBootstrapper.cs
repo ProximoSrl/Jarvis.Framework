@@ -29,7 +29,8 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
     {
         private readonly IWindsorContainer _container;
         private readonly string _connectionString;
-        private readonly string _prefix;
+        public string Prefix { get; private set; }
+
         private readonly JsonSerializerSettings _jsonSerializerSettings = new JsonSerializerSettings
         {
             TypeNameHandling = TypeNameHandling.All,
@@ -39,6 +40,8 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 
         public IMessagesTracker MessagesTracker { get; set; }
 
+        public JarvisRebusConfiguration Configuration { get; set; }
+
         public BusBootstrapper(
             IWindsorContainer container,
             string connectionString,
@@ -47,7 +50,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
         {
             this._container = container;
             this._connectionString = connectionString;
-            _prefix = prefix;
+            Prefix = prefix;
             MessagesTracker = messagesTracker;
         }
 
@@ -70,8 +73,8 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
             var busConfiguration = Configure.With(new WindsorContainerAdapter(_container))
                 .Logging(l => l.Log4Net())
                 .Serialization(c => c.Use(new CustomJsonSerializer()))
-                .Timeouts(t => t.StoreInMongoDb(_connectionString, _prefix + "-timeouts"))
-                .Subscriptions(s => s.StoreInMongoDb(_connectionString, _prefix + "-subscriptions"))
+                .Timeouts(t => t.StoreInMongoDb(_connectionString, Prefix + "-timeouts"))
+                .Subscriptions(s => s.StoreInMongoDb(_connectionString, Prefix + "-subscriptions"))
                 .Events(e => e.MessageSent += OnMessageSent)
                 .Events(e => e.PoisonMessage += OnPoisonMessage)
                 .SpecifyOrderOfHandlers(pipeline => pipeline.Use(new RemoveDefaultTimeoutReplyHandlerFilter()));
@@ -86,23 +89,25 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
                 );
         }
 
-        //public void StartWithConfigurationManager()
-        //{
-          
-        //}
-
-        public void StartWithConfiguration(JarvisRebusConfiguration configuration)
+        public void StartWithConfigurationProperty()
         {
-            String configurationPrefix = _prefix + "-rebus";
-            String inputQueueName = configuration.InputQueue;
-            String errorQueueName = configuration.ErrorQueue;
+            if (Configuration == null)
+            {
+                throw new ConfigurationErrorsException(
+@"Configuration property is null!
+You probably forgot to register JarvisRebusConfiguration instance in Castle 
+or manually set the Configuration property of this instance.");
+            }
 
-            Int32 workersNumber = configuration.NumOfWorkers;
+            String inputQueueName = Configuration.InputQueue;
+            String errorQueueName = Configuration.ErrorQueue;
+
+            Int32 workersNumber = Configuration.NumOfWorkers;
             
             var busConfiguration = CreateDefaultBusConfiguration();
 
             //now it is time to load endpoints configuration mapping
-            Dictionary<String, String> endpointsMap = configuration.endpointsMap;
+            Dictionary<String, String> endpointsMap = Configuration.EndpointsMap;
            
             var bus = busConfiguration
                 .Transport(t => t.UseMsmq(inputQueueName, errorQueueName))
