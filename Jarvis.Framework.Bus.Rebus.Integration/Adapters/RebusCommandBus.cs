@@ -7,7 +7,7 @@ using Castle.Core.Logging;
 
 namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
 {
-	public class RebusCommandBus : ICommandBus
+	public abstract class RebusCommandBus : ICommandBus
     {
         private IBus _bus;
 
@@ -50,26 +50,31 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
             return command;
         }
 
-	    protected virtual bool UserIsAllowedToSendCommand(ICommand command, string userName)
-	    {
-		    return true;
-	    }
+        protected abstract bool UserIsAllowedToSendCommand(ICommand command, string userName);
 
-	    protected virtual void PrepareCommand(ICommand command, string impersonatingUser)
+        protected virtual string ImpersonateUser(
+            ICommand command,
+            string impersonatingUser)
+        {
+            return impersonatingUser ?? GetCurrentExecutingUser();
+        }
+
+        protected virtual string GetCurrentExecutingUser()
+        {
+            return null;
+        }
+
+        protected virtual void PrepareCommand(ICommand command, string impersonatingUser)
         {
             var userId = command.GetContextData("user.id");
 
             if (userId == null)
             {
-                userId = impersonatingUser ?? ClaimsPrincipal.Current.Identity.Name;
-
-                if (String.IsNullOrWhiteSpace(userId))
-                    throw new Exception("Missing user id information in command context");
-
+                userId = ImpersonateUser(command, impersonatingUser);
                 command.SetContextData("user.id", userId);
             }
 
-		    if (userId != "import" &&  !UserIsAllowedToSendCommand(command, userId))
+            if (!UserIsAllowedToSendCommand(command, userId))
 		    {
 				throw new UserCannotSendCommandException();
 			}
