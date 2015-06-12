@@ -39,6 +39,7 @@
     <file src="publish\Jarvis.Framework.Kernel.dll" target="lib" />
     <file src="publish\Jarvis.Framework.Shared.dll" target="lib" />
     <file src="publish\Jarvis.NEventStoreEx.dll" target="lib" />
+    <file src="publish\Jarvis.Framework.TestHelpers.dll" target="lib" />
   </files>
 
 </package>
