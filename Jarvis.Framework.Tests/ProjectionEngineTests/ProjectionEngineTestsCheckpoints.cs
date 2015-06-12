@@ -62,7 +62,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             Assert.That(_statusChecker.IsCheckpointProjectedByAllProjection(lastCommit.CheckpointToken), Is.True);
         }
 
-        [Test]
+        //[Test]
         public async void verify_projection_removed()
         {
             var reader = new MongoReader<SampleReadModel, string>(Database);

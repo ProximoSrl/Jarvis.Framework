@@ -46,10 +46,6 @@
     <Reference Include="Castle.Windsor">
       <HintPath>..\packages\Castle.Windsor.3.3.0\lib\net45\Castle.Windsor.dll</HintPath>
     </Reference>
-    <Reference Include="Jarvis.ConfigurationService.Client, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Jarvis.ConfigurationService.Client.1.1.94\lib\NET45\Jarvis.ConfigurationService.Client.dll</HintPath>
-    </Reference>
     <Reference Include="log4net">
       <HintPath>..\packages\log4net.1.2.10\lib\2.0\log4net.dll</HintPath>
       <Private>True</Private>
@@ -100,6 +96,7 @@
     <Compile Include="Support\CommandHandlersRegistration.cs" />
     <Compile Include="Support\BusBootstrapper.cs" />
     <Compile Include="Support\CustomTimeoutReplyHandler.cs" />
+    <Compile Include="Support\JarvisRebusConfiguration.cs" />
     <Compile Include="Support\RemoveDefaultTimeoutReplyHandlerFilter.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -8,7 +8,6 @@ using System.Reflection;
 using System.Text;
 using Castle.MicroKernel.Registration;
 using Castle.Windsor;
-using Jarvis.ConfigurationService.Client;
 using Jarvis.Framework.Bus.Rebus.Integration.Logging;
 using Jarvis.Framework.Bus.Rebus.Integration.Serializers;
 using Jarvis.Framework.Shared.Commands;
@@ -30,7 +29,8 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
     {
         private readonly IWindsorContainer _container;
         private readonly string _connectionString;
-        private readonly string _prefix;
+        public string Prefix { get; private set; }
+
         private readonly JsonSerializerSettings _jsonSerializerSettings = new JsonSerializerSettings
         {
             TypeNameHandling = TypeNameHandling.All,
@@ -40,6 +40,8 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 
         public IMessagesTracker MessagesTracker { get; set; }
 
+        public JarvisRebusConfiguration Configuration { get; set; }
+
         public BusBootstrapper(
             IWindsorContainer container,
             string connectionString,
@@ -48,7 +50,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
         {
             this._container = container;
             this._connectionString = connectionString;
-            _prefix = prefix;
+            Prefix = prefix;
             MessagesTracker = messagesTracker;
         }
 
@@ -71,8 +73,8 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
             var busConfiguration = Configure.With(new WindsorContainerAdapter(_container))
                 .Logging(l => l.Log4Net())
                 .Serialization(c => c.Use(new CustomJsonSerializer()))
-                .Timeouts(t => t.StoreInMongoDb(_connectionString, _prefix + "-timeouts"))
-                .Subscriptions(s => s.StoreInMongoDb(_connectionString, _prefix + "-subscriptions"))
+                .Timeouts(t => t.StoreInMongoDb(_connectionString, Prefix + "-timeouts"))
+                .Subscriptions(s => s.StoreInMongoDb(_connectionString, Prefix + "-subscriptions"))
                 .Events(e => e.MessageSent += OnMessageSent)
                 .Events(e => e.PoisonMessage += OnPoisonMessage)
                 .SpecifyOrderOfHandlers(pipeline => pipeline.Use(new RemoveDefaultTimeoutReplyHandlerFilter()));
@@ -87,47 +89,26 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
                 );
         }
 
-        public void StartWithConfigurationManager()
+        public void StartWithConfigurationProperty()
         {
-            String configurationPrefix = _prefix + "-rebus";
-            String inputQueueName = ConfigurationServiceClient.Instance.GetSetting(configurationPrefix + ".inputQueue");
-            String errorQueueName = ConfigurationServiceClient.Instance.GetSetting(configurationPrefix + ".errorQueue");
+            if (Configuration == null)
+            {
+                throw new ConfigurationErrorsException(
+@"Configuration property is null!
+You probably forgot to register JarvisRebusConfiguration instance in Castle 
+or manually set the Configuration property of this instance.");
+            }
 
-            Int32 workersNumber = 3;
-            ConfigurationServiceClient.Instance.WithSetting(configurationPrefix + ".workers", setting => workersNumber = Int32.Parse(setting));
-            ConfigurationServiceClient.Instance.WithSetting(configurationPrefix + ".maxRetries", setting => Int32.Parse(setting));
+            String inputQueueName = Configuration.InputQueue;
+            String errorQueueName = Configuration.ErrorQueue;
 
+            Int32 workersNumber = Configuration.NumOfWorkers;
+            
             var busConfiguration = CreateDefaultBusConfiguration();
 
             //now it is time to load endpoints configuration mapping
-            Dictionary<String, String> endpointsMap = new Dictionary<string, string>();
-            ConfigurationServiceClient.Instance.WithArraySetting(configurationPrefix + ".endpoints", s =>
-            {
-                foreach (dynamic element in s)
-                {
-                    var endpoint = (string)element.endpoint;
-                    var messageTypeString = (String)element.messageType;
-                    if (String.IsNullOrEmpty(endpoint))
-                        return
-                            @"Missing endpoint property. Rebus endpoints configuration should contain an array of valid endpoints: es 
-    rebus : 
-	{
-		inputQueue : 'xxx.input',
-		errorQueue : 'xxx.health',
-		workers    : 2,
-		maxRetries : 3,
-		endpoints : [
-			{
-				message : 'Auth.Shared.Model.Authentication.Group.Commands.CreateOrUpdateGroupFromActiveDirectoryInfo, Auth.Shared',
-				endpoint : 'xxx.input'
-			}
-		]
-	}";
-                    endpointsMap.Add(messageTypeString, endpoint);
-                }
-                return ""; //Everything is ok
-            });
-
+            Dictionary<String, String> endpointsMap = Configuration.EndpointsMap;
+           
             var bus = busConfiguration
                 .Transport(t => t.UseMsmq(inputQueueName, errorQueueName))
                 .MessageOwnership(mo => mo.Use(new JarvisDetermineMessageOwnershipFromConfigurationManager(endpointsMap)))
