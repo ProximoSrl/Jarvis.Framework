@@ -50,6 +50,11 @@ namespace Jarvis.Framework.ElasticLogPoller.Importers
 
         public abstract void SaveCheckpoint(Object checkpoint);
 
+        public virtual List<BaseImporter> HandleWildcard()
+        {
+            return null;
+        }
+
         public PollResult Poll()
         {
             var pollResult = OnPoll();
@@ -114,4 +119,6 @@ namespace Jarvis.Framework.ElasticLogPoller.Importers
             _log.Info("ES Mapping set");
         }
     }
+
+
 }

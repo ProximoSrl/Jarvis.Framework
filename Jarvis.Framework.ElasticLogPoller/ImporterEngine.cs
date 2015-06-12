@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.ElasticLogPoller
@@ -20,6 +21,23 @@ namespace Jarvis.Framework.ElasticLogPoller
         private ElasticClient _client;
 
         public IList<BaseImporter> Importers { get; set; }
+
+        internal void HandleWildcards()
+        {
+            //need to handle wildcards for mongo collection
+            foreach (var importer in Importers.ToList())
+            {
+                var expandedImportersList = importer.HandleWildcard();
+                if (expandedImportersList != null && expandedImportersList.Count > 0)
+                {
+                    Importers.Remove(importer);
+                    foreach (var expandedImporter in expandedImportersList)
+                    {
+                        Importers.Add(expandedImporter);
+                    }
+                }
+            }
+        }
 
         internal void Configure()
         {

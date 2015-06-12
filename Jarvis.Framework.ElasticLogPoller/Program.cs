@@ -89,7 +89,9 @@ namespace Jarvis.Framework.ElasticLogPoller
                 importer = JsonConvert.DeserializeObject<ImporterEngine>(
                     File.ReadAllText(fi.FullName), converter);
 
+                importer.HandleWildcards();
                 importer.Configure();
+
                 Console.WriteLine("Importing Started. CTRL+C to exit");
                 var pollingIntervalInSecondsString = ConfigurationManager.AppSettings["PollingIntervalInSeconds"];
                 Int32 pollingIntervalInSeconds;
