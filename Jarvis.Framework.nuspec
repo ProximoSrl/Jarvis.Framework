@@ -13,18 +13,22 @@
 
     <dependencies>
       <dependency id="NEventStore" version="[5.1.1]" />
+      <dependency id="NEventStore.Persistence.MongoDb" version="[5.1.1]" />
       <dependency id="mongocsharpdriver" version="1.10.0" />
-      <dependency id="Rebus" version="0.71.1" />
-      <dependency id="Rebus.Castle.Windsor" version="0.71.1" />
-      <dependency id="Rebus.MongoDb" version="0.71.1" />
       <dependency id="Newtonsoft.Json" version="6.0.8" />
 
       <dependency id="Castle.Core" version="3.3.3" />
       <dependency id="Castle.LoggingFacility" version="3.3.0" />
-      <dependency id="Castle.Core-log4net" version="3.3.3" />
       <dependency id="Castle.Windsor" version="3.3.0" />
-      <dependency id="Castle.Windsor-log4net" version="3.3.0" />
 
+      <dependency id="Rx.Core" version="2.2.5" />
+      <dependency id="Rx-Interfaces" version="2.2.5" />
+      <dependency id="Rx-Linq" version="2.2.5" />
+      <dependency id="Rx-Main" version="2.2.5" />
+      <dependency id="Rx-PlatformServices" version="2.2.5" />
+      
+      <dependency id="Microsoft.Tpl.Dataflow" version="4.5.24" />
+      
       <dependency id="Fasterflect" version="2.1.3" />
       <dependency id="Metrics.NET" version="0.2.16" />
 	 
@@ -32,11 +36,9 @@
   </metadata>
 
   <files>
-    <file src="publish\Jarvis.Framework.Bus.Rebus.Integration.dll" target="lib" />
     <file src="publish\Jarvis.Framework.Kernel.dll" target="lib" />
     <file src="publish\Jarvis.Framework.Shared.dll" target="lib" />
     <file src="publish\Jarvis.NEventStoreEx.dll" target="lib" />
-    <file src="publish\Jarvis.Framework.TestHelpers.dll" target="lib" />
   </files>
 
 </package>
