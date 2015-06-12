@@ -17,6 +17,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{9870AC
 	ProjectSection(SolutionItems) = preProject
 		Jarvis.Framework.nuspec = Jarvis.Framework.nuspec
 		Jarvis.Framework.Rebus.nuspec = Jarvis.Framework.Rebus.nuspec
+		Jarvis.Framework.TestHelpers.nuspec = Jarvis.Framework.TestHelpers.nuspec
 		.nuget\packages.config = .nuget\packages.config
 	EndProjectSection
 EndProject
