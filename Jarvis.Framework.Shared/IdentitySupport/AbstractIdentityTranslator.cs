@@ -4,6 +4,8 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using MongoDB.Driver.Builders;
+using MongoDB.Bson.Serialization;
+using Jarvis.Framework.Shared.IdentitySupport.Serialization;
 
 namespace Jarvis.Framework.Shared.IdentitySupport
 {
@@ -42,11 +44,16 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                 ExternalKey = newKey;
             }
         }
-
+        internal Boolean IsFlatMapping { get; private set; }
         protected AbstractIdentityTranslator(MongoDatabase systemDB, IIdentityGenerator identityGenerator)
         {
             IdentityGenerator = identityGenerator;
             _collection = systemDB.GetCollection<MappedIdentity>("map_" + typeof(TKey).Name.ToLower());
+            var serializer = BsonSerializer.LookupSerializer(typeof(TKey));
+            if (serializer is EventStoreIdentityBsonSerializer)
+            {
+                IsFlatMapping = true;
+            }
         }
 
         protected void AddAlias(TKey key, string alias)
@@ -70,8 +77,8 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         {
             if (alias == null) throw new ArgumentNullException();
             alias = alias.ToLowerInvariant();
-
-            _collection.Remove(Query.EQ("AggregateId._id", BsonValue.Create(key.FullyQualifiedId)));
+            String query = IsFlatMapping == false ? "AggregateId._id" : "AggregateId";
+            _collection.Remove(Query.EQ(query, BsonValue.Create(key.FullyQualifiedId)));
             MapIdentity(alias, key);
         }
 
@@ -138,7 +145,8 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
         public void DeleteAliases(TKey key)
         {
-            _collection.Remove(Query.EQ("AggregateId._id", BsonValue.Create(key.FullyQualifiedId)));
+            String query = IsFlatMapping == false ? "AggregateId._id" : "AggregateId";
+            _collection.Remove(Query.EQ(query, BsonValue.Create(key.FullyQualifiedId)));
         }
     }
 }
