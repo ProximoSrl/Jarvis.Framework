@@ -79,5 +79,15 @@ namespace Jarvis.Framework.Kernel.Support
             CommitDispatchIndex[slotName].Mark(count);
         }
 
+
+        private static readonly Counter projectionCounter = Metric.Counter("prj-time", Unit.Custom("ticks"));
+        private static readonly Counter projectionSlotCounter = Metric.Counter("prj-slot-time", Unit.Custom("ticks"));
+
+        public static void IncrementProjectionCounter(String projectionName, String slotName, Int64 milliseconds)
+        {
+            projectionCounter.Increment(projectionName, milliseconds);
+            projectionSlotCounter.Increment(slotName, milliseconds);
+        }
+
     }
 }

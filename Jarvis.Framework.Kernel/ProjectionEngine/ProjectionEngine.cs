@@ -375,6 +375,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                             handled = projection.Handle(evt, checkpointStatus.IsRebuilding);
                             sw.Stop();
                             ticks = sw.ElapsedTicks;
+                            MetricsHelper.IncrementProjectionCounter(cname, slotName, ticks);
                         }
                         catch (Exception ex)
                         {
