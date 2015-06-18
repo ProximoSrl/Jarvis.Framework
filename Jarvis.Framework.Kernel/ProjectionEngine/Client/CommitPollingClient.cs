@@ -1,5 +1,6 @@
 ﻿using Castle.Core.Logging;
 using Jarvis.Framework.Kernel.Support;
+using Metrics;
 using NEventStore;
 using NEventStore.Client;
 using NEventStore.Persistence;
@@ -92,6 +93,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         private CancellationTokenSource _stopRequested = new CancellationTokenSource();
 
+        private Int64 _lastActivityTickCount;
+
         public void StartAutomaticPolling(
             String checkpointTokenFrom,
             Int32 intervalInMilliseconds,
@@ -105,6 +108,24 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
             //Add an immediate poll
             _commandList.Add(command_poll);
+
+            //Set health check for polling
+            HealthChecks.RegisterHealthCheck("Polling-" + pollerName, () =>
+            {
+                if (_pollerTimer == null)
+                {
+                    //poller is stopped, system healty
+                    return HealthCheckResult.Healthy("Automatic polling stopped");
+                }
+                var elapsed = Math.Abs(Environment.TickCount - _lastActivityTickCount);
+                if (elapsed > 5000)
+                {
+                    //more than 5 seconds without a poll, polling probably is stopped
+                    return HealthCheckResult.Unhealthy(String.Format("poller stuck, last polling {0} ms ago", elapsed));
+                }
+
+                return HealthCheckResult.Healthy("Poller alive");
+            });
         }
 
         public void StartManualPolling(
@@ -128,7 +149,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             //TODO: Decide if we want to wait TPL
             _pollerTimer.Stop();
             _pollerTimer.Dispose();
-
+            _pollerTimer = null;
             CloseEverything();
         }
 
@@ -192,12 +213,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         private void InternalPoll()
         {
+            _lastActivityTickCount = Environment.TickCount; //much faster than DateTime.now or UtcNow.
             if (_persistStreams.IsDisposed) return; //no need to poll, someone disposed NEventStore
             try
             {
                 IEnumerable<ICommit> commits = _persistStreams.GetFrom(_checkpointTokenCurrent);
                 foreach (var commit in commits)
                 {
+                    _lastActivityTickCount = Environment.TickCount; //much faster than DateTime.now or UtcNow.
                     if (_stopRequested.IsCancellationRequested)
                     {
                         CloseTplChain();

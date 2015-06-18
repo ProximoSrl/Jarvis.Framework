@@ -170,6 +170,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Store\SagaFactory.cs" />
     <Compile Include="Store\SnapshotsHelper.cs" />
+    <Compile Include="Support\MetricsHealthCheck.cs" />
     <Compile Include="Support\MetricsHelper.cs" />
   </ItemGroup>
   <ItemGroup>
