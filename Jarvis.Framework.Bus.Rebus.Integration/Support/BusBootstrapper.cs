@@ -112,8 +112,9 @@ or manually set the Configuration property of this instance.");
             var bus = busConfiguration
                 .Transport(t => t.UseMsmq(inputQueueName, errorQueueName))
                 .MessageOwnership(mo => mo.Use(new JarvisDetermineMessageOwnershipFromConfigurationManager(endpointsMap)))
+                .Behavior(b => b.SetMaxRetriesFor<Exception>(Configuration.MaxRetry))
                 .CreateBus();
-
+     
             FixTiemoutHack();
 
             bus.Start(workersNumber);
