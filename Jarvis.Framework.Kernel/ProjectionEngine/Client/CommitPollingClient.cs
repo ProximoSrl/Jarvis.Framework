@@ -211,6 +211,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             }
         }
 
+        private Int32 _postErrors = 0;
         private void InternalPoll()
         {
             _lastActivityTickCount = Environment.TickCount; //much faster than DateTime.now or UtcNow.
@@ -238,7 +239,22 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                             return;
                         }
                     };
-                    Debug.Assert(task.Result);
+                    //Check if block postponed the message, if for some
+                    //reason the message is postponed, exit from the polling
+                    if (!task.Result)
+                    {
+                        if (_postErrors > 2)
+                        {
+                            //TPL is somewhat stuck
+                            _logger.ErrorFormat("Unable to dispatch commit {0} into TPL chain, buffer block did not accept message", commit.CheckpointToken);
+                            _stopRequested.Cancel();
+                        }
+                        _postErrors++;
+                        _logger.WarnFormat("TPL did not accept message for commit {0}", commit.CheckpointToken);
+                        Thread.Sleep(1000); //let some time to flush some messages.
+                        return;
+                    }
+                    _postErrors = 0;
                     _checkpointTokenCurrent = commit.CheckpointToken;
                 }
             }
@@ -265,7 +281,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         #region Tpl
 
         private BufferBlock<ICommit> _buffer;
-        //private TransformBlock<ICommit, ICommit> _enhancerBlock;
         private ITargetBlock<ICommit> _broadcaster;
 
         private void CreateTplChain()
@@ -276,13 +291,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
             ExecutionDataflowBlockOptions executionOption = new ExecutionDataflowBlockOptions();
             executionOption.BoundedCapacity = _bufferSize;
-            //executionOption.MaxDegreeOfParallelism = 16;
-            //_enhancerBlock = new TransformBlock<ICommit, ICommit>((Func<ICommit, ICommit>)Enhance, executionOption);
-
+         
             _broadcaster = GuaranteedDeliveryBroadcastBlock.Create(_consumers, 3000);
 
-            //_buffer.LinkTo(_enhancerBlock, new DataflowLinkOptions() { PropagateCompletion = true });
-            //_enhancerBlock.LinkTo(_broadcaster, new DataflowLinkOptions() { PropagateCompletion = true });
             _buffer.LinkTo(_broadcaster, new DataflowLinkOptions() { PropagateCompletion = true });
         }
 
@@ -312,8 +323,17 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                     {
                         foreach (var target in targets)
                         {
-                            var result = await target.SendAsync(item);
-                            Debug.Assert(result);
+                            Int32 errorCount = 0;
+                            Boolean result;
+                            while (result = await target.SendAsync(item) == false)
+                            {
+                                Thread.Sleep(1000); //give some time to free some resource.
+                                if (errorCount > 2)
+                                {
+                                    throw new Exception("GuaranteedDeliveryBroadcastBlock: Unable to send message to a target");
+                                }
+                                errorCount++;
+                            }
                         }
                     }, options);
 

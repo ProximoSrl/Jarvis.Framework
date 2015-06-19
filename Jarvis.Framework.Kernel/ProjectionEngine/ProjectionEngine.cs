@@ -320,9 +320,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             {
                 lastCheckpointDispatched[slotName] = 0;
             }
-            Debug.Assert(lastCheckpointDispatched[slotName] < chkpoint.LongValue,
-                String.Format("Sequence broken, last checkpoint for slot {0} was {1} and now we dispatched {2}",
-                slotName, lastCheckpointDispatched[slotName], chkpoint.LongValue));
+            if (!(lastCheckpointDispatched[slotName] < chkpoint.LongValue) )
+            {
+                var error = String.Format("Sequence broken, last checkpoint for slot {0} was {1} and now we dispatched {2}",
+                        slotName, lastCheckpointDispatched[slotName], chkpoint.LongValue);
+                Logger.Error(error);
+                throw new Exception(error);
+            }
+              
             if (lastCheckpointDispatched[slotName] + 1 != chkpoint.LongValue)
             {
                 if (lastCheckpointDispatched[slotName] > 0)
