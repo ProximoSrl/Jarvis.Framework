@@ -134,6 +134,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
             int seconds = _config.ForcedGcSecondsInterval;
 
+            StartPolling();
+
             if (seconds > 0)
             {
                 ThreadPool.QueueUserWorkItem(state =>
@@ -145,9 +147,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                     }
                 });
             }
-
-
-            StartPolling();
             if (Logger.IsDebugEnabled) Logger.Debug("Projection engine started");
         }
 
