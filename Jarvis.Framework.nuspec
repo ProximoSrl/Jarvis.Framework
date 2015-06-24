@@ -42,6 +42,9 @@
     <file src="publish\Jarvis.Framework.Shared.pdb" target="lib" />
     <file src="publish\Jarvis.NEventStoreEx.dll" target="lib" />
     <file src="publish\Jarvis.NEventStoreEx.pdb" target="lib" />
+    <file src="Jarvis.Framework.Kernel\**\*.cs" target="src\Jarvis.Framework.Kernel" />
+    <file src="Jarvis.Framework.Shared\**\*.cs" target="src\Jarvis.Framework.Shared" />
+    <file src="Jarvis.NEventStoreEx\**\*.cs" target="src\Jarvis.NEventStoreEx" />    
   </files>
 
 </package>
