@@ -29,6 +29,8 @@
 
   <files>
     <file src="publish\Jarvis.Framework.Bus.Rebus.Integration.dll" target="lib" />
+	<file src="publish\Jarvis.Framework.Bus.Rebus.Integration.pdb" target="lib" />
+	<file src="Jarvis.Framework.Bus.Rebus.Integration\**\*.cs" target="src" />
   </files>
 
 </package>
