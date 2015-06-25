@@ -54,10 +54,12 @@ namespace Jarvis.Framework.Kernel.Engine
 
     public class SagaTimeout : SagaMessage
     {
+        public string TimeOutKey { get;private  set; }
 
-        public SagaTimeout(String sagaId) : base(sagaId)
+        public SagaTimeout(String sagaId, string timeOutKey = null) 
+            : base(sagaId)
         {
-
+            TimeOutKey = timeOutKey;
         }
     }
 }

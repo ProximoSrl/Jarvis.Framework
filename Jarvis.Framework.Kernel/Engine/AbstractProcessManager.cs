@@ -35,7 +35,7 @@ namespace Jarvis.Framework.Kernel.Engine
         /// <param name="correlate"></param>
         protected void Map<TMessage>(Func<TMessage, string> correlate)
         {
-            _correlator[typeof (TMessage)] = m => correlate((TMessage) m);
+            _correlator[typeof(TMessage)] = m => correlate((TMessage)m);
         }
 
         public string GetCorrelationId<TMessage>(TMessage message) where TMessage : IMessage
@@ -43,13 +43,14 @@ namespace Jarvis.Framework.Kernel.Engine
             return _correlator[message.GetType()](message);
         }
 
-        public IEnumerable<Type> ListeningTo {
+        public IEnumerable<Type> ListeningTo
+        {
             get { return _correlator.Keys; }
         }
 
         public Type GetProcessType()
         {
-            return typeof (TProcessManager);
+            return typeof(TProcessManager);
         }
     }
 
@@ -72,14 +73,14 @@ namespace Jarvis.Framework.Kernel.Engine
         public void Transition(object message)
         {
             if (Logger.IsDebugEnabled) Logger.DebugFormat("Dispatching message {0} to saga {1} [{2}] IsReplay {3}", message.GetType().Name, this.GetType().Name, this.Id, IsInReplay);
-            ((dynamic)this).On((dynamic)message); 
+            ((dynamic)this).On((dynamic)message);
             _uncommitted.Add(message);
             Version++;
         }
 
         ICollection<object> ISagaEx.GetUncommittedEvents()
         {
-            return _uncommitted ;
+            return _uncommitted;
         }
 
         void ISagaEx.ClearUncommittedEvents()
@@ -126,9 +127,10 @@ namespace Jarvis.Framework.Kernel.Engine
         /// saga.
         /// </summary>
         /// <param name="dateTime"></param>
-        public void DispatchTimeout(DateTime dateTime)
+        /// <param name="timeOutKey">key related to this timeOut, it can be null</param>
+        public void DispatchTimeout(DateTime dateTime, string timeOutKey = null)
         {
-            var timeout = new SagaTimeout(this.Id);
+            var timeout = new SagaTimeout(this.Id, timeOutKey);
             var message = new SagaDeferredMessage(timeout, dateTime);
             Dispatch(message);
         }
@@ -149,7 +151,7 @@ namespace Jarvis.Framework.Kernel.Engine
             return Equals(obj as ISagaEx);
         }
 
-        protected void Throw(String message, params String[] param) 
+        protected void Throw(String message, params String[] param)
         {
             throw new ApplicationException(String.Format(message, param));
         }
