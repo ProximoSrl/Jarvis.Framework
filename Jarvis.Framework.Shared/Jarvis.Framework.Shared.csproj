@@ -105,6 +105,7 @@
     <Compile Include="IoC\TransientNotTrackingLifestyle.cs" />
     <Compile Include="Logging\NEventStoreLog4NetLogger.cs" />
     <Compile Include="Messages\CommandHandled.cs" />
+    <Compile Include="Messages\Constants.cs" />
     <Compile Include="Messages\IMessage.cs" />
     <Compile Include="Messages\INotifyToSubscribers.cs" />
     <Compile Include="Messages\MessagesContractResolver.cs" />

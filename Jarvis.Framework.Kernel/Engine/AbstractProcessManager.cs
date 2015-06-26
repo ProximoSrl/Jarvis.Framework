@@ -56,6 +56,7 @@ namespace Jarvis.Framework.Kernel.Engine
 
     public abstract class AbstractProcessManager : ISagaEx, IEquatable<ISagaEx>
     {
+       
         readonly ICollection<object> _uncommitted = new LinkedList<object>();
         readonly ICollection<object> _undispatched = new LinkedList<object>();
 
@@ -110,11 +111,24 @@ namespace Jarvis.Framework.Kernel.Engine
             return null != other && other.Id == Id;
         }
 
+        protected void Dispatch(ICommand command)
+        {
+            command.SetContextData(MessagesConstants.SagaIdHeader, this.Id);
+            command.SetContextData(MessagesConstants.ReplyToHeader, this.Id);
+            InnerDispatch(command);
+        }
+
         protected void Dispatch(IMessage message)
         {
-            if (Logger.IsDebugEnabled) Logger.DebugFormat("Saga {0} dispatched command {1}", Id, message.Describe());
-            _undispatched.Add(message);
+            InnerDispatch(message);
         }
+
+        private void InnerDispatch(IMessage command)
+        {
+            if (Logger.IsDebugEnabled) Logger.DebugFormat("Saga {0} dispatched command {1}", Id, command.Describe());
+            _undispatched.Add(command);
+        }
+
 
         protected void Dispatch(ICommand message, String issuedBy)
         {

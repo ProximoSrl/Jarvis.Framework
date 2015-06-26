@@ -147,7 +147,7 @@ or manually set the Configuration property of this instance.");
 
                 if (command != null)
                 {
-                    var notifyTo = command.GetContextData("reply-to");
+                    var notifyTo = command.GetContextData(MessagesConstants.ReplyToHeader);
 
                     if (!string.IsNullOrEmpty(notifyTo))
                     {

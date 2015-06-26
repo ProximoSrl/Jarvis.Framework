@@ -1,8 +1,10 @@
-﻿using System;
+﻿using Jarvis.Framework.Shared.Commands;
+using System;
+using System.Collections.Generic;
 
 namespace Jarvis.Framework.Shared.Messages
 {
-	public class CommandHandled
+	public class CommandHandled : IMessage
 	{
 		public enum CommandResult
 		{
@@ -16,7 +18,21 @@ namespace Jarvis.Framework.Shared.Messages
         public string IssuedBy { get; private set; }
         public string Error { get; private set; }
 
-		public CommandHandled(string issuedBy, Guid commandId, CommandResult result, string message = null, string error = null)
+        public IDictionary<string, string> Context { get; private set; }
+
+        private String GetContextData(String key, String defaultValue = "") 
+        {
+            return Context.ContainsKey(key) ? Context[key] : defaultValue;
+        }
+
+        public string SagaId { get { return GetContextData(MessagesConstants.ReplyToHeader); } }
+
+		public CommandHandled(
+            string issuedBy, 
+            Guid commandId, 
+            CommandResult result, 
+            string message = null, 
+            string error = null)
 		{
 			IssuedBy = issuedBy;
 			Result = result;
@@ -24,7 +40,27 @@ namespace Jarvis.Framework.Shared.Messages
 			Text = message;
 		    Error = error;
 		}
-	}
+
+        public void CopyHeaders(ICommand command) 
+        {
+            Context = new Dictionary<String, String>();
+            foreach (var key in command.AllContextKeys)
+            {
+                Context[key] = command.GetContextData(key);
+            }
+        }
+
+        public Guid MessageId
+        {
+            get { return CommandId; }
+        }
+
+        public string Describe()
+        {
+            return String.Format("Command {0} handled, result {1}!", CommandId, Result);
+        }
+
+    }
 
     public class CommitProjected
     {

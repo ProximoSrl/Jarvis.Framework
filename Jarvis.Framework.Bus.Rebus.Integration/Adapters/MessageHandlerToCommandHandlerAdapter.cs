@@ -40,7 +40,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
             if (Logger.IsDebugEnabled) Logger.DebugFormat("Handling {0} {1}", message.GetType().FullName, message.MessageId);
             int i = 0;
             bool done = false;
-            var notifyTo = message.GetContextData("reply-to");
+            var notifyTo = message.GetContextData(MessagesConstants.ReplyToHeader);
 
             while (!done && i < 100)
             {
@@ -53,12 +53,14 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
 
                     if (notifyTo != null && message.GetContextData("disable-success-reply", "false") != "true")
                     {
-                        _bus.Reply(new CommandHandled(
+                        var replyCommand = new CommandHandled(
                             notifyTo,
                             message.MessageId,
                             CommandHandled.CommandResult.Handled,
                             message.Describe()
-                        ));
+                        );
+                        replyCommand.CopyHeaders(message);
+                        _bus.Reply(replyCommand);
                     }
                 }
                 catch (ConflictingCommandException ex)
@@ -77,13 +79,15 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
 
                     if (notifyTo != null)
                     {
-                        _bus.Reply(new CommandHandled(
+                        var replyCommand = new CommandHandled(
                             notifyTo,
                             message.MessageId,
                             CommandHandled.CommandResult.Failed,
                             message.Describe(),
                             ex.Message
-                        ));
+                        );
+                        replyCommand.CopyHeaders(message);
+                        _bus.Reply(replyCommand);
                     }
                 }
             }
