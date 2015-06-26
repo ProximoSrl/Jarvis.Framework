@@ -22,10 +22,13 @@ namespace Jarvis.Framework.Shared.Messages
 
         private String GetContextData(String key, String defaultValue = "") 
         {
-            return Context.ContainsKey(key) ? Context[key] : defaultValue;
+            
+            return (Context != null && Context.ContainsKey(key)) 
+                ? Context[key] 
+                : defaultValue;
         }
 
-        public string SagaId { get { return GetContextData(MessagesConstants.ReplyToHeader); } }
+        public string SagaId { get { return GetContextData(MessagesConstants.SagaIdHeader); } }
 
 		public CommandHandled(
             string issuedBy, 

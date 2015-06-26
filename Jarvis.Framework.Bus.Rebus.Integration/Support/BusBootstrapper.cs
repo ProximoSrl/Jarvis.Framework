@@ -103,18 +103,18 @@ or manually set the Configuration property of this instance.");
             String errorQueueName = Configuration.ErrorQueue;
 
             Int32 workersNumber = Configuration.NumOfWorkers;
-            
+
             var busConfiguration = CreateDefaultBusConfiguration();
 
             //now it is time to load endpoints configuration mapping
             Dictionary<String, String> endpointsMap = Configuration.EndpointsMap;
-           
+
             var bus = busConfiguration
                 .Transport(t => t.UseMsmq(inputQueueName, errorQueueName))
                 .MessageOwnership(mo => mo.Use(new JarvisDetermineMessageOwnershipFromConfigurationManager(endpointsMap)))
                 .Behavior(b => b.SetMaxRetriesFor<Exception>(Configuration.MaxRetry))
                 .CreateBus();
-     
+
             FixTiemoutHack();
 
             bus.Start(workersNumber);
@@ -151,16 +151,18 @@ or manually set the Configuration property of this instance.");
 
                     if (!string.IsNullOrEmpty(notifyTo))
                     {
-                        bus.Advanced.Routing.Send(
-                            message.Headers["rebus-return-address"].ToString(),
-                            new CommandHandled(
+                        var commandHandled = new CommandHandled(
                                 notifyTo,
                                 commandId,
                                 CommandHandled.CommandResult.Failed,
                                 description,
                                 exMessage
-                                )
-                            );
+                                );
+
+                        commandHandled.CopyHeaders(command);
+                        bus.Advanced.Routing.Send(
+                            message.Headers["rebus-return-address"].ToString(),
+                           commandHandled);
                     }
                 }
             }
