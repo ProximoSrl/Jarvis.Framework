@@ -84,7 +84,8 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
                             message.MessageId,
                             CommandHandled.CommandResult.Failed,
                             message.Describe(),
-                            ex.Message
+                            ex.Message,
+                            true
                         );
                         replyCommand.CopyHeaders(message);
                         _bus.Reply(replyCommand);
