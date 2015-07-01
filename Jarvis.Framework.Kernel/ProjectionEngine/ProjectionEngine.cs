@@ -380,7 +380,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                             handled = projection.Handle(evt, checkpointStatus.IsRebuilding);
                             sw.Stop();
                             ticks = sw.ElapsedTicks;
-                            MetricsHelper.IncrementProjectionCounter(cname, slotName, ticks);
+                            MetricsHelper.IncrementProjectionCounter(cname, slotName, eventName, ticks);
                         }
                         catch (Exception ex)
                         {

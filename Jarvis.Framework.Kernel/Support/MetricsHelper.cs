@@ -82,11 +82,14 @@ namespace Jarvis.Framework.Kernel.Support
 
         private static readonly Counter projectionCounter = Metric.Counter("prj-time", Unit.Custom("ticks"));
         private static readonly Counter projectionSlotCounter = Metric.Counter("prj-slot-time", Unit.Custom("ticks"));
+        private static readonly Counter projectionEventCounter = Metric.Counter("prj-event-time", Unit.Custom("ticks"));
 
-        public static void IncrementProjectionCounter(String projectionName, String slotName, Int64 milliseconds)
+
+        public static void IncrementProjectionCounter(String projectionName, String slotName, String eventName, Int64 milliseconds)
         {
             projectionCounter.Increment(projectionName, milliseconds);
             projectionSlotCounter.Increment(slotName, milliseconds);
+            projectionEventCounter.Increment(eventName, milliseconds);
         }
 
     }
