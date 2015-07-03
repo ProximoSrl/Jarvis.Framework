@@ -1,0 +1,11 @@
+db.getCollection('Commits').find({}).forEach(function(commit)
+{
+    var evts = commit["Events"];
+    evts.forEach(function(evt)
+    {
+        var body = evt["Payload"]["Body"];
+        body["AggregateId"] = commit["StreamId"]
+    });
+
+    db.getCollection('Commits').save(commit);
+});
