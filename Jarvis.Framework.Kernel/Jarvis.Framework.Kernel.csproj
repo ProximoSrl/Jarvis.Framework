@@ -107,6 +107,7 @@
     <Compile Include="Engine\AggregateSnapshot.cs" />
     <Compile Include="Engine\AggregateState.cs" />
     <Compile Include="Engine\DomainAggregateDeletedException.cs" />
+    <Compile Include="Engine\IDomainRule.cs" />
     <Compile Include="Engine\InvalidAggregateOperationException.cs" />
     <Compile Include="Engine\SagaMessage.cs" />
     <Compile Include="Engine\Snapshots\SnapshotClassMap.cs" />

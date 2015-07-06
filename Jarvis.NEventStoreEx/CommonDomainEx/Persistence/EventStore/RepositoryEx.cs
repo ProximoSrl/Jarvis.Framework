@@ -46,6 +46,11 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
                     throw new InvariantNotSatifiedException(aggregate.Id, result.ErrorMessage);
                 }
             }
+            var domainRuleChecker = aggregate as IDomainRulesChecker;
+            if (domainRuleChecker != null)
+            {
+                domainRuleChecker.CheckRules();
+            }
 
             Save(GetBucketFor(aggregate), aggregate, commitId, updateHeaders);
         }

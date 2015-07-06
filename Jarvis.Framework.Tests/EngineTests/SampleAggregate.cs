@@ -27,6 +27,8 @@ namespace Jarvis.Framework.Tests.EngineTests
         {
             public Boolean ShouldBeFalse { get; private set; }
 
+            public Int32 TouchCount { get; internal set; }
+
             protected void When(SampleAggregateCreated evt)
             {
             }
@@ -36,16 +38,29 @@ namespace Jarvis.Framework.Tests.EngineTests
                 ShouldBeFalse = true;
             }
 
+            protected void When(SampleAggregateTouched evt)
+            {
+                TouchCount++;
+            }
+
             public override InvariantCheckResult CheckInvariants()
             {
                 if (ShouldBeFalse == true) return InvariantCheckResult.CreateForError("Invariant not satisfied");
 
                 return InvariantCheckResult.Success;
             }
+
+
         }
 
         public SampleAggregate()
         {
+        }
+
+        public SampleAggregate(IDomainRule<SampleAggregate.State>[] rules)
+            : base(rules)
+        {
+
         }
 
 		public void Create()

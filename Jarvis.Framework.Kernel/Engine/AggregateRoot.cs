@@ -64,7 +64,7 @@ namespace Jarvis.Framework.Kernel.Engine
     /// classe base per gli aggregati che gestiscono lo stato tramite un <c>AggregateState</c>
     /// </summary>
     /// <typeparam name="TState">Tipo dello stato</typeparam>
-    public abstract class AggregateRoot<TState> : AggregateRoot, ISnapshotable, IInvariantsChecker
+    public abstract class AggregateRoot<TState> : AggregateRoot, ISnapshotable, IInvariantsChecker, IDomainRulesChecker
         where TState : AggregateState, new()
     {
 
@@ -74,11 +74,20 @@ namespace Jarvis.Framework.Kernel.Engine
             get { return _internalState; }
         }
 
+        protected IDomainRule<TState>[] _externalRules;
+
         protected AggregateRoot()
-            : base(new AggregateRootEventRouter<TState>())
+            : this(new IDomainRule<TState>[0])
+        {
+          
+        }
+
+        protected AggregateRoot(IDomainRule<TState>[] externalRules)
+           : base(new AggregateRootEventRouter<TState>())
         {
             ((AggregateRootEventRouter<TState>)RegisteredRoutes).AttachAggregateRoot(this);
             _internalState = new TState();
+            _externalRules = externalRules;
         }
 
         protected override void RaiseEvent(object @event)
@@ -137,6 +146,14 @@ namespace Jarvis.Framework.Kernel.Engine
         public InvariantCheckResult CheckInvariants()
         {
             return _internalState.CheckInvariants();
+        }
+
+        public void CheckRules()
+        {
+            foreach (var rule in _externalRules)
+            {
+                rule.Validate(Id, InternalState);
+            }
         }
 
         protected void ThrowDomainException(string format, params object[] p)
