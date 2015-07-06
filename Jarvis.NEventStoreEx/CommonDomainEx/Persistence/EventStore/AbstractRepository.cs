@@ -5,6 +5,9 @@ using CommonDomain;
 using CommonDomain.Persistence;
 using NEventStore;
 using NEventStore.Persistence;
+using System.Collections.Concurrent;
+using System.Threading;
+using System.Diagnostics;
 
 namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 {
@@ -22,7 +25,19 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 
 		private readonly IDictionary<string, IEventStream> _streams = new Dictionary<string, IEventStream>();
 
-		protected AbstractRepository(IStoreEvents eventStore, IConstructAggregatesEx factory, IDetectConflicts conflictDetector, IIdentityConverter identityConverter)
+        private readonly HashSet<IIdentity> loadedIdentities = new HashSet<IIdentity>();
+
+        /// <summary>
+        /// ConcurrentBag has no simple way to remove specific element.
+        /// </summary>
+        protected static ConcurrentDictionary<IIdentity, Boolean> idSerializerDictionary;
+
+        static AbstractRepository()
+        {
+            idSerializerDictionary =  new ConcurrentDictionary<IIdentity, Boolean>();
+        }
+
+        protected AbstractRepository(IStoreEvents eventStore, IConstructAggregatesEx factory, IDetectConflicts conflictDetector, IIdentityConverter identityConverter)
 		{
 			this._eventStore = eventStore;
 			this._factory = factory;
@@ -53,6 +68,17 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 
 		public TAggregate GetById<TAggregate>(string bucketId, IIdentity id, int versionToLoad) where TAggregate : class, IAggregateEx
 		{
+            //try to acquire a lock on the identity, to minimize risk of ConcurrencyException
+            //do not sleep more than a certain amount of time (avoid some missing dispose).
+            Int32 sleepCount = 0;
+            while (!idSerializerDictionary.TryAdd(id, true) && sleepCount < 100)
+            {
+                //some other thread is accessing that entity. Sleeping is the best choiche, because
+                //the lock will be removed after a save, involving IO.
+                Thread.Sleep(50);
+                sleepCount++;
+            }
+            loadedIdentities.Add(id);//store loaded identities.
             ISnapshot snapshot = this.GetSnapshot<TAggregate>(bucketId, id, versionToLoad);
 			IEventStream stream = this.OpenStream(bucketId, id, versionToLoad, snapshot);
 			IAggregateEx aggregate = this.GetAggregate<TAggregate>(snapshot, stream);
@@ -65,7 +91,6 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 		public virtual void Save(IAggregateEx aggregate, Guid commitId, Action<IDictionary<string, object>> updateHeaders)
 		{
 			Save(Bucket.Default, aggregate, commitId, updateHeaders);
-
 		}
 
 		public void Save(string bucketId, IAggregateEx aggregate, Guid commitId, Action<IDictionary<string, object>> updateHeaders)
@@ -80,12 +105,14 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 				{
 					stream.CommitChanges(commitId);
 					aggregate.ClearUncommittedEvents();
-					return;
+                    ReleaseAggregateId(aggregate.Id); //release immediately if everything is ok.
+                    return;
 				}
 				catch (DuplicateCommitException)
 				{
 					stream.ClearChanges();
-					return;
+                    ReleaseAggregateId(aggregate.Id); //release immediately if commit is simply discharded
+                    return;
 				}
 				catch (ConcurrencyException e)
 				{
@@ -100,7 +127,7 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 				}
 				catch (StorageException e)
 				{
-					throw new PersistenceException(e.Message, e);
+                    throw new PersistenceException(e.Message, e);
 				}
 			}
 		}
@@ -112,7 +139,13 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 				return;
 			}
 
-			lock (this._streams)
+            foreach (var id in loadedIdentities)
+            {
+                ReleaseAggregateId(id);
+            }
+            loadedIdentities.Clear();
+
+            lock (this._streams)
 			{
 				foreach (var stream in this._streams)
 				{
@@ -124,7 +157,17 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 			}
 		}
 
-		private static void ApplyEventsToAggregate(int versionToLoad, IEventStream stream, IAggregateEx aggregate)
+        private void ReleaseAggregateId(IIdentity id)
+        {
+            Boolean outTempValue;
+
+            if (!idSerializerDictionary.TryRemove(id, out outTempValue))
+            {
+                Debug.WriteLine("Entity was not locked.");
+            }
+        }
+
+        private static void ApplyEventsToAggregate(int versionToLoad, IEventStream stream, IAggregateEx aggregate)
 		{
 			if (versionToLoad == 0 || aggregate.Version < versionToLoad)
 			{
