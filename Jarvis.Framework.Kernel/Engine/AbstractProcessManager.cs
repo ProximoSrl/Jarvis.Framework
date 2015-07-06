@@ -38,6 +38,18 @@ namespace Jarvis.Framework.Kernel.Engine
             _correlator[typeof(TMessage)] = m => correlate((TMessage)m);
         }
 
+        protected void MapWithSagaId<TMessage>(String prefix, Func<TMessage, string> correlate)
+        {
+            _correlator[typeof(TMessage)] = m =>
+            {
+                var correlationId = correlate((TMessage)m);
+                if (!correlationId.StartsWith(prefix))
+                    return null;
+
+                return correlationId;
+            }; 
+        }
+
         public string GetCorrelationId<TMessage>(TMessage message) where TMessage : IMessage
         {
             return _correlator[message.GetType()](message);
