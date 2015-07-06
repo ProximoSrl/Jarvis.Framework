@@ -111,11 +111,11 @@ namespace Jarvis.Framework.Kernel.Engine
             return null != other && other.Id == Id;
         }
 
-        protected void Dispatch(ICommand command)
+        protected void DispatchWithReply(ICommand command, String issuedBy)
         {
             command.SetContextData(MessagesConstants.SagaIdHeader, this.Id);
             command.SetContextData(MessagesConstants.ReplyToHeader, this.Id);
-            InnerDispatch(command);
+            Dispatch(command, issuedBy);
         }
 
         protected void Dispatch(IMessage message)
