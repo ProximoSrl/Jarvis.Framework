@@ -6,6 +6,9 @@ using CommonDomain.Persistence;
 using NEventStore;
 using NEventStore.Persistence;
 using System.Reflection;
+using System.Collections.Concurrent;
+using System.Threading;
+using System.Diagnostics;
 
 namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 {
@@ -20,6 +23,19 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
         readonly IDictionary<string, IEventStream> _streams = new Dictionary<string, IEventStream>();
         readonly ISagaFactory _factory;
 
+        /// <summary>
+        /// ConcurrentBag has no simple way to remove specific element.
+        /// </summary>
+        protected static ConcurrentDictionary<String, Boolean> idSerializerDictionary;
+
+        private readonly HashSet<String> loadedSagaIdentities = new HashSet<String>();
+
+        static SagaEventStoreRepositoryEx()
+        {
+            idSerializerDictionary = new ConcurrentDictionary<String, Boolean>();
+        }
+
+
         public SagaEventStoreRepositoryEx(IStoreEvents eventStore, ISagaFactory factory)
         {
             _eventStore = eventStore;
@@ -28,6 +44,16 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 
         public TSaga GetById<TSaga>(string sagaId) where TSaga : class, ISagaEx
         {
+            //try to acquire a lock on the identity, to minimize risk of ConcurrencyException
+            //do not sleep more than a certain amount of time (avoid some missing dispose).
+            Int32 sleepCount = 0;
+            while (!idSerializerDictionary.TryAdd(sagaId, true) && sleepCount < 100)
+            {
+                //some other thread is accessing that entity. Sleeping is the best choiche, because
+                //the lock will be removed after a save, involving IO.
+                Thread.Sleep(50);
+                sleepCount++;
+            }
             return BuildSaga<TSaga>(OpenStream(sagaId), sagaId);
         }
 
@@ -42,7 +68,7 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
             IEventStream stream = PrepareStream(saga, headers);
 
             Persist(stream, commitId);
-
+            ReleaseAggregateId(saga.Id);
             saga.ClearUncommittedEvents();
             saga.ClearUndispatchedMessages();
         }
@@ -60,6 +86,12 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
                 return;
             }
 
+            foreach (var id in loadedSagaIdentities)
+            {
+                ReleaseAggregateId(id);
+            }
+            loadedSagaIdentities.Clear();
+
             lock (_streams)
             {
                 foreach (var stream in _streams)
@@ -68,6 +100,16 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
                 }
 
                 _streams.Clear();
+            }
+        }
+
+        private void ReleaseAggregateId(String id)
+        {
+            Boolean outTempValue;
+
+            if (!idSerializerDictionary.TryRemove(id, out outTempValue))
+            {
+                Debug.WriteLine("Entity was not locked.");
             }
         }
 
@@ -163,5 +205,7 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
                 throw new PersistenceException(e.Message, e);
             }
         }
+
+       
     }
 }
