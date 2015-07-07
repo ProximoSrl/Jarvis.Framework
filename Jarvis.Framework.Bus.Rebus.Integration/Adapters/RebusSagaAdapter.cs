@@ -27,7 +27,8 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
             try
             {
                 var id = _listener.GetCorrelationId(message);
-                
+                if (String.IsNullOrEmpty(id))
+                    return;
                 pm = _repository.GetById<TProcessManager>(id);
                 pm.Transition(message);
                 _repository.Save(pm, message.MessageId, null);

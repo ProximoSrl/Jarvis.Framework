@@ -4,9 +4,13 @@ using Castle.MicroKernel;
 using Castle.MicroKernel.Registration;
 using Jarvis.Framework.Kernel.Engine;
 using Rebus;
+using System.Linq;
 
 namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
 {
+    /// <summary>
+    /// Register all listener for Saga an Message Handler.
+    /// </summary>
     public class ListenerRegistration 
     {
         readonly IProcessManagerListener[] _listeners;
@@ -42,6 +46,18 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
                             .LifeStyle.Transient
                     );
                 }
+            }
+
+            //then should scan Castle for each component that registered IHandleMessage
+            foreach (var handler in _kernel.GetAssignableHandlers(typeof(Object)))
+            {
+                var messageHandlers = handler.ComponentModel.Services
+                    .Where(s => s.IsGenericType && s.GetGenericTypeDefinition() == typeof(IHandleMessages<>));
+                foreach (var handlerType in messageHandlers)
+                {
+                    subscribeToMessages.Add(handlerType.GenericTypeArguments[0]);
+                }
+                
             }
 
             foreach (var type in subscribeToMessages)
