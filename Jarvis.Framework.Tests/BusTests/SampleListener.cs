@@ -1,4 +1,6 @@
+using System;
 using Jarvis.Framework.Kernel.Engine;
+using Rebus;
 
 namespace Jarvis.Framework.Tests.BusTests
 {
@@ -14,4 +16,5 @@ namespace Jarvis.Framework.Tests.BusTests
             get { return "SampleListener_"; }
         }
     }
+
 }
