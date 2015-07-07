@@ -8,10 +8,15 @@ namespace Jarvis.Framework.Tests.EngineTests.SagaTests
     {
         public DeliverPizzaSagaListener2()
         {
-            Map<OrderPlaced>(m => "DeliverPizzaSaga2_" + m.OrderId);
-            Map<PizzaDelivered>(m => "DeliverPizzaSaga2_" + m.OrderId);
-            Map<BillPrinted>(m => "DeliverPizzaSaga2_" + m.OrderId);
-            Map<PaymentReceived>(m => "DeliverPizzaSaga2_" + m.OrderId);
+            Map<OrderPlaced>(m =>  m.OrderId);
+            Map<PizzaDelivered>(m => m.OrderId);
+            Map<BillPrinted>(m => m.OrderId);
+            Map<PaymentReceived>(m => m.OrderId);
+        }
+
+        protected override string Prefix
+        {
+            get { return "DeliverPizzaSaga2_"; }
         }
     }
 

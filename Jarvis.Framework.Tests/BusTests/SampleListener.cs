@@ -6,7 +6,12 @@ namespace Jarvis.Framework.Tests.BusTests
     {
         public SampleListener()
         {
-            Map<SampleMessage>(m => m.Id.ToString());
+            MapWithoutPrefix<SampleMessage>(m => m.Id.ToString());
+        }
+
+        protected override string Prefix
+        {
+            get { return "SampleListener_"; }
         }
     }
 }

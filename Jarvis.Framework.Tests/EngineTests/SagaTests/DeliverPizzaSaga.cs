@@ -12,6 +12,11 @@ namespace Jarvis.Framework.Tests.EngineTests.SagaTests
             Map<BillPrinted>(m => m.OrderId);
             Map<PaymentReceived>(m => m.OrderId);
         }
+
+        protected override string Prefix
+        {
+            get { return "DeliverPizzaSaga_"; }
+        }
     }
 
     public class DeliverPizzaSaga : AbstractProcessManager
