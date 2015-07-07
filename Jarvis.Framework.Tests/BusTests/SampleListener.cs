@@ -9,7 +9,7 @@ namespace Jarvis.Framework.Tests.BusTests
             MapWithoutPrefix<SampleMessage>(m => m.Id.ToString());
         }
 
-        protected override string Prefix
+        public override string Prefix
         {
             get { return "SampleListener_"; }
         }

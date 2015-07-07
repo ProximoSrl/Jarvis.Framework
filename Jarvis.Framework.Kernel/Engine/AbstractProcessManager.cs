@@ -48,7 +48,7 @@ namespace Jarvis.Framework.Kernel.Engine
             };
         }
 
-        protected abstract String Prefix { get; }
+        public abstract String Prefix { get; }
 
         public string GetCorrelationId<TMessage>(TMessage message) where TMessage : IMessage
         {

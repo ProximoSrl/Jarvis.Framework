@@ -14,7 +14,7 @@ namespace Jarvis.Framework.Tests.EngineTests.SagaTests
             Map<PaymentReceived>(m => m.OrderId);
         }
 
-        protected override string Prefix
+        public override string Prefix
         {
             get { return "DeliverPizzaSaga2_"; }
         }

@@ -93,11 +93,11 @@ namespace Jarvis.Framework.Tests.EngineTests.SagaTests
             var printed = new BillPrinted(orderId);
             var received = new PaymentReceived(orderId, Guid.NewGuid());
             var delivered = new PizzaDelivered(orderId);
-
-            Assert.AreEqual((string)orderId, listener.GetCorrelationId(placed));
-            Assert.AreEqual((string)orderId, listener.GetCorrelationId(printed));
-            Assert.AreEqual((string)orderId, listener.GetCorrelationId(received));
-            Assert.AreEqual((string)orderId, listener.GetCorrelationId(delivered));
+            var prefix = listener.Prefix;
+            Assert.AreEqual(prefix+(string)orderId, listener.GetCorrelationId(placed));
+            Assert.AreEqual(prefix + (string)orderId, listener.GetCorrelationId(printed));
+            Assert.AreEqual(prefix + (string)orderId, listener.GetCorrelationId(received));
+            Assert.AreEqual(prefix + (string)orderId, listener.GetCorrelationId(delivered));
         }
 
 
