@@ -1,5 +1,6 @@
 ﻿using Castle.MicroKernel;
 using Castle.MicroKernel.Registration;
+using Castle.Windsor;
 using Jarvis.Framework.Bus.Rebus.Integration.Adapters;
 using Jarvis.Framework.Kernel.Engine;
 using NSubstitute;
@@ -13,30 +14,44 @@ namespace Jarvis.Framework.Tests.BusTests
     {
         ListenerRegistration _registration;
         IBus _fakeBus;
-        IKernel _fakeKernel;
+        IKernel _kernel;
 
-        [SetUp]
-        public void SetUp()
+        private void CreateSut(IKernel kernel = null, IProcessManagerListener[] listener = null)
         {
-            _fakeKernel = Substitute.For<IKernel>();
-
+            _kernel = kernel ?? Substitute.For<IKernel>();
             _fakeBus = Substitute.For<IBus>();
             _registration = new ListenerRegistration(
-                new IProcessManagerListener[]{new SampleListener()}, 
-                _fakeBus, 
-                _fakeKernel
+                listener ?? new IProcessManagerListener[] { new SampleListener() },
+                _fakeBus,
+                _kernel
             );
         }
+
+
 
         [Test]
         public void messages_should_be_subscripted()
         {
+            CreateSut();
             _registration.Subscribe();
             _fakeBus.Received().Subscribe<SampleMessage>();
-            _fakeKernel.Received().Register(Arg.Is<IRegistration[]>(x =>
+            _kernel.Received().Register(Arg.Is<IRegistration[]>(x =>
                 x.Length == 1 && 
                 x[0] is ComponentRegistration
             ));
+        }
+
+        [Test]
+        public void IMessageHandler_should_subscribe()
+        {
+            WindsorContainer container = new WindsorContainer();
+            container.Register(Component
+                .For<IHandleMessages<SampleMessage>>()
+                .ImplementedBy<SampleMessageHandler>());
+            CreateSut(container.Kernel, new IProcessManagerListener[0]);
+            _registration.Subscribe();
+
+            _fakeBus.Received().Subscribe<SampleMessage>();
         }
     }
 }

@@ -26,7 +26,6 @@ namespace Jarvis.Framework.Kernel.Engine
     public abstract class AbstractProcessManagerListener<TProcessManager> : IProcessManagerListener<TProcessManager> where TProcessManager : ISagaEx
     {
         Dictionary<Type, Func<IMessage, string>> _correlator = new Dictionary<Type, Func<IMessage, string>>();
-
         /// <summary>
         /// Estabilish a correlation between a Message and the Id of the saga that should
         /// handle that message.
@@ -35,8 +34,21 @@ namespace Jarvis.Framework.Kernel.Engine
         /// <param name="correlate"></param>
         protected void Map<TMessage>(Func<TMessage, string> correlate)
         {
-            _correlator[typeof(TMessage)] = m => correlate((TMessage)m);
+            _correlator[typeof(TMessage)] = m => Prefix + correlate((TMessage)m);
         }
+
+        protected void MapWithoutPrefix<TMessage>(Func<TMessage, string> correlate)
+        {
+            _correlator[typeof(TMessage)] = m =>
+            {
+                var correlateId = correlate((TMessage)m);
+                if (correlateId == null || !correlateId.StartsWith(Prefix))
+                    return null;
+                return correlateId;
+            };
+        }
+
+        public abstract String Prefix { get; }
 
         public string GetCorrelationId<TMessage>(TMessage message) where TMessage : IMessage
         {
@@ -111,11 +123,11 @@ namespace Jarvis.Framework.Kernel.Engine
             return null != other && other.Id == Id;
         }
 
-        protected void Dispatch(ICommand command)
+        protected void DispatchWithReply(ICommand command, String issuedBy)
         {
             command.SetContextData(MessagesConstants.SagaIdHeader, this.Id);
             command.SetContextData(MessagesConstants.ReplyToHeader, this.Id);
-            InnerDispatch(command);
+            Dispatch(command, issuedBy);
         }
 
         protected void Dispatch(IMessage message)
