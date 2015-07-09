@@ -107,6 +107,7 @@ namespace Jarvis.Framework.ElasticLogPoller.Importers
             indexDefinition.Properties.Add("pn", notAnalyzedProperty);
             indexDefinition.Properties.Add("ln", notAnalyzedProperty);
             indexDefinition.Properties.Add("cn", notAnalyzedProperty);
+            indexDefinition.Properties.Add("ts", new DateMapping());
 
             indexDefinition.Properties.Add("mongo-server", notAnalyzedProperty);
             indexDefinition.Properties.Add("collection", notAnalyzedProperty);
