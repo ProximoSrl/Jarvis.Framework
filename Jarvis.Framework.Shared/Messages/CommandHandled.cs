@@ -14,6 +14,8 @@ namespace Jarvis.Framework.Shared.Messages
 
         public CommandResult Result { get; private set; }
         public Guid CommandId { get; private set; }
+        public Guid MessageId { get; private set; }
+
         public string Text { get; private set; }
         public string IssuedBy { get; private set; }
         public string Error { get; private set; }
@@ -40,6 +42,7 @@ namespace Jarvis.Framework.Shared.Messages
             string error = null,
             bool isDomainException = false)
         {
+            MessageId = Guid.NewGuid();
             IssuedBy = issuedBy;
             Result = result;
             CommandId = commandId;
@@ -55,11 +58,6 @@ namespace Jarvis.Framework.Shared.Messages
             {
                 Context[key] = command.GetContextData(key);
             }
-        }
-
-        public Guid MessageId
-        {
-            get { return CommandId; }
         }
 
         public string Describe()
