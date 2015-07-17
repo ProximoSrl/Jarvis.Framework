@@ -12,6 +12,8 @@ using NUnit.Framework;
 using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Tests.Support;
 using NEventStore;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace Jarvis.Framework.Tests.EngineTests.SagaTests
 {
@@ -81,7 +83,35 @@ namespace Jarvis.Framework.Tests.EngineTests.SagaTests
             Assert.AreEqual(0, uncommittedevents.Count());
         }
 
-      
+        [Test]
+        public void repository_can_serialize_access_to_the_same_entity()
+        {
+            var orderId = new OrderId(1);
+            var sagaId = orderId;
+
+            var eventStore = _factory.BuildEventStore(_connectionString);
+
+            using (var repo1 = new SagaEventStoreRepositoryEx(eventStore, new SagaFactory()))
+            using (var repo2 = new SagaEventStoreRepositoryEx(eventStore, new SagaFactory()))
+            {
+                var saga1 = repo1.GetById<DeliverPizzaSaga>(sagaId);
+                saga1.Transition(new OrderPlaced(orderId));
+
+                //now create another thread that loads and change the same entity
+                var task = Task<Boolean>.Factory.StartNew(() =>
+                {
+                    var saga2 = repo2.GetById<DeliverPizzaSaga>(sagaId);
+                    saga2.Transition(new OrderPlaced(orderId));
+                    repo2.Save(saga2, Guid.NewGuid(), null);
+                    return true;
+                });
+
+                Thread.Sleep(100); //Let be sure the other task is started doing something.
+                repo1.Save(saga1, Guid.NewGuid(), null);
+                Assert.IsTrue(task.Result); //inner should not throw.
+            }
+        }
+
 
         [Test]
         public void listener_tests()
