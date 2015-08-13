@@ -106,8 +106,8 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             Assert.AreEqual(2, _reader1.AllSortedById.Count());
             Assert.That(_reader1.AllSortedById.Count(r => r.IsInRebuild), Is.EqualTo(2));
             var checkpoint = _checkpoints.FindOneById("Projection");
-            Assert.That(checkpoint.Value, Is.EqualTo(2), "Checkpoint is written after rebuild.");
-            Assert.That(checkpoint.Current, Is.EqualTo(2), "Checkpoint is written after rebuild.");
+            Assert.That(checkpoint.Value, Is.EqualTo("2"), "Checkpoint is written after rebuild.");
+            Assert.That(checkpoint.Current, Is.EqualTo("2"), "Checkpoint is written after rebuild.");
         }
 
     
@@ -155,14 +155,14 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             Assert.That(_reader1.AllSortedById.Count(r => r.IsInRebuild), Is.EqualTo(2));
 
             var checkpoint = _checkpoints.FindOneById("Projection");
-            Assert.That(checkpoint.Value, Is.EqualTo(2), "Checkpoint is written after rebuild.");
-            Assert.That(checkpoint.Current, Is.EqualTo(2), "Checkpoint is written after rebuild.");
+            Assert.That(checkpoint.Value, Is.EqualTo("2"), "Checkpoint is written after rebuild.");
+            Assert.That(checkpoint.Current, Is.EqualTo("2"), "Checkpoint is written after rebuild.");
         
             Assert.AreEqual(2, _reader2.AllSortedById.Count());
             Assert.That(_reader2.AllSortedById.Count(r => r.IsInRebuild), Is.EqualTo(2));
             checkpoint = _checkpoints.FindOneById("Projection2");
-            Assert.That(checkpoint.Value, Is.EqualTo(2), "Checkpoint is written after rebuild.");
-            Assert.That(checkpoint.Current, Is.EqualTo(2), "Checkpoint is written after rebuild.");
+            Assert.That(checkpoint.Value, Is.EqualTo("2"), "Checkpoint is written after rebuild.");
+            Assert.That(checkpoint.Current, Is.EqualTo("2"), "Checkpoint is written after rebuild.");
         
         }
 

@@ -260,10 +260,21 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             var lastCommit = GetLastCommitId();
             foreach (var slot in _projectionsBySlot)
             {
+                var maxCheckpointDispatchedInSlot = slot.Value
+                    .Select(projection =>
+                    {
+                        var checkpoint = _checkpointTracker.GetCheckpoint(projection);
+                        var longCheckpoint = LongCheckpoint.Parse(checkpoint);
+                        return longCheckpoint.LongValue;
+                    })
+                    .Max();
+
                 foreach (var projection in slot.Value)
                 {
-                    if (_checkpointTracker.NeedsRebuild(projection))
+                    if (_checkpointTracker.NeedsRebuild(projection) &&
+                        maxCheckpointDispatchedInSlot >= 0)
                     {
+                        _checkpointTracker.SetCheckpoint(projection.GetCommonName(), maxCheckpointDispatchedInSlot.ToString());
                         projection.Drop();
                         projection.StartRebuild(_rebuildContext);
                         _checkpointTracker.RebuildStarted(projection, lastCommit);
