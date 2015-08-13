@@ -1,11 +1,22 @@
 ﻿{
-    "Importers": [
-        {
-            "Connection": "mongodb://bigend/monitor-server",
-            "Collection": "logs.*",
-            "EsIndex": "logs-*",
-            "EsServer" :  "http://localhost:9200",
-            "Type": "mongo"
-        }
-    ]
+
+  "Importers": [
+
+    //Multi collection importer configuration
+    //    {
+    //         "Connection": "mongodb://bigend/monitor-server",
+    //       "Collection": "logs.*",
+    //        "EsIndex": "logs-*",
+    //        "EsServer" :  "http://localhost:9200",
+    //        "Type": "mongo"
+    //    }
+
+    {
+      "Connection": "mongodb://localhost/jarvis-log",
+      "Collection": "logs",
+      "EsIndex": "logs",
+      "EsServer": "http://localhost:9200",
+      "Type": "mongo"
+    }
+  ]
 }

@@ -17,6 +17,8 @@ using MongoDB.Driver;
 using NEventStore;
 using NSubstitute;
 using NUnit.Framework;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace Jarvis.Framework.Tests.EngineTests
 {
@@ -45,8 +47,12 @@ namespace Jarvis.Framework.Tests.EngineTests
             var loggerFactory = Substitute.For<ILoggerFactory>();
             loggerFactory.Create(Arg.Any<Type>()).Returns(NullLogger.Instance);
             _eventStore = new EventStoreFactory(loggerFactory).BuildEventStore(connectionString);
+            _repository = CreateRepository();
+        }
 
-            _repository = new RepositoryEx(
+        private RepositoryEx CreateRepository()
+        {
+            return new RepositoryEx(
                 _eventStore,
                 _aggregateFactory, new ConflictDetector(), _identityConverter
             );
@@ -185,5 +191,36 @@ namespace Jarvis.Framework.Tests.EngineTests
         {
             get { throw new NotImplementedException(); }
         }
+
+        [Test]
+        public void can_serialize_access_to_the_same_entity()
+        {
+            //create an aggregate.
+            var sampleAggregateId = new SampleAggregateId(1);
+            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregate.State(), sampleAggregateId);
+            aggregate.Create();
+            _repository.Save(aggregate, new Guid("135E4E5F-3D65-43AC-9D8D-8A8B0EFF8501"), null);
+
+            using (var repo1 = CreateRepository())
+            using (var repo2 = CreateRepository())
+            {
+                aggregate = repo1.GetById<SampleAggregate>(sampleAggregateId);
+                aggregate.Touch();
+
+                //now create another thread that loads and change the same entity
+                var task = Task<Boolean>.Factory.StartNew(() =>
+                {
+                    var aggregate2 = repo2.GetById<SampleAggregate>(sampleAggregateId);
+                    aggregate2.Touch();
+                    repo2.Save(aggregate2, Guid.NewGuid(), null);
+                    return true;
+                });
+
+                Thread.Sleep(100); //Let be sure the other task is started doing something.
+                repo1.Save(aggregate, Guid.NewGuid(), null); //should not throw
+                Assert.IsTrue(task.Result); //inner should not throw.
+            }
+        }
+
     }
 }

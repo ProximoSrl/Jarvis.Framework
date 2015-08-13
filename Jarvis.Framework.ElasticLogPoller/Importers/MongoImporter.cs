@@ -11,12 +11,15 @@ using System.Threading.Tasks;
 using MongoDB.Driver.Linq;
 using MongoDB.Bson.Serialization.Attributes;
 using System.Text.RegularExpressions;
+using System.Globalization;
 
 namespace Jarvis.Framework.ElasticLogPoller.Importers
 {
 
     public class MongoImporter : BaseImporter
     {
+        public const String DateTimeFormatForNestQuery = "yyyy-MM-ddThh:mm:ss.fff";
+
         public class ImportCheckpoint
         {
             public DateTime LastCheckpoint { get; set; }
@@ -124,7 +127,10 @@ namespace Jarvis.Framework.ElasticLogPoller.Importers
                 try
                 {
                     b["_id"] = b["_id"].ToString();
-                    b["ts"] = b["ts"].ToString();
+
+                    //Fix string format to avoid problems with locales.
+                    DateTime timestamp = b["ts"].ToUniversalTime();
+                    b["ts"] = timestamp.ToString(DateTimeFormatForNestQuery, CultureInfo.InvariantCulture);
                     b["collection"] = Collection;
                     b["mongo-server"] = Connection;
                     b["source"] = Connection + "/" + Collection;
