@@ -31,6 +31,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             _collection.Insert(e, new SampleReadModel()
             {
                 Id = e.AggregateId,
+                IsInRebuild = base.IsRebuilding,
                 Timestamp = DateTime.Now.Ticks
             });
         }
@@ -68,6 +69,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             _collection.Insert(e, new SampleReadModel2()
             {
                 Id = e.AggregateId,
+                IsInRebuild = base.IsRebuilding,
                 Timestamp = DateTime.Now.Ticks
             });
         }
@@ -111,6 +113,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             _collection.Insert(e, new SampleReadModel3()
             {
                 Id = e.AggregateId,
+                IsInRebuild = base.IsRebuilding,
                 Timestamp = DateTime.Now.Ticks
             });
         }

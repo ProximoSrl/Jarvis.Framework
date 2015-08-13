@@ -84,13 +84,13 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
         }
 
 
-        protected void ConfigureProjectionEngine()
+        protected void ConfigureProjectionEngine(Boolean dropCheckpoints = true)
         {
             if (Engine != null)
             {
                 Engine.Stop();
             }
-            _checkpoints.Drop();
+            if (dropCheckpoints) _checkpoints.Drop();
             _tracker = new ConcurrentCheckpointTracker(Database);
             _statusChecker = new ConcurrentCheckpointStatusChecker(Database);
 
@@ -107,7 +107,9 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
                 EngineVersion = "v2",
             };
 
-            _rebuildContext = new RebuildContext(false);
+            RebuildSettings.Init(OnShouldRebuild(), OnShouldUseNitro());
+
+            _rebuildContext = new RebuildContext(RebuildSettings.NitroMode);
             StorageFactory = new MongoStorageFactory(Database, _rebuildContext);
             Func<IPersistStreams, CommitPollingClient> pollingClientFactory = 
                 ps => new CommitPollingClient(
@@ -129,6 +131,16 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             OnStartPolling();
         }
 
+        protected virtual bool OnShouldUseNitro()
+        {
+            return false;
+        }
+
+        protected virtual bool OnShouldRebuild()
+        {
+            return false;
+        }
+
         protected virtual string OnGetPollingClientId()
         {
             return this.GetType().Name;
@@ -136,7 +148,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 
         protected virtual void OnStartPolling()
         {
-            Engine.StartWithManualPoll();
+            Engine.StartWithManualPoll(false);
         }
 
         protected abstract IEnumerable<IProjection> BuildProjections();

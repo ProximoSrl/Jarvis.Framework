@@ -133,29 +133,30 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             if (Logger.IsDebugEnabled) Logger.Debug("Projection engine stopped");
         }
 
-        public void StartWithManualPoll()
+        public void StartWithManualPoll(Boolean immediatePoll = true)
         {
             if (_config.DelayedStartInMilliseconds == 0)
             {
-                InnerStartWithManualPoll();
+                InnerStartWithManualPoll(immediatePoll);
             }
             else
             {
                 Task.Factory.StartNew(() =>
                 {
                     Thread.Sleep(_config.DelayedStartInMilliseconds);
-                    InnerStartWithManualPoll();
+                    InnerStartWithManualPoll(immediatePoll);
                 });
             }
         }
 
-        private void InnerStartWithManualPoll()
+        private void InnerStartWithManualPoll(Boolean immediatePoll)
         {
             Init();
             foreach (var client in _clients)
             {
                 client.StartManualPolling(GetStartGlobalCheckpoint());
             }
+            if (immediatePoll) Poll();
         }
 
         void StartPolling()

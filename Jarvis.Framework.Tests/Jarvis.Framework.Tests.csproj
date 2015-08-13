@@ -149,6 +149,7 @@
     <Compile Include="ProjectionEngineTests\V2\ProjectionEnginePriorityTests.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="ProjectionEngineTests\V2\ProjectionEngineRebuildBaseTests.cs" />
     <Compile Include="ProjectionEngineTests\V2\ProjectionEngineTests.cs" />
     <Compile Include="ProjectionEngineTests\Projection.cs" />
     <Compile Include="ProjectionEngineTests\SampleReadModel.cs" />
