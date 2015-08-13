@@ -53,6 +53,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             Repository.Save(aggregate, Guid.NewGuid(), h => { });
             Thread.Sleep(50);
             await Engine.UpdateAndWait();
+
             var rm = reader.AllUnsorted.Single();
             var rm2 = reader2.AllUnsorted.Single();
             Assert.That(rm2.Timestamp, Is.LessThan(rm.Timestamp));

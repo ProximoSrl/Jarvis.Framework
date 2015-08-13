@@ -11,10 +11,11 @@ using Jarvis.Framework.Shared.ReadModel;
 using Jarvis.Framework.TestHelpers;
 using Jarvis.Framework.Tests.EngineTests;
 using NUnit.Framework;
+using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
-    [TestFixture]
+
     public class ProjectionEngineRebuildBaseTests : AbstractV2ProjectionEngineTests
     {
         protected MongoReader<SampleReadModel, string> _reader1;
@@ -74,10 +75,24 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 
             DateTime startWait = DateTime.Now;
             while (_reader1.AllSortedById.Count() < numberOfTotalCommits &&
-                   DateTime.Now.Subtract(startWait).TotalMilliseconds < 10000)
+                   DateTime.Now.Subtract(startWait).TotalMilliseconds < 5000)
             {
                 Thread.Sleep(50);
             }
+
+            startWait = DateTime.Now;
+            Checkpoint checkpoint = _checkpoints.FindOneById("Projection");
+            do
+            {
+                Thread.Sleep(50);
+                checkpoint = _checkpoints.FindOneById("Projection");
+            } while (
+                        (
+                            checkpoint == null ||
+                            checkpoint.Value != numberOfTotalCommits.ToString()
+                         ) &&
+                         DateTime.Now.Subtract(startWait).TotalMilliseconds < 5000
+                     );
         }
     }
 
@@ -106,8 +121,8 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             Assert.AreEqual(2, _reader1.AllSortedById.Count());
             Assert.That(_reader1.AllSortedById.Count(r => r.IsInRebuild), Is.EqualTo(2));
             var checkpoint = _checkpoints.FindOneById("Projection");
-            Assert.That(checkpoint.Value, Is.EqualTo("2"), "Checkpoint is written after rebuild.");
-            Assert.That(checkpoint.Current, Is.EqualTo("2"), "Checkpoint is written after rebuild.");
+            Assert.That(checkpoint.Value, Is.EqualTo("2"), "Checkpoint Value is not written after rebuild.");
+            Assert.That(checkpoint.Current, Is.EqualTo("2"), "Checkpoint Current is written after rebuild.");
         }
 
     
