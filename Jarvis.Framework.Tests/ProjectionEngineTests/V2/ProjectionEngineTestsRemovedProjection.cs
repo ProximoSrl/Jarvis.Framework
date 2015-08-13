@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
+using System.Threading;
 using Jarvis.Framework.Kernel.Events;
 using Jarvis.Framework.Kernel.ProjectionEngine;
 using Jarvis.Framework.Shared.IdentitySupport;
@@ -9,12 +10,13 @@ using Jarvis.Framework.Shared.Messages;
 using Jarvis.Framework.Shared.ReadModel;
 using Jarvis.Framework.TestHelpers;
 using Jarvis.Framework.Tests.EngineTests;
+using MongoDB.Driver.Builders;
 using NUnit.Framework;
 
-namespace Jarvis.Framework.Tests.ProjectionEngineTests
+namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
     [TestFixture]
-    public class ProjectionEngineTestsCheckpoints : AbstractProjectionEngineTests
+    public class ProjectionEngineTestsRemovedProjection : AbstractV2ProjectionEngineTests
     {
         [TestFixtureSetUp]
         public override void TestFixtureSetUp()
@@ -42,27 +44,6 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         private Boolean returnProjection3 = true;
 
         [Test]
-        public async void run_poller()
-        {
-            var reader = new MongoReader<SampleReadModel, string>(Database);
-            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregateId(1));
-            aggregate.Create();
-            Repository.Save(aggregate, Guid.NewGuid(), h => { });
-
-            aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregateId(2));
-            aggregate.Create();
-            Repository.Save(aggregate, Guid.NewGuid(), h => { });
-
-            var stream = _eventStore.Advanced.GetFrom("0");
-            var lastCommit = stream.Last();
-
-            Assert.That(_statusChecker.IsCheckpointProjectedByAllProjection(lastCommit.CheckpointToken), Is.False);
-             
-            await Engine.UpdateAndWait();
-            Assert.That(_statusChecker.IsCheckpointProjectedByAllProjection(lastCommit.CheckpointToken), Is.True);
-        }
-
-        //[Test]
         public async void verify_projection_removed()
         {
             var reader = new MongoReader<SampleReadModel, string>(Database);

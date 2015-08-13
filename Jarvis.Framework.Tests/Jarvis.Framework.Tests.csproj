@@ -129,18 +129,42 @@
     <Compile Include="EngineTests\StringIdTests.cs" />
     <Compile Include="MultitenantSupportTests\MultiTenantSubDependencyResolverTests.cs" />
     <Compile Include="MultitenantSupportTests\TenantManagerTests.cs" />
-    <Compile Include="ProjectionEngineTests\AbstractProjectionEngineTests.cs" />
+    <Compile Include="ProjectionEngineTests\Concurrent\AbstractConcurrentProjectionEngineTests.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ProjectionEngineTests\Concurrent\ProjectionEnginePriorityTests.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ProjectionEngineTests\Concurrent\ProjectionEngineTests.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ProjectionEngineTests\Concurrent\ProjectionEngineTestsRemovedProjection.cs" />
+    <Compile Include="ProjectionEngineTests\Concurrent\ProjectionEngineTestsCheckpoints.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ProjectionEngineTests\Concurrent\ProjectionEngineTestsPoller.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ProjectionEngineTests\V2\AbstractV2ProjectionEngineTests.cs" />
+    <Compile Include="ProjectionEngineTests\V2\ProjectionEnginePriorityTests.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ProjectionEngineTests\V2\ProjectionEngineTests.cs" />
     <Compile Include="ProjectionEngineTests\Projection.cs" />
-    <Compile Include="ProjectionEngineTests\ProjectionEnginePriorityTests.cs" />
-    <Compile Include="ProjectionEngineTests\ProjectionEngineTestsCheckpoints.cs" />
-    <Compile Include="ProjectionEngineTests\ProjectionEngineTestsPoller.cs" />
     <Compile Include="ProjectionEngineTests\SampleReadModel.cs" />
+    <Compile Include="ProjectionEngineTests\V2\ProjectionEngineTestsRemovedProjection.cs" />
+    <Compile Include="ProjectionEngineTests\V2\ProjectionEngineTestsCheckpoints.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ProjectionEngineTests\V2\PollerCanStopAndRestart.cs" />
+    <Compile Include="ProjectionEngineTests\V2\ProjectionEngineTestsPoller.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="ProjectionsTests\DeleteEvent.cs" />
     <Compile Include="ProjectionsTests\InsertEvent.cs" />
     <Compile Include="ProjectionsTests\MyAggregateId.cs" />
     <Compile Include="ProjectionsTests\MyProjection.cs" />
     <Compile Include="ProjectionsTests\MyReadModel.cs" />
-    <Compile Include="ProjectionEngineTests\ProjectionEngineTests.cs" />
     <Compile Include="ProjectionsTests\ProjectionTests.cs" />
     <Compile Include="ProjectionsTests\ReadModelTests.cs" />
     <Compile Include="ProjectionsTests\RebuildContextTests.cs" />

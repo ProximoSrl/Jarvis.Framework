@@ -113,9 +113,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         public void Start()
         {
             if (Logger.IsDebugEnabled) Logger.DebugFormat("Starting projection engine on tenant {0}", _config.TenantId);
-
-            int seconds = _config.ForcedGcSecondsInterval;
-
+            
             StartPolling();
             if (Logger.IsDebugEnabled) Logger.Debug("Projection engine started");
         }
@@ -158,8 +156,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             {
                 client.StartManualPolling(GetStartGlobalCheckpoint());
             }
-
-            Poll();
         }
 
         void StartPolling()
@@ -198,6 +194,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
             var allSlots = _projectionsBySlot.Keys.ToArray();
 
+            //recreate all polling clients.
             foreach (var bucket in _config.BucketInfo)
             {
                 var client = _pollingClientFactory(_eventstore.Advanced);
@@ -300,6 +297,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             {
                 client.StopPolling();
             }
+            _clients.Clear();
+            _bucketToClient.Clear();
             _eventstore.Dispose();
         }
 

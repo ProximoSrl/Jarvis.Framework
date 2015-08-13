@@ -7,21 +7,21 @@ using Jarvis.Framework.Kernel.Engine;
 using Jarvis.Framework.Kernel.Events;
 using Jarvis.Framework.Kernel.ProjectionEngine;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
-using Jarvis.Framework.Kernel.Store;
 using Jarvis.Framework.Shared.IdentitySupport;
 using Jarvis.Framework.Shared.MultitenantSupport;
 using Jarvis.Framework.Shared.ReadModel;
 using Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore;
 using MongoDB.Driver;
 using NEventStore;
+using NEventStore.Persistence;
 using NSubstitute;
 using NUnit.Framework;
 
-namespace Jarvis.Framework.Tests.ProjectionEngineTests
+namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
-    public abstract class AbstractProjectionEngineTests
+    public abstract class AbstractV2ProjectionEngineTests
     {
-        protected ConcurrentProjectionsEngine Engine;
+        protected ProjectionEngine Engine;
         string _eventStoreConnectionString;
         IdentityManager _identityConverter;
         protected RepositoryEx Repository;
@@ -29,7 +29,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         protected MongoDatabase Database;
         RebuildContext _rebuildContext;
         protected MongoStorageFactory StorageFactory;
-
+        protected MongoCollection<Checkpoint> _checkpoints;
         protected ConcurrentCheckpointTracker _tracker;
         protected ConcurrentCheckpointStatusChecker _statusChecker;
 
@@ -57,14 +57,15 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             var url = new MongoUrl(_eventStoreConnectionString);
             var client = new MongoClient(url);
             Database = client.GetServer().GetDatabase(url.DatabaseName);
+            _checkpoints = Database.GetCollection<Checkpoint>("checkpoints");
             Database.Drop();
         }
 
         [TestFixtureTearDown]
         public virtual void TestFixtureTearDown()
         {
-            _eventStore.Dispose();
             Engine.Stop();
+            _eventStore.Dispose();
             CollectionNames.Customize = name => name;
         }
 
@@ -89,6 +90,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             {
                 Engine.Stop();
             }
+            _checkpoints.Drop();
             _tracker = new ConcurrentCheckpointTracker(Database);
             _statusChecker = new ConcurrentCheckpointStatusChecker(Database);
 
@@ -98,16 +100,25 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             {
                 Slots = new[] { "*" },
                 EventStoreConnectionString = _eventStoreConnectionString,
-                TenantId = tenantId
+                TenantId = tenantId,
+                BucketInfo = new List<BucketInfo>() { new BucketInfo() { Slots = new[] { "*" }, BufferSize = 10 } },
+                DelayedStartInMilliseconds = 1000,
+                ForcedGcSecondsInterval = 0,
+                EngineVersion = "v2",
             };
 
             _rebuildContext = new RebuildContext(false);
             StorageFactory = new MongoStorageFactory(Database, _rebuildContext);
-
-            Engine = new ConcurrentProjectionsEngine(
+            Func<IPersistStreams, CommitPollingClient> pollingClientFactory = 
+                ps => new CommitPollingClient(
+                    ps, 
+                    new CommitEnhancer(_identityConverter),
+                    OnGetPollingClientId(),
+                    NullLogger.Instance);
+            Engine = new ProjectionEngine(
+                pollingClientFactory,
                 _tracker,
                 BuildProjections().ToArray(),
-                new PollingClientWrapper(new CommitEnhancer(_identityConverter), true, _tracker),
                 new NullHouseKeeper(),
                 _rebuildContext,
                 new NullNotifyCommitHandled(),
@@ -115,6 +126,16 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
                 );
             Engine.LoggerFactory = Substitute.For<ILoggerFactory>();
             Engine.LoggerFactory.Create(Arg.Any<Type>()).Returns(NullLogger.Instance);
+            OnStartPolling();
+        }
+
+        protected virtual string OnGetPollingClientId()
+        {
+            return this.GetType().Name;
+        }
+
+        protected virtual void OnStartPolling()
+        {
             Engine.StartWithManualPoll();
         }
 

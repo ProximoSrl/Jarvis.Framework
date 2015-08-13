@@ -104,6 +104,9 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
 
         public void On(SampleAggregateCreated e)
         {
+            Console.WriteLine("Projected in thread {0} - {1}", 
+                Thread.CurrentThread.ManagedThreadId,
+                Thread.CurrentThread.Name);
             Thread.Sleep(0);
             _collection.Insert(e, new SampleReadModel3()
             {
