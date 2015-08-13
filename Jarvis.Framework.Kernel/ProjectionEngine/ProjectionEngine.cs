@@ -271,13 +271,24 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
                 foreach (var projection in slot.Value)
                 {
-                    if (_checkpointTracker.NeedsRebuild(projection) &&
-                        maxCheckpointDispatchedInSlot >= 0)
+                    if (_checkpointTracker.NeedsRebuild(projection))
                     {
-                        _checkpointTracker.SetCheckpoint(projection.GetCommonName(), maxCheckpointDispatchedInSlot.ToString());
-                        projection.Drop();
-                        projection.StartRebuild(_rebuildContext);
-                        _checkpointTracker.RebuildStarted(projection, lastCommit);
+                        //Check if this slot has ever dispatched at least one commit
+                        if (maxCheckpointDispatchedInSlot > 0)
+                        {
+                            _checkpointTracker.SetCheckpoint(projection.GetCommonName(),
+                                maxCheckpointDispatchedInSlot.ToString());
+                            projection.Drop();
+                            projection.StartRebuild(_rebuildContext);
+                            _checkpointTracker.RebuildStarted(projection, lastCommit);
+                        }
+                        else
+                        {
+                            //this is a new slot, all the projection should execute
+                            //as if they are not in rebuild, because they are new
+                            //so we need to immediately stop rebuilding.
+                            projection.StopRebuild();
+                        }
                     }
 
                     projection.SetUp();
