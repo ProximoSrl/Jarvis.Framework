@@ -223,7 +223,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             if (_persistStreams.IsDisposed) return; //no need to poll, someone disposed NEventStore
             try
             {
-                IEnumerable<ICommit> commits = _persistStreams.GetFrom(_checkpointTokenCurrent);
+                IEnumerable<ICommit> commits = _persistStreams.GetFrom(_checkpointTokenCurrent)
+                    .Take(_bufferSize).ToList();
                 foreach (var commit in commits)
                 {
                     _lastActivityTickCount = Environment.TickCount; //much faster than DateTime.now or UtcNow.
