@@ -183,4 +183,59 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 
 
     }
+
+    public class BasicRebuildWithNewProjectionDifferentSlot : ProjectionEngineRebuildBaseTests
+    {
+
+        private Boolean returnTwoProjection = false;
+
+        protected override IEnumerable<IProjection> BuildProjections()
+        {
+            var writer = new CollectionWrapper<SampleReadModel, string>(StorageFactory, new NotifyToNobody());
+            yield return new Projection(writer);
+            if (returnTwoProjection)
+            {
+                var writer3 = new CollectionWrapper<SampleReadModel3, string>(StorageFactory, new NotifyToNobody());
+                yield return new Projection3(writer3);
+            }
+
+        }
+
+        [Test]
+        public async void verify_basic_rebuild_with_new_projection_different_slot()
+        {
+
+            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregateId(1));
+            aggregate.Create();
+            Repository.Save(aggregate, Guid.NewGuid(), h => { });
+            aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregateId(2));
+            aggregate.Create();
+            Repository.Save(aggregate, Guid.NewGuid(), h => { });
+            Thread.Sleep(50);
+            await Engine.UpdateAndWait();
+            Assert.AreEqual(2, _reader1.AllSortedById.Count());
+            Assert.That(_reader1.AllSortedById.Count(r => r.IsInRebuild), Is.EqualTo(0));
+            Assert.AreEqual(0, _reader3.AllSortedById.Count(), "Third projection should not be enabled!!");
+
+            //now rebuild.
+            returnTwoProjection = true;
+            ReInitAndRebuild(2);
+
+            Assert.AreEqual(2, _reader1.AllSortedById.Count());
+            Assert.That(_reader1.AllSortedById.Count(r => r.IsInRebuild), Is.EqualTo(2));
+
+            var checkpoint = _checkpoints.FindOneById("Projection");
+            Assert.That(checkpoint.Value, Is.EqualTo("2"), "Checkpoint is written after rebuild.");
+            Assert.That(checkpoint.Current, Is.EqualTo("2"), "Checkpoint is written after rebuild.");
+
+            Assert.AreEqual(2, _reader3.AllSortedById.Count());
+            Assert.That(_reader3.AllSortedById.Count(r => r.IsInRebuild), Is.EqualTo(0), "New projection in new slot does not undergo rebuilding");
+            checkpoint = _checkpoints.FindOneById("Projection3");
+            Assert.That(checkpoint.Value, Is.EqualTo("2"), "Checkpoint is written after rebuild.");
+            Assert.That(checkpoint.Current, Is.EqualTo("2"), "Checkpoint is written after rebuild.");
+
+        }
+
+
+    }
 }

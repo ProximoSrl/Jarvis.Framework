@@ -77,8 +77,6 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
                 Thread.Sleep(100);
             }
 
-            Thread.Sleep(5000);
-
             projected = _statusChecker.IsCheckpointProjectedByAllProjection(lastCommit.CheckpointToken);
             if (projected)
             {

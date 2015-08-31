@@ -46,7 +46,6 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
         [Test]
         public async void verify_projection_removed()
         {
-            var reader = new MongoReader<SampleReadModel, string>(Database);
             var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregateId(1));
             aggregate.Create();
             Repository.Save(aggregate, Guid.NewGuid(), h => { });
