@@ -11,5 +11,6 @@ namespace Jarvis.Framework.Shared.Messages
         public const String SagaIdHeader = "sagaId";
         public const String ReplyToHeader = "reply-to";
         public const String UserId = "user.id";
+        public const String CommandTimestamp = "command.timestamp";
     }
 }

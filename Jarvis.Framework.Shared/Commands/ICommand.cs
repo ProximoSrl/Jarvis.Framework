@@ -29,7 +29,7 @@ namespace Jarvis.Framework.Shared.Commands
         {
             Context = new Dictionary<string, string>();
             MessageId = Guid.NewGuid();
-            SetContextData("command.timestamp", DateTime.UtcNow.ToString("o"));
+            SetContextData(MessagesConstants.CommandTimestamp, DateTime.UtcNow.ToString("o"));
         }
 
         public IDictionary<string, string> Context { get; set; }
