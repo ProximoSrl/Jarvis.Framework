@@ -109,7 +109,7 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 
             if (!idSerializerDictionary.TryRemove(id, out outTempValue))
             {
-                Debug.WriteLine("Entity was not locked.");
+                //Debug.WriteLine("Entity was not locked, probably is new");
             }
         }
 

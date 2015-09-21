@@ -28,6 +28,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         private int _bufferSize = 4000;
         private readonly int _interval;
         readonly ICommitEnhancer _enhancer;
+        private String _id;
 
         readonly ILogger _logger;
         private IPersistStreams _persistStreams;
@@ -35,6 +36,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         public CommitPollingClient(
             IPersistStreams persistStreams,
             ICommitEnhancer enhancer,
+            String id,
             ILogger logger)
         {
             if (persistStreams == null)
@@ -46,6 +48,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             _consumers = new List<ITargetBlock<ICommit>>();
             _commandList = new BlockingCollection<string>();
             _logger = logger;
+            _id = id;
         }
 
         public void AddConsumer(IPollingClientConsumer consumer)
@@ -65,7 +68,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                 }
                 catch (Exception ex)
                 {
-                    _logger.ErrorFormat(ex, "Error during Commit consumer {0} ", ex.Message);
+                    _logger.ErrorFormat(ex, "CommitPollingClient {0}: Error during Commit consumer {1} ", _id, ex.Message);
                     CloseEverything();
                     throw;
                 }
@@ -146,17 +149,19 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         public void StopPolling()
         {
-            //TODO: Decide if we want to wait TPL
-            _pollerTimer.Stop();
-            _pollerTimer.Dispose();
-            _pollerTimer = null;
+            if (_pollerTimer != null)
+            {
+                _pollerTimer.Stop();
+                _pollerTimer.Dispose();
+                _pollerTimer = null;
+            }
             CloseEverything();
         }
 
         private void CloseEverything()
         {
             _stopRequested.Cancel();
-            _commandList.Add(command_stop);
+            CloseTplChain();
         }
 
         private void TimerCallback(object sender, System.Timers.ElapsedEventArgs e)
@@ -199,13 +204,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                             return; //this will stop poller thread
 
                         default:
-                            _logger.ErrorFormat("Unknown command {0}", command);
+                            _logger.ErrorFormat("CommitPollingClient {0}: Unknown command {1}",_id, command);
                             break;
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.ErrorFormat(ex, "Error in executing command: {0}", command);
+                    _logger.ErrorFormat(ex, "CommitPollingClient {0}: Error in executing command: {1}",_id, command);
                     throw;
                 }
             }
@@ -246,11 +251,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                         if (_postErrors > 2)
                         {
                             //TPL is somewhat stuck
-                            _logger.ErrorFormat("Unable to dispatch commit {0} into TPL chain, buffer block did not accept message", commit.CheckpointToken);
+                            _logger.ErrorFormat("CommitPollingClient {0}: Unable to dispatch commit {1} into TPL chain, buffer block did not accept message", _id, commit.CheckpointToken);
                             _stopRequested.Cancel();
                         }
                         _postErrors++;
-                        _logger.WarnFormat("TPL did not accept message for commit {0}", commit.CheckpointToken);
+                        _logger.WarnFormat("CommitPollingClient {0}: TPL did not accept message for commit {1}", _id, commit.CheckpointToken);
                         Thread.Sleep(1000); //let some time to flush some messages.
                         return;
                     }
@@ -264,16 +269,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                     return;
 
                 // These exceptions are expected to be transient, we can simply start a new poll immediately
-                _logger.ErrorFormat(ex, "Error in polling client {0}", ex.Message);
+                _logger.ErrorFormat(ex, "CommitPollingClient {0}: Error in polling client {1}", _id, ex.Message);
 
                 Poll();
             }
-        }
-
-        private void CloseTplChain()
-        {
-            //signal Tpl to complete buffer.
-            _buffer.Complete();
         }
 
         #endregion
@@ -282,9 +281,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         private BufferBlock<ICommit> _buffer;
         private ITargetBlock<ICommit> _broadcaster;
+        private Boolean tplChainActive = false;
 
         private void CreateTplChain()
         {
+            tplChainActive = true;
             DataflowBlockOptions bufferOptions = new DataflowBlockOptions();
             bufferOptions.BoundedCapacity = _bufferSize;
             _buffer = new BufferBlock<ICommit>(bufferOptions);
@@ -292,15 +293,17 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             ExecutionDataflowBlockOptions executionOption = new ExecutionDataflowBlockOptions();
             executionOption.BoundedCapacity = _bufferSize;
          
-            _broadcaster = GuaranteedDeliveryBroadcastBlock.Create(_consumers, 3000);
+            _broadcaster = GuaranteedDeliveryBroadcastBlock.Create(_consumers, _id, 3000);
 
             _buffer.LinkTo(_broadcaster, new DataflowLinkOptions() { PropagateCompletion = true });
         }
 
-        private ICommit Enhance(ICommit arg)
+        private void CloseTplChain()
         {
-            _enhancer.Enhance(arg);
-            return arg;
+            //signal Tpl to complete buffer.
+            _buffer.Complete();
+            _broadcaster.Complete();
+            tplChainActive = false;
         }
 
         #endregion 
@@ -311,6 +314,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         {
             public static ITargetBlock<T> Create<T>(
                 IEnumerable<ITargetBlock<T>> targets,
+                String commitPollingClientId,
                 Int32 boundedCapacity)
             {
                 var options = new ExecutionDataflowBlockOptions();
@@ -330,7 +334,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                                 Thread.Sleep(1000); //give some time to free some resource.
                                 if (errorCount > 2)
                                 {
-                                    throw new Exception("GuaranteedDeliveryBroadcastBlock: Unable to send message to a target");
+                                    throw new Exception("GuaranteedDeliveryBroadcastBlock: Unable to send message to a target id " + commitPollingClientId);
                                 }
                                 errorCount++;
                             }

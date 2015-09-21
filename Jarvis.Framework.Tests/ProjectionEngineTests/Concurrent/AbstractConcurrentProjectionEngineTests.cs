@@ -7,7 +7,6 @@ using Jarvis.Framework.Kernel.Engine;
 using Jarvis.Framework.Kernel.Events;
 using Jarvis.Framework.Kernel.ProjectionEngine;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
-using Jarvis.Framework.Kernel.Store;
 using Jarvis.Framework.Shared.IdentitySupport;
 using Jarvis.Framework.Shared.MultitenantSupport;
 using Jarvis.Framework.Shared.ReadModel;
@@ -17,9 +16,9 @@ using NEventStore;
 using NSubstitute;
 using NUnit.Framework;
 
-namespace Jarvis.Framework.Tests.ProjectionEngineTests
+namespace Jarvis.Framework.Tests.ProjectionEngineTests.Concurrent
 {
-    public abstract class AbstractProjectionEngineTests
+    public abstract class AbstractConcurrentProjectionEngineTests
     {
         protected ConcurrentProjectionsEngine Engine;
         string _eventStoreConnectionString;

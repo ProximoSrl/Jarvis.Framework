@@ -40,7 +40,8 @@ namespace Jarvis.Framework.Tests.BusTests
         public SampleTestCommand ReceivedCommand { get; private set; }
     }
 
-    class MessageTrackerTests
+    [TestFixture]
+    public class MessageTrackerTests
     {
         IBus _bus;
         WindsorContainer _container;

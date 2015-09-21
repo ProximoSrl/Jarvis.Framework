@@ -12,10 +12,10 @@ using Jarvis.Framework.TestHelpers;
 using Jarvis.Framework.Tests.EngineTests;
 using NUnit.Framework;
 
-namespace Jarvis.Framework.Tests.ProjectionEngineTests
+namespace Jarvis.Framework.Tests.ProjectionEngineTests.Concurrent
 {
     [TestFixture]
-    public class ProjectionEnginePriorityTests : AbstractProjectionEngineTests
+    public class ProjectionEnginePriorityTests : AbstractConcurrentProjectionEngineTests
     {
 
         [TestFixtureSetUp]

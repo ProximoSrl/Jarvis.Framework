@@ -113,9 +113,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         public void Start()
         {
             if (Logger.IsDebugEnabled) Logger.DebugFormat("Starting projection engine on tenant {0}", _config.TenantId);
-
-            int seconds = _config.ForcedGcSecondsInterval;
-
+            
             StartPolling();
             if (Logger.IsDebugEnabled) Logger.Debug("Projection engine started");
         }
@@ -135,31 +133,30 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             if (Logger.IsDebugEnabled) Logger.Debug("Projection engine stopped");
         }
 
-        public void StartWithManualPoll()
+        public void StartWithManualPoll(Boolean immediatePoll = true)
         {
             if (_config.DelayedStartInMilliseconds == 0)
             {
-                InnerStartWithManualPoll();
+                InnerStartWithManualPoll(immediatePoll);
             }
             else
             {
                 Task.Factory.StartNew(() =>
                 {
                     Thread.Sleep(_config.DelayedStartInMilliseconds);
-                    InnerStartWithManualPoll();
+                    InnerStartWithManualPoll(immediatePoll);
                 });
             }
         }
 
-        private void InnerStartWithManualPoll()
+        private void InnerStartWithManualPoll(Boolean immediatePoll)
         {
             Init();
             foreach (var client in _clients)
             {
                 client.StartManualPolling(GetStartGlobalCheckpoint());
             }
-
-            Poll();
+            if (immediatePoll) Poll();
         }
 
         void StartPolling()
@@ -198,6 +195,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
             var allSlots = _projectionsBySlot.Keys.ToArray();
 
+            //recreate all polling clients.
             foreach (var bucket in _config.BucketInfo)
             {
                 var client = _pollingClientFactory(_eventstore.Advanced);
@@ -262,13 +260,35 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             var lastCommit = GetLastCommitId();
             foreach (var slot in _projectionsBySlot)
             {
+                var maxCheckpointDispatchedInSlot = slot.Value
+                    .Select(projection =>
+                    {
+                        var checkpoint = _checkpointTracker.GetCheckpoint(projection);
+                        var longCheckpoint = LongCheckpoint.Parse(checkpoint);
+                        return longCheckpoint.LongValue;
+                    })
+                    .Max();
+
                 foreach (var projection in slot.Value)
                 {
                     if (_checkpointTracker.NeedsRebuild(projection))
                     {
-                        projection.Drop();
-                        projection.StartRebuild(_rebuildContext);
-                        _checkpointTracker.RebuildStarted(projection, lastCommit);
+                        //Check if this slot has ever dispatched at least one commit
+                        if (maxCheckpointDispatchedInSlot > 0)
+                        {
+                            _checkpointTracker.SetCheckpoint(projection.GetCommonName(),
+                                maxCheckpointDispatchedInSlot.ToString());
+                            projection.Drop();
+                            projection.StartRebuild(_rebuildContext);
+                            _checkpointTracker.RebuildStarted(projection, lastCommit);
+                        }
+                        else
+                        {
+                            //this is a new slot, all the projection should execute
+                            //as if they are not in rebuild, because they are new
+                            //so we need to immediately stop rebuilding.
+                            projection.StopRebuild();
+                        }
                     }
 
                     projection.SetUp();
@@ -300,6 +320,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             {
                 client.StopPolling();
             }
+            _clients.Clear();
+            _bucketToClient.Clear();
             _eventstore.Dispose();
         }
 
