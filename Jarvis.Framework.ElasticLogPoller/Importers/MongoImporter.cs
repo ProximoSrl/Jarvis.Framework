@@ -18,7 +18,7 @@ namespace Jarvis.Framework.ElasticLogPoller.Importers
 
     public class MongoImporter : BaseImporter
     {
-        public const String DateTimeFormatForNestQuery = "yyyy-MM-ddThh:mm:ss.fff";
+        public const String DateTimeFormatForNestQuery = "yyyy-MM-ddTHH:mm:ss.fff";
 
         public class ImportCheckpoint
         {
@@ -111,10 +111,11 @@ namespace Jarvis.Framework.ElasticLogPoller.Importers
         {
             List<BsonDocument> resultList;
 
+            DateTime limitDate = DateTime.Now.AddSeconds(-30);
             resultList = _collection
                 .Find(Query.And(
                         Query.GTE("ts", _checkpoint.LastCheckpoint),
-                        Query.LT("ts", DateTime.Now.AddSeconds(-30))))
+                        Query.LT("ts", limitDate)))
                     .SetSortOrder(SortBy.Ascending("ts"))
                     .Take(1000)
                     .ToList();
