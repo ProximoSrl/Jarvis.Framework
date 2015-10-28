@@ -27,10 +27,38 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         public void CreateIndex(IMongoIndexKeys keys, IMongoIndexOptions options = null)
         {
             if (options != null)
-                _collection.CreateIndex(keys, options);
+            {
+                //there is the possibility that create index trow if an index with same name and 
+                //different options/keys is created
+                try
+                {
+                    _collection.CreateIndex(keys, options);
+                }
+                catch (MongoWriteConcernException ex)
+                {
+                    //probably index extist with different options, lets check if name is specified
+                    var optionsDoc = options.ToBsonDocument();
+                    String indexName;
+                    if (optionsDoc.Names.Contains("name"))
+                    {
+                        indexName = optionsDoc["name"].AsString;
+                    }
+                    else
+                    {
+                        //determine the index name from fields, fragile but works with this version of drivers 
+                        indexName = GetIndexName(keys);
+                    }
+                    _collection.DropIndexByName(indexName);
+                    _collection.CreateIndex(keys, options);
+                }
+            }
             else
+            {
                 _collection.CreateIndex(keys);
+            }
+                
         }
+
         public void InsertBatch(IEnumerable<TModel> values)
         {
             _collection.InsertBatch(values);
@@ -123,5 +151,17 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         {
 
         }
+
+        #region Helpers
+
+        private String GetIndexName(IMongoIndexKeys keys)
+        {
+            var keysdocument = keys.ToBsonDocument();
+            return keysdocument
+                .Select(k => k.Name + "_" + k.Value.ToString())
+                .Aggregate((s1, s2) => s1 + "_" + s2);
+        }
+
+        #endregion
     }
 }
