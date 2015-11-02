@@ -21,6 +21,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         void Consume(ICommit commit);
     }
 
+
+    public enum CommitPollingClientStatus
+    {
+        Stopped,
+        Polling,
+        Faulted
+    }
+
     public class CommitPollingClient
     {
         private const string command_poll = "poll";
@@ -32,6 +40,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         readonly ILogger _logger;
         private IPersistStreams _persistStreams;
+
+        public CommitPollingClientStatus Status { get; private set; }
+
+        public Exception LastException { get; private set; }
 
         public CommitPollingClient(
             IPersistStreams persistStreams,
@@ -49,6 +61,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             _commandList = new BlockingCollection<string>();
             _logger = logger;
             _id = id;
+            Status = CommitPollingClientStatus.Stopped;
         }
 
         public void AddConsumer(IPollingClientConsumer consumer)
@@ -69,7 +82,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                 catch (Exception ex)
                 {
                     _logger.ErrorFormat(ex, "CommitPollingClient {0}: Error during Commit consumer {1} ", _id, ex.Message);
-                    CloseEverything();
+                    StopPolling(true); //Stop and close everything on this poller.
+                    LastException = ex;
                     throw;
                 }
             };
@@ -115,10 +129,18 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             //Set health check for polling
             HealthChecks.RegisterHealthCheck("Polling-" + pollerName, () =>
             {
-                if (_pollerTimer == null)
+                if (Status == CommitPollingClientStatus.Stopped)
                 {
                     //poller is stopped, system healty
                     return HealthCheckResult.Healthy("Automatic polling stopped");
+                }
+                else if (Status == CommitPollingClientStatus.Faulted)
+                {
+                    //poller is stopped, system healty
+                    return HealthCheckResult.Unhealthy("Faulted (exception in consumer): " + 
+                        LastException != null ? 
+                        LastException.ToString() : 
+                        "");
                 }
                 var elapsed = Math.Abs(Environment.TickCount - _lastActivityTickCount);
                 if (elapsed > 5000)
@@ -129,6 +151,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
                 return HealthCheckResult.Healthy("Poller alive");
             });
+
+            Status = CommitPollingClientStatus.Polling;
         }
 
         public void StartManualPolling(
@@ -138,6 +162,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         {
             _bufferSize = bufferSize;
             _checkpointTokenCurrent = checkpointTokenFrom;
+            LastException = null;
             //prepare single poller thread.
             CreateTplChain();
             _pollerThread = new Thread(PollerFunc);
@@ -147,7 +172,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             MetricsHelper.SetCommitPollingClientBufferSize(pollerName, () => GetClientBufferSize());
         }
 
-        public void StopPolling()
+        public void StopPolling(Boolean setToFaulted = false)
         {
             if (_pollerTimer != null)
             {
@@ -156,6 +181,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                 _pollerTimer = null;
             }
             CloseEverything();
+            Status = setToFaulted ? 
+                CommitPollingClientStatus.Faulted : 
+                CommitPollingClientStatus.Stopped;
         }
 
         private void CloseEverything()
