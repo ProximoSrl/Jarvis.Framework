@@ -67,6 +67,22 @@ namespace Jarvis.Framework.Tests.SharedTests
             mapCount = _mappingFlatCollection.FindAll();
             Assert.That(mapCount.Count(), Is.EqualTo(0));
         }
+
+        [Test]
+        public void Verify_exception_of_multiple_map()
+        {
+            sut.Addalias(new TestId(2), "Alias2");
+            try
+            {
+                sut.Addalias(new TestId(3), "Alias2");
+                Assert.Fail("Expect exception for invalid alias");
+            }
+            catch (Exception ex)
+            {
+                Assert.That(ex.Message, Contains.Substring("Alias alias2 already mapped to Test_2"));
+            }
+           
+        }
     }
 
     public class TestMapper : AbstractIdentityTranslator<TestId>
@@ -81,6 +97,12 @@ namespace Jarvis.Framework.Tests.SharedTests
         {
             base.ReplaceAlias(id, value);
         }
+
+        public void Addalias(TestId id, String value)
+        {
+            base.AddAlias(id, value);
+        }
+
 
 
         public TestId Map(String value)

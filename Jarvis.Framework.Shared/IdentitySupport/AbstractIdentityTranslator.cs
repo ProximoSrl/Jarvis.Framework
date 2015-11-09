@@ -65,7 +65,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             if (mapped != null)
             {
                 if (mapped.AggregateId != key)
-                    throw new Exception(string.Format("Alias {0} already mapped to {1}", alias, key));
+                    throw new Exception(string.Format("Alias {0} already mapped to {1}", alias, mapped.AggregateId));
 
                 return;
             }
