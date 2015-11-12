@@ -256,5 +256,43 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         {
             _checkpointTracker.Clear();
         }
+
+        public List<string> GetCheckpointErrors()
+        {
+            List<string> errors = new List<string>();
+            if (RebuildSettings.ShouldRebuild == false)
+            {
+                //need to check every slot for new projection 
+                var slots = _projectionToSlot.GroupBy(k => k.Value, k => k.Key);
+                foreach (var slot in slots)
+                {
+                    var allCheckpoints = _checkpointTracker
+                        .Where(k => slot.Contains(k.Key));
+
+                    var minCheckpoint = allCheckpoints.Min(k => k.Value);
+                    var maxCheckpoint = allCheckpoints.Max(k => k.Value);
+
+                    if (minCheckpoint != maxCheckpoint)
+                    {
+                        String error;
+                        //error, ve have not all projection at the same checkpoint 
+                        if (allCheckpoints
+                            .Where(k => k.Value != "0")
+                            .Select(k => k.Value)
+                            .Distinct().Count() == 1)
+                        {
+                            //We have one or more new projection in slot
+                            error = String.Format("Error in slot {0}: we have new projections at checkpoint 0, rebuild needed!", slot.Key);
+                        }
+                        else
+                        {
+                            error = String.Format("Error in slot {0}, not all projection at the same checkpoint value. Please check reamodel db!", slot.Key);
+                        }
+                        errors.Add(error);
+                    }
+                }
+            }
+            return errors;
+        }
     }
 }
