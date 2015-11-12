@@ -1,5 +1,6 @@
 using System;
 using Jarvis.Framework.Kernel.Events;
+using System.Collections.Generic;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 {
@@ -18,5 +19,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         void RebuildEnded(IProjection projection, ProjectionMetrics.Meter meter);
         void UpdateSlot(string slotName, string checkpointToken);
         string GetCurrent(IProjection projection);
+
+        /// <summary>
+        /// Return a list of errors if there are anomalies in projection
+        /// checkpoints.
+        /// It should be called after all projection are configured and 
+        /// before start polling to dispatch commit.
+        /// </summary>
+        /// <returns></returns>
+        List<String> GetCheckpointErrors();
     }
 }

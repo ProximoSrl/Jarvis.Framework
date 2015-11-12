@@ -21,6 +21,7 @@ using NEventStore.Serialization;
 using NEventStore.Persistence;
 using Jarvis.Framework.Kernel.Support;
 using System.Collections.Concurrent;
+using System.Text;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
 {
@@ -294,6 +295,17 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                     projection.SetUp();
                 }
             }
+            var errors = _checkpointTracker.GetCheckpointErrors();
+            if (errors.Any())
+            {
+                StringBuilder fullError = new StringBuilder();
+                foreach (var error in errors)
+                {
+                    Logger.ErrorFormat("CheckpointError: {0}", error);
+                    fullError.AppendLine(error);
+                }
+                throw new Exception(String.Format("Found {0} errors in checkpoint status: {1}", errors.Count, fullError.ToString()));
+            }
         }
 
         private String GetLastCommitId()
@@ -383,8 +395,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                     var evt = (DomainEvent)eventMessage.Body;
                     if (Logger.IsDebugEnabled) Logger.ThreadProperties["evType"] = evt.GetType().Name;
                     if (Logger.IsDebugEnabled) Logger.ThreadProperties["evMsId"] = evt.MessageId;
+                    if (Logger.IsDebugEnabled) Logger.ThreadProperties["evCheckpointToken"] = commit.CheckpointToken;
                     string eventName = evt.GetType().Name;
-
                     foreach (var projection in projections)
                     {
                         var cname = projection.GetCommonName();
@@ -406,11 +418,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                         }
                         catch (Exception ex)
                         {
-                            Logger.FatalFormat(ex, "[{3}] Failed checkpoint {0}: {1} > {2}",
+                            Logger.FatalFormat(ex, "[Slot: {3} Projection: {4}] Failed checkpoint: {0} StreamId: {1} Event Name: {2}",
                                 commit.CheckpointToken,
                                 commit.StreamId,
                                 eventName,
-                                slotName
+                                slotName,
+                                cname
                             );
                             throw;
                         }
@@ -453,12 +466,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                         if (Logger.IsDebugEnabled) Logger.ThreadProperties["prj"] = null;
                     }
 
-                    if (Logger.IsDebugEnabled) Logger.ThreadProperties["evType"] = null;
-                    if (Logger.IsDebugEnabled) Logger.ThreadProperties["evMsId"] = null;
+                    ClearLoggerThreadPropertiesForEventDispatchLoop();
                 }
                 catch (Exception ex)
                 {
-                    Logger.ErrorFormat(ex, "{0} -> {1}", eventMessage.Body, ex.Message);
+                    Logger.ErrorFormat(ex, "Error dispathing commit id: {0}\nMessage: {1}\nError: {2}", 
+                        commit.CheckpointToken, eventMessage.Body, ex.Message);
+                    ClearLoggerThreadPropertiesForEventDispatchLoop();
                     throw;
                 }
             }
@@ -488,6 +502,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
             if (Logger.IsDebugEnabled) Logger.ThreadProperties["commit"] = null;
             Interlocked.Decrement(ref _countOfConcurrentDispatchingCommit);
+        }
+
+        private void ClearLoggerThreadPropertiesForEventDispatchLoop()
+        {
+            if (Logger.IsDebugEnabled) Logger.ThreadProperties["evType"] = null;
+            if (Logger.IsDebugEnabled) Logger.ThreadProperties["evMsId"] = null;
+            if (Logger.IsDebugEnabled) Logger.ThreadProperties["evCheckpointToken"] = null;
+            if (Logger.IsDebugEnabled) Logger.ThreadProperties["prj"] = null;
         }
 
         public void Update()
