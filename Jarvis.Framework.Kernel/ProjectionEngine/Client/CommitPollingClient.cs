@@ -73,7 +73,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         {
             ExecutionDataflowBlockOptions consumerOptions = new ExecutionDataflowBlockOptions();
             consumerOptions.BoundedCapacity = _bufferSize;
-            Action<ICommit> wrapperAction = commit => 
+            Action<ICommit> wrapperAction = commit =>
             {
                 try
                 {
@@ -88,7 +88,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                 }
             };
             var actionBlock = new ActionBlock<ICommit>(wrapperAction, consumerOptions);
-            
+
             _consumers.Add(actionBlock);
         }
 
@@ -137,10 +137,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                 else if (Status == CommitPollingClientStatus.Faulted)
                 {
                     //poller is stopped, system healty
-                    return HealthCheckResult.Unhealthy("Faulted (exception in consumer): " + 
-                        LastException != null ? 
-                        LastException.ToString() : 
-                        "");
+                    var exception = (LastException != null ? LastException.ToString() : "");
+                    exception = exception.Replace("{", "{{").Replace("}", "}}");
+                    return HealthCheckResult.Unhealthy("Faulted (exception in consumer): " + exception);
                 }
                 var elapsed = Math.Abs(Environment.TickCount - _lastActivityTickCount);
                 if (elapsed > 5000)
@@ -181,8 +180,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                 _pollerTimer = null;
             }
             CloseEverything();
-            Status = setToFaulted ? 
-                CommitPollingClientStatus.Faulted : 
+            Status = setToFaulted ?
+                CommitPollingClientStatus.Faulted :
                 CommitPollingClientStatus.Stopped;
         }
 
@@ -232,13 +231,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                             return; //this will stop poller thread
 
                         default:
-                            _logger.ErrorFormat("CommitPollingClient {0}: Unknown command {1}",_id, command);
+                            _logger.ErrorFormat("CommitPollingClient {0}: Unknown command {1}", _id, command);
                             break;
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.ErrorFormat(ex, "CommitPollingClient {0}: Error in executing command: {1}",_id, command);
+                    _logger.ErrorFormat(ex, "CommitPollingClient {0}: Error in executing command: {1}", _id, command);
                     throw;
                 }
             }
@@ -320,7 +319,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
             ExecutionDataflowBlockOptions executionOption = new ExecutionDataflowBlockOptions();
             executionOption.BoundedCapacity = _bufferSize;
-         
+
             _broadcaster = GuaranteedDeliveryBroadcastBlock.Create(_consumers, _id, 3000);
 
             _buffer.LinkTo(_broadcaster, new DataflowLinkOptions() { PropagateCompletion = true });
