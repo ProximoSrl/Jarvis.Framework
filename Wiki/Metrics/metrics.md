@@ -22,4 +22,4 @@ Launched by an admin console.
 
 ###What Metrics Jarvis.Framework can offer
 
-- [Projections](Wiki/Metrics/projections.md)
+- [Projections](projections.md)
