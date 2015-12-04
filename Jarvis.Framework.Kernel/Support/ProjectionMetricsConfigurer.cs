@@ -1,13 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Castle.Core;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 using Metrics;
 
-namespace Jarvis.Framework.Shared.Metrics
+namespace Jarvis.Framework.Kernel.Support
 {
     public class ProjectionMetricsConfigurer : IStartable
     {
