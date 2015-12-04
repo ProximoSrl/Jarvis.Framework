@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Castle.Core;
+using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 using Metrics;
 
 namespace Jarvis.Framework.Shared.Metrics
@@ -69,6 +70,9 @@ namespace Jarvis.Framework.Shared.Metrics
         {
             return () =>
             {
+                if (RebuildSettings.ShouldRebuild)
+                    return HealthCheckResult.Healthy("Slot " + slotName + " is rebuilding");
+
                 var behind = _loader.GetSlotMetric(slotName).CommitBehind;
                 if (behind > _maxSkewForSlot)
                     return HealthCheckResult.Unhealthy("Slot " + slotName + " behind:" + behind);

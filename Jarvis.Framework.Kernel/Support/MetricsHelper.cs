@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 
 namespace Jarvis.Framework.Kernel.Support
 {
@@ -13,7 +14,7 @@ namespace Jarvis.Framework.Kernel.Support
     /// </summary>
     public static class MetricsHelper
     {
-        private const String _checkpointToDispatchGaugeName ="checkpoint-to-dispatch";
+        private const String _checkpointToDispatchRebuildGaugeName ="checkpoint-to-dispatch";
 
         private const String _commitPollingClientBufferSizeGaugeName = "polling-client-buffer-size";
 
@@ -29,14 +30,18 @@ namespace Jarvis.Framework.Kernel.Support
 
         public static void SetCheckpointCountToDispatch(String slotName, Func<Double> valueProvider)
         {
+            //These stats are valid only during a rebuild and not during standard working.
+            if (!RebuildSettings.ShouldRebuild)
+                return;
+
             String gaugeName;
             if (!string.IsNullOrEmpty(slotName))
             {
-                gaugeName = _checkpointToDispatchGaugeName + "-" + slotName;
+                gaugeName = _checkpointToDispatchRebuildGaugeName + "-" + slotName;
             }
             else
             {
-                gaugeName = _checkpointToDispatchGaugeName;
+                gaugeName = _checkpointToDispatchRebuildGaugeName;
             }
             if (TenantContext.CurrentTenantId != null) 
             {

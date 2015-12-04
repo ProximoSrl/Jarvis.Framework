@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Metrics;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.Builders;
 
-namespace Jarvis.Framework.Shared.Metrics
+namespace Jarvis.Framework.Kernel.Support
 {
     public class ProjectionStatusLoader : IProjectionStatusLoader
     {
@@ -18,9 +17,6 @@ namespace Jarvis.Framework.Shared.Metrics
 
         private Dictionary<String, SlotStatus> _lastMetrics;
         private Int64 _lastDelay;
-
-
-       
 
         public ProjectionStatusLoader(
             MongoDatabase eventStoreDatabase,
@@ -86,7 +82,16 @@ namespace Jarvis.Framework.Shared.Metrics
                 foreach (BsonDocument metric in allCheckpoints)
                 {
                     var slotName = metric["_id"].AsString;
-                    var current = Int64.Parse(metric["Current"].AsString);
+                    Int64 current;
+                    if (!metric["Current"].IsBsonNull)
+                    {
+                        current = Int64.Parse(metric["Current"].AsString);
+                    }
+                    else
+                    {
+                        current = 0;
+                    }
+
                     var delay = lastCommit - current;
                     if (delay > _lastDelay) _lastDelay = delay;
                     _lastMetrics[slotName] = new SlotStatus(slotName, delay);
