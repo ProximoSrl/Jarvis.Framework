@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace Jarvis.Framework.Shared.Metrics
+namespace Jarvis.Framework.Kernel.Support
 {
     public interface IProjectionStatusLoader
     {
