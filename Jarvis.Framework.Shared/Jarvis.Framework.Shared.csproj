@@ -115,9 +115,6 @@
     <Compile Include="Messages\MessagesContractResolver.cs" />
     <Compile Include="Messages\ReadModelUpdatedMessage.cs" />
     <Compile Include="Messages\TimeToBeReceivedAttribute.cs" />
-    <Compile Include="Metrics\IProjectionMetricsDotNetConfigurer.cs" />
-    <Compile Include="Metrics\ProjectionMetricsConfigurer.cs" />
-    <Compile Include="Metrics\ProjectionMetricsLoader.cs" />
     <Compile Include="MultitenantSupport\ITenant.cs" />
     <Compile Include="MultitenantSupport\ITenantAccessor.cs" />
     <Compile Include="MultitenantSupport\TenantId.cs" />
