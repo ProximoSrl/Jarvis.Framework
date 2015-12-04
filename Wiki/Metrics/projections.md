@@ -5,15 +5,15 @@
 You can configure a couple of classes useful to gather health status of projection slots and automatically configure Metrics.NET with some useful stats.
 
 ```csharp
-            container.Register(
-                Component
-                    .For<IProjectionStatusLoader>()
-                    .ImplementedBy<ProjectionStatusLoader>()
-                    .DependsOn(Dependency.OnComponent("eventStoreDatabase", "EventStoreDb"))
-                    .DependsOn(Dependency.OnComponent("readModelDatabase", "ReadModelDb")),
-                Component
-                    .For<ProjectionMetricsConfigurer>()
-            );
+container.Register(
+    Component
+        .For<IProjectionStatusLoader>()
+        .ImplementedBy<ProjectionStatusLoader>()
+        .DependsOn(Dependency.OnComponent("eventStoreDatabase", "EventStoreDb"))
+        .DependsOn(Dependency.OnComponent("readModelDatabase", "ReadModelDb")),
+    Component
+        .For<ProjectionMetricsConfigurer>()
+);
 ```
 
 With the above code we registered a component called *IProjectionStatusLoader* that depends both on EventStore database and ReadModel database. This component allows asking the following question: How many commit each slot needs to process?
