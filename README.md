@@ -6,7 +6,8 @@ Licenses:
 
 ##Docs:
 
-- [Usage of Metrics.NET](Wiki/metrics.md)
+- [Metrics](Wiki/Metrics/metrics.md)
+	- [Projection](Wiki/Metrics/projections.md)
 
 ###GitFlow
 
