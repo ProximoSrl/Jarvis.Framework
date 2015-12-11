@@ -73,7 +73,9 @@ namespace Jarvis.Framework.Tests.DomainTests
         }
     }
 
+    //WE cannot run this test because registration of class map is global and creates problem for other tests
     [TestFixture]
+    [Explicit]
     public class StringValueMongoTestsFlatMapper
     {
         [TestFixtureSetUp]
@@ -129,6 +131,6 @@ namespace Jarvis.Framework.Tests.DomainTests
             Assert.IsNull(instance.Value);
         }
 
-        
+
     }
 }
