@@ -64,7 +64,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             }
 
             foreach (var type in assembly.GetTypes()
-              .Where(t => typeof(LowercaseStringValue).IsAssignableFrom(t)))
+              .Where(t => typeof(StringValue).IsAssignableFrom(t)))
             {
                 _logger.DebugFormat("Registered LowercaseStringValue type {0}", type.FullName);
                 BsonSerializer.RegisterSerializer(type, new StringValueBsonSerializer());

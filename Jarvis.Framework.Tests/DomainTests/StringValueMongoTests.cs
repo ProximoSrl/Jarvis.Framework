@@ -1,4 +1,5 @@
 ﻿using Jarvis.Framework.Shared.Domain.Serialization;
+using Jarvis.Framework.Shared.IdentitySupport;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using NUnit.Framework;
@@ -70,5 +71,64 @@ namespace Jarvis.Framework.Tests.DomainTests
             var val = BsonValue.Create(new TypedStringValue("ABC"));
             Assert.IsInstanceOf<BsonString>(val);
         }
+    }
+
+    [TestFixture]
+    public class StringValueMongoTestsFlatMapper
+    {
+        [TestFixtureSetUp]
+        public void TestFixtureSetUp()
+        {
+            MongoFlatMapper.EnableFlatMapping(true);
+        }
+
+        [Test]
+        public void should_serialize_lowercase()
+        {
+            var instance = new ClassWithTypedStringValueLowerCaseWithoutAttribute { Value = new TypedStringValueWithoutAttributeLowerCase("abc_123") };
+            var json = instance.ToJson();
+
+            Assert.AreEqual("{ \"Value\" : \"abc_123\" }", json);
+        }
+
+        [Test]
+        public void should_serialize()
+        {
+            var instance = new ClassWithTypedStringValueWithoutAttribute { Value = new TypedStringValueWithoutAttribute("aBC_123") };
+            var json = instance.ToJson();
+
+            Assert.AreEqual("{ \"Value\" : \"aBC_123\" }", json);
+        }
+
+        [Test]
+        public void should_deserialize_lowercase()
+        {
+            var instance = BsonSerializer.Deserialize<ClassWithTypedStringValueLowerCaseWithoutAttribute>("{ Value:\"abc_123\"}");
+            Assert.AreEqual("abc_123", (string)instance.Value);
+        }
+
+        [Test]
+        public void should_deserialize()
+        {
+            var instance = BsonSerializer.Deserialize<ClassWithTypedStringValueWithoutAttribute>("{ Value:\"ABC_123\"}");
+            Assert.AreEqual("ABC_123", (string)instance.Value);
+        }
+
+        [Test]
+        public void should_serialize_null()
+        {
+            var instance = new ClassWithTypedStringValueLowerCaseWithoutAttribute();
+            var json = instance.ToJson();
+            Assert.AreEqual("{ \"Value\" : null }", json);
+        }
+
+        [Test]
+        public void should_deserialize_null()
+        {
+            var instance = BsonSerializer.Deserialize<ClassWithTypedStringValueLowerCaseWithoutAttribute>("{ Value: null}");
+            Assert.IsNull(instance.Value);
+        }
+
+        
     }
 }

@@ -19,4 +19,18 @@ namespace Jarvis.Framework.Tests.DomainTests
         }
     }
 
+    public class TypedStringValueWithoutAttribute : StringValue
+    {
+        public TypedStringValueWithoutAttribute(string value) : base(value)
+        {
+        }
+    }
+
+    public class TypedStringValueWithoutAttributeLowerCase : StringValue
+    {
+        public TypedStringValueWithoutAttributeLowerCase(string value) : base(value)
+        {
+        }
+    }
+
 }
