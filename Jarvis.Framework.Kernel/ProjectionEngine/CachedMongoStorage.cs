@@ -30,16 +30,26 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         {
             String _propertyName;
 
+            private Dictionary<TKey, HashSet<TModel>> _ownershipMap;
+
             public Index(String propertyName)
             {
                 _propertyName = propertyName;
+                _ownershipMap = new Dictionary<TKey, HashSet<TModel>>();
             }
 
             public void Set(TModel instance)
             {
                 var propertyValue = instance.GetPropertyValue(_propertyName);
                 EnsureCache(propertyValue);
-                base[propertyValue].Add(instance);
+                var belongingSet = base[propertyValue];
+                if (_ownershipMap.ContainsKey(instance.Id) &&
+                    _ownershipMap[instance.Id] != belongingSet)
+                {
+                    _ownershipMap[instance.Id].Remove(instance);
+                }
+                belongingSet.Add(instance);
+                _ownershipMap[instance.Id] = belongingSet;
             }
 
             public void RemoveInstance(TModel instance)
@@ -107,8 +117,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                     }
                 }
             }
-
-           
         }
 
         private IndexCollection _indexes;

@@ -87,6 +87,32 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
         }
 
         [Test]
+        public void Insert_then_change_property()
+        {
+            var sut = CreateSut();
+            sut.FindManyByProperty(e => e.Value, 12); //This will force index creation
+            sut.InsertBatch(new[] {
+                new SampleReadModel4() { Id = "1", Value = 2 },
+                new SampleReadModel4() { Id = "2", Value = 2 },
+            });
+
+            var loaded = sut.FindManyByProperty(e => e.Value, 2).ToList();
+            Assert.That(loaded.All(e => e.Value == 2));
+            Assert.That(loaded, Has.Count.EqualTo(2));
+            var first = loaded.First();
+            first.Value = 3;
+            sut.SaveWithVersion(first, first.Version);
+
+            loaded = sut.FindManyByProperty(e => e.Value, 2).ToList();
+            Assert.That(loaded, Has.Count.EqualTo(1));
+            Assert.That(loaded[0].Id, Is.EqualTo("2"));
+
+            loaded = sut.FindManyByProperty(e => e.Value, 3).ToList();
+            Assert.That(loaded, Has.Count.EqualTo(1));
+            Assert.That(loaded[0].Id, Is.EqualTo("1"));
+        }
+
+        [Test]
         public void insert_many_and_retrieve_with_and_without_index()
         {
             if (_inMemory == false) return; //this test makes sense only in memory
