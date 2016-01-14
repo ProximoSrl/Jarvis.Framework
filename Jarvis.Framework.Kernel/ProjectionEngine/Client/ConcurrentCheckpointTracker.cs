@@ -59,14 +59,18 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         void Add(IProjection projection, string defaultValue)
         {
             var id = projection.GetCommonName();
-            var checkPoint = _checkpoints.FindOneById(id) ?? new Checkpoint(id, defaultValue);
-
             var projectionSignature = projection.GetSignature();
             var projectionSlotName = projection.GetSlotName();
+
+            var checkPoint = _checkpoints.FindOneById(id) ?? 
+                new Checkpoint(id, defaultValue, projectionSignature);
+
             //Check if some projection is changed and rebuild is not active
-            if (checkPoint.Signature != projectionSignature && !RebuildSettings.ShouldRebuild)
+            if (
+                checkPoint.Signature != projectionSignature && 
+                !RebuildSettings.ShouldRebuild)
             {
-                _checkpointErrors.Add(String.Format("Projection {0} [slot {1}] has signature {2} but chekpoint on database has signature {3}.\n REBUILD NEEDED",
+                _checkpointErrors.Add(String.Format("Projection {0} [slot {1}] has signature {2} but checkpoint on database has signature {3}.\n REBUILD NEEDED",
                     id, projectionSlotName, projectionSignature, checkPoint.Signature));
             }
             else
@@ -85,7 +89,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             var versionInfo = _checkpoints.FindOneById("VERSION");
             if (versionInfo == null)
             {
-                versionInfo = new Checkpoint("VERSION", "0");
+                versionInfo = new Checkpoint("VERSION", "0", null);
             }
 
             int currentVersion = int.Parse(versionInfo.Value);
