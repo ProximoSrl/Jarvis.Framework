@@ -45,19 +45,28 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         [Test]
         public void Verify_check_of_signature_change()
         {
-            SetupOneProjectionChangedSignature();
             RebuildSettings.Init(false, false);
+            SetupOneProjectionChangedSignature();
             var errors = _sut.GetCheckpointErrors();
             Assert.That(errors, Has.Count.EqualTo(1));
             Assert.That(errors[0], Is.EqualTo("Projection Projection2 [slot default] has signature V2 but checkpoint on database has signature oldSignature.\n REBUILD NEEDED"));
+        }
+
+        [Test]
+        public void Verify_check_of_signature_change_during_rebuild()
+        {
+            RebuildSettings.Init(true, true);
+            SetupOneProjectionChangedSignature();
+            var errors = _sut.GetCheckpointErrors();
+            Assert.That(errors, Has.Count.EqualTo(0));
         }
 
 
         [Test]
         public void Verify_check_of_generic_projection_checkpoint_error()
         {
-            SetupTwoProjectionsError();
             RebuildSettings.Init(false, false);
+            SetupTwoProjectionsError();
             var errors = _sut.GetCheckpointErrors();
             Assert.That(errors, Has.Count.EqualTo(1));
             Assert.That(errors[0], Is.EqualTo("Error in slot default, not all projection at the same checkpoint value. Please check reamodel db!"));
