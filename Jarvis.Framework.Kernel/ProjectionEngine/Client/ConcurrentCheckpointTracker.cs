@@ -206,6 +206,25 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             _currentCheckpointTracker.AddOrUpdate(slotName, checkpointToken, (key, value) => checkpointToken);
         }
 
+        public void UpdateSlotAndSetCheckpoint(
+            string slotName, 
+            IEnumerable<String> projectionIdList, 
+            string checkpointToken)
+        {
+            _checkpoints.Update(
+                  Query.EQ("Slot", slotName),
+                  Update
+                    .Set("Current", checkpointToken)
+                    .Set("Value", checkpointToken),
+                  UpdateFlags.Multi
+              );
+            _currentCheckpointTracker.AddOrUpdate(slotName, checkpointToken, (key, value) => checkpointToken);
+            foreach (var projectionId in projectionIdList)
+            {
+                _checkpointTracker.AddOrUpdate(projectionId, key => checkpointToken, (key, currentValue) => checkpointToken);
+            }
+        }
+
         public string GetCurrent(IProjection projection)
         {
             var checkpoint = _checkpoints.FindOneById(projection.GetCommonName());
