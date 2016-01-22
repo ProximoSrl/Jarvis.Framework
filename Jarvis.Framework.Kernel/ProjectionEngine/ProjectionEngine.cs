@@ -477,12 +477,17 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 }
             }
 
-            _checkpointTracker.UpdateSlot(slotName, commit.CheckpointToken);
-            MetricsHelper.MarkCommitDispatchedCount(slotName, 1);
-            foreach (var cname in projectionToUpdate)
+            if (projectionToUpdate.Count == 0)
             {
-                _checkpointTracker.SetCheckpoint(cname, commit.CheckpointToken);
+                //I'm in rebuilding or no projection had run any events, only update slot
+                _checkpointTracker.UpdateSlot(slotName, commit.CheckpointToken);
             }
+            else
+            {
+                //I'm not on rebuilding, we have projection to update, update everything with one call.
+                _checkpointTracker.UpdateSlotAndSetCheckpoint(slotName, projectionToUpdate, commit.CheckpointToken);
+            }
+            MetricsHelper.MarkCommitDispatchedCount(slotName, 1);
 
             if (dispatchCommit)
                 _notifyCommitHandled.SetDispatched(commit);

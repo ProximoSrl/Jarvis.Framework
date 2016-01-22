@@ -47,12 +47,17 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
             //try to acquire a lock on the identity, to minimize risk of ConcurrencyException
             //do not sleep more than a certain amount of time (avoid some missing dispose).
             Int32 sleepCount = 0;
-            while (!idSerializerDictionary.TryAdd(sagaId, true) && sleepCount < 100)
+            Boolean lockAcquired = false;
+            while (!(lockAcquired = idSerializerDictionary.TryAdd(sagaId, true)) && sleepCount < 100)
             {
                 //some other thread is accessing that entity. Sleeping is the best choiche, because
                 //the lock will be removed after a save, involving IO.
                 Thread.Sleep(50);
                 sleepCount++;
+            }
+            if (lockAcquired)
+            {
+                loadedSagaIdentities.Add(sagaId);
             }
             return BuildSaga<TSaga>(OpenStream(sagaId), sagaId);
         }
@@ -110,6 +115,10 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
             if (!idSerializerDictionary.TryRemove(id, out outTempValue))
             {
                 //Debug.WriteLine("Entity was not locked, probably is new");
+            }
+            if (loadedSagaIdentities.Contains(id))
+            {
+                loadedSagaIdentities.Remove(id);
             }
         }
 
