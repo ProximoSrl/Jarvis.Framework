@@ -21,20 +21,24 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 
 		private readonly IConstructAggregatesEx _factory;
 		private readonly IIdentityConverter _identityConverter;
-		private readonly IDictionary<string, ISnapshot> _snapshots = new Dictionary<string, ISnapshot>();
+		//private readonly IDictionary<string, ISnapshot> _snapshots = new Dictionary<string, ISnapshot>();
 
 		private readonly IDictionary<string, IEventStream> _streams = new Dictionary<string, IEventStream>();
 
-        private readonly HashSet<IIdentity> loadedIdentities = new HashSet<IIdentity>();
+        private readonly HashSet<IIdentity> identityAcquireLock = new HashSet<IIdentity>();
+
+        private readonly Int64 _identity;
+        private static Int64 _actualIdentity;
 
         /// <summary>
         /// ConcurrentBag has no simple way to remove specific element.
         /// </summary>
-        protected static ConcurrentDictionary<IIdentity, Boolean> idSerializerDictionary;
+        protected static ConcurrentDictionary<IIdentity, Int64> idSerializerDictionary;
 
         static AbstractRepository()
         {
-            idSerializerDictionary =  new ConcurrentDictionary<IIdentity, Boolean>();
+            idSerializerDictionary =  new ConcurrentDictionary<IIdentity, Int64>();
+            _actualIdentity = 0;
         }
 
         protected AbstractRepository(IStoreEvents eventStore, IConstructAggregatesEx factory, IDetectConflicts conflictDetector, IIdentityConverter identityConverter)
@@ -43,7 +47,8 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 			this._factory = factory;
 			this._conflictDetector = conflictDetector;
 			this._identityConverter = identityConverter;
-		}
+            this._identity = Interlocked.Increment(ref _actualIdentity);
+        }
 
 		public void Dispose()
 		{
@@ -71,14 +76,24 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
             //try to acquire a lock on the identity, to minimize risk of ConcurrencyException
             //do not sleep more than a certain amount of time (avoid some missing dispose).
             Int32 sleepCount = 0;
-            while (!idSerializerDictionary.TryAdd(id, true) && sleepCount < 100)
+            Boolean lockAcquired = false;
+            while (!(lockAcquired = idSerializerDictionary.TryAdd(id, _identity)) && sleepCount < 100)
             {
                 //some other thread is accessing that entity. Sleeping is the best choiche, because
                 //the lock will be removed after a save, involving IO.
                 Thread.Sleep(50);
                 sleepCount++;
             }
-            loadedIdentities.Add(id);//store loaded identities.
+            if (lockAcquired == true)
+            {
+                identityAcquireLock.Add(id);
+                //Debug.WriteLine("Lock acquired [{3}] for identity {0} _identity {1}, stored {2}", id, _identity, idSerializerDictionary[id], lockAcquired);
+            }
+            //else
+            //{
+            //    //Debug.WriteLine("Acquire failed sleepCount = {0}", sleepCount);
+            //}
+            
             ISnapshot snapshot = this.GetSnapshot<TAggregate>(bucketId, id, versionToLoad);
 			IEventStream stream = this.OpenStream(bucketId, id, versionToLoad, snapshot);
 			IAggregateEx aggregate = this.GetAggregate<TAggregate>(snapshot, stream);
@@ -101,34 +116,35 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 				IEventStream stream = this.PrepareStream(bucketId, aggregate, headers);
 				int commitEventCount = stream.CommittedEvents.Count;
 
-				try
-				{
-					stream.CommitChanges(commitId);
-					aggregate.ClearUncommittedEvents();
-                    ReleaseAggregateId(aggregate.Id); //release immediately if everything is ok.
+                try
+                {
+                    stream.CommitChanges(commitId);
+                    aggregate.ClearUncommittedEvents();
                     return;
-				}
-				catch (DuplicateCommitException)
-				{
-					stream.ClearChanges();
-                    ReleaseAggregateId(aggregate.Id); //release immediately if commit is simply discharded
+                }
+                catch (DuplicateCommitException)
+                {
+                    stream.ClearChanges();
                     return;
-				}
-				catch (ConcurrencyException e)
-				{
-
+                }
+                catch (ConcurrencyException e)
+                {
                     if (this.ThrowOnConflict(stream, commitEventCount))
-					{
+                    {
                         //@@FIX -> aggiungere prima del lancio dell'eccezione
                         stream.ClearChanges();
                         throw new ConflictingCommandException(e.Message, e);
-					}
+                    }
                     stream.ClearChanges();
-				}
-				catch (StorageException e)
-				{
+                }
+                catch (StorageException e)
+                {
                     throw new PersistenceException(e.Message, e);
-				}
+                }
+                finally
+                {
+                    ReleaseAggregateId(aggregate.Id);
+                }
 			}
 		}
 
@@ -138,13 +154,14 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 			{
 				return;
 			}
-
-            foreach (var id in loadedIdentities)
+            //Clear all lock if not already done.
+            if (identityAcquireLock.Count > 0)
             {
-                ReleaseAggregateId(id);
+                foreach (var id in identityAcquireLock.ToList())
+                {
+                    ReleaseAggregateId(id);
+                }
             }
-            loadedIdentities.Clear();
-
             lock (this._streams)
 			{
 				foreach (var stream in this._streams)
@@ -152,18 +169,26 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 					stream.Value.Dispose();
 				}
 
-				this._snapshots.Clear();
+				//this._snapshots.Clear();
 				this._streams.Clear();
 			}
 		}
 
         private void ReleaseAggregateId(IIdentity id)
         {
-            Boolean outTempValue;
+            Int64 outTempValue;
 
-            if (!idSerializerDictionary.TryRemove(id, out outTempValue))
+            if (idSerializerDictionary.TryGetValue(id, out outTempValue))
             {
-                Debug.WriteLine("Entity was not locked.");
+                if (outTempValue == _identity)
+                {
+                    //Debug.WriteLine("Removed lock for aggregate {0} with _identity {1} from Repository {2}", id, outTempValue, _identity);
+                    idSerializerDictionary.TryRemove(id, out outTempValue);
+                }
+            }
+            if (identityAcquireLock.Contains(id))
+            {
+                identityAcquireLock.Remove(id);
             }
         }
 
@@ -188,12 +213,16 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 		{
 			ISnapshot snapshot;
 			var snapshotId = bucketId + "@" + id;
-			if (!this._snapshots.TryGetValue(snapshotId, out snapshot))
-			{
-				this._snapshots[snapshotId] = snapshot = this._eventStore.Advanced.GetSnapshot(bucketId, id.AsString(), version);
-			}
-
-			return snapshot;
+            //if (!this._snapshots.TryGetValue(snapshotId, out snapshot))
+            //{
+            //    this._snapshots[snapshotId] = snapshot = this._eventStore.Advanced.GetSnapshot(bucketId, id.AsString(), version);
+            //}
+            //else
+            //{
+            //    //Debug.WriteLine("Snapshot found");
+            //} 
+            snapshot = this._eventStore.Advanced.GetSnapshot(bucketId, id.AsString(), version);
+            return snapshot;
 		}
 
 		private IEventStream OpenStream(string bucketId, IIdentity id, int version, ISnapshot snapshot)

@@ -20,6 +20,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         void UpdateSlot(string slotName, string checkpointToken);
         string GetCurrent(IProjection projection);
 
+        void UpdateSlotAndSetCheckpoint(string slotName, IEnumerable<String> projectionIdList, string checkpointToken);
+
         /// <summary>
         /// Return a list of errors if there are anomalies in projection
         /// checkpoints.
@@ -28,5 +30,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         /// </summary>
         /// <returns></returns>
         List<String> GetCheckpointErrors();
+
+ 
     }
 }

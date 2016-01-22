@@ -66,7 +66,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
                 catch (ConflictingCommandException ex)
                 {
                     // retry
-                    if (Logger.IsDebugEnabled) Logger.DebugFormat("Handled {0} {1}, concurrency exception. Retrying", message.GetType().FullName, message.MessageId);
+                    if (Logger.IsDebugEnabled) Logger.DebugFormat("Handled {0} {1}, concurrency exception. Retry count: {2}", message.GetType().FullName, message.MessageId, i);
                     if (i++ > 5)
                     {
                         Thread.Sleep(new Random(DateTime.Now.Millisecond).Next(i * 10));
@@ -91,6 +91,11 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
                         _bus.Reply(replyCommand);
                     }
                 }
+            }
+            if (done == false)
+            {
+                var exception = new Exception("Command failed. Too many Conflicts");
+                _messagesTracker.Failed(message.MessageId, DateTime.UtcNow, exception);
             }
             if (Logger.IsDebugEnabled) Logger.DebugFormat("Handled {0} {1}", message.GetType().FullName, message.MessageId);
         }
