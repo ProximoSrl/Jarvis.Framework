@@ -114,7 +114,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         public void Start()
         {
             if (Logger.IsDebugEnabled) Logger.DebugFormat("Starting projection engine on tenant {0}", _config.TenantId);
-            
+
             StartPolling();
             if (Logger.IsDebugEnabled) Logger.Debug("Projection engine started");
         }
@@ -354,19 +354,19 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             {
                 lastCheckpointDispatched[slotName] = 0;
             }
-            if (!(lastCheckpointDispatched[slotName] < chkpoint.LongValue) )
+            if (!(lastCheckpointDispatched[slotName] < chkpoint.LongValue))
             {
                 var error = String.Format("Sequence broken, last checkpoint for slot {0} was {1} and now we dispatched {2}",
                         slotName, lastCheckpointDispatched[slotName], chkpoint.LongValue);
                 Logger.Error(error);
                 throw new Exception(error);
             }
-              
+
             if (lastCheckpointDispatched[slotName] + 1 != chkpoint.LongValue)
             {
                 if (lastCheckpointDispatched[slotName] > 0)
                 {
-                    Logger.WarnFormat("Sequence of commit non consecutive, last dispatched {0} receiving {1}",
+                    Logger.DebugFormat("Sequence of commit non consecutive, last dispatched {0} receiving {1}",
                       lastCheckpointDispatched[slotName], chkpoint.LongValue);
                 }
             }
@@ -470,7 +470,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 }
                 catch (Exception ex)
                 {
-                    Logger.ErrorFormat(ex, "Error dispathing commit id: {0}\nMessage: {1}\nError: {2}", 
+                    Logger.ErrorFormat(ex, "Error dispathing commit id: {0}\nMessage: {1}\nError: {2}",
                         commit.CheckpointToken, eventMessage.Body, ex.Message);
                     ClearLoggerThreadPropertiesForEventDispatchLoop();
                     throw;
