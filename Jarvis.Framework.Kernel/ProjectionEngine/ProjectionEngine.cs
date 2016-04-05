@@ -366,7 +366,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             {
                 if (lastCheckpointDispatched[slotName] > 0)
                 {
-                    Logger.WarnFormat("Sequence of commit non consecutive, last dispatched {0} receiving {1}",
+                    Logger.DebugFormat("Sequence of commit non consecutive, last dispatched {0} receiving {1}",
                       lastCheckpointDispatched[slotName], chkpoint.LongValue);
                 }
             }
