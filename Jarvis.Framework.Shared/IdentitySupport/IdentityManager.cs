@@ -5,13 +5,15 @@ using System.Reflection;
 using System.Text;
 using Fasterflect;
 using Jarvis.NEventStoreEx.CommonDomainEx;
+using System.Linq.Expressions;
+using Jarvis.Framework.Shared.Helpers;
 
 namespace Jarvis.Framework.Shared.IdentitySupport
 {
     public class IdentityManager : IIdentityManager
     {
         readonly ICounterService _counterService;
-        private readonly Dictionary<string, Func<string, IIdentity>> _stringBasedFactories = new Dictionary<string, Func<string, IIdentity>>();
+
         private readonly Dictionary<string, Func<long, IIdentity>> _longBasedFactories = new Dictionary<string, Func<long, IIdentity>>();
 
         public IdentityManager(ICounterService counterService)
@@ -28,17 +30,17 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         {
             if (String.IsNullOrEmpty(identityAsString))
                 return null;
-
             int pos = identityAsString.IndexOf(EventStoreIdentity.Separator);
             if (pos == -1)
                 throw new Exception(string.Format("invalid identity value {0}", identityAsString));
             var tag = identityAsString.Substring(0, pos);
-            Func<string, IIdentity> factory;
-            if (!_stringBasedFactories.TryGetValue(tag, out factory))
+            var id = Int64.Parse(identityAsString.Substring(pos + 1));
+            Func<Int64, IIdentity> factory;
+            if (!_longBasedFactories.TryGetValue(tag, out factory))
             {
                 throw new Exception(string.Format("{0} not registered in IdentityManager", tag));
             }
-            return factory(identityAsString);
+            return factory(id);
         }
 
         public TIdentity ToIdentity<TIdentity>(string identityAsString)
@@ -53,24 +55,15 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             {
                 var tag = EventStoreIdentity.GetTagForIdentityClass(ic);
 
-                // registra la factory per string
-                {
-                    var ctor = ic.Constructor(new Type[] { typeof(string) });
-                    if (ctor == null)
-                    {
-                        sb.AppendFormat("Identity {0} must have the constructor {1}(string id)\n", ic.FullName, ic.Name);
-                    }
-                    _stringBasedFactories[tag] = (id) => (EventStoreIdentity)ctor.CreateInstance(new object[] { id });
-                }
-
-                // registra la factory per long
                 {
                     var ctor = ic.Constructor(new Type[] { typeof(long) });
                     if (ctor == null)
                     {
                         sb.AppendFormat("Identity {0} must have the constructor {1}(long id)\n", ic.FullName, ic.Name);
                     }
-                    _longBasedFactories[tag] = (id) => (EventStoreIdentity)ctor.CreateInstance(new object[] { id });
+                    var activator = FastReflectionHelper.GetActivator(ctor);
+
+                    _longBasedFactories[tag] = (id) => (EventStoreIdentity)activator(new object[] { id });
                 }
             }
 

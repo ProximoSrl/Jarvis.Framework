@@ -1,11 +1,18 @@
 using System;
 using MongoDB.Bson.Serialization.Attributes;
 using Newtonsoft.Json;
+using System.Collections.Concurrent;
 
 namespace Jarvis.Framework.Shared.IdentitySupport
 {
     public abstract class EventStoreIdentity : AbstractIdentity<long>
     {
+        private static ConcurrentDictionary<Type, String> classTags;
+
+        static EventStoreIdentity()
+        {
+            classTags = new ConcurrentDictionary<Type, string>();
+        }
         public static string GetTagForIdentityClass<T>() where T : EventStoreIdentity
         {
             return GetTagForIdentityClass(typeof(T));
@@ -18,11 +25,16 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
         public static string GetTagForIdentityClass(Type identityType)
         {
-            var tn = identityType.Name;
-            if (!tn.EndsWith("Id"))
-                throw new Exception(string.Format("Wrong Identity class name: {0} Class name should end with Id", tn));
-
-            return tn.Remove(tn.Length - 2);
+            String tag;
+            if (!classTags.TryGetValue(identityType, out tag))
+            {
+                var tn = identityType.Name;
+                if (!tn.EndsWith("Id"))
+                    throw new Exception(string.Format("Wrong Identity class name: {0} Class name should end with Id", tn));
+                tag = tn.Remove(tn.Length - 2);
+                classTags.TryAdd(identityType, tag);
+            }
+            return tag;
         }
 
         public override string GetTag()
@@ -55,12 +67,16 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                 throw new Exception(string.Format("invalid identity value {0}", identityAsString));
             }
             var tag = identityAsString.Substring(0, pos);
+            var idString = identityAsString.Substring(pos + 1);
+            var id = long.Parse(idString);
+            Assign(tag, id);
+        }
 
+        protected virtual void Assign(string tag, Int64 value)
+        {
             if (tag != GetTag())
-                throw new Exception(string.Format("Invalid assigment. {0} is not of type {1}", identityAsString, GetType().FullName));
-
-            var id = identityAsString.Substring(pos + 1);
-            this.Id = long.Parse(id);
+                throw new Exception(string.Format("Invalid assigment. {0} is not of valid tag for type {1}", value, GetType().FullName));
+            this.Id = value;
         }
 
         public static string Format(Type type, long value)
