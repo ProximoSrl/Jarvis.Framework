@@ -4,16 +4,17 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using MongoDB.Driver;
+using Jarvis.Framework.Shared.Helpers;
 
 namespace Jarvis.Framework.Tests.Support
 {
     public static class TestHelper
     {
-        public static MongoDatabase CreateNew(string connectionString)
+        public static IMongoDatabase CreateNew(string connectionString)
         {
             var url = new MongoUrl(connectionString);
-            var server = new MongoClient(url).GetServer();
-            var db = server.GetDatabase(url.DatabaseName);
+            var client = new MongoClient(url);
+            var db = client.GetDatabase(url.DatabaseName);
             
             db.Drop();
 

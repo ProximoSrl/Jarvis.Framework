@@ -19,6 +19,7 @@ using Jarvis.Framework.Kernel.Commands;
 using Jarvis.Framework.Shared.Commands;
 using Jarvis.Framework.Shared.Messages;
 using System.Collections.Generic;
+using Jarvis.Framework.Shared.Helpers;
 
 namespace Jarvis.Framework.Tests.BusTests
 {
@@ -46,7 +47,7 @@ namespace Jarvis.Framework.Tests.BusTests
         IBus _bus;
         WindsorContainer _container;
         SampleCommandHandler _handler;
-        MongoCollection<TrackedMessageModel> _messages;
+        IMongoCollection<TrackedMessageModel> _messages;
         MessageHandlerToCommandHandlerAdapter<SampleTestCommand> _handlerAdapter;
 
         [TestFixtureSetUp]
@@ -56,7 +57,7 @@ namespace Jarvis.Framework.Tests.BusTests
             String connectionString = ConfigurationManager.ConnectionStrings["rebus"].ConnectionString;
             var rebusUrl = new MongoUrl(connectionString);
             var rebusClient = new MongoClient(rebusUrl);
-            var rebusDb = rebusClient.GetServer().GetDatabase(rebusUrl.DatabaseName);
+            var rebusDb = rebusClient.GetDatabase(rebusUrl.DatabaseName);
             _messages = rebusDb.GetCollection<TrackedMessageModel>("messages");
             MongoDbMessagesTracker tracker = new MongoDbMessagesTracker(rebusDb);
             BusBootstrapper bb = new BusBootstrapper(

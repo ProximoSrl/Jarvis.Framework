@@ -15,6 +15,7 @@ using MongoDB.Driver;
 using NEventStore;
 using NSubstitute;
 using NUnit.Framework;
+using Jarvis.Framework.Shared.Helpers;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.Concurrent
 {
@@ -25,7 +26,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Concurrent
         IdentityManager _identityConverter;
         protected RepositoryEx Repository;
         protected IStoreEvents _eventStore;
-        protected MongoDatabase Database;
+        protected IMongoDatabase Database;
         RebuildContext _rebuildContext;
         protected MongoStorageFactory StorageFactory;
 
@@ -55,7 +56,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Concurrent
         {
             var url = new MongoUrl(_eventStoreConnectionString);
             var client = new MongoClient(url);
-            Database = client.GetServer().GetDatabase(url.DatabaseName);
+            Database = client.GetDatabase(url.DatabaseName);
             Database.Drop();
         }
 

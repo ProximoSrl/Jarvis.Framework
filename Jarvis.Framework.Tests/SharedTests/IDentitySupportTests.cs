@@ -13,6 +13,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Jarvis.Framework.Shared.Helpers;
 
 namespace Jarvis.Framework.Tests.SharedTests
 {
@@ -21,8 +22,8 @@ namespace Jarvis.Framework.Tests.SharedTests
     {
         private TestMapper sut;
         private TestFlatMapper sutFlat;
-        private MongoCollection<BsonDocument> _mappingCollection;
-        private MongoCollection<BsonDocument> _mappingFlatCollection;
+        private IMongoCollection<BsonDocument> _mappingCollection;
+        private IMongoCollection<BsonDocument> _mappingFlatCollection;
 
         [TestFixtureSetUp]
         public void TestFixtureSetup()
@@ -87,7 +88,7 @@ namespace Jarvis.Framework.Tests.SharedTests
 
     public class TestMapper : AbstractIdentityTranslator<TestId>
     {
-        public TestMapper(MongoDatabase db, IIdentityGenerator identityGenerator) :
+        public TestMapper(IMongoDatabase db, IIdentityGenerator identityGenerator) :
             base(db, identityGenerator)
         {
 
@@ -113,7 +114,7 @@ namespace Jarvis.Framework.Tests.SharedTests
 
     public class TestFlatMapper : AbstractIdentityTranslator<TestFlatId>
     {
-        public TestFlatMapper(MongoDatabase db, IIdentityGenerator identityGenerator) :
+        public TestFlatMapper(IMongoDatabase db, IIdentityGenerator identityGenerator) :
             base(db, identityGenerator)
         {
 

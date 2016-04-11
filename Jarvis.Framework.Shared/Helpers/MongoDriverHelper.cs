@@ -20,6 +20,11 @@ namespace Jarvis.Framework.Shared.Helpers
             collection.Database.DropCollection(collection.CollectionNamespace.CollectionName);
         }
 
+        public static void Drop(this IMongoDatabase database)
+        {
+            database.Client.DropDatabase(database.DatabaseNamespace.DatabaseName);
+        }
+
         public static T FindOneById<T>(this IMongoCollection<T> collection, Object idValue)
         {
             return collection.Find(Builders<T>.Filter.Eq("_id", idValue)).SingleOrDefault();

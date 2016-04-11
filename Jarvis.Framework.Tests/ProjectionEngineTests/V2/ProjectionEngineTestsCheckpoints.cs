@@ -10,8 +10,11 @@ using Jarvis.Framework.Shared.Messages;
 using Jarvis.Framework.Shared.ReadModel;
 using Jarvis.Framework.TestHelpers;
 using Jarvis.Framework.Tests.EngineTests;
-using MongoDB.Driver.Builders;
+
 using NUnit.Framework;
+using Jarvis.Framework.Shared.Helpers;
+using MongoDB.Driver;
+
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
@@ -71,7 +74,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 
             //need to wait for at least one checkpoint written to database.
             DateTime startTime = DateTime.Now;
-            while (!_checkpoints.Find(Query.Null).Any() &&
+            while (!_checkpoints.FindAll().Any() &&
                 DateTime.Now.Subtract(startTime).TotalMilliseconds < 2000) //2 seconds timeout is fine
             {
                 Thread.Sleep(100);

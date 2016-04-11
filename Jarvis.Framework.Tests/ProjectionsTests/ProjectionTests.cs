@@ -4,6 +4,7 @@ using Jarvis.Framework.Kernel.ProjectionEngine;
 using Jarvis.Framework.TestHelpers;
 using MongoDB.Driver;
 using NUnit.Framework;
+using Jarvis.Framework.Shared.Helpers;
 
 namespace Jarvis.Framework.Tests.ProjectionsTests
 {
@@ -18,7 +19,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
         {
             var url = new MongoUrl(ConfigurationManager.ConnectionStrings["readmodel"].ConnectionString);
             var client = new MongoClient(url);
-            var db = client.GetServer().GetDatabase(url.DatabaseName);
+            var db = client.GetDatabase(url.DatabaseName);
             db.Drop();
 
             _collection = new CollectionWrapper<MyReadModel, string>(new MongoStorageFactory(db, new RebuildContext(false)), new SpyNotifier());

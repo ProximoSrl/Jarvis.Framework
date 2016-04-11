@@ -16,6 +16,7 @@ using NEventStore;
 using NEventStore.Persistence;
 using NSubstitute;
 using NUnit.Framework;
+using Jarvis.Framework.Shared.Helpers;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
@@ -26,10 +27,10 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
         IdentityManager _identityConverter;
         protected RepositoryEx Repository;
         protected IStoreEvents _eventStore;
-        protected MongoDatabase Database;
+        protected IMongoDatabase Database;
         RebuildContext _rebuildContext;
         protected MongoStorageFactory StorageFactory;
-        protected MongoCollection<Checkpoint> _checkpoints;
+        protected IMongoCollection<Checkpoint> _checkpoints;
         protected ConcurrentCheckpointTracker _tracker;
         protected ConcurrentCheckpointStatusChecker _statusChecker;
 
@@ -56,9 +57,9 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
         {
             var url = new MongoUrl(_eventStoreConnectionString);
             var client = new MongoClient(url);
-            Database = client.GetServer().GetDatabase(url.DatabaseName);
+            Database = client.GetDatabase(url.DatabaseName);
             _checkpoints = Database.GetCollection<Checkpoint>("checkpoints");
-            Database.Drop();
+            client.DropDatabase(url.DatabaseName);
         }
 
         [TestFixtureTearDown]

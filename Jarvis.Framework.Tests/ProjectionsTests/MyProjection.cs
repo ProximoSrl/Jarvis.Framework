@@ -1,7 +1,7 @@
 using Jarvis.Framework.Kernel.Events;
 using Jarvis.Framework.Kernel.ProjectionEngine;
 using MongoDB.Driver;
-using MongoDB.Driver.Builders;
+
 
 namespace Jarvis.Framework.Tests.ProjectionsTests
 {
@@ -13,7 +13,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
     {
         readonly ICollectionWrapper<MyReadModel, string> _collection;
 
-        public IMongoIndexKeys IndexKeys = new IndexKeysBuilder<MyReadModel>().Ascending(x => x.Text);
+        public IndexKeysDefinition<MyReadModel> IndexKeys = Builders<MyReadModel>.IndexKeys.Ascending(x => x.Text);
 
         public MyProjection(ICollectionWrapper<MyReadModel, string> collection)
         {
