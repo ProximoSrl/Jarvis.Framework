@@ -13,7 +13,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         readonly IInmemoryCollection<TModel, TKey> _inmemoryCollection;
         readonly MongoStorage<TModel, TKey> _storage;
         public CachedMongoStorage(
-                MongoCollection<TModel> collection,
+                IMongoCollection<TModel> collection,
                 IInmemoryCollection<TModel, TKey> inmemoryCollection
             )
         {
@@ -21,7 +21,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             _inmemoryCollection = inmemoryCollection;
         }
 
-        public bool IndexExists(IMongoIndexKeys keys)
+        public bool IndexExists(IndexKeysDefinition<TModel> keys)
         {
             return _storage.IndexExists(keys);
         }
@@ -32,7 +32,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 throw new Exception("Unsupported operation while operating in memory");
         }
 
-        public void CreateIndex(IMongoIndexKeys keys, IMongoIndexOptions options = null)
+        public void CreateIndex(IndexKeysDefinition<TModel> keys, CreateIndexOptions options = null)
         {
             _storage.CreateIndex(keys, options);
         }
@@ -140,24 +140,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             _storage.Drop();
         }
 
-        public MongoCollection<TModel> Collection {
+        public IMongoCollection<TModel> Collection {
             get
             {
                 ThrowIfOperatingInMemory();
                 return _storage.Collection;
             }
         }
-        public IEnumerable<BsonDocument> Aggregate(IEnumerable<BsonDocument> operations)
-        {
-            ThrowIfOperatingInMemory();
-            return _storage.Aggregate(operations);
-        }
 
-        public IEnumerable<BsonDocument> Aggregate(AggregateArgs aggregateArgs)
-        {
-            ThrowIfOperatingInMemory();
-            return _storage.Aggregate(aggregateArgs);
-        }
 
         public void Flush()
         {

@@ -22,8 +22,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         //        void Delete(Expression<Func<TModel, bool>> filterById, bool notify = false);
         void Delete(DomainEvent e, TKey id, bool notify = false);
         void Drop();
-        void CreateIndex(IMongoIndexKeys keys, IMongoIndexOptions options = null);
-        bool IndexExists(IMongoIndexKeys keys);
+        void CreateIndex(IndexKeysDefinition<TModel> keys, CreateIndexOptions options = null);
+        bool IndexExists(IndexKeysDefinition<TModel> keys);
         void Attach(IProjection projection,  bool bEnableNotifications);
         void InsertBatch(IEnumerable<TModel> values);
     }

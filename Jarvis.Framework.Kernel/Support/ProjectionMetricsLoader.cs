@@ -3,15 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using MongoDB.Driver.Builders;
+using Jarvis.Framework.Shared.Helpers;
 
 namespace Jarvis.Framework.Kernel.Support
 {
     public class ProjectionStatusLoader : IProjectionStatusLoader
     {
         private readonly int _pollingIntervalInSeconds;
-        private MongoCollection<BsonDocument> _commitsCollection;
-        private MongoCollection<BsonDocument> _checkpointCollection;
+        private IMongoCollection<BsonDocument> _commitsCollection;
+        private IMongoCollection<BsonDocument> _checkpointCollection;
 
         private DateTime lastPoll = DateTime.MinValue;
 
@@ -19,8 +19,8 @@ namespace Jarvis.Framework.Kernel.Support
         private Int64 _lastDelay;
 
         public ProjectionStatusLoader(
-            MongoDatabase eventStoreDatabase,
-            MongoDatabase readModelDatabase,
+            IMongoDatabase eventStoreDatabase,
+            IMongoDatabase readModelDatabase,
             Int32 pollingIntervalInSeconds = 5)
         {
             _pollingIntervalInSeconds = pollingIntervalInSeconds;
@@ -54,9 +54,10 @@ namespace Jarvis.Framework.Kernel.Support
             if (DateTime.Now.Subtract(lastPoll).TotalSeconds > _pollingIntervalInSeconds)
             {
                 _lastDelay = 0;
-                var lastCommitDoc = _commitsCollection.FindAll()
-                    .SetSortOrder(SortBy.Descending("_id"))
-                    .SetFields(Fields.Include("_id"))
+                var lastCommitDoc = _commitsCollection
+                    .FindAll()
+                    .Sort(Builders<BsonDocument>.Sort.Descending("_id"))
+                    .Project(Builders<BsonDocument>.Projection.Include("_id"))
                     .FirstOrDefault();
                 if (lastCommitDoc == null) return;
 
@@ -74,11 +75,17 @@ namespace Jarvis.Framework.Kernel.Support
                     BsonDocument.Parse(@"{$project : {""Slot"" : 1, ""Current"" : 1}}"),
                     BsonDocument.Parse(@"{$group : {""_id"" : ""$Slot"", ""Current"" : {$min : ""$Current""}}}")
                 };
-                AggregateArgs args = new AggregateArgs();
-                args.Pipeline = pipeline;
-                args.AllowDiskUse = true; //important for large file systems
-
-                var allCheckpoints = _checkpointCollection.Aggregate(args);
+                //AggregateArgs args = new AggregateArgs();
+                //args.Pipeline = pipeline;
+                //args.AllowDiskUse = true; //important for large file systems
+                var options = new AggregateOptions();
+                options.AllowDiskUse = true;
+                options.UseCursor = true;
+                var allCheckpoints = _checkpointCollection.Aggregate(options)
+                    .Match(pipeline[0])
+                    .Project(pipeline[1])
+                    .Group(pipeline[2])
+                    .ToList();
                 foreach (BsonDocument metric in allCheckpoints)
                 {
                     var slotName = metric["_id"].AsString;

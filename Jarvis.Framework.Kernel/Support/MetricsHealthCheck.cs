@@ -11,28 +11,23 @@ namespace Jarvis.Framework.Kernel.Support
 {
     public class DatabaseHealthCheck : HealthCheck
     {
-        private readonly MongoServer mongoServer;
-
-        public DatabaseHealthCheck(String dbDescription, MongoServer server)
-            : base("MongoDatabaseCheck:" + dbDescription)
-        {
-            this.mongoServer = server;
-            HealthChecks.RegisterHealthCheck(this);
-        }
+        private readonly MongoClient client;
 
         public DatabaseHealthCheck(String dbDescription, String serverUrl)
            : base("MongoDatabaseCheck:" + dbDescription)
         {
             var url = new MongoUrl(serverUrl);
-            var client = new MongoClient(url);
-            this.mongoServer = client.GetServer();
+            client = new MongoClient(url);
             HealthChecks.RegisterHealthCheck(this);
         }
 
         protected override HealthCheckResult Check()
         {
-            this.mongoServer.Ping();
-            return HealthCheckResult.Healthy();
+            var state = this.client.Cluster.Description.State;
+            if (state == MongoDB.Driver.Core.Clusters.ClusterState.Connected)
+                return HealthCheckResult.Healthy();
+
+            return HealthCheckResult.Unhealthy("Cluster state is disconnected");
         }
     }
 }

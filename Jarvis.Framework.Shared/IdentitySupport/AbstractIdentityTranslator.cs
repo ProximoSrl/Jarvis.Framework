@@ -3,7 +3,7 @@ using Castle.Core.Logging;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
-using MongoDB.Driver.Builders;
+using Jarvis.Framework.Shared.Helpers;
 using MongoDB.Bson.Serialization;
 using Jarvis.Framework.Shared.IdentitySupport.Serialization;
 
@@ -16,7 +16,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
     public abstract class AbstractIdentityTranslator<TKey> : IIdentityTranslator where TKey : EventStoreIdentity
     {
         private ILogger _logger;
-        private readonly MongoCollection<MappedIdentity> _collection;
+        private readonly IMongoCollection<MappedIdentity> _collection;
         private IIdentityGenerator IdentityGenerator { get; set; }
 
         public ILogger Logger
@@ -45,7 +45,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             }
         }
         internal Boolean IsFlatMapping { get; private set; }
-        protected AbstractIdentityTranslator(MongoDatabase systemDB, IIdentityGenerator identityGenerator)
+        protected AbstractIdentityTranslator(IMongoDatabase systemDB, IIdentityGenerator identityGenerator)
         {
             IdentityGenerator = identityGenerator;
             _collection = systemDB.GetCollection<MappedIdentity>("map_" + typeof(TKey).Name.ToLower());
@@ -77,8 +77,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         {
             if (alias == null) throw new ArgumentNullException();
             alias = alias.ToLowerInvariant();
-            String query = IsFlatMapping == false ? "AggregateId._id" : "AggregateId";
-            _collection.Remove(Query.EQ(query, BsonValue.Create(key.FullyQualifiedId)));
+            _collection.Remove(Builders<MappedIdentity>.Filter.Eq(f => f.AggregateId, key.FullyQualifiedId));
             MapIdentity(alias, key);
         }
 
@@ -123,7 +122,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             try
             {
                 var mapped = new MappedIdentity(externalKey, key);
-                _collection.Insert(mapped);
+                _collection.InsertOne(mapped);
                 return mapped;
             }
             catch (MongoWriteConcernException ex)
@@ -145,8 +144,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
         public void DeleteAliases(TKey key)
         {
-            String query = IsFlatMapping == false ? "AggregateId._id" : "AggregateId";
-            _collection.Remove(Query.EQ(query, BsonValue.Create(key.FullyQualifiedId)));
+            _collection.Remove(Builders<MappedIdentity>.Filter.Eq(f => f.AggregateId, key.FullyQualifiedId));
         }
     }
 }

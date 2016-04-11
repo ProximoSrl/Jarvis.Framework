@@ -71,12 +71,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         #region ICollectionWrapper members
 
-        public void CreateIndex(IMongoIndexKeys keys, IMongoIndexOptions options = null)
+        public void CreateIndex(IndexKeysDefinition<TModel> keys, CreateIndexOptions options = null)
         {
             _storage.CreateIndex(keys, options);
         }
 
-        public bool IndexExists(IMongoIndexKeys keys)
+        public bool IndexExists(IndexKeysDefinition<TModel> keys)
         {
             return _storage.IndexExists(keys);
         }

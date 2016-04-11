@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using MongoDB.Driver.Builders;
 using MongoDB.Driver.Linq;
+using Jarvis.Framework.Shared.Helpers;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.RecycleBin
 {
@@ -44,9 +44,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.RecycleBin
 
     public class RecycleBin : IRecycleBin
     {
-        readonly MongoCollection<RecycleBinSlot> _collection;
+        readonly IMongoCollection<RecycleBinSlot> _collection;
 
-        public RecycleBin(MongoDatabase db)
+        public RecycleBin(IMongoDatabase db)
         {
             _collection = db.GetCollection<RecycleBinSlot>("RecycleBin");
         }
@@ -64,7 +64,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.RecycleBin
                 dictionary = data.GetType().GetProperties().ToDictionary(p => p.Name, p => p.GetValue(data));
             }
 
-            _collection.Save(new RecycleBinSlot(new SlotId(aggregateId, bucketId), deleteDateTime, dictionary));
+            var id = new SlotId(aggregateId, bucketId);
+            _collection.Save(new RecycleBinSlot(id, deleteDateTime, dictionary), id);
         }
 
         public void Drop()
@@ -74,7 +75,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.RecycleBin
 
         public void Purge(SlotId id)
         {
-            _collection.Remove(Query.EQ("_id", id.ToBsonDocument()));
+            _collection.Remove(Builders<RecycleBinSlot>.Filter.Eq("_id", id.ToBsonDocument()));
         }
 
         public void SetUp()

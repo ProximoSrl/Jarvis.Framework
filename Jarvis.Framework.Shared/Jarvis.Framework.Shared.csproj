@@ -99,6 +99,7 @@
     <Compile Include="Events\IDomainEvent.cs" />
     <Compile Include="Factories\IFactory.cs" />
     <Compile Include="Helpers\ExpressionExtension.cs" />
+    <Compile Include="Helpers\MongoDriverHelper.cs" />
     <Compile Include="IdentitySupport\AbstractIdentity.cs" />
     <Compile Include="IdentitySupport\AbstractIdentityTranslator.cs" />
     <Compile Include="IdentitySupport\CounterService.cs" />

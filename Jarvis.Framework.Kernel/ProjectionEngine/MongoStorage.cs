@@ -5,26 +5,29 @@ using System.Linq.Expressions;
 using Jarvis.Framework.Shared.ReadModel;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using MongoDB.Driver.Builders;
+using Jarvis.Framework.Shared.Helpers;
 using MongoDB.Driver.Linq;
+using Jarvis.Framework.Shared.Helpers;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
 {
     public class MongoStorage<TModel, TKey> : IMongoStorage<TModel, TKey> where TModel : class, IReadModelEx<TKey>
     {
-        private readonly MongoCollection<TModel> _collection;
+        private readonly IMongoCollection<TModel> _collection;
 
-        public MongoStorage(MongoCollection<TModel> collection)
+        public MongoStorage(IMongoCollection<TModel> collection)
         {
             _collection = collection;
         }
 
-        public bool IndexExists(IMongoIndexKeys keys)
+        public bool IndexExists(IndexKeysDefinition<TModel> keys)
         {
-            return _collection.IndexExists(keys);
+            var indexName = GetIndexName(keys);
+            return _collection.Indexes.List().ToList()
+                .Any(i => i["name"].AsString == indexName);
         }
 
-        public void CreateIndex(IMongoIndexKeys keys, IMongoIndexOptions options = null)
+        public void CreateIndex(IndexKeysDefinition<TModel> keys, CreateIndexOptions options = null)
         {
             if (options != null)
             {
@@ -32,7 +35,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 //different options/keys is created
                 try
                 {
-                    _collection.CreateIndex(keys, options);
+                    _collection.Indexes.CreateOne(keys, options);
                 }
                 catch (MongoWriteConcernException ex)
                 {
@@ -48,20 +51,20 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                         //determine the index name from fields, fragile but works with this version of drivers 
                         indexName = GetIndexName(keys);
                     }
-                    _collection.DropIndexByName(indexName);
-                    _collection.CreateIndex(keys, options);
+                    _collection.Indexes.DropOne(indexName);
+                    _collection.Indexes.CreateOne(keys, options);
                 }
             }
             else
             {
-                _collection.CreateIndex(keys);
+                _collection.Indexes.CreateOne(keys);
             }
                 
         }
 
         public void InsertBatch(IEnumerable<TModel> values)
         {
-            _collection.InsertBatch(values);
+            _collection.InsertMany(values);
         }
 
         public IQueryable<TModel> All
@@ -86,41 +89,41 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         public InsertResult Insert(TModel model)
         {
-            var result = _collection.Insert(model);
+            _collection.InsertOne(model);
 
             return new InsertResult()
             {
-                Ok = result.HasLastErrorMessage == false,
-                ErrorMessage = result.LastErrorMessage
+                Ok = true,
+                ErrorMessage = ""
             };
         }
 
         public SaveResult SaveWithVersion(TModel model, int orignalVersion)
         {
-            var result = _collection.FindAndModify(new FindAndModifyArgs()
-            {
-                Query = Query.And(
-                    Query<TModel>.EQ(x => x.Id, model.Id),
-                    Query<TModel>.EQ(x => x.Version, orignalVersion)
+            var result = _collection.FindOneAndReplace(
+                Builders<TModel>.Filter.And(
+                    Builders<TModel>.Filter.Eq(x => x.Id, model.Id),
+                    Builders<TModel>.Filter.Eq(x => x.Version, orignalVersion)
                     ),
-                SortBy = SortBy<TModel>.Ascending(s => s.Id),
-                Update = Update<TModel>.Replace(model)
-            });
+                model,
+                new FindOneAndReplaceOptions<TModel, TModel>() {
+                    Sort = Builders<TModel>.Sort.Ascending(s => s.Id)
+                });
 
             return new SaveResult()
             {
-                Ok = result.Ok
+                Ok = result.Id != null
             };
         }
 
         public DeleteResult Delete(TKey id)
         {
-            var result = _collection.Remove(Query.EQ("_id", BsonValue.Create(id)));
+            var result = _collection.Remove(id);
 
             return new DeleteResult()
             {
-                Ok = result.HasLastErrorMessage == false,
-                DocumentsAffected = result.DocumentsAffected
+                Ok = result != null,
+                DocumentsAffected = result != null ? 1 : 0,
             };
         }
 
@@ -129,22 +132,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             _collection.Drop();
         }
 
-        public MongoCollection<TModel> Collection
+        public IMongoCollection<TModel> Collection
         {
             get { return _collection; }
-        }
-
-        public IEnumerable<BsonDocument> Aggregate(IEnumerable<BsonDocument> operations)
-        {
-            return Aggregate(new AggregateArgs()
-            {
-                Pipeline = operations
-            });
-        }
-
-        public IEnumerable<BsonDocument> Aggregate(AggregateArgs aggregateArgs)
-        {
-            return _collection.Aggregate(aggregateArgs);
         }
 
         public void Flush()
@@ -154,7 +144,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         #region Helpers
 
-        private String GetIndexName(IMongoIndexKeys keys)
+        private String GetIndexName(IndexKeysDefinition<TModel> keys)
         {
             var keysdocument = keys.ToBsonDocument();
             return keysdocument

@@ -9,14 +9,14 @@ using Castle.Core.Logging;
 using Jarvis.Framework.Kernel.Events;
 using Jarvis.Framework.Kernel.Support;
 using MongoDB.Driver;
-using MongoDB.Driver.Builders;
 using NEventStore;
+using Jarvis.Framework.Shared.Helpers;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 {
     public class ConcurrentCheckpointTracker : IConcurrentCheckpointTracker
     {
-        readonly MongoCollection<Checkpoint> _checkpoints;
+        readonly IMongoCollection<Checkpoint> _checkpoints;
         private ConcurrentDictionary<string, string> _checkpointTracker;
         private ConcurrentDictionary<string, string> _currentCheckpointTracker;
 
@@ -42,10 +42,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         public ILogger Logger { get; set; }
 
-        public ConcurrentCheckpointTracker(MongoDatabase db)
+        public ConcurrentCheckpointTracker(IMongoDatabase db)
         {
             _checkpoints = db.GetCollection<Checkpoint>("checkpoints");
-            _checkpoints.CreateIndex(IndexKeys<Checkpoint>.Ascending(x => x.Slot));
+            _checkpoints.Indexes.CreateOne(Builders<Checkpoint>.IndexKeys.Ascending(x => x.Slot));
             _checkpointTracker = new ConcurrentDictionary<string, string>();
             _checkpointSlotTracker = new ConcurrentDictionary<string, Int64>();
             _projectionToSlot = new ConcurrentDictionary<String, String>();
@@ -62,7 +62,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             checkPoint.Signature = projection.GetSignature();
             checkPoint.Slot = projection.GetSlotName();
             checkPoint.Active = true;
-            _checkpoints.Save(checkPoint);
+            _checkpoints.Save(checkPoint, checkPoint.Id);
             _checkpointTracker[id] = checkPoint.Value;
             _projectionToSlot[id] = checkPoint.Slot;
         }
@@ -86,10 +86,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             }
 
             //set all projection to active = false
-            _checkpoints.Update(
-                Query<Checkpoint>.NE(c => c.Slot, null),
-                Update<Checkpoint>.Set(c => c.Active, false),
-                UpdateFlags.Multi
+            _checkpoints.UpdateMany(
+                Builders<Checkpoint>.Filter.Ne(c => c.Slot, null),
+                Builders<Checkpoint>.Update.Set(c => c.Active, false)
             );
 
             foreach (var projection in projections)
@@ -101,7 +100,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             if (version > currentVersion)
             {
                 versionInfo.Value = new LongCheckpoint(version).Value;
-                _checkpoints.Save(versionInfo);
+                _checkpoints.Save(versionInfo, versionInfo.Id);
             }
 
             foreach (var slot in projections.Select(p => p.GetSlotName()).Distinct())
@@ -147,9 +146,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         public void RebuildStarted(IProjection projection, String lastCommitId)
         {
             var projectionName = projection.GetCommonName();
-            _checkpoints.Update(
-                Query.EQ("_id", projectionName),
-                Update<Checkpoint>.Set(x => x.RebuildStart, DateTime.UtcNow)
+            _checkpoints.UpdateOne(
+                Builders<Checkpoint>.Filter.Eq("_id", projectionName),
+                Builders<Checkpoint>.Update.Set(x => x.RebuildStart, DateTime.UtcNow)
                                     .Set(x => x.RebuildStop, null)
                                     .Set(x => x.RebuildTotalSeconds, 0)
                                     .Set(x => x.RebuildActualSeconds, 0)
@@ -169,9 +168,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             if (lastCommitIdLong < trackerLastValue)
             {
                 _checkpointTracker[projection.GetCommonName()] = lastCommitId;
-                _checkpoints.Update(
-                  Query.EQ("_id", projectionName),
-                  Update<Checkpoint>.Set(x => x.Value, lastCommitId));
+                _checkpoints.UpdateOne(
+                   Builders<Checkpoint>.Filter.Eq("_id", projectionName),
+                   Builders<Checkpoint>.Update.Set(x => x.Value, lastCommitId));
             }
             _higherCheckpointToDispatchInRebuild = Math.Max(
                 _higherCheckpointToDispatchInRebuild,
@@ -190,33 +189,31 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             checkpoint.Events = meter.TotalEvents;
             checkpoint.RebuildActualSeconds = (double)meter.TotalElapsed / TimeSpan.TicksPerSecond;
             checkpoint.Details = meter;
-            _checkpoints.Save(checkpoint);
+            _checkpoints.Save(checkpoint, checkpoint.Id);
         }
 
         public void UpdateSlot(string slotName, string checkpointToken)
         {
             if (_slotRebuildTracker[slotName] == false)
             {
-                _checkpoints.Update(
-                    Query.EQ("Slot", slotName),
-                    Update.Set("Current", checkpointToken),
-                    UpdateFlags.Multi
+                _checkpoints.UpdateMany(
+                     Builders<Checkpoint>.Filter.Eq("Slot", slotName),
+                     Builders<Checkpoint>.Update.Set("Current", checkpointToken)
                 );
             }
             _currentCheckpointTracker.AddOrUpdate(slotName, checkpointToken, (key, value) => checkpointToken);
         }
 
         public void UpdateSlotAndSetCheckpoint(
-            string slotName, 
-            IEnumerable<String> projectionIdList, 
+            string slotName,
+            IEnumerable<String> projectionIdList,
             string checkpointToken)
         {
-            _checkpoints.Update(
-                  Query.EQ("Slot", slotName),
-                  Update
+            _checkpoints.UpdateMany(
+                   Builders<Checkpoint>.Filter.Eq("Slot", slotName),
+                   Builders<Checkpoint>.Update
                     .Set("Current", checkpointToken)
-                    .Set("Value", checkpointToken),
-                  UpdateFlags.Multi
+                    .Set("Value", checkpointToken)
               );
             _currentCheckpointTracker.AddOrUpdate(slotName, checkpointToken, (key, value) => checkpointToken);
             foreach (var projectionId in projectionIdList)
@@ -236,9 +233,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         public void SetCheckpoint(string id, string value)
         {
-            _checkpoints.Update(
-                Query.EQ("_id", id),
-                Update.Set("Value", value)
+            _checkpoints.UpdateOne(
+                 Builders<Checkpoint>.Filter.Eq("_id", id),
+                 Builders<Checkpoint>.Update.Set("Value", value)
             );
 
             _checkpointTracker.AddOrUpdate(id, key => value, (key, currentValue) => value);
@@ -246,7 +243,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         public void LoadAll()
         {
-            var allChecks = _checkpoints.FindAll().OrderBy(x => x.Id);
+            var allChecks = _checkpoints.FindAll().Sort(Builders<Checkpoint>.Sort.Ascending(x => x.Id)).ToList();
             _checkpointTracker = new ConcurrentDictionary<string, string>(allChecks.ToDictionary(k => k.Id, v => v.Value));
         }
 

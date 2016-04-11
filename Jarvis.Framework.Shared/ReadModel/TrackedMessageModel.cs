@@ -4,7 +4,7 @@ using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.Messages;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using MongoDB.Driver.Builders;
+using Jarvis.Framework.Shared.Helpers;
 
 namespace Jarvis.Framework.Shared.ReadModel
 {
@@ -34,13 +34,13 @@ namespace Jarvis.Framework.Shared.ReadModel
 
     public class MongoDbMessagesTracker : IMessagesTracker
     {
-        readonly MongoCollection<TrackedMessageModel> _commands;
+        readonly IMongoCollection<TrackedMessageModel> _commands;
 
-        public MongoDbMessagesTracker(MongoDatabase db)
+        public MongoDbMessagesTracker(IMongoDatabase db)
         {
             _commands = db.GetCollection<TrackedMessageModel>("messages");
-            _commands.CreateIndex(IndexKeys<TrackedMessageModel>.Ascending(x => x.MessageId));
-            _commands.CreateIndex(IndexKeys<TrackedMessageModel>.Ascending(x => x.IssuedBy));
+            _commands.Indexes.CreateOne(Builders<TrackedMessageModel>.IndexKeys.Ascending(x => x.MessageId));
+            _commands.Indexes.CreateOne(Builders<TrackedMessageModel>.IndexKeys.Ascending(x => x.IssuedBy));
         }
 
         public void Started(IMessage msg)
@@ -57,39 +57,39 @@ namespace Jarvis.Framework.Shared.ReadModel
                 issuedBy = ((IDomainEvent) msg).IssuedBy;
             }
 
-            _commands.Update(
-                Query<TrackedMessageModel>.EQ(x=>x.MessageId, id),
-                Update<TrackedMessageModel>
+            _commands.UpdateOne(
+               Builders<TrackedMessageModel>.Filter.Eq(x=>x.MessageId, id),
+               Builders<TrackedMessageModel >.Update
                     .Set(x => x.Message, msg)
                     .Set(x=>x.StartedAt, DateTime.UtcNow)
                     .Set(x => x.IssuedBy, issuedBy)
                     .Set(x => x.Description, msg.Describe()),
-                UpdateFlags.Upsert
-            );
+               new UpdateOptions() { IsUpsert = true} 
+               );
         }
 
         public void Completed(Guid commandId, DateTime completedAt)
         {
             var id = commandId.ToString();
-            _commands.Update(
-                Query<TrackedMessageModel>.EQ(x => x.MessageId, id),
-                Update<TrackedMessageModel>.Set(x => x.CompletedAt, completedAt),
-                UpdateFlags.Upsert
+            _commands.UpdateOne(
+                Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
+                Builders<TrackedMessageModel>.Update.Set(x => x.CompletedAt, completedAt),
+                new UpdateOptions() { IsUpsert = true }
             );
         }
 
         public bool Dispatched(Guid commandId, DateTime dispatchedAt)
         {
             var id = commandId.ToString();
-            var result = _commands.Update(
-                Query.And(
-                    Query<TrackedMessageModel>.EQ(x => x.MessageId, id),
-                    Query<TrackedMessageModel>.EQ(x => x.DispatchedAt, null)
+            var result = _commands.UpdateOne(
+                 Builders<TrackedMessageModel>.Filter.And(
+                    Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
+                     Builders<TrackedMessageModel>.Filter.Eq(x => x.DispatchedAt, null)
                 ),
-                Update<TrackedMessageModel>.Set(x => x.DispatchedAt, dispatchedAt)
+                Builders<TrackedMessageModel>.Update.Set(x => x.DispatchedAt, dispatchedAt)
             );
 
-            return result.DocumentsAffected > 0;
+            return result.ModifiedCount > 0;
         }
 
         public void Drop()
@@ -100,12 +100,12 @@ namespace Jarvis.Framework.Shared.ReadModel
         public void Failed(Guid commandId, DateTime failedAt, Exception ex)
         {
             var id = commandId.ToString();
-            _commands.Update(
-                Query<TrackedMessageModel>.EQ(x => x.MessageId, id),
-                Update<TrackedMessageModel>
+            _commands.UpdateOne(
+                Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
+                Builders<TrackedMessageModel>.Update
                     .Set(x => x.FailedAt, failedAt)
                     .Set(x => x.ErrorMessage, ex.Message),
-                UpdateFlags.Upsert
+                new UpdateOptions() { IsUpsert = true}
             );
         }
     }

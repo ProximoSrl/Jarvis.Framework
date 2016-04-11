@@ -5,10 +5,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 {
     public class MongoStorageFactory : IMongoStorageFactory
     {
-        readonly MongoDatabase _db;
+        readonly IMongoDatabase _db;
         readonly IRebuildContext _rebuildContext;
 
-        public MongoStorageFactory(MongoDatabase db, IRebuildContext rebuildContext)
+        public MongoStorageFactory(IMongoDatabase db, IRebuildContext rebuildContext)
         {
             _db = db;
             _rebuildContext = rebuildContext;

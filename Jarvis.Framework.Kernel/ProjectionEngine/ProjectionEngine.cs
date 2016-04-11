@@ -13,7 +13,6 @@ using Jarvis.Framework.Shared.Logging;
 using Jarvis.Framework.Shared.MultitenantSupport;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using MongoDB.Driver.Builders;
 using MongoDB.Driver.Linq;
 using NEventStore;
 using NEventStore.Client;
@@ -22,6 +21,7 @@ using NEventStore.Persistence;
 using Jarvis.Framework.Kernel.Support;
 using System.Collections.Concurrent;
 using System.Text;
+using Jarvis.Framework.Shared.Helpers;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
 {
@@ -311,9 +311,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         private String GetLastCommitId()
         {
             var collection = GetMongoCommitsCollection();
-            var lastCommit = collection.Find(Query.GT("_id", BsonValue.Create(0)))
-                .SetSortOrder(SortBy.Descending("_id"))
-                .SetLimit(1)
+            var lastCommit = collection
+                .Find(Builders<BsonDocument>.Filter.Gte("_id", BsonValue.Create(0)))
+                .Sort(Builders<BsonDocument>.Sort.Descending("_id"))
+                .Limit(1)
                 .FirstOrDefault();
 
             if (lastCommit == null) return null;
@@ -532,7 +533,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
             while (true)
             {
-                var last = collection.FindAll().SetSortOrder(SortBy.Descending("_id")).SetLimit(1).SetFields("_id").FirstOrDefault();
+                var last = collection  
+                    .FindAll()            
+                    .Sort(Builders<BsonDocument>.Sort.Descending("_id"))
+                    .Limit(1)
+                    .Project(Builders<BsonDocument>.Projection.Include("_id"))
+                    .FirstOrDefault();
+
                 if (last != null)
                 {
                     var checkpointId = last["_id"].AsInt64;
@@ -551,12 +558,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                     }
                     if (checkpointId == dispatched)
                     {
-                        last =
-                            collection.FindAll()
-                                .SetSortOrder(SortBy.Descending("_id"))
-                                .SetLimit(1)
-                                .SetFields("_id")
-                                .FirstOrDefault();
+                        last =  collection
+                            .FindAll()
+                            .Sort(Builders<BsonDocument>.Sort.Descending("_id"))
+                            .Limit(1)
+                            .Project(Builders<BsonDocument>.Projection.Include("_id"))
+                            .FirstOrDefault();
+
                         checkpointId = last["_id"].AsInt64;
                         if (checkpointId == dispatched)
                         {
@@ -588,12 +596,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             }
         }
 
-        private MongoCollection<BsonDocument> GetMongoCommitsCollection()
+        private IMongoCollection<BsonDocument> GetMongoCommitsCollection()
         {
             var url = new MongoUrl(_config.EventStoreConnectionString);
             var client = new MongoClient(url);
-            var db = client.GetServer().GetDatabase(url.DatabaseName);
-            var collection = db.GetCollection("Commits");
+            var db = client.GetDatabase(url.DatabaseName);
+            var collection = db.GetCollection<BsonDocument>("Commits");
             return collection;
         }
     }
