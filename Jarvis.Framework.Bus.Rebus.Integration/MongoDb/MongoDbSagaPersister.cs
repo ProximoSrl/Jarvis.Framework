@@ -5,11 +5,13 @@ using System.Timers;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Conventions;
 using MongoDB.Driver;
-using MongoDB.Driver.Builders;
+using MongoDB.Bson.Serialization;
 using MongoDB.Bson;
 using System.Linq;
 using Ponder;
 using Rebus.Logging;
+using MongoDB.Bson.Serialization.Serializers;
+using System.Linq.Expressions;
 
 namespace Rebus.MongoDb
 {
@@ -35,6 +37,71 @@ namespace Rebus.MongoDb
             ConventionRegistry.Register("SagaDataConventionPack",
                                         NamingConvention,
                                         t => typeof (ISagaData).IsAssignableFrom(t));
+        }
+
+        class Reflect
+        {
+            public static string Path<T>(Expression<Func<T, object>> expression)
+            {
+                return GetPropertyName(expression);
+            }
+
+            public static object Value(object obj, string path)
+            {
+                var dots = path.Split('.');
+
+                foreach (var dot in dots)
+                {
+                    var propertyInfo = obj.GetType().GetProperty(dot);
+                    if (propertyInfo == null) return null;
+                    obj = propertyInfo.GetValue(obj, new object[0]);
+                    if (obj == null) break;
+                }
+
+                return obj;
+            }
+
+            static string GetPropertyName(Expression expression)
+            {
+                if (expression == null) return "";
+
+                if (expression is LambdaExpression)
+                {
+                    expression = ((LambdaExpression)expression).Body;
+                }
+
+                if (expression is UnaryExpression)
+                {
+                    expression = ((UnaryExpression)expression).Operand;
+                }
+
+                if (expression is MemberExpression)
+                {
+                    dynamic memberExpression = expression;
+
+                    var lambdaExpression = (Expression)memberExpression.Expression;
+
+                    string prefix;
+                    if (lambdaExpression != null)
+                    {
+                        prefix = GetPropertyName(lambdaExpression);
+                        if (!string.IsNullOrEmpty(prefix))
+                        {
+                            prefix += ".";
+                        }
+                    }
+                    else
+                    {
+                        prefix = "";
+                    }
+
+                    var propertyName = memberExpression.Member.Name;
+
+                    return prefix + propertyName;
+                }
+
+                return "";
+            }
         }
 
         class SagaDataNamingConvention : IConventionPack, IMemberMapConvention
@@ -70,7 +137,7 @@ namespace Rebus.MongoDb
         }
 
         readonly Dictionary<Type, string> collectionNames = new Dictionary<Type, string>();
-        readonly MongoDatabase database;
+        readonly IMongoDatabase database;
         readonly Timer indexRecreationTimer = new Timer();
 
         /// <summary>
@@ -142,22 +209,17 @@ namespace Rebus.MongoDb
         /// </summary>
         public void Insert(ISagaData sagaData, string[] sagaDataPropertyPathsToIndex)
         {
-            var collection = database.GetCollection(GetCollectionName(sagaData.GetType()));
-
+            var collection = database.GetCollection<BsonDocument>(GetCollectionName(sagaData.GetType()));
+            collection.Settings.WriteConcern = WriteConcern.Acknowledged;
             EnsureIndexHasBeenCreated(sagaDataPropertyPathsToIndex, collection);
 
             sagaData.Revision++;
+            var sagaDataBson = BsonDocument.Create(sagaData);
             try
             {
-                var writeConcernResult = collection.Insert(sagaData, WriteConcern.Acknowledged);
-
-                EnsureResultIsGood(writeConcernResult,
-                       "insert saga data of type {0} with _id {1} and _rev {2}", 0,
-                       sagaData.GetType(),
-                       sagaData.Id,
-                       sagaData.Revision);
+                collection.InsertOne(sagaDataBson);
             }
-            catch (WriteConcernException ex)
+            catch (MongoWriteConcernException ex)
             {
                 // in case of race conditions, we get a duplicate key error because the upsert
                 // cannot proceed to insert a document with the same _id as an existing document
@@ -172,29 +234,25 @@ namespace Rebus.MongoDb
         /// </summary>
         public void Update(ISagaData sagaData, string[] sagaDataPropertyPathsToIndex)
         {
-            var collection = database.GetCollection(GetCollectionName(sagaData.GetType()));
+            var collection = database.GetCollection<BsonDocument>(GetCollectionName(sagaData.GetType()));
+            collection.Settings.WriteConcern = WriteConcern.Acknowledged;
 
             EnsureIndexHasBeenCreated(sagaDataPropertyPathsToIndex, collection);
 
             var revisionElementName = GetRevisionElementName(sagaData);
 
-            var criteria = Query.And(Query.EQ(IdElementName, sagaData.Id),
-                                     Query.EQ(revisionElementName, sagaData.Revision));
+            var criteria = Builders<BsonDocument>.Filter.And(Builders<BsonDocument>.Filter.Eq(IdElementName, sagaData.Id),
+                                     Builders<BsonDocument>.Filter.Eq(revisionElementName, sagaData.Revision));
 
             sagaData.Revision++;
-
-            var update = MongoDB.Driver.Builders.Update.Replace(sagaData);
+            var docData = BsonDocument.Create(sagaData);
             try
             {
-                var safeModeResult = collection.Update(criteria, update, WriteConcern.Acknowledged);
-
-                EnsureResultIsGood(safeModeResult,
-                       "update saga data of type {0} with _id {1} and _rev {2}", 1,
-                       sagaData.GetType(),
-                       sagaData.Id,
-                       sagaData.Revision);
+                var safeModeResult = collection.FindOneAndReplace(
+                    criteria,
+                    docData);
             }
-            catch (WriteConcernException ex)
+            catch (MongoWriteConcernException ex)
             {
                 // in case of race conditions, we get a duplicate key error because the upsert
                 // cannot proceed to insert a document with the same _id as an existing document
@@ -209,24 +267,18 @@ namespace Rebus.MongoDb
         /// </summary>
         public void Delete(ISagaData sagaData)
         {
-            var collection = database.GetCollection(GetCollectionName(sagaData.GetType()));
-
+            var collection = database.GetCollection<BsonDocument>(GetCollectionName(sagaData.GetType()));
+            collection.Settings.WriteConcern = WriteConcern.Acknowledged;
             var revisionElementName = GetRevisionElementName(sagaData);
 
-            var query = Query.And(Query.EQ(IdElementName, sagaData.Id),
-                                  Query.EQ(revisionElementName, sagaData.Revision));
+            var query = Builders<BsonDocument>.Filter.And(Builders<BsonDocument>.Filter.Eq(IdElementName, sagaData.Id),
+                                  Builders<BsonDocument>.Filter.Eq(revisionElementName, sagaData.Revision));
 
             try
             {
-                var safeModeResult = collection.Remove(query, WriteConcern.Acknowledged);
-
-                EnsureResultIsGood(safeModeResult,
-                                   "delete saga data of type {0} with _id {1} and _rev {2}", 1,
-                                   sagaData.GetType(),
-                                   sagaData.Id,
-                                   sagaData.Revision);
+                var safeModeResult = collection.DeleteMany(query);
             }
-            catch (WriteConcernException ex)
+            catch (MongoWriteConcernException ex)
             {
                 // in case of race conditions, we get a duplicate key error because the upsert
                 // cannot proceed to insert a document with the same _id as an existing document
@@ -241,20 +293,21 @@ namespace Rebus.MongoDb
         /// </summary>
         public T Find<T>(string sagaDataPropertyPath, object fieldFromMessage) where T : class, ISagaData
         {
-            var collection = database.GetCollection(typeof(T), GetCollectionName(typeof(T)));
+            var collection = database.GetCollection<T>(GetCollectionName(typeof(T)));
 
             if (sagaDataPropertyPath == "Id")
             {
-                return collection.FindOneByIdAs<T>(BsonValue.Create(fieldFromMessage));
+                return collection.Find(Builders<T>.Filter.Eq("_id", BsonValue.Create(fieldFromMessage)))
+                    .FirstOrDefault();
             }
 
             var bsonValue = fieldFromMessage != null
                 ? BsonValue.Create(fieldFromMessage)
                 : BsonNull.Value;
 
-            var query = Query.EQ(MapSagaDataPropertyPath(sagaDataPropertyPath, typeof (T)), bsonValue);
+            var query = Builders<T>.Filter.Eq(MapSagaDataPropertyPath(sagaDataPropertyPath, typeof (T)), bsonValue);
 
-            return collection.FindOneAs<T>(query);
+            return collection.Find(query).FirstOrDefault();
         }
 
         string GetCollectionName(Type sagaDataType)
@@ -306,7 +359,7 @@ which will make the persister use the type of the saga to come up with collectio
             return string.Format("sagas_{0}", sagaDataType.Name);
         }
 
-        void EnsureIndexHasBeenCreated(IEnumerable<string> sagaDataPropertyPathsToIndex, MongoCollection<BsonDocument> collection)
+        void EnsureIndexHasBeenCreated(IEnumerable<string> sagaDataPropertyPathsToIndex, IMongoCollection<BsonDocument> collection)
         {
             if (!indexEnsuredRecently)
             {
@@ -324,14 +377,14 @@ which will make the persister use the type of the saga to come up with collectio
 
                         foreach (var propertyToIndex in propertyPathsToIndex.Except(new[] { "Id" }))
                         {
-                            var indexDefinition = IndexKeys.Ascending(propertyToIndex);
+                            var indexDefinition = Builders<BsonDocument>.IndexKeys.Ascending(propertyToIndex);
 
                             //if (IndexAlreadyExists(indexes, propertyToIndex))
                             //{
                             //    AssertIndexIsCorrect(indexes, propertyToIndex);
                             //}
 
-                            collection.CreateIndex(indexDefinition, IndexOptions.SetBackground(false).SetUnique(true));
+                            collection.Indexes.CreateOne(indexDefinition, new CreateIndexOptions() { Background = false, Unique = true});
                         }
 
                         //collection.ReIndex();
@@ -339,21 +392,6 @@ which will make the persister use the type of the saga to come up with collectio
                         indexEnsuredRecently = true;
                     }
                 }
-            }
-        }
-
-        void AssertIndexIsCorrect(GetIndexesResult indexes, string propertyToIndex)
-        {
-            var indexInfo = indexes.Single(i => IsIndexForProperty(propertyToIndex, i));
-
-            if (!indexInfo.IsUnique)
-            {
-                throw new InvalidOperationException(string.Format("The index for {0} already existed, but it wasn't enforcing a UNIQUE constraint.", propertyToIndex));
-            }
-
-            if (indexInfo.IsBackground)
-            {
-                throw new InvalidOperationException(string.Format("The index for {0} aready exists, but it wasn't SYNCHRONOUS.", propertyToIndex));
             }
         }
 
@@ -375,19 +413,6 @@ which will make the persister use the type of the saga to come up with collectio
             return revisionElementName;
         }
 
-        bool IndexAlreadyExists(IEnumerable<IndexInfo> indexes, string propertyToIndex)
-        {
-            return indexes
-                .Any(indexInfo => IsIndexForProperty(propertyToIndex, indexInfo));
-        }
-
-        static bool IsIndexForProperty(string propertyToIndex, IndexInfo indexInfo)
-        {
-            var indexKeys = indexInfo.Key.ToDictionary();
-
-            return indexKeys.Count == 1 && indexKeys.ContainsKey(propertyToIndex);
-        }
-
         string MapSagaDataPropertyPath(string sagaDataPropertyPath, Type sagaDataType)
         {
             var propertyInfo = sagaDataType.GetProperty(sagaDataPropertyPath, BindingFlags.Public | BindingFlags.Instance);
@@ -398,24 +423,6 @@ which will make the persister use the type of the saga to come up with collectio
             return NamingConvention.GetElementName(propertyInfo);
         }
 
-        void EnsureResultIsGood(WriteConcernResult writeConcernResult, string message, int expectedNumberOfAffectedDocuments, params object[] objs)
-        {
-            if (!writeConcernResult.Ok)
-            {
-                var exceptionMessage = string.Format("Tried to {0}, but apparently the operation didn't succeed.",
-                                                     string.Format(message, objs));
-
-                throw new WriteConcernException(exceptionMessage, writeConcernResult);
-            }
-
-            if (writeConcernResult.DocumentsAffected != expectedNumberOfAffectedDocuments)
-            {
-                var exceptionMessage = string.Format("Tried to {0}, but documents affected != {1}.",
-                                                     string.Format(message, objs),
-                                                     expectedNumberOfAffectedDocuments);
-
-                throw new WriteConcernException(exceptionMessage, writeConcernResult);
-            }
-        }
+      
     }
 }
