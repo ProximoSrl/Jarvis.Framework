@@ -7,6 +7,7 @@ using Jarvis.Framework.TestHelpers;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using NUnit.Framework;
+using Jarvis.NEventStoreEx.CommonDomainEx;
 
 namespace Jarvis.Framework.Tests.EngineTests
 {
@@ -29,7 +30,7 @@ namespace Jarvis.Framework.Tests.EngineTests
             BsonClassMap.RegisterClassMap<DomainEvent>(map =>
             {
                 map.AutoMap();
-                map.MapProperty(x => x.AggregateId).SetSerializer(new EventStoreIdentityBsonSerializer());
+                map.MapProperty(x => x.AggregateId).SetSerializer(new EventStoreIdentityBsonSerializer(typeof(IIdentity)));
             });
         }
 

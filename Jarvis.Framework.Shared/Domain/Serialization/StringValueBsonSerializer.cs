@@ -7,11 +7,16 @@ namespace Jarvis.Framework.Shared.Domain.Serialization
 {
     public class StringValueBsonSerializer : IBsonSerializer
     {
+        Type _t;
+        public StringValueBsonSerializer(Type t)
+        {
+            _t = t;
+        }
         public Type ValueType
         {
             get
             {
-                return typeof(StringValue);
+                return _t;
             }
         }
 
@@ -38,6 +43,14 @@ namespace Jarvis.Framework.Shared.Domain.Serialization
             {
                 context.Writer.WriteString((StringValue)value);
             }
+        }
+    }
+
+    public class StringValueBsonSerializer<T> : StringValueBsonSerializer
+    {
+        public StringValueBsonSerializer() : base(typeof(T))
+        {
+
         }
     }
 }

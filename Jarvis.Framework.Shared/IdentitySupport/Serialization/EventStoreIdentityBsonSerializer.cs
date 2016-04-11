@@ -9,13 +9,18 @@ namespace Jarvis.Framework.Shared.IdentitySupport.Serialization
     public class EventStoreIdentityBsonSerializer : IBsonSerializer
     {
         public static IIdentityConverter IdentityConverter { get; set; }
+        Type _t;
 
+        public EventStoreIdentityBsonSerializer(Type t)
+        {
+            _t = t;
+        }
 
         public Type ValueType
         {
             get
             {
-                return typeof(IIdentity);
+                return _t;
             }
         }
 

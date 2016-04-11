@@ -8,6 +8,7 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
 using NUnit.Framework;
+using Jarvis.NEventStoreEx.CommonDomainEx;
 
 namespace Jarvis.Framework.Tests.DomainTests
 {
@@ -49,10 +50,10 @@ namespace Jarvis.Framework.Tests.DomainTests
             BsonClassMap.RegisterClassMap<DomainEvent>(map =>
             {
                 map.AutoMap();
-                map.MapProperty(x => x.AggregateId).SetSerializer(new EventStoreIdentityBsonSerializer());
+                map.MapProperty(x => x.AggregateId).SetSerializer(new EventStoreIdentityBsonSerializer(typeof(IIdentity)));
             });
         }
-
+        
         [TearDown]
         public void TearDown()
         {

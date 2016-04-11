@@ -28,7 +28,7 @@ namespace Jarvis.Framework.Tests.SharedTests
         [TestFixtureSetUp]
         public void TestFixtureSetup()
         {
-            BsonSerializer.RegisterSerializer(typeof(TestFlatId), new EventStoreIdentityBsonSerializer());
+            BsonSerializer.RegisterSerializer(typeof(TestFlatId), new EventStoreIdentityBsonSerializer(typeof(TestFlatId)));
             EventStoreIdentityCustomBsonTypeMapper.Register<TestFlatId>();
         }
 
