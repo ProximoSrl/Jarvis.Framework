@@ -10,8 +10,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 {
     public interface IMongoStorage<TModel, TKey> where TModel : class, IReadModelEx<TKey>
     {
-        bool IndexExists(IndexKeysDefinition<TModel> keys);
-        void CreateIndex(IndexKeysDefinition<TModel> keys,  CreateIndexOptions options = null);
+        bool IndexExists(String name);
+        void CreateIndex(String name, IndexKeysDefinition<TModel> keys,  CreateIndexOptions options = null);
         void InsertBatch(IEnumerable<TModel> values);
         IQueryable<TModel> All { get; }
         TModel FindOneById(TKey id);

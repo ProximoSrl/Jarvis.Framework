@@ -1,5 +1,6 @@
 ﻿using MongoDB.Bson;
 using MongoDB.Bson.IO;
+using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
 using MongoDB.Driver.Core.Operations;
@@ -48,7 +49,21 @@ namespace Jarvis.Framework.Shared.Helpers
             return collection.DeleteOne(Builders<T>.Filter.Eq("_id", idValue));
         }
 
-
+        public static Dictionary<Tkey, Tvalue> AsDictionary<Tkey, Tvalue>(this BsonValue bsonValue)
+        {
+            using (BsonReader reader = new JsonReader(bsonValue.ToJson()))
+            {
+                var dictionarySerializer = new DictionaryInterfaceImplementerSerializer<Dictionary<Tkey, Tvalue>>();
+                object result = dictionarySerializer.Deserialize(
+                    BsonDeserializationContext.CreateRoot(reader, b => { }),
+                    new BsonDeserializationArgs()
+                    {
+                        NominalType = typeof(Dictionary<Tkey, Tvalue>)
+                    }
+                );
+                return (Dictionary<Tkey, Tvalue>)result;
+            }
+        }
 
     }
 

@@ -161,7 +161,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
         {
             Assert.IsTrue
                 (
-                    _collection.IndexExists(_projection.IndexKeys)
+                    _collection.IndexExists(MyProjection.IndexName)
                 );
         }
     }

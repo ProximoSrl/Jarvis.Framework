@@ -13,7 +13,8 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
     {
         readonly ICollectionWrapper<MyReadModel, string> _collection;
 
-        public IndexKeysDefinition<MyReadModel> IndexKeys = Builders<MyReadModel>.IndexKeys.Ascending(x => x.Text);
+        private IndexKeysDefinition<MyReadModel> IndexKeys = Builders<MyReadModel>.IndexKeys.Ascending(x => x.Text);
+        public const string IndexName = "MyIndex";
 
         public MyProjection(ICollectionWrapper<MyReadModel, string> collection)
         {
@@ -22,7 +23,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
 
         public override void SetUp()
         {
-            _collection.CreateIndex(IndexKeys);
+            _collection.CreateIndex(IndexName, IndexKeys);
         }
 
         public override void Drop ()

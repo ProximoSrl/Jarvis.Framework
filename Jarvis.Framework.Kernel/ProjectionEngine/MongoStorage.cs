@@ -20,46 +20,33 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             _collection = collection;
         }
 
-        public bool IndexExists(IndexKeysDefinition<TModel> keys)
+        public bool IndexExists(string indexName)
         {
-            var indexName = GetIndexName(keys);
             return _collection.Indexes.List().ToList()
                 .Any(i => i["name"].AsString == indexName);
         }
 
-        public void CreateIndex(IndexKeysDefinition<TModel> keys, CreateIndexOptions options = null)
+        public void CreateIndex(String name, IndexKeysDefinition<TModel> keys, CreateIndexOptions options = null)
         {
-            if (options != null)
+            options = options ?? new CreateIndexOptions();
+            options.Name = name;
+
+            //there is the possibility that create index trow if an index with same name and 
+            //different options/keys is created
+            try
             {
-                //there is the possibility that create index trow if an index with same name and 
-                //different options/keys is created
-                try
-                {
-                    _collection.Indexes.CreateOne(keys, options);
-                }
-                catch (MongoWriteConcernException ex)
-                {
-                    //probably index extist with different options, lets check if name is specified
-                    var optionsDoc = options.ToBsonDocument();
-                    String indexName;
-                    if (optionsDoc.Names.Contains("name"))
-                    {
-                        indexName = optionsDoc["name"].AsString;
-                    }
-                    else
-                    {
-                        //determine the index name from fields, fragile but works with this version of drivers 
-                        indexName = GetIndexName(keys);
-                    }
-                    _collection.Indexes.DropOne(indexName);
-                    _collection.Indexes.CreateOne(keys, options);
-                }
+                _collection.Indexes.CreateOne(keys, options);
             }
-            else
+            catch (MongoWriteConcernException ex)
             {
-                _collection.Indexes.CreateOne(keys);
+                //probably index extist with different options, lets check if name is specified
+                var optionsDoc = options.ToBsonDocument();
+                String indexName = name;
+                _collection.Indexes.DropOne(indexName);
+                _collection.Indexes.CreateOne(keys, options);
             }
-                
+
+
         }
 
         public void InsertBatch(IEnumerable<TModel> values)
@@ -106,7 +93,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                     Builders<TModel>.Filter.Eq(x => x.Version, orignalVersion)
                     ),
                 model,
-                new FindOneAndReplaceOptions<TModel, TModel>() {
+                new FindOneAndReplaceOptions<TModel, TModel>()
+                {
                     Sort = Builders<TModel>.Sort.Ascending(s => s.Id)
                 });
 
@@ -144,13 +132,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         #region Helpers
 
-        private String GetIndexName(IndexKeysDefinition<TModel> keys)
-        {
-            var keysdocument = keys.ToBsonDocument();
-            return keysdocument
-                .Select(k => k.Name + "_" + k.Value.ToString())
-                .Aggregate((s1, s2) => s1 + "_" + s2);
-        }
+
 
         #endregion
     }

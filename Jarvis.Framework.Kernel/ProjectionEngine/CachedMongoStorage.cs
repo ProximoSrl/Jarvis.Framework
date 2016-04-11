@@ -21,9 +21,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             _inmemoryCollection = inmemoryCollection;
         }
 
-        public bool IndexExists(IndexKeysDefinition<TModel> keys)
+        public bool IndexExists(String name)
         {
-            return _storage.IndexExists(keys);
+            return _storage.IndexExists(name);
         }
 
         void ThrowIfOperatingInMemory()
@@ -32,9 +32,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 throw new Exception("Unsupported operation while operating in memory");
         }
 
-        public void CreateIndex(IndexKeysDefinition<TModel> keys, CreateIndexOptions options = null)
+        public void CreateIndex(String name, IndexKeysDefinition<TModel> keys, CreateIndexOptions options = null)
         {
-            _storage.CreateIndex(keys, options);
+            _storage.CreateIndex(name, keys, options);
         }
 
         public void InsertBatch(IEnumerable<TModel> values)

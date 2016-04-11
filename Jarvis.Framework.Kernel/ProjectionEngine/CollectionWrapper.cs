@@ -71,14 +71,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         #region ICollectionWrapper members
 
-        public void CreateIndex(IndexKeysDefinition<TModel> keys, CreateIndexOptions options = null)
+        public void CreateIndex(String name, IndexKeysDefinition<TModel> keys, CreateIndexOptions options = null)
         {
-            _storage.CreateIndex(keys, options);
+            _storage.CreateIndex(name, keys, options);
         }
 
-        public bool IndexExists(IndexKeysDefinition<TModel> keys)
+        public bool IndexExists(String name)
         {
-            return _storage.IndexExists(keys);
+            return _storage.IndexExists(name);
         }
 
         public void InsertBatch(IEnumerable<TModel> values)
