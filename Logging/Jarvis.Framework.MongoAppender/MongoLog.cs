@@ -7,7 +7,7 @@ using log4net.Core;
 using log4net.Util;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using MongoDB.Driver.Builders;
+
 using System.Reflection;
 
 namespace Jarvis.Framework.MongoAppender
@@ -77,59 +77,62 @@ namespace Jarvis.Framework.MongoAppender
         {
             var uri = new MongoUrl(ConnectionString);
             var client = new MongoClient(uri);
-            MongoDatabase db = client.GetServer().GetDatabase(uri.DatabaseName);
+            IMongoDatabase db = client.GetDatabase(uri.DatabaseName);
             Int64 cappedSize;
             if (!Int64.TryParse(CappedSizeInMb, out cappedSize))
             {
                 cappedSize = 5 * 1024L;
             }
-            if (!db.CollectionExists(CollectionName))
+            var collections = db.ListCollections()
+                .ToList()
+                .Select(d => d["name"].AsString)
+                .ToList();
+            if (!collections.Contains(CollectionName))
             {
-                CollectionOptionsBuilder options = CollectionOptions
-                    .SetCapped(true)
-                    .SetMaxSize(1024L * 1024L * cappedSize); //5 gb.
-                db.CreateCollection(CollectionName, options);
+                var craeteCollectionOptions = new CreateCollectionOptions() {
+                    Capped = true,
+                    MaxSize = 1024L * 1024L * cappedSize
+                };
+                db.CreateCollection(CollectionName, craeteCollectionOptions);
             }
-            LogCollection = db.GetCollection(CollectionName);
-            var builder = new IndexOptionsBuilder();
-
+            LogCollection = db.GetCollection<BsonDocument>(CollectionName);
+            CreateIndexOptions options = new CreateIndexOptions();
             const string ttlIndex = FieldNames.Timestamp + "_-1";
-            var index = LogCollection.GetIndexes().SingleOrDefault(x => x.Name == ttlIndex);
+            var index = LogCollection.Indexes.List().ToList().SingleOrDefault(x => x["name"].AsString == ttlIndex);
             if (index != null)
             {
-                if (ExpireAfter != null)
-                {
-                    if (index.TimeToLive != ExpireAfter.ToTimeSpan())
-                    {
-                        var d = new CommandDocument()
-                    {
-                        {   "collMod", CollectionName   },
-                        {
-                            "index", new BsonDocument
-                            {
-                                {"keyPattern", new BsonDocument {{FieldNames.Timestamp, -1}}},
-                                {"expireAfterSeconds", (int)(ExpireAfter.ToTimeSpan().TotalSeconds)}
-                            }
-                        }
-                    };
+                //if (ExpireAfter != null)
+                //{
+                //    if (index.op != ExpireAfter.ToTimeSpan())
+                //    {
+                //        var d = new CommandDocument()
+                //        {
+                //            {   "collMod", CollectionName   },
+                //            {
+                //                "index", new BsonDocument
+                //                {
+                //                    {"keyPattern", new BsonDocument {{FieldNames.Timestamp, -1}}},
+                //                    {"expireAfterSeconds", (int)(ExpireAfter.ToTimeSpan().TotalSeconds)}
+                //                }
+                //            }
+                //        };
 
-                        db.RunCommand(d);
-                    }
-                }
+                //        db.RunCommand(d);
+                //    }
+                //}
             }
             else
             {
                 if (ExpireAfter != null)
                 {
-                    builder.SetTimeToLive(ExpireAfter.ToTimeSpan());
+                    options.ExpireAfter = ExpireAfter.ToTimeSpan();
                 }
 
-                LogCollection.CreateIndex(IndexKeys.Descending(FieldNames.Timestamp), builder);
+                LogCollection.Indexes.CreateOne(Builders<BsonDocument>.IndexKeys.Descending(FieldNames.Timestamp), options);
             }
 
-            LogCollection.CreateIndex(IndexKeys
-                .Ascending(FieldNames.Level, FieldNames.Thread, FieldNames.Loggername)
-            );
+            LogCollection.Indexes.CreateOne(Builders<BsonDocument>.IndexKeys
+                .Ascending(FieldNames.Level).Ascending(FieldNames.Thread).Ascending(FieldNames.Loggername));
         }
 
         public BsonDocument LoggingEventToBSON(LoggingEvent loggingEvent)
@@ -227,7 +230,7 @@ namespace Jarvis.Framework.MongoAppender
             return toReturn;
         }
 
-        public MongoCollection<BsonDocument> LogCollection { get; private set; }
+        public IMongoCollection<BsonDocument> LogCollection { get; private set; }
 
         /// <summary>
         /// Used to programmatically override the name of the program with code.
@@ -255,7 +258,7 @@ namespace Jarvis.Framework.MongoAppender
             if (LogCollection != null)
             {
                 var docs = events.Select(LoggingEventToBSON).Where(x => x != null).ToArray();
-                LogCollection.InsertBatch(docs);
+                LogCollection.InsertMany(docs);
             }
         }
 
@@ -266,7 +269,7 @@ namespace Jarvis.Framework.MongoAppender
                 BsonDocument doc = LoggingEventToBSON(loggingEvent);
                 if (doc != null)
                 {
-                    LogCollection.Insert(doc);
+                    LogCollection.InsertOne(doc);
                 }
             }
         }
@@ -274,7 +277,7 @@ namespace Jarvis.Framework.MongoAppender
         public void Insert(BsonDocument doc)
         {
 
-                    LogCollection.Insert(doc);
+                    LogCollection.InsertOne(doc);
 
         }
     }

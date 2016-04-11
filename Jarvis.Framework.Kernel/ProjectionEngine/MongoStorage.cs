@@ -90,8 +90,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
             return new InsertResult()
             {
-                Ok = result.Ok,
-                ErrorMessage = result.ErrorMessage
+                Ok = result.HasLastErrorMessage == false,
+                ErrorMessage = result.LastErrorMessage
             };
         }
 
@@ -119,7 +119,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
             return new DeleteResult()
             {
-                Ok = result.Ok,
+                Ok = result.HasLastErrorMessage == false,
                 DocumentsAffected = result.DocumentsAffected
             };
         }

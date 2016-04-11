@@ -14,12 +14,14 @@ using NUnit.Framework;
 using System.Diagnostics;
 using System;
 using log4net.Layout;
+using MongoDB.Driver;
 
 namespace Jarvis.Framework.LoggingTests
 {
     public class MongoAppenderTestsBaseClass
     {
-        protected MongoCollection _logCollection;
+        protected IMongoDatabase _db;
+        protected IMongoCollection<BsonDocument> _logCollection;
         protected BufferedMongoDBAppender _appender;
         protected MongoDBAppender _mongoAppender;
         protected FileAppender _fileAppender;
@@ -30,9 +32,9 @@ namespace Jarvis.Framework.LoggingTests
         public void TestFixtureSetup()
         {
             var client = new MongoClient("mongodb://localhost");
-            var db = client.GetServer().GetDatabase("test-db-log");
-            _logCollection = db.GetCollection("logs");
-            _logCollection.Drop();
+            _db = client.GetDatabase("test-db-log");
+            _logCollection = _db.GetCollection<BsonDocument>("logs");
+            _db.DropCollection("logs");
 
             var hierarchy = (Hierarchy)LogManager.GetRepository();
             _logger = hierarchy.LoggerFactory.CreateLogger("logname");
@@ -55,7 +57,7 @@ namespace Jarvis.Framework.LoggingTests
         [SetUp]
         public void SetUp()
         {
-            _logCollection.Drop();
+            _db.DropCollection("logs");
         }
 
         protected IAppender CreateMongoAppender(Boolean looseFix, Boolean multiThreadSave)
@@ -114,7 +116,7 @@ namespace Jarvis.Framework.LoggingTests
         {
             _sut.Debug("This is a logger");
             _appender.Flush();
-            Assert.That(_logCollection.Count(), Is.EqualTo(1));
+            Assert.That(_logCollection.Count(Builders<BsonDocument>.Filter.Empty), Is.EqualTo(1));
         }
             
         [Test]
@@ -122,7 +124,7 @@ namespace Jarvis.Framework.LoggingTests
         {
             _sut.Debug("This is a logger");
             _appender.Flush();
-            var log = _logCollection.FindAllAs<BsonDocument>().Single();
+            var log = _logCollection.Find<BsonDocument>(Builders<BsonDocument>.Filter.Empty).Single();
             Assert.That(log["fi"].ToString(), Is.StringEnding("MongoAppenderTests.cs"));
         }
 
@@ -134,7 +136,7 @@ namespace Jarvis.Framework.LoggingTests
                 _sut.Debug("This is a logger with a big string: " + new string('x', 10000));
             }
             _appender.Flush();
-            var log = _logCollection.FindAllAs<BsonDocument>().Count();
+            var log = _logCollection.Find<BsonDocument>(Builders<BsonDocument>.Filter.Empty).Count();
             Assert.That(log, Is.EqualTo(1000));
         }
 
@@ -152,7 +154,7 @@ namespace Jarvis.Framework.LoggingTests
                 _sut.Error("Exception", ex);
             }
             _appender.Flush();
-            var log = _logCollection.FindAllAs<BsonDocument>().First();
+            var log = _logCollection.Find<BsonDocument>(Builders<BsonDocument>.Filter.Empty).First();
             var innerExceptionList = log["ie"] as BsonArray;
             Assert.That(innerExceptionList.Count, Is.EqualTo(2));
 
@@ -176,7 +178,7 @@ namespace Jarvis.Framework.LoggingTests
                 _sut.Error("Exception", ex);
             }
             _appender.Flush();
-            var log = _logCollection.FindAllAs<BsonDocument>().First();
+            var log = _logCollection.Find<BsonDocument>(Builders<BsonDocument>.Filter.Empty).First();
             var firstException = log["fe"];
             Assert.That(firstException["me"].AsString, Is.EqualTo("Inner 1"));
         }

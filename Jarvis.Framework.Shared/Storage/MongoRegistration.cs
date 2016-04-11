@@ -12,14 +12,15 @@ namespace Jarvis.Framework.Shared.Storage
     {
         static MongoRegistration()
         {
-            var conventions = new ConventionPack
-                {
-                    new MemberSerializationOptionsConvention(
-                        typeof (Guid),
-                        new RepresentationSerializationOptions(BsonType.String)
-                        )
-                };
-            ConventionRegistry.Register("guidstring", conventions, t => true);
+            //TODO: CONVERSION
+            //var conventions = new ConventionPack
+            //    {
+            //        new MemberSerializationOptionsConvention(
+            //            typeof (Guid),
+            //            new RepresentationSerializationOptions(BsonType.String)
+            //            )
+            //    };
+            //ConventionRegistry.Register("guidstring", conventions, t => true);
         }
 
         private class AliasClassMap : BsonClassMap

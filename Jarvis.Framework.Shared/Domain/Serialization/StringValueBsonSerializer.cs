@@ -7,37 +7,36 @@ namespace Jarvis.Framework.Shared.Domain.Serialization
 {
     public class StringValueBsonSerializer : IBsonSerializer
     {
-        public object Deserialize(BsonReader bsonReader, Type nominalType, IBsonSerializationOptions options)
+        public Type ValueType
         {
-            throw new NotImplementedException();
+            get
+            {
+                return typeof(String);
+            }
         }
 
-        public object Deserialize(BsonReader bsonReader, Type nominalType, Type actualType, IBsonSerializationOptions options)
+        public object Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args)
         {
-            if (bsonReader.CurrentBsonType == BsonType.Null)
+            if (context.Reader.CurrentBsonType == BsonType.Null)
             {
-                bsonReader.ReadNull();
+                context.Reader.ReadNull();
                 return null;
             }
 
-            var id = bsonReader.ReadString();
-            return Activator.CreateInstance(nominalType, new object[] {id});
+            var id = context.Reader.ReadString();
+            return Activator.CreateInstance(args.NominalType, new object[] {id});
         }
 
-        public IBsonSerializationOptions GetDefaultSerializationOptions()
-        {
-            throw new NotImplementedException();
-        }
 
-        public void Serialize(BsonWriter bsonWriter, Type nominalType, object value, IBsonSerializationOptions options)
+        public void Serialize(BsonSerializationContext context, BsonSerializationArgs args, object value)
         {
             if (value == null)
             {
-                bsonWriter.WriteNull();
+                context.Writer.WriteNull();
             }
             else
             {
-                bsonWriter.WriteString((StringValue)value);
+                context.Writer.WriteString((StringValue)value);
             }
         }
     }

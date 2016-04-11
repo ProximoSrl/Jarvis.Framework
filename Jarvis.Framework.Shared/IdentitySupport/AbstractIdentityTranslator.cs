@@ -126,7 +126,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                 _collection.Insert(mapped);
                 return mapped;
             }
-            catch (WriteConcernException ex)
+            catch (MongoWriteConcernException ex)
             {
                 if (ex.Message.Contains("E11000 duplicate key"))
                 {

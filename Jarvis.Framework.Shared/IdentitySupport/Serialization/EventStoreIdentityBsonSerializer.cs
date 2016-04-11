@@ -6,24 +6,28 @@ using MongoDB.Bson.Serialization;
 
 namespace Jarvis.Framework.Shared.IdentitySupport.Serialization
 {
-    public class EventStoreIdentityBsonSerializer: IBsonSerializer 
+    public class EventStoreIdentityBsonSerializer : IBsonSerializer
     {
         public static IIdentityConverter IdentityConverter { get; set; }
 
-        public object Deserialize(BsonReader bsonReader, Type nominalType, IBsonSerializationOptions options)
+
+        public Type ValueType
         {
-            throw new NotImplementedException();
+            get
+            {
+                return typeof(IIdentity);
+            }
         }
 
-        public object Deserialize(BsonReader bsonReader, Type nominalType, Type actualType, IBsonSerializationOptions options)
+        public object Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args)
         {
-            if (bsonReader.CurrentBsonType == BsonType.Null)
+            if (context.Reader.CurrentBsonType == BsonType.Null)
             {
-                bsonReader.ReadNull();
+                context.Reader.ReadNull();
                 return null;
             }
 
-            var id = bsonReader.ReadString();
+            var id = context.Reader.ReadString();
 
             if (IdentityConverter == null)
                 throw new Exception("Identity converter not set in EventStoreIdentityBsonSerializer");
@@ -31,21 +35,18 @@ namespace Jarvis.Framework.Shared.IdentitySupport.Serialization
             return IdentityConverter.ToIdentity(id);
         }
 
-        public IBsonSerializationOptions GetDefaultSerializationOptions()
-        {
-            throw new NotImplementedException();
-        }
-
-        public void Serialize(BsonWriter bsonWriter, Type nominalType, object value, IBsonSerializationOptions options)
+        public void Serialize(BsonSerializationContext context, BsonSerializationArgs args, object value)
         {
             if (value == null)
             {
-                bsonWriter.WriteNull();
+                context.Writer.WriteNull();
             }
             else
             {
-                bsonWriter.WriteString((EventStoreIdentity)value);
+                context.Writer.WriteString((EventStoreIdentity)value);
             }
         }
+
+
     }
 }
