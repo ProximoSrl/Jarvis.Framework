@@ -11,7 +11,7 @@ namespace Jarvis.Framework.Shared.Domain.Serialization
         {
             get
             {
-                return typeof(String);
+                return typeof(StringValue);
             }
         }
 

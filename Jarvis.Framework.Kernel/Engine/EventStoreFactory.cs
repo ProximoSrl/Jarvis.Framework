@@ -26,7 +26,7 @@ namespace Jarvis.Framework.Kernel.Engine
             MongoPersistenceOptions mongoPersistenceOptions = null)
         {
             mongoPersistenceOptions = mongoPersistenceOptions ??
-                new MongoPersistenceOptions() { ServerSideOptimisticLoop = true };
+                new MongoPersistenceOptions() {};
             Wireup es = Wireup.Init()
                     .LogTo(t => new NEventStoreLog4NetLogger(_loggerFactory.Create(t)))
                     .UsingMongoPersistence(
