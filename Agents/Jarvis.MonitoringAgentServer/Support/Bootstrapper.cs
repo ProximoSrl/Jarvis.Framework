@@ -52,16 +52,16 @@ namespace Jarvis.MonitoringAgentServer.Support
 
             var url = new MongoUrl(_configuration.MongoConnectionString);
             var client = new MongoClient(url);
-            var db = client.GetServer().GetDatabase(url.DatabaseName);
+            var db = client.GetDatabase(url.DatabaseName);
 
             ServerWebAppInstaller.SetContainer(_container);
             var customerCollection = db.GetCollection<Customer>("serv.customers");
             _container.Register(
                 Component
-                    .For<MongoCollection<Customer>>()
+                    .For<IMongoCollection<Customer>>()
                     .Instance(customerCollection),
                   Component
-                    .For<MongoDatabase>()
+                    .For<IMongoDatabase>()
                     .Instance(db),
                 Classes.FromThisAssembly()
                     .BasedOn<ApiController>()

@@ -13,10 +13,10 @@ namespace Jarvis.MonitoringAgentServer.Server.Controllers
 {
     public class CustomerController : ApiController
     {
-        public MongoCollection<Customer> _customers { get; set; }
+        public IMongoCollection<Customer> _customers { get; set; }
 
         public CustomerController(
-                MongoCollection<Customer> customers
+                IMongoCollection<Customer> customers
             )
         {
             _customers = customers;
@@ -28,11 +28,13 @@ namespace Jarvis.MonitoringAgentServer.Server.Controllers
         {
             if (base.RequestContext.Url.Request.RequestUri.Host == "localhost")
             {
-                return Json(_customers.FindAll()
+                return Json(_customers.Find(Builders<Customer>.Filter.Empty)
+                    .ToList()
                     .Select(c => new CustomerDto(c.Name, c.Enabled, c.PublicKey)));
             }
 
-            return Json(_customers.FindAll()
+            return Json(_customers.Find(Builders<Customer>.Filter.Empty)
+                .ToList()
                 .Select(c => new CustomerDto(c.Name, c.Enabled)));
         }
 
@@ -40,7 +42,8 @@ namespace Jarvis.MonitoringAgentServer.Server.Controllers
         [HttpPut]
         public object AddCustomer(CreateCustomer createCustomer)
         {
-            var existing = _customers.FindOneById(BsonValue.Create(createCustomer.Name));
+            var existing = _customers.Find(Builders<Customer>.Filter.Eq(c => c.Name, createCustomer.Name))
+                .SingleOrDefault();
             if (existing != null)
                 return Json(new { Success = false, Error = "User already existing" });
 
@@ -50,7 +53,7 @@ namespace Jarvis.MonitoringAgentServer.Server.Controllers
             customer.PublicKey = key.PublicKey;
             customer.PrivateKey = key.PrivateKey;
             customer.Enabled = true;
-            _customers.Save(customer);
+            _customers.InsertOne(customer);
 
             return Json(new { CustomerName = createCustomer.Name,
                 PublicKey = customer.PublicKey});

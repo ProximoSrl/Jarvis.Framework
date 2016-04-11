@@ -46,10 +46,10 @@ namespace Jarvis.MonitoringAgent.Support
         {
             var url = new MongoUrl(_configuration.MongoConnectionString);
             var client = new MongoClient(url);
-            var db = client.GetServer().GetDatabase(url.DatabaseName);
+            var db = client.GetDatabase(url.DatabaseName);
 
             _container.Register(
-                Component.For<MongoDatabase>()
+                Component.For<IMongoDatabase>()
                 .Instance(db)
             );
 

@@ -99,6 +99,8 @@ namespace Jarvis.Framework.MongoAppender
             CreateIndexOptions options = new CreateIndexOptions();
             const string ttlIndex = FieldNames.Timestamp + "_-1";
             var index = LogCollection.Indexes.List().ToList().SingleOrDefault(x => x["name"].AsString == ttlIndex);
+            String createIndexResult;
+           
             if (index != null)
             {
                 //if (ExpireAfter != null)
@@ -128,10 +130,10 @@ namespace Jarvis.Framework.MongoAppender
                     options.ExpireAfter = ExpireAfter.ToTimeSpan();
                 }
 
-                LogCollection.Indexes.CreateOne(Builders<BsonDocument>.IndexKeys.Descending(FieldNames.Timestamp), options);
+                createIndexResult = LogCollection.Indexes.CreateOne(Builders<BsonDocument>.IndexKeys.Descending(FieldNames.Timestamp), options);
             }
 
-            LogCollection.Indexes.CreateOne(Builders<BsonDocument>.IndexKeys
+            createIndexResult = LogCollection.Indexes.CreateOne(Builders<BsonDocument>.IndexKeys
                 .Ascending(FieldNames.Level).Ascending(FieldNames.Thread).Ascending(FieldNames.Loggername));
         }
 
