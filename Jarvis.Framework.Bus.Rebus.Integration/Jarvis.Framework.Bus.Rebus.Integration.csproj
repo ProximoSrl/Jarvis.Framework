@@ -75,9 +75,6 @@
     <Reference Include="Rebus.Castle.Windsor">
       <HintPath>..\packages\Rebus.Castle.Windsor.0.71.1\lib\NET40\Rebus.Castle.Windsor.dll</HintPath>
     </Reference>
-    <Reference Include="Rebus.MongoDb">
-      <HintPath>..\packages\Rebus.MongoDb.0.71.1\lib\NET40\Rebus.MongoDb.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
@@ -95,6 +92,11 @@
     <Compile Include="Logging\Log4NetLogger.cs" />
     <Compile Include="Logging\Log4NetLoggerFactory.cs" />
     <Compile Include="Logging\Log4NetLoggingExtension.cs" />
+    <Compile Include="MongoDb\MongoDbExtensions.cs" />
+    <Compile Include="MongoDb\MongoDbSagaPersister.cs" />
+    <Compile Include="MongoDb\MongoDbSubscriptionStorage.cs" />
+    <Compile Include="MongoDb\MongoDbTimeoutStorage.cs" />
+    <Compile Include="MongoDb\MongoHelper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Serializers\JsonSerializerWithProtectedPropertiesSupport.cs" />
     <Compile Include="Support\CommandHandlersRegistration.cs" />
