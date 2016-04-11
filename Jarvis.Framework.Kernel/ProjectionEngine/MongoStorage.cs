@@ -123,7 +123,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             return new DeleteResult()
             {
                 Ok = result != null,
-                DocumentsAffected = result != null ? 1 : 0,
+                DocumentsAffected = result.DeletedCount
             };
         }
 

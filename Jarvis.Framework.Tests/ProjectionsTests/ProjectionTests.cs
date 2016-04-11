@@ -86,6 +86,21 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
             var loaded = _collection.FindOneById(delete.AggregateId);
 
             Assert.IsNull(loaded);
+        }
+
+
+        [Test]
+        public void delete_does_not_generates_multiple_notifications()
+        {
+            var insert = new InsertEvent() { Text = "one" };
+            var delete = new DeleteEvent();
+
+            _projection.On(insert);
+            _projection.On(delete);
+            _projection.On(delete);
+
+            var loaded = _collection.FindOneById(delete.AggregateId);
+
             Assert.AreEqual(2, SpyNotifier.Counter);
         }
 

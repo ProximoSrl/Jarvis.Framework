@@ -43,9 +43,9 @@ namespace Jarvis.Framework.Shared.Helpers
                    new UpdateOptions { IsUpsert = true });
         }
 
-        public static T Remove<T>(this IMongoCollection<T> collection, Object idValue)
+        public static DeleteResult Remove<T>(this IMongoCollection<T> collection, Object idValue)
         {
-            return collection.Find(Builders<T>.Filter.Eq("_id", idValue)).SingleOrDefault();
+            return collection.DeleteOne(Builders<T>.Filter.Eq("_id", idValue));
         }
 
 
