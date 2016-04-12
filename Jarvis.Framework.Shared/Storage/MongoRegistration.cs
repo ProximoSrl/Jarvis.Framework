@@ -5,6 +5,7 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Conventions;
 using MongoDB.Bson.Serialization.Options;
+using System.Reflection;
 
 namespace Jarvis.Framework.Shared.Storage
 {
@@ -12,15 +13,9 @@ namespace Jarvis.Framework.Shared.Storage
     {
         static MongoRegistration()
         {
-            //TODO: CONVERSION
-            //var conventions = new ConventionPack
-            //    {
-            //        new MemberSerializationOptionsConvention(
-            //            typeof (Guid),
-            //            new RepresentationSerializationOptions(BsonType.String)
-            //            )
-            //    };
-            //ConventionRegistry.Register("guidstring", conventions, t => true);
+            var guidConversion = new ConventionPack();
+            guidConversion.Add(new GuidAsStringRepresentationConvention());
+            ConventionRegistry.Register("guidstring", guidConversion, t => true);
         }
 
         private class AliasClassMap : BsonClassMap
@@ -56,7 +51,6 @@ namespace Jarvis.Framework.Shared.Storage
             }
         }
 
-
         public static void RegisterTypes(IEnumerable<Type> types, bool useAlias = true)
         {
             if (useAlias)
@@ -76,5 +70,43 @@ namespace Jarvis.Framework.Shared.Storage
             }
         }
 
+    }
+
+    /// <summary>
+    /// A convention that allows you to set the serialization representation of guid to a simple string
+    /// </summary>
+    public class GuidAsStringRepresentationConvention : ConventionBase, IMemberMapConvention
+    {
+
+        // constructors
+        /// <summary>
+        /// Initializes a new instance of the <see cref="GuidAsStringRepresentationConvention" /> class.
+        /// </summary>  
+        /// <param name="representation">The serialization representation. 0 is used to detect representation
+        /// from the enum itself.</param>
+        public GuidAsStringRepresentationConvention()
+        {
+
+        }
+
+        /// <summary>
+        /// Applies a modification to the member map.
+        /// </summary>
+        /// <param name="memberMap">The member map.</param>
+        public void Apply(BsonMemberMap memberMap)
+        {
+            var memberTypeInfo = memberMap.MemberType.GetTypeInfo();
+            if (memberTypeInfo == typeof(Guid))
+            {
+                var serializer = memberMap.GetSerializer();
+                var representationConfigurableSerializer = serializer as IRepresentationConfigurable;
+                if (representationConfigurableSerializer != null)
+                {
+                    BsonType _representation = BsonType.String;
+                    var reconfiguredSerializer = representationConfigurableSerializer.WithRepresentation(_representation);
+                    memberMap.SetSerializer(reconfiguredSerializer);
+                }
+            }
+        }
     }
 }
