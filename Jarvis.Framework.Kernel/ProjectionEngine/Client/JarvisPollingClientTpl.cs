@@ -55,7 +55,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         /// </returns>
         public override IObserveCommits ObserveFrom(string checkpointToken = null)
         {
-            return new PollingObserveCommitsTpl(PersistStreams, _interval, checkpointToken, _enhancer, _boost);
+            return new PollingObserveCommitsTpl(PersistStreams, _interval, checkpointToken, _enhancer, _boost, null);
+        }
+
+        public override IObserveCommits ObserveFromBucket(string bucketId, string checkpointToken = null)
+        {
+            return new PollingObserveCommitsTpl(PersistStreams, _interval, checkpointToken, _enhancer, _boost, bucketId);
         }
 
         private class PollingObserveCommitsTpl : IObserveCommits
@@ -64,6 +69,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
             private readonly IPersistStreams _persistStreams;
             private string _checkpointToken;
+            private readonly string _bucketId;
             readonly ICommitEnhancer _enhancer;
             private readonly int _interval;
 
@@ -83,13 +89,15 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                 int interval,
                 string checkpointToken,
                 ICommitEnhancer enhancer,
-                bool boost)
+                bool boost,
+                String bucketId)
             {
                 _persistStreams = persistStreams;
                 _checkpointToken = checkpointToken;
                 _enhancer = enhancer;
                 _interval = interval;
                 _boost = boost;
+                _bucketId = bucketId;
 
                 DataflowBlockOptions bufferOptions = new DataflowBlockOptions();
                 if (_boost)
@@ -195,7 +203,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                         try
                         {
                             skippedPoolCount = 0;
-                            IEnumerable<ICommit> commits = _persistStreams.GetFrom(_checkpointToken);
+                            IEnumerable<ICommit> commits = _bucketId == null ?
+                                _persistStreams.GetFrom(_checkpointToken) :
+                                _persistStreams.GetFrom(_bucketId, _checkpointToken);
                             foreach (var commit in commits)
                             {
                                 if (_stopRequested.IsCancellationRequested)
