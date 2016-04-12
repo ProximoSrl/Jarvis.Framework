@@ -76,7 +76,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
 
             Assert.That(index["name"].AsString, Is.EqualTo("test1"));
             Assert.That(index["key"]["Timestamp"].AsInt32, Is.EqualTo(1));
-            Assert.That(index["key"]["unique"].AsBoolean, Is.True);
+            Assert.That(index["unique"].AsBoolean, Is.True);
         }
 
         [Test]

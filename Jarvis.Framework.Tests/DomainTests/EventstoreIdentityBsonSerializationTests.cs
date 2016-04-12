@@ -71,7 +71,7 @@ namespace Jarvis.Framework.Tests.DomainTests
             Debug.WriteLine(json);
 
             Assert.AreEqual(
-                "{ \"MessageId\" : CSUUID(\"cfbb68da-b598-417c-84c7-e951e8a36b8e\"), \"AggregateId\" : \"Sample_1\", \"Value\" : \"this is a test\" }",
+                "{ \"MessageId\" : \"cfbb68da-b598-417c-84c7-e951e8a36b8e\", \"AggregateId\" : \"Sample_1\", \"Value\" : \"this is a test\" }",
                 json
             );
         }
@@ -79,7 +79,7 @@ namespace Jarvis.Framework.Tests.DomainTests
         [Test]
         public void should_deserialize_event()
         {
-            var json = "{ \"MessageId\" : CSUUID(\"cfbb68da-b598-417c-84c7-e951e8a36b8e\"), \"AggregateId\" : \"Sample_1\", \"Value\" : \"this is a test\" }";
+            var json = "{ \"MessageId\" : \"cfbb68da-b598-417c-84c7-e951e8a36b8e\", \"AggregateId\" : \"Sample_1\", \"Value\" : \"this is a test\" }";
             var e = BsonSerializer.Deserialize<SampleEvent>(json);
 
             Assert.AreEqual("Sample_1", e.AggregateId.FullyQualifiedId);

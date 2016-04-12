@@ -6,18 +6,21 @@ using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Conventions;
 using MongoDB.Bson.Serialization.Options;
 using System.Reflection;
+using System.Linq;
 
 namespace Jarvis.Framework.Shared.Storage
 {
     public static class MongoRegistration
     {
-        static MongoRegistration()
+
+        public static void RegisterMongoConversions(params String[] protectedAssemblies)
         {
             var guidConversion = new ConventionPack();
-            guidConversion.Add(new GuidAsStringRepresentationConvention());
+            guidConversion.Add(new GuidAsStringRepresentationConvention(protectedAssemblies.ToList()));
             ConventionRegistry.Register("guidstring", guidConversion, t => true);
         }
 
+             
         private class AliasClassMap : BsonClassMap
         {
             public AliasClassMap(Type classType)
@@ -77,6 +80,7 @@ namespace Jarvis.Framework.Shared.Storage
     /// </summary>
     public class GuidAsStringRepresentationConvention : ConventionBase, IMemberMapConvention
     {
+        private List<string> protectedAssemblies;
 
         // constructors
         /// <summary>
@@ -84,9 +88,9 @@ namespace Jarvis.Framework.Shared.Storage
         /// </summary>  
         /// <param name="representation">The serialization representation. 0 is used to detect representation
         /// from the enum itself.</param>
-        public GuidAsStringRepresentationConvention()
+        public GuidAsStringRepresentationConvention(List<string> protectedAssemblies)
         {
-
+            this.protectedAssemblies = protectedAssemblies;
         }
 
         /// <summary>
@@ -98,6 +102,13 @@ namespace Jarvis.Framework.Shared.Storage
             var memberTypeInfo = memberMap.MemberType.GetTypeInfo();
             if (memberTypeInfo == typeof(Guid))
             {
+                var declaringTypeAssembly = memberMap.ClassMap.ClassType.Assembly;
+                var asmName = declaringTypeAssembly.GetName().Name;
+                if (protectedAssemblies.Any(a => a.Equals(asmName, StringComparison.OrdinalIgnoreCase)))
+                {
+                    return;
+                }
+
                 var serializer = memberMap.GetSerializer();
                 var representationConfigurableSerializer = serializer as IRepresentationConfigurable;
                 if (representationConfigurableSerializer != null)
