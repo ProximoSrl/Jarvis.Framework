@@ -3,28 +3,15 @@ using Jarvis.NEventStoreEx.CommonDomainEx;
 using MongoDB.Bson;
 using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
+using MongoDB.Bson.Serialization.Serializers;
 
 namespace Jarvis.Framework.Shared.IdentitySupport.Serialization
 {
-    public class EventStoreIdentityBsonSerializer : IBsonSerializer
+    public class EventStoreIdentityBsonSerializer : SerializerBase<EventStoreIdentity>
     {
         public static IIdentityConverter IdentityConverter { get; set; }
-        Type _t;
 
-        public EventStoreIdentityBsonSerializer(Type t)
-        {
-            _t = t;
-        }
-
-        public Type ValueType
-        {
-            get
-            {
-                return _t;
-            }
-        }
-
-        public object Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args)
+        public override EventStoreIdentity Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args)
         {
             if (context.Reader.CurrentBsonType == BsonType.Null)
             {
@@ -37,10 +24,10 @@ namespace Jarvis.Framework.Shared.IdentitySupport.Serialization
             if (IdentityConverter == null)
                 throw new Exception("Identity converter not set in EventStoreIdentityBsonSerializer");
 
-            return IdentityConverter.ToIdentity(id);
+            return (EventStoreIdentity) IdentityConverter.ToIdentity(id);
         }
 
-        public void Serialize(BsonSerializationContext context, BsonSerializationArgs args, object value)
+        public override void Serialize(BsonSerializationContext context, BsonSerializationArgs args, EventStoreIdentity value)
         {
             if (value == null)
             {
@@ -48,10 +35,8 @@ namespace Jarvis.Framework.Shared.IdentitySupport.Serialization
             }
             else
             {
-                context.Writer.WriteString((EventStoreIdentity)value);
+                context.Writer.WriteString(value);
             }
         }
-
-
     }
 }

@@ -37,10 +37,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             {
                 _collection.Indexes.CreateOne(keys, options);
             }
-            catch (MongoWriteConcernException ex)
+            catch (MongoCommandException ex)
             {
-                //probably index extist with different options, lets check if name is specified
-                var optionsDoc = options.ToBsonDocument();
+                //probably index exists with different options, lets check if name is specified
                 String indexName = name;
                 _collection.Indexes.DropOne(indexName);
                 _collection.Indexes.CreateOne(keys, options);
@@ -61,7 +60,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         public TModel FindOneById(TKey id)
         {
-            return _collection.FindOneById(BsonValue.Create(id));
+            return _collection.FindOneById(id);
         }
 
         public IQueryable<TModel> Where(Expression<Func<TModel, bool>> filter)
@@ -106,7 +105,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         public DeleteResult Delete(TKey id)
         {
-            var result = _collection.Remove(id);
+            var result = _collection.RemoveById(id);
 
             return new DeleteResult()
             {

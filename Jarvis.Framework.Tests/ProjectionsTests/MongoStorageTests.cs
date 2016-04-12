@@ -37,27 +37,27 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
         public void Verify_create_index_change_fields()
         {
             _sut.CreateIndex(
-                "test1",
+                "test",
                 Builders<SampleReadModel>.IndexKeys
                     .Ascending(x => x.Timestamp),
                 new CreateIndexOptions() { Name = "TestIndex" });
 
             //now modify the index, should not throw
             _sut.CreateIndex(
-                 "test2",
+                 "test",
                  Builders<SampleReadModel>.IndexKeys
                     .Ascending(x => x.Timestamp)
                     .Descending(x => x.IsInRebuild),
                  new CreateIndexOptions() { Name = "TestIndex" });
 
-            var index = _collection.Indexes.List().ToList().Single(x => x["name"].AsString == "TestIndex");
-            Assert.That(index["name"].AsString, Is.EqualTo("TestIndex"));
-            Assert.That(index["Timestamp"].AsInt32, Is.EqualTo(1));
-            Assert.That(index["IsInRebuild"].AsInt32, Is.EqualTo(-1));
+            var index = _collection.Indexes.List().ToList().Single(x => x["name"].AsString == "test");
+            Assert.That(index["name"].AsString, Is.EqualTo("test"));
+            Assert.That(index["key"]["Timestamp"].AsInt32, Is.EqualTo(1));
+            Assert.That(index["key"]["IsInRebuild"].AsInt32, Is.EqualTo(-1));
         }
 
         [Test]
-        public void Verify_create_index_different_options_no_name()
+        public void Verify_update_index_with_different_options()
         {
             _sut.CreateIndex(
                 "test1",
@@ -67,16 +67,16 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
 
             //now modify the index, should not throw
             _sut.CreateIndex(
-                 "test2",
+                 "test1",
                  Builders<SampleReadModel>.IndexKeys
                     .Ascending(x => x.Timestamp),
                new CreateIndexOptions() { Unique = true });
 
-            var index = _collection.Indexes.List().ToList().Single(x => x["name"].AsString == "Timestamp_1");
+            var index = _collection.Indexes.List().ToList().Single(x => x["name"].AsString == "test1");
 
-            Assert.That(index["name"].AsString, Is.EqualTo("Timestamp_1"));
-            Assert.That(index["Timestamp"].AsInt32, Is.EqualTo(1));
-            Assert.That(index["unique"].AsBoolean, Is.True);
+            Assert.That(index["name"].AsString, Is.EqualTo("test1"));
+            Assert.That(index["key"]["Timestamp"].AsInt32, Is.EqualTo(1));
+            Assert.That(index["key"]["unique"].AsBoolean, Is.True);
         }
 
         [Test]
@@ -97,11 +97,11 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
                         .Descending(x => x.IsInRebuild),
             new CreateIndexOptions() { Unique = true });
 
-            var index = _collection.Indexes.List().ToList().Single(x => x["name"].AsString == "Timestamp_1_IsInRebuild_-1");
+            var index = _collection.Indexes.List().ToList().Single(x => x["name"].AsString == "test2");
 
-            Assert.That(index["name"].AsString, Is.EqualTo("Timestamp_1_IsInRebuild_-1"));
-            Assert.That(index["Timestamp"].AsInt32, Is.EqualTo(1));
-            Assert.That(index["IsInRebuild"].AsInt32, Is.EqualTo(-1));
+            Assert.That(index["name"].AsString, Is.EqualTo("test2"));
+            Assert.That(index["key"]["Timestamp"].AsInt32, Is.EqualTo(1));
+            Assert.That(index["key"]["IsInRebuild"].AsInt32, Is.EqualTo(-1));
             Assert.That(index["unique"].AsBoolean, Is.True);
         }
 

@@ -77,7 +77,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         {
             if (alias == null) throw new ArgumentNullException();
             alias = alias.ToLowerInvariant();
-            _collection.Remove(Builders<MappedIdentity>.Filter.Eq(f => f.AggregateId, key.FullyQualifiedId));
+            _collection.DeleteMany(Builders<MappedIdentity>.Filter.Eq(f => f.AggregateId, key.FullyQualifiedId));
             MapIdentity(alias, key);
         }
 
@@ -144,7 +144,8 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
         public void DeleteAliases(TKey key)
         {
-            _collection.Remove(Builders<MappedIdentity>.Filter.Eq(f => f.AggregateId, key.FullyQualifiedId));
+            var id = (EventStoreIdentity) key;
+            _collection.DeleteMany(Builders<MappedIdentity>.Filter.Eq(f => f.AggregateId, id));
         }
     }
 }

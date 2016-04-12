@@ -30,7 +30,7 @@ namespace Jarvis.Framework.Tests.EngineTests
             BsonClassMap.RegisterClassMap<DomainEvent>(map =>
             {
                 map.AutoMap();
-                map.MapProperty(x => x.AggregateId).SetSerializer(new EventStoreIdentityBsonSerializer(typeof(IIdentity)));
+                map.MapProperty(x => x.AggregateId).SetSerializer(new EventStoreIdentityBsonSerializer());
             });
         }
 

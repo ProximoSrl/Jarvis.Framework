@@ -34,7 +34,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                 map.AutoMap();
                 map
                     .MapProperty(x => x.AggregateId)
-                    .SetSerializer(new EventStoreIdentityBsonSerializer(typeof(IIdentity)));
+                    .SetSerializer(new EventStoreIdentityBsonSerializer());
 
             });
 
@@ -61,7 +61,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             {
                 var fullName = type.FullName;
                 _logger.DebugFormat("Registered IIdentity type {0}", type.FullName);
-                BsonSerializer.RegisterSerializer(type, new EventStoreIdentityBsonSerializer(type));
+                BsonSerializer.RegisterSerializer(type, new EventStoreIdentityBsonSerializer());
                 EventStoreIdentityCustomBsonTypeMapper.Register(type);
             }
 

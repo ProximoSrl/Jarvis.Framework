@@ -75,7 +75,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.RecycleBin
 
         public void Purge(SlotId id)
         {
-            _collection.Remove(Builders<RecycleBinSlot>.Filter.Eq("_id", id.ToBsonDocument()));
+            _collection.RemoveById(id);
         }
 
         public void SetUp()
