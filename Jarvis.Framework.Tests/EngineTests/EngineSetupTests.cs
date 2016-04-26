@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Configuration;
 using Castle.Core.Logging;
-using CommonDomain.Core;
+using NEventStore.Domain.Core;
 using Jarvis.Framework.Kernel.Engine;
 using Jarvis.Framework.Shared.IdentitySupport;
 using Jarvis.Framework.TestHelpers;

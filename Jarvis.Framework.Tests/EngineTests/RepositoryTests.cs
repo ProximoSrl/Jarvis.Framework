@@ -2,7 +2,7 @@
 using System.Configuration;
 using System.Diagnostics;
 using Castle.Core.Logging;
-using CommonDomain.Core;
+using NEventStore.Domain.Core;
 using Jarvis.Framework.Kernel.Commands;
 using Jarvis.Framework.Kernel.Engine;
 using Jarvis.Framework.Kernel.MultitenantSupport;

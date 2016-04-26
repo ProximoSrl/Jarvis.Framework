@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading;
 using Castle.Core.Logging;
 using Castle.MicroKernel;
-using CommonDomain.Persistence;
+using NEventStore.Domain.Persistence;
 using Jarvis.Framework.Kernel.Engine;
 using Jarvis.Framework.Kernel.Store;
 using Jarvis.Framework.Shared.Commands;

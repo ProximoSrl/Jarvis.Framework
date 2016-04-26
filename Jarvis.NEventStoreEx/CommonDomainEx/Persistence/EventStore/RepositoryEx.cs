@@ -2,7 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using CommonDomain;
+using NEventStore.Domain;
 using Jarvis.NEventStoreEx.CommonDomainEx.Core;
 using NEventStore;
 

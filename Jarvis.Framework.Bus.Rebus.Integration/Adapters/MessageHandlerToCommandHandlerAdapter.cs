@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
 using Castle.Core.Logging;
-using CommonDomain.Persistence;
+using NEventStore.Domain.Persistence;
 using Jarvis.Framework.Kernel.Commands;
 using Jarvis.Framework.Shared.Commands;
 using Jarvis.Framework.Shared.Messages;
