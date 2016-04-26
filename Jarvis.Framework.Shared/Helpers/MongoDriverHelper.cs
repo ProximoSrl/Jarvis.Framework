@@ -46,7 +46,7 @@ namespace Jarvis.Framework.Shared.Helpers
 
         public static void SaveWithGeneratedObjectId<T>(this IMongoCollection<T> collection, T objToSave, Action<ObjectId> idAssigner)
         {
-            var id = new ObjectId();
+            var id = ObjectId.GenerateNewId();
             idAssigner(id);
             collection.ReplaceOne(
                    Builders<T>.Filter.Eq("_id", id),

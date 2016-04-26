@@ -77,7 +77,7 @@ namespace Jarvis.Framework.Tests.SharedTests.Helpers
         {
             MongoDriverHelperTestsClassWithObjectId obj = new MongoDriverHelperTestsClassWithObjectId() { Name = "A" };
             _collectionObjectId.SaveWithGeneratedObjectId(obj, id => obj.Id = id);
-
+            Assert.That(obj.Id, Is.Not.EqualTo(ObjectId.Empty));
             var saved = _collectionObjectId.FindOneById(obj.Id);
             Assert.That(saved.Name, Is.EqualTo("A"));
 
