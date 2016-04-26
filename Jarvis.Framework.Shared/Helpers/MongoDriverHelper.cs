@@ -44,8 +44,20 @@ namespace Jarvis.Framework.Shared.Helpers
             return collection.Find(Builders<T>.Filter.Empty);
         }
 
+        public static void SaveWithGeneratedObjectId<T>(this IMongoCollection<T> collection, T objToSave, Action<ObjectId> idAssigner)
+        {
+            var id = new ObjectId();
+            idAssigner(id);
+            collection.ReplaceOne(
+                   Builders<T>.Filter.Eq("_id", id),
+                   objToSave,
+                   new UpdateOptions { IsUpsert = true });
+        }
+
         public static void Save<T>(this IMongoCollection<T> collection, T objToSave, Object objectId)
         {
+            if (ObjectId.Empty.Equals(objectId))
+                throw new ApplicationException("Cannot save with null objectId");
             collection.ReplaceOne(
                    Builders<T>.Filter.Eq("_id", objectId),
                    objToSave,

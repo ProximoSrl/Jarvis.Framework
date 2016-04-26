@@ -21,7 +21,17 @@ namespace Jarvis.Framework.Tests.SharedTests.Helpers
             public String Name { get; set; }
 
         }
+
+        public class MongoDriverHelperTestsClassWithObjectId
+        {
+            public ObjectId Id { get; set; }
+
+            public String Name { get; set; }
+
+        }
+
         IMongoCollection<MongoDriverHelperTestsClass> _collection;
+        IMongoCollection<MongoDriverHelperTestsClassWithObjectId> _collectionObjectId;
 
         [SetUp]
         public void SetUp()
@@ -30,7 +40,9 @@ namespace Jarvis.Framework.Tests.SharedTests.Helpers
             var client = new MongoClient(conn);
             var db = client.GetDatabase(conn.DatabaseName);
             _collection = db.GetCollection<MongoDriverHelperTestsClass>("mongo-helpers-test");
+            _collectionObjectId = db.GetCollection<MongoDriverHelperTestsClassWithObjectId>("mongo-helpers-test-objectId");
             _collection.Drop();
+            _collectionObjectId.Drop();
         }
 
         [Test]
@@ -57,6 +69,26 @@ namespace Jarvis.Framework.Tests.SharedTests.Helpers
             var findOne = _collection.FindOneById(BsonValue.Create("A"));
             Assert.That(findOne, Is.Not.Null);
             Assert.That(findOne.Name, Is.EqualTo("A"));
+        }
+
+
+        [Test]
+        public void verify_object_id_is_generated()
+        {
+            MongoDriverHelperTestsClassWithObjectId obj = new MongoDriverHelperTestsClassWithObjectId() { Name = "A" };
+            _collectionObjectId.SaveWithGeneratedObjectId(obj, id => obj.Id = id);
+
+            var saved = _collectionObjectId.FindOneById(obj.Id);
+            Assert.That(saved.Name, Is.EqualTo("A"));
+
+        }
+
+        [Test]
+        [ExpectedException(ExpectedMessage = "Cannot save with null objectId")]
+        public void verify_save_with_empty_object_id_throws()
+        {
+            MongoDriverHelperTestsClassWithObjectId obj = new MongoDriverHelperTestsClassWithObjectId() { Name = "A" };
+            _collectionObjectId.Save(obj, obj.Id);
         }
     }
 }
