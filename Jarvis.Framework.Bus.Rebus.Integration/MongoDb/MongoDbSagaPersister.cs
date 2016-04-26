@@ -297,12 +297,12 @@ namespace Rebus.MongoDb
 
             if (sagaDataPropertyPath == "Id")
             {
-                return collection.Find(Builders<T>.Filter.Eq("_id", BsonValue.Create(fieldFromMessage)))
+                return collection.Find(Builders<T>.Filter.Eq("_id", fieldFromMessage))
                     .FirstOrDefault();
             }
 
             var bsonValue = fieldFromMessage != null
-                ? BsonValue.Create(fieldFromMessage)
+                ? fieldFromMessage
                 : BsonNull.Value;
 
             var query = Builders<T>.Filter.Eq(MapSagaDataPropertyPath(sagaDataPropertyPath, typeof (T)), bsonValue);

@@ -312,7 +312,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         {
             var collection = GetMongoCommitsCollection();
             var lastCommit = collection
-                .Find(Builders<BsonDocument>.Filter.Gte("_id", BsonValue.Create(0)))
+                .Find(Builders<BsonDocument>.Filter.Gte("_id", 0))
                 .Sort(Builders<BsonDocument>.Sort.Descending("_id"))
                 .Limit(1)
                 .FirstOrDefault();

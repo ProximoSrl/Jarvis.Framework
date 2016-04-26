@@ -32,7 +32,7 @@ namespace Jarvis.Framework.Shared.ReadModel
 
         public virtual TModel FindOneById(TKey id)
         {
-            return Collection.FindOneById(BsonValue.Create(id));
+            return Collection.FindOneById(id);
         }
 
    
