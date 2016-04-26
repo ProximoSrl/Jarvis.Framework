@@ -28,6 +28,14 @@ namespace Jarvis.Framework.Shared.Helpers
 
         public static T FindOneById<T>(this IMongoCollection<T> collection, Object idValue)
         {
+            if (idValue is BsonValue)
+            {
+                idValue = BsonTypeMapper.MapToDotNetValue((BsonValue)idValue);
+                if (idValue == null)
+                {
+                    throw new ApplicationException("FindOneById wrapper needs not a BsonValue but a plain value to be specified");
+                }
+            }
             return collection.Find(Builders<T>.Filter.Eq("_id", idValue)).SingleOrDefault();
         }
 
