@@ -108,11 +108,18 @@ namespace Jarvis.Framework.Tests.DomainTests
             public SampleId Value { get; set; }
         }
 
+        public class ClassWithArrayIdentity
+        {
+            [BsonSerializer(typeof(IdentityArrayBsonSerializer<SampleId>))]
+            public SampleId[] Value { get; set; }
+        }
+
         [TestFixtureSetUp]
         public void SetUp()
         {
             var identityConverter = new IdentityManager(new InMemoryCounterService());
             EventStoreIdentityBsonSerializer.IdentityConverter = identityConverter;
+
             identityConverter.RegisterIdentitiesFromAssembly(typeof(SampleId).Assembly);
         }
 
@@ -132,10 +139,33 @@ namespace Jarvis.Framework.Tests.DomainTests
         }
 
         [Test]
+        public void should_serialize_array()
+        {
+            var instance = new ClassWithArrayIdentity { Value = new SampleId[] {
+                    new SampleId("Sample_1"),
+                    new SampleId("Sample_2"),
+                }
+            };
+            var json = instance.ToJson();
+
+            Assert.AreEqual("{ \"Value\" : [\"Sample_1\", \"Sample_2\"] }", json);
+        }
+
+        [Test]
         public void should_deserialize()
         {
             var instance = BsonSerializer.Deserialize<ClassWithSampleIdentity>("{ Value:\"Sample_1\"}");
             Assert.AreEqual("Sample_1", (string)instance.Value);
+        }
+
+        [Test]
+        public void should_deserialize_array()
+        {
+            var instance = BsonSerializer.Deserialize<ClassWithArrayIdentity>("{ \"Value\" : [\"Sample_1\", \"Sample_2\"] }");
+            Assert.That(instance.Value, Is.EquivalentTo(new SampleId[] {
+                    new SampleId("Sample_1"),
+                    new SampleId("Sample_2"),
+                }));
         }
 
         [Test]
