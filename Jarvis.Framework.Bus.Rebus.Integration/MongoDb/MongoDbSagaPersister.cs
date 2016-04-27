@@ -148,14 +148,13 @@ namespace Rebus.MongoDb
         public void Insert(ISagaData sagaData, string[] sagaDataPropertyPathsToIndex)
         {
             var collection = database.GetCollection<BsonDocument>(GetCollectionName(sagaData.GetType()));
-            //collection.Settings.WriteConcern = WriteConcern.Acknowledged;
             EnsureIndexHasBeenCreated(sagaDataPropertyPathsToIndex, collection);
 
             sagaData.Revision++;
             var sagaDataBson = BsonDocument.Create(sagaData);
             try
             {
-                collection.InsertOne(sagaDataBson);
+                collection.WithWriteConcern(WriteConcern.Acknowledged).InsertOne(sagaDataBson);
             }
             catch (MongoWriteConcernException ex)
             {
@@ -173,7 +172,6 @@ namespace Rebus.MongoDb
         public void Update(ISagaData sagaData, string[] sagaDataPropertyPathsToIndex)
         {
             var collection = database.GetCollection<BsonDocument>(GetCollectionName(sagaData.GetType()));
-            //collection.Settings.WriteConcern = WriteConcern.Acknowledged;
 
             EnsureIndexHasBeenCreated(sagaDataPropertyPathsToIndex, collection);
 
@@ -186,7 +184,8 @@ namespace Rebus.MongoDb
             var docData = BsonDocument.Create(sagaData);
             try
             {
-                var safeModeResult = collection.FindOneAndReplace(
+                var safeModeResult = collection.WithWriteConcern(WriteConcern.Acknowledged)
+                    .FindOneAndReplace(
                     criteria,
                     docData);
             }
@@ -206,7 +205,7 @@ namespace Rebus.MongoDb
         public void Delete(ISagaData sagaData)
         {
             var collection = database.GetCollection<BsonDocument>(GetCollectionName(sagaData.GetType()));
-            //collection.Settings.WriteConcern = WriteConcern.Acknowledged;
+
             var revisionElementName = GetRevisionElementName(sagaData);
 
             var query = Builders<BsonDocument>.Filter.And(Builders<BsonDocument>.Filter.Eq(IdElementName, sagaData.Id),
@@ -214,7 +213,7 @@ namespace Rebus.MongoDb
 
             try
             {
-                var safeModeResult = collection.DeleteMany(query);
+                var safeModeResult = collection.WithWriteConcern(WriteConcern.Acknowledged).DeleteMany(query);
             }
             catch (MongoWriteConcernException ex)
             {
