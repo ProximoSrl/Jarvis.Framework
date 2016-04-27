@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package >
   <metadata>
-    <id>Jarvis.Framework.MongoAppender</id>
+    <id>Jarvis.Framework.MongoAppender2</id>
     <version>1.0.0</version>
     <authors>Proximo S.r.L.</authors>
     <owners>Proximo S.r.L.</owners>
@@ -13,7 +13,7 @@
 
     <dependencies>
       <dependency id="log4net" version="1.2.10" />
-      <dependency id="mongocsharpdriver" version="1.10.0" />
+      <dependency id="mongocsharpdriver" version="2.2.3" />
     </dependencies>
   </metadata>
 
