@@ -148,7 +148,7 @@ namespace Rebus.MongoDb
         public void Insert(ISagaData sagaData, string[] sagaDataPropertyPathsToIndex)
         {
             var collection = database.GetCollection<BsonDocument>(GetCollectionName(sagaData.GetType()));
-            collection.Settings.WriteConcern = WriteConcern.Acknowledged;
+            //collection.Settings.WriteConcern = WriteConcern.Acknowledged;
             EnsureIndexHasBeenCreated(sagaDataPropertyPathsToIndex, collection);
 
             sagaData.Revision++;
@@ -173,7 +173,7 @@ namespace Rebus.MongoDb
         public void Update(ISagaData sagaData, string[] sagaDataPropertyPathsToIndex)
         {
             var collection = database.GetCollection<BsonDocument>(GetCollectionName(sagaData.GetType()));
-            collection.Settings.WriteConcern = WriteConcern.Acknowledged;
+            //collection.Settings.WriteConcern = WriteConcern.Acknowledged;
 
             EnsureIndexHasBeenCreated(sagaDataPropertyPathsToIndex, collection);
 
@@ -206,7 +206,7 @@ namespace Rebus.MongoDb
         public void Delete(ISagaData sagaData)
         {
             var collection = database.GetCollection<BsonDocument>(GetCollectionName(sagaData.GetType()));
-            collection.Settings.WriteConcern = WriteConcern.Acknowledged;
+            //collection.Settings.WriteConcern = WriteConcern.Acknowledged;
             var revisionElementName = GetRevisionElementName(sagaData);
 
             var query = Builders<BsonDocument>.Filter.And(Builders<BsonDocument>.Filter.Eq(IdElementName, sagaData.Id),

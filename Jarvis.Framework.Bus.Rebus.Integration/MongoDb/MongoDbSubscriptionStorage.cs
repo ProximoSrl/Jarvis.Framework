@@ -30,7 +30,7 @@ namespace Rebus.MongoDb
         public void Store(Type eventType, string subscriberInputQueue)
         {
             var collection = database.GetCollection<BsonDocument>(collectionName);
-            collection.Settings.WriteConcern = WriteConcern.Acknowledged;
+            //collection.Settings.WriteConcern = WriteConcern.Acknowledged;
 
             var criteria = Builders<BsonDocument>.Filter.Eq("_id", eventType.FullName);
             var update = Builders<BsonDocument>.Update.AddToSet("endpoints", subscriberInputQueue);
@@ -52,7 +52,7 @@ namespace Rebus.MongoDb
         public void Remove(Type eventType, string subscriberInputQueue)
         {
             var collection = database.GetCollection<BsonDocument>(collectionName);
-            collection.Settings.WriteConcern = WriteConcern.Acknowledged;
+            //collection.Settings.WriteConcern = WriteConcern.Acknowledged;
 
             var criteria = Builders<BsonDocument>.Filter.Eq("_id", eventType.FullName);
             var update = Builders<BsonDocument>.Update.Pull("endpoints", subscriberInputQueue);
@@ -75,7 +75,7 @@ namespace Rebus.MongoDb
         public string[] GetSubscribers(Type eventType)
         {
             var collection = database.GetCollection<BsonDocument>(collectionName);
-            collection.Settings.WriteConcern = WriteConcern.Acknowledged;
+            //collection.Settings.WriteConcern = WriteConcern.Acknowledged;
 
             var doc = collection.Find(Builders<BsonDocument>.Filter.Eq("_id", eventType.FullName)).SingleOrDefault();
             if (doc == null) return new string[0];
