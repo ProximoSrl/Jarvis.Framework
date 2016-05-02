@@ -65,14 +65,18 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                 var fullName = type.FullName;
                 _logger.DebugFormat("Registered IIdentity type {0}", type.FullName);
                 var serializerType = serializerGeneric.MakeGenericType(type);
-                BsonSerializer.RegisterSerializer(type, (IBsonSerializer) Activator.CreateInstance(serializerType));
+                BsonSerializer.RegisterSerializer(type, (IBsonSerializer)Activator.CreateInstance(serializerType));
                 EventStoreIdentityCustomBsonTypeMapper.Register(type);
             }
+
+           // var serializerStringGeneric = typeof(TypedStringValueBsonSerializer<>);
 
             foreach (var type in assembly.GetTypes()
               .Where(t => typeof(StringValue).IsAssignableFrom(t) && !t.IsAbstract))
             {
                 _logger.DebugFormat("Registered LowercaseStringValue type {0}", type.FullName);
+                //var serializerType = serializerStringGeneric.MakeGenericType(type);
+                //BsonSerializer.RegisterSerializer(type, (IBsonSerializer)Activator.CreateInstance(serializerType));
                 BsonSerializer.RegisterSerializer(type, new StringValueBsonSerializer(type));
                 StringValueCustomBsonTypeMapper.Register(type);
             }
@@ -91,7 +95,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
     {
         public IBsonSerializer GetSerializer(Type type)
         {
-            if (typeof(EventStoreIdentity).IsAssignableFrom( type) && !type.IsAbstract)
+            if (typeof(EventStoreIdentity).IsAssignableFrom(type) && !type.IsAbstract)
             {
                 var serializerGeneric = typeof(TypedEventStoreIdentityBsonSerializer<>);
                 var serializerType = serializerGeneric.MakeGenericType(type);
@@ -104,12 +108,17 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         }
     }
 
-    public class  StringValueSerializationProvider : IBsonSerializationProvider
+    public class StringValueSerializationProvider : IBsonSerializationProvider
     {
         public IBsonSerializer GetSerializer(Type type)
         {
             if (typeof(StringValue).IsAssignableFrom(type) && !type.IsAbstract)
             {
+                //var serializerStringGeneric = typeof(TypedStringValueBsonSerializer<>);
+
+                //var serializerType = serializerStringGeneric.MakeGenericType(type);
+                //var serializer = (IBsonSerializer) Activator.CreateInstance(serializerType);
+                //return serializer;
                 return new StringValueBsonSerializer(type);
             }
 

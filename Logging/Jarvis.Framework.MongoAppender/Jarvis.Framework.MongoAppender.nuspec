@@ -13,7 +13,7 @@
 
     <dependencies>
       <dependency id="log4net" version="1.2.10" />
-      <dependency id="mongocsharpdriver" version="2.2.3" />
+      <dependency id="MongoDB.Driver" version="2.2.3" />
     </dependencies>
   </metadata>
 
