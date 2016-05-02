@@ -40,8 +40,10 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
             if (enableForAllId)
             {
-                AppDomain.CurrentDomain.AssemblyLoad += CurrentDomain_AssemblyLoad;
-                AddSerializerForAllStringBasedIdFromThisApplication();
+                BsonSerializer.RegisterSerializationProvider(new EventStoreIdentitySerializationProvider());
+                BsonSerializer.RegisterSerializationProvider(new StringValueSerializationProvider());
+                //AppDomain.CurrentDomain.AssemblyLoad += CurrentDomain_AssemblyLoad;
+                //AddSerializerForAllStringBasedIdFromThisApplication();
             }
 
             _enabled = true;
@@ -82,6 +84,36 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             {
                 AddSerializerForAllStringBasedIdFromAssembly(assembly);
             }
+        }
+    }
+
+    public class EventStoreIdentitySerializationProvider : IBsonSerializationProvider
+    {
+        public IBsonSerializer GetSerializer(Type type)
+        {
+            if (typeof(EventStoreIdentity).IsAssignableFrom( type) && !type.IsAbstract)
+            {
+                var serializerGeneric = typeof(TypedEventStoreIdentityBsonSerializer<>);
+                var serializerType = serializerGeneric.MakeGenericType(type);
+                var serializer = (IBsonSerializer)Activator.CreateInstance(serializerType);
+
+                return serializer;
+            }
+
+            return null;
+        }
+    }
+
+    public class  StringValueSerializationProvider : IBsonSerializationProvider
+    {
+        public IBsonSerializer GetSerializer(Type type)
+        {
+            if (typeof(StringValue).IsAssignableFrom(type) && !type.IsAbstract)
+            {
+                return new StringValueBsonSerializer(type);
+            }
+
+            return null;
         }
     }
 }
