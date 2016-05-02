@@ -96,6 +96,6 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             Assert.That(_statusChecker.IsCheckpointProjectedByAllProjection(lastCommit.CheckpointToken), Is.True);
         }
 
-        
+     
     }
 }

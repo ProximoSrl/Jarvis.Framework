@@ -160,6 +160,7 @@
     <Compile Include="ProjectionEngineTests\Concurrent\ProjectionEngineTestsPoller.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="ProjectionEngineTests\V2\ProjectionStatusLoaderTest.cs" />
     <Compile Include="ProjectionsTests\MongoStorageTests.cs" />
     <Compile Include="ProjectionEngineTests\V2\AbstractV2ProjectionEngineTests.cs" />
     <Compile Include="ProjectionEngineTests\V2\ProjectionEnginePriorityTests.cs">

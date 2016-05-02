@@ -71,9 +71,9 @@ namespace Jarvis.Framework.Kernel.Support
                 //])
                 BsonDocument[] pipeline =
                 {
-                    BsonDocument.Parse(@"{$match : {""Active"": true}}"),
-                    BsonDocument.Parse(@"{$project : {""Slot"" : 1, ""Current"" : 1}}"),
-                    BsonDocument.Parse(@"{$group : {""_id"" : ""$Slot"", ""Current"" : {$min : ""$Current""}}}")
+                    BsonDocument.Parse(@"{""Active"": true}"),
+                    BsonDocument.Parse(@"{""Slot"" : 1, ""Current"" : 1}"),
+                    BsonDocument.Parse(@"{""_id"" : ""$Slot"", ""Current"" : {$min : ""$Current""}}")
                 };
                 //AggregateArgs args = new AggregateArgs();
                 //args.Pipeline = pipeline;
