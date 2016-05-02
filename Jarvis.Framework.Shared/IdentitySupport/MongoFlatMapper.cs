@@ -54,6 +54,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
         public static void AddSerializerForAllStringBasedIdFromAssembly(Assembly assembly)
         {
+            var serializerGeneric = typeof(TypedEventStoreIdentityBsonSerializer<>);
             var asmName = assembly.FullName;
             _logger.InfoFormat("Scanning assembly {0} for Mongo flat mapping", asmName);
             foreach (var type in assembly.GetTypes()
@@ -61,7 +62,8 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             {
                 var fullName = type.FullName;
                 _logger.DebugFormat("Registered IIdentity type {0}", type.FullName);
-                BsonSerializer.RegisterSerializer(type, new EventStoreIdentityBsonSerializer());
+                var serializerType = serializerGeneric.MakeGenericType(type);
+                BsonSerializer.RegisterSerializer(type, (IBsonSerializer) Activator.CreateInstance(serializerType));
                 EventStoreIdentityCustomBsonTypeMapper.Register(type);
             }
 
