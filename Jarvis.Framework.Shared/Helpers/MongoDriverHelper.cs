@@ -26,17 +26,21 @@ namespace Jarvis.Framework.Shared.Helpers
             database.Client.DropDatabase(database.DatabaseNamespace.DatabaseName);
         }
 
-        public static T FindOneById<T>(this IMongoCollection<T> collection, Object idValue)
+        public static T FindOneById<T, Tid>(this IMongoCollection<T> collection, Tid idValue)
         {
-            if (idValue is BsonValue)
-            {
-                idValue = BsonTypeMapper.MapToDotNetValue((BsonValue)idValue);
-                if (idValue == null)
-                {
-                    throw new ApplicationException("FindOneById wrapper needs not a BsonValue but a plain value to be specified");
-                }
-            }
             return collection.Find(Builders<T>.Filter.Eq("_id", idValue)).SingleOrDefault();
+        }
+
+        public static T FindOneById<T, Tid>(this IMongoCollection<T> collection, BsonValue idValue)
+        {
+
+            var value = BsonTypeMapper.MapToDotNetValue(idValue);
+            if (idValue == null)
+            {
+                throw new ApplicationException("FindOneById wrapper needs not a BsonValue but a plain value to be specified");
+            }
+
+            return collection.Find(Builders<T>.Filter.Eq("_id", value)).SingleOrDefault();
         }
 
         public static IFindFluent<T, T> FindAll<T>(this IMongoCollection<T> collection)
@@ -54,7 +58,7 @@ namespace Jarvis.Framework.Shared.Helpers
                    new UpdateOptions { IsUpsert = true });
         }
 
-        public static void Save<T>(this IMongoCollection<T> collection, T objToSave, Object objectId)
+        public static void Save<T, Tid>(this IMongoCollection<T> collection, T objToSave, Tid objectId)
         {
             if (ObjectId.Empty.Equals(objectId))
                 throw new ApplicationException("Cannot save with null objectId");
