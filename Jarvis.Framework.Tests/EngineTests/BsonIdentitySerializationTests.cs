@@ -22,12 +22,28 @@ namespace Jarvis.Framework.Tests.EngineTests
         [TestFixtureSetUp]
         public void TestFixtureSetUp()
         {
-            IdentitiesRegistration.RegisterFromAssembly(GetType().Assembly);
-            var identityConverter = new IdentityManager(new InMemoryCounterService());
-            EventStoreIdentityBsonSerializer.IdentityConverter = identityConverter;
-            identityConverter.RegisterIdentitiesFromAssembly(typeof(SampleAggregate).Assembly);
-        }
+            try
+            {
+                IdentitiesRegistration.RegisterFromAssembly(GetType().Assembly);
+                var identityConverter = new IdentityManager(new InMemoryCounterService());
+                EventStoreIdentityBsonSerializer.IdentityConverter = identityConverter;
+                identityConverter.RegisterIdentitiesFromAssembly(typeof(SampleAggregate).Assembly);
 
+                BsonClassMap.RegisterClassMap<DomainEvent>(map =>
+                {
+                    map.AutoMap();
+                    map.MapProperty(x => x.AggregateId).SetSerializer(new EventStoreIdentityBsonSerializer());
+                });
+            }
+            catch (Exception ex)
+            {
+
+                Console.WriteLine(ex.ToString());
+                throw;
+            }
+         
+        }
+           
         [Test]
         public void serialize_to_bson()
         {
