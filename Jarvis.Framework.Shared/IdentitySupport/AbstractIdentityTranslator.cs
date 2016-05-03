@@ -125,18 +125,19 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                 _collection.InsertOne(mapped);
                 return mapped;
             }
-            catch (MongoWriteConcernException ex)
+            catch (Exception ex)
             {
-                if (ex.Message.Contains("E11000 duplicate key"))
+                if (ex is MongoWriteException || ex is MongoWriteConcernException)
                 {
-                    var mapped = _collection.FindOneById(externalKey);
-                    if (mapped != null)
-                        return mapped;
+                    if (ex.Message.Contains("E11000 duplicate key"))
+                    {
+                        var mapped = _collection.FindOneById(externalKey);
+                        if (mapped != null)
+                            return mapped;
+                    }
                 }
-                else
-                {
-                    throw;
-                }
+
+                throw;
             }
 
             throw new Exception("Something went damn wrong...");
@@ -144,7 +145,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
         public void DeleteAliases(TKey key)
         {
-            var id = (EventStoreIdentity) key;
+            var id = (EventStoreIdentity)key;
             _collection.DeleteMany(Builders<MappedIdentity>.Filter.Eq(f => f.AggregateId, id));
         }
     }

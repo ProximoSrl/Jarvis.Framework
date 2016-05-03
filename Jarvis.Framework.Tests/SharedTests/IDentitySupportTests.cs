@@ -107,8 +107,6 @@ namespace Jarvis.Framework.Tests.SharedTests
             base.AddAlias(id, value);
         }
 
-
-
         public TestId Map(String value)
         {
             return Translate(value);

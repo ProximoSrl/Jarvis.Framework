@@ -188,6 +188,7 @@
     <Compile Include="ServicesTests\CounterServiceTests.cs" />
     <Compile Include="SharedTests\Helpers\MongoDriverHelperTests.cs" />
     <Compile Include="SharedTests\IDentitySupportTests.cs" />
+    <Compile Include="SharedTests\MapperTests.cs" />
     <Compile Include="Support\TestHelper.cs" />
   </ItemGroup>
   <ItemGroup>
