@@ -335,7 +335,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             }
             _clients.Clear();
             _bucketToClient.Clear();
-            _eventstore.Dispose();
+            if (_eventstore != null)
+            {
+                _eventstore.Dispose();
+            }
         }
 
         private ConcurrentDictionary<String, Int64> lastCheckpointDispatched =
