@@ -69,15 +69,15 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                 EventStoreIdentityCustomBsonTypeMapper.Register(type);
             }
 
-           // var serializerStringGeneric = typeof(TypedStringValueBsonSerializer<>);
+            var serializerStringGeneric = typeof(TypedStringValueBsonSerializer<>);
 
             foreach (var type in assembly.GetTypes()
               .Where(t => typeof(StringValue).IsAssignableFrom(t) && !t.IsAbstract))
             {
                 _logger.DebugFormat("Registered LowercaseStringValue type {0}", type.FullName);
-                //var serializerType = serializerStringGeneric.MakeGenericType(type);
-                //BsonSerializer.RegisterSerializer(type, (IBsonSerializer)Activator.CreateInstance(serializerType));
-                BsonSerializer.RegisterSerializer(type, new StringValueBsonSerializer(type));
+                var serializerType = serializerStringGeneric.MakeGenericType(type);
+                BsonSerializer.RegisterSerializer(type, (IBsonSerializer)Activator.CreateInstance(serializerType));
+                //BsonSerializer.RegisterSerializer(type, new StringValueBsonSerializer(type));
                 StringValueCustomBsonTypeMapper.Register(type);
             }
         }
@@ -114,12 +114,12 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         {
             if (typeof(StringValue).IsAssignableFrom(type) && !type.IsAbstract)
             {
-                //var serializerStringGeneric = typeof(TypedStringValueBsonSerializer<>);
+                var serializerStringGeneric = typeof(TypedStringValueBsonSerializer<>);
 
-                //var serializerType = serializerStringGeneric.MakeGenericType(type);
-                //var serializer = (IBsonSerializer) Activator.CreateInstance(serializerType);
-                //return serializer;
-                return new StringValueBsonSerializer(type);
+                var serializerType = serializerStringGeneric.MakeGenericType(type);
+                var serializer = (IBsonSerializer)Activator.CreateInstance(serializerType);
+                return serializer;
+                //return new StringValueBsonSerializer(type);
             }
 
             return null;
