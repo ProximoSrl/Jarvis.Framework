@@ -36,13 +36,14 @@ namespace Jarvis.Framework.Shared.Domain.Serialization
 
         public void Serialize(BsonSerializationContext context, BsonSerializationArgs args, object value)
         {
-            if (value == null)
+            StringValue sValue = value as StringValue;
+            if (sValue == null || sValue.IsValid() == false)
             {
                 context.Writer.WriteNull();
             }
             else
             {
-                context.Writer.WriteString((StringValue)value);
+                context.Writer.WriteString(sValue);
             }
         }
     }
@@ -57,6 +58,18 @@ namespace Jarvis.Framework.Shared.Domain.Serialization
 
     public class TypedStringValueBsonSerializer<T> : SerializerBase<T> where T : StringValue
     {
+        public override void Serialize(BsonSerializationContext context, BsonSerializationArgs args, T value)
+        {
+            if (value == null || value.IsValid() == false)
+            {
+                context.Writer.WriteNull();
+            }
+            else
+            {
+                String stringValue = (StringValue)value;
+                context.Writer.WriteString(stringValue);
+            }
+        }
 
         public override T Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args)
         {
@@ -71,17 +84,6 @@ namespace Jarvis.Framework.Shared.Domain.Serialization
         }
 
 
-        public void Serialize(BsonSerializationContext context, BsonSerializationArgs args, object value)
-        {
-            if (value == null)
-            {
-                context.Writer.WriteNull();
-            }
-            else
-            {
-                context.Writer.WriteString((StringValue)value);
-            }
-        }
     }
 
 }

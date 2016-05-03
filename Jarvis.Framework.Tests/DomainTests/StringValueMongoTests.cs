@@ -19,6 +19,24 @@ namespace Jarvis.Framework.Tests.DomainTests
         }
 
         [Test]
+        public void should_serialize_lowercase_null()
+        {
+            var instance = new ClassWithTypedStringValueLowerCase { Value = null };
+            var json = instance.ToJson();
+
+            Assert.AreEqual("{ \"Value\" : null }", json);
+        }
+
+        [Test]
+        public void should_serialize_lowercase_null_value()
+        {
+            var instance = new ClassWithTypedStringValueLowerCase { Value = new TypedStringValueLowerCase(null) };
+            var json = instance.ToJson();
+
+            Assert.AreEqual("{ \"Value\" : null }", json);
+        }
+
+        [Test]
         public void should_serialize()
         {
             var instance = new ClassWithTypedStringValue { Value = new TypedStringValue("aBC_123") };
