@@ -72,8 +72,8 @@
       <HintPath>..\packages\NEventStore.Domain.6.0.0-unstable0016\lib\net40\NEventStore.Domain.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="NEventStore.Persistence.MongoDB, Version=5.3.5.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NEventStore.Persistence.MongoDB.5.3.5-beta0003\lib\net40\NEventStore.Persistence.MongoDB.dll</HintPath>
+    <Reference Include="NEventStore.Persistence.MongoDB, Version=6.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\NEventStore.Persistence.MongoDB.6.0.0-unstable0039\lib\net40\NEventStore.Persistence.MongoDB.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
