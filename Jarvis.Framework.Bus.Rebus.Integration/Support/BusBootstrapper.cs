@@ -61,6 +61,16 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
             MessagesTracker = messagesTracker;
         }
 
+        public void StartWithAppConfigWithImmediateStart()
+        {
+            StartWithAppConfig(true);
+        }
+
+        public void StartWithAppConfigWithoutImmediateStart()
+        {
+            StartWithAppConfig(false);
+        }
+
         public void StartWithAppConfig(Boolean immediateStart)
         {
             var busConfiguration = CreateDefaultBusConfiguration();
@@ -94,6 +104,16 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
                 .For<IHandleMessages<TimeoutReply>>()
                 .ImplementedBy<CustomTimeoutReplyHandler>()
                 );
+        }
+
+        public void StartWithConfigurationPropertyWithImmediateStart()
+        {
+            StartWithConfigurationProperty(true);
+        }
+
+        public void StartWithConfigurationPropertyWithoutImmediateStart()
+        {
+            StartWithConfigurationProperty(false);
         }
 
         public void StartWithConfigurationProperty(Boolean immediateStart)
