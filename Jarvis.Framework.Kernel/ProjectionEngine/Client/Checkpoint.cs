@@ -27,10 +27,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 	    public ProjectionMetrics.Meter Details { get; set; }
 
 
-        public Checkpoint(string id, string value)
+        public Checkpoint(string id, string value, string signature)
 		{
 			Id = id;
 			Value = value;
+            Signature = signature;
 		}
 	}
 }

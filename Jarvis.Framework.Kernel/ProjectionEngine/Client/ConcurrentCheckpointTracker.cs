@@ -42,6 +42,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         public ILogger Logger { get; set; }
 
+        private List<string> _checkpointErrors = new List<string>();
+
         public ConcurrentCheckpointTracker(MongoDatabase db)
         {
             _checkpoints = db.GetCollection<Checkpoint>("checkpoints");
@@ -57,10 +59,25 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         void Add(IProjection projection, string defaultValue)
         {
             var id = projection.GetCommonName();
-            var checkPoint = _checkpoints.FindOneById(id) ?? new Checkpoint(id, defaultValue);
+            var projectionSignature = projection.GetSignature();
+            var projectionSlotName = projection.GetSlotName();
 
-            checkPoint.Signature = projection.GetSignature();
-            checkPoint.Slot = projection.GetSlotName();
+            var checkPoint = _checkpoints.FindOneById(id) ?? 
+                new Checkpoint(id, defaultValue, projectionSignature);
+
+            //Check if some projection is changed and rebuild is not active
+            if (
+                checkPoint.Signature != projectionSignature && 
+                !RebuildSettings.ShouldRebuild)
+            {
+                _checkpointErrors.Add(String.Format("Projection {0} [slot {1}] has signature {2} but checkpoint on database has signature {3}.\n REBUILD NEEDED",
+                    id, projectionSlotName, projectionSignature, checkPoint.Signature));
+            }
+            else
+            {
+                checkPoint.Signature = projectionSignature;
+            }
+            checkPoint.Slot = projectionSlotName;
             checkPoint.Active = true;
             _checkpoints.Save(checkPoint);
             _checkpointTracker[id] = checkPoint.Value;
@@ -72,7 +89,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             var versionInfo = _checkpoints.FindOneById("VERSION");
             if (versionInfo == null)
             {
-                versionInfo = new Checkpoint("VERSION", "0");
+                versionInfo = new Checkpoint("VERSION", "0", null);
             }
 
             int currentVersion = int.Parse(versionInfo.Value);
@@ -278,7 +295,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         public List<string> GetCheckpointErrors()
         {
-            List<string> errors = new List<string>();
             if (RebuildSettings.ShouldRebuild == false)
             {
                 //need to check every slot for new projection 
@@ -301,17 +317,17 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                             .Distinct().Count() == 1)
                         {
                             //We have one or more new projection in slot
-                            error = String.Format("Error in slot {0}: we have new projections at checkpoint 0, rebuild needed!", slot.Key);
+                            error = String.Format("Error in slot {0}: we have new projections at checkpoint 0.\n REBUILD NEEDED!", slot.Key);
                         }
                         else
                         {
                             error = String.Format("Error in slot {0}, not all projection at the same checkpoint value. Please check reamodel db!", slot.Key);
                         }
-                        errors.Add(error);
+                        _checkpointErrors.Add(error);
                     }
                 }
             }
-            return errors;
+            return _checkpointErrors;
         }
     }
 }
