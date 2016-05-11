@@ -76,7 +76,7 @@ namespace Jarvis.Framework.Tests.BusTests
                 }
             };
             bb.Configuration = configuration;
-            bb.StartWithConfigurationProperty();
+            bb.StartWithConfigurationProperty(true);
             _bus = _container.Resolve<IBus>();
             _handler = new SampleCommandHandler();
             _handlerAdapter = new MessageHandlerToCommandHandlerAdapter<SampleTestCommand>(
