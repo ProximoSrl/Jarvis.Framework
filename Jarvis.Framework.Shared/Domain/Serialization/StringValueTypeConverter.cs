@@ -1,11 +1,17 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Globalization;
+using Fasterflect;
+using Jarvis.Framework.Shared.Helpers;
+using System.Collections.Concurrent;
 
 namespace Jarvis.Framework.Shared.Domain.Serialization
 {
     public class StringValueTypeConverter<T> : TypeConverter where T : StringValue
     {
+        private static ConcurrentDictionary<Type, FastReflectionHelper.ObjectActivator> _activators
+          = new ConcurrentDictionary<Type, FastReflectionHelper.ObjectActivator>();
+
         public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType)
         {
             if (sourceType == typeof(string))
@@ -17,7 +23,15 @@ namespace Jarvis.Framework.Shared.Domain.Serialization
 
         public override object ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object value)
         {
-            return Activator.CreateInstance(typeof(T), new object[] {(string) value});
+            var nominalType = typeof(T);
+            FastReflectionHelper.ObjectActivator activator;
+            if (!_activators.TryGetValue(nominalType, out activator))
+            {
+                var ctor = nominalType.Constructor(new Type[] { typeof(string) });
+                activator = FastReflectionHelper.GetActivator(ctor);
+                _activators[nominalType] = activator;
+            }
+            return activator(new object[] { (string)value });
         }
     }
 }
