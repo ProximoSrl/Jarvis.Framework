@@ -18,8 +18,36 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         TModel Upsert(DomainEvent e, TKey id, Func<TModel> insert, Action<TModel> update, bool notify = false);
         void FindAndModify(DomainEvent e, Expression<Func<TModel, bool>> filter, Action<TModel> action, bool notify = false);
         void FindAndModify(DomainEvent e, TKey id, Action<TModel> action, bool notify = false);
+
+        /// <summary>
+        /// Optimize the "in memory" collection allowing to search for a given object that has
+        /// a specific property equal to specific value.
+        /// 
+        /// PAY attention, the items are returned without any given sort.
+        /// </summary>
+        /// <param name="e"></param>
+        /// <param name="propertyToSearch"></param>
+        /// <param name="propertySelector"></param>
+        /// <param name="action"></param>
+        /// <param name="notify"></param>
+        void FindAndModifyByProperty(DomainEvent e, Expression<Func<TModel, Object>> propertySelector, Object propertyValue, Action<TModel> action, bool notify = false);
+
+        /// <summary>
+        /// Optimize the "in memory" collection allowing to search for a given object that has
+        /// a specific property equal to specific value.
+        /// 
+        /// PAY attention, the items are returned without any given sort.
+        /// </summary>
+        /// <param name="e"></param>
+        /// <param name="propertyToSearch"></param>
+        /// <param name="propertySelector"></param>
+        /// <param name="action"></param>
+        /// <param name="notify"></param>
+        IEnumerable<TModel> FindByProperty(Expression<Func<TModel, Object>> propertySelector, Object propertyValue);
+
+
         void Save(DomainEvent e, TModel model, bool notify = false);
-        //        void Delete(Expression<Func<TModel, bool>> filterById, bool notify = false);
+
         void Delete(DomainEvent e, TKey id, bool notify = false);
         void Drop();
         void CreateIndex(IMongoIndexKeys keys, IMongoIndexOptions options = null);

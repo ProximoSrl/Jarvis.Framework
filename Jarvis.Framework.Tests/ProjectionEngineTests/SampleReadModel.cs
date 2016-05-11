@@ -21,4 +21,13 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         public Int64 Timestamp { get; set; }
         public Boolean IsInRebuild { get; set; }
     }
+
+    public class SampleReadModel4 : AbstractReadModel<string>
+    {
+        public Int64 Timestamp { get; set; }
+        public String Name { get; set; }
+
+        public Int32 Value { get; set; }
+
+    }
 }

@@ -74,6 +74,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             return _collection.FindOneById(BsonValue.Create(id));
         }
 
+        public IEnumerable<TModel> FindManyByProperty(Expression<Func<TModel, Object>> propertySelector, Object value)
+        {
+            return _collection.Find(Query<TModel>.EQ(propertySelector, value))
+                .SetSortOrder(SortBy<TModel>.Ascending(m => m.Id));
+        }
+
         public IQueryable<TModel> Where(Expression<Func<TModel, bool>> filter)
         {
             return _collection.AsQueryable().Where(filter).OrderBy(x => x.Id);
