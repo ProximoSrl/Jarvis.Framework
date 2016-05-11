@@ -42,6 +42,8 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 
         public JarvisRebusConfiguration Configuration { get; set; }
 
+        public CustomJsonSerializer CustomSerializer { get; private set; }
+
         public BusBootstrapper(
             IWindsorContainer container,
             string connectionString,
@@ -50,6 +52,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
         {
             this._container = container;
             this._connectionString = connectionString;
+            CustomSerializer = new CustomJsonSerializer();
             Prefix = prefix;
             MessagesTracker = messagesTracker;
         }
@@ -72,7 +75,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
         {
             var busConfiguration = Configure.With(new WindsorContainerAdapter(_container))
                 .Logging(l => l.Log4Net())
-                .Serialization(c => c.Use(new CustomJsonSerializer()))
+                .Serialization(c => c.Use(CustomSerializer))
                 .Timeouts(t => t.StoreInMongoDb(_connectionString, Prefix + "-timeouts"))
                 .Subscriptions(s => s.StoreInMongoDb(_connectionString, Prefix + "-subscriptions"))
                 .Events(e => e.MessageSent += OnMessageSent)
