@@ -44,6 +44,10 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 
         public CustomJsonSerializer CustomSerializer { get; private set; }
 
+        private IStartableBus _bus;
+
+        private Boolean _busStarted = false;
+
         public BusBootstrapper(
             IWindsorContainer container,
             string connectionString,
@@ -57,18 +61,18 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
             MessagesTracker = messagesTracker;
         }
 
-        public void StartWithAppConfig()
+        public void StartWithAppConfig(Boolean immediateStart)
         {
             var busConfiguration = CreateDefaultBusConfiguration();
 
-            var bus = busConfiguration
+            _bus = busConfiguration
                 .Transport(t => t.UseMsmqAndGetInputQueueNameFromAppConfig())
                 .MessageOwnership(d => d.FromRebusConfigurationSection())
                 .CreateBus();
 
-            FixTiemoutHack();
+            FixTimeoutHack();
 
-            bus.Start();
+            if (immediateStart) Start(Configuration.NumOfWorkers);
         }
 
         RebusConfigurer CreateDefaultBusConfiguration()
@@ -84,7 +88,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
             return busConfiguration;
         }
 
-        void FixTiemoutHack()
+        void FixTimeoutHack()
         {
             _container.Register(Component
                 .For<IHandleMessages<TimeoutReply>>()
@@ -92,7 +96,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
                 );
         }
 
-        public void StartWithConfigurationProperty()
+        public void StartWithConfigurationProperty(Boolean immediateStart)
         {
             if (Configuration == null)
             {
@@ -112,15 +116,26 @@ or manually set the Configuration property of this instance.");
             //now it is time to load endpoints configuration mapping
             Dictionary<String, String> endpointsMap = Configuration.EndpointsMap;
 
-            var bus = busConfiguration
+            _bus = busConfiguration
                 .Transport(t => t.UseMsmq(inputQueueName, errorQueueName))
                 .MessageOwnership(mo => mo.Use(new JarvisDetermineMessageOwnershipFromConfigurationManager(endpointsMap)))
                 .Behavior(b => b.SetMaxRetriesFor<Exception>(Configuration.MaxRetry))
                 .CreateBus();
 
-            FixTiemoutHack();
+            FixTimeoutHack();
 
-            bus.Start(workersNumber);
+            if (immediateStart) Start(workersNumber);
+        }
+
+        public void Start(Int32 numberOfWorkers)
+        {
+            if (_bus == null)
+                throw new ApplicationException("Unable to start, bus still not created.");
+            if (_busStarted)
+                return;
+
+            _bus.Start(numberOfWorkers);
+            _busStarted = true;
         }
 
         void OnPoisonMessage(IBus bus, ReceivedTransportMessage message, PoisonMessageInfo poisonmessageinfo)
