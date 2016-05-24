@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 public class GlobalSetup
 {
     [SetUp]
-    public void ShowSomeTrace()
+    public void Global_initialization_of_all_tests()
     {
         var overrideTestDb = Environment.GetEnvironmentVariable("TEST_MONGODB");
         if (String.IsNullOrEmpty(overrideTestDb)) return;
