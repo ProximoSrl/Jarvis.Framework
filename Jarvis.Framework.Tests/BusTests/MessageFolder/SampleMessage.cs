@@ -33,4 +33,19 @@ namespace Jarvis.Framework.Tests.BusTests.MessageFolder
             return "SampleTestCommand description";
         }
     }
+
+    public class AnotherSampleTestCommand : Command
+    {
+        public AnotherSampleTestCommand(int id)
+        {
+            Id = id;
+        }
+
+        public int Id { get; private set; }
+
+        public override string Describe()
+        {
+            return "AnotherSampleTestCommand description";
+        }
+    }
 }
