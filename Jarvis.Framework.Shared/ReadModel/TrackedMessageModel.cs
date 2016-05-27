@@ -10,10 +10,43 @@ namespace Jarvis.Framework.Shared.ReadModel
 {
     public interface IMessagesTracker
     {
+
+        /// <summary>
+        /// A message handlers started elaborating the message
+        /// </summary>
+        /// <param name="msg"></param>
         void Started(IMessage msg);
+
+        /// <summary>
+        /// Message was elaborated with success
+        /// </summary>
+        /// <param name="commandId"></param>
+        /// <param name="completedAt"></param>
         void Completed(Guid commandId, DateTime completedAt);
+
+        /// <summary>
+        /// Dispatched is the status when the event related to the command is 
+        /// dispatched by the NotifyCommitHandled in projection engine. This means
+        /// that the command is executed then dispatched to the bus and if there
+        /// is a Reply-to a reply command is sent.
+        /// </summary>
+        /// <param name="commandId"></param>
+        /// <param name="dispatchedAt"></param>
+        /// <returns></returns>
         bool Dispatched(Guid commandId, DateTime dispatchedAt);
+
+        /// <summary>
+        /// Drop the entire collection.
+        /// </summary>
         void Drop();
+
+        /// <summary>
+        /// Message cannot be elaborated, some error prevents the message to be
+        /// handled.
+        /// </summary>
+        /// <param name="commandId"></param>
+        /// <param name="failedAt"></param>
+        /// <param name="ex"></param>
         void Failed(Guid commandId, DateTime failedAt, Exception ex);
     }
 
