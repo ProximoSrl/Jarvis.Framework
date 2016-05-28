@@ -21,7 +21,7 @@ public class GlobalSetup
         var connectionStringsSection = (ConnectionStringsSection)config.GetSection("connectionStrings");
 
         connectionStringsSection.ConnectionStrings["testDb"].ConnectionString = overrideTestDb.TrimEnd('/') + "/{0}" + overrideTestDbQueryString;
-      config.Save();
+        config.Save();
         ConfigurationManager.RefreshSection("connectionStrings");
     }
 }

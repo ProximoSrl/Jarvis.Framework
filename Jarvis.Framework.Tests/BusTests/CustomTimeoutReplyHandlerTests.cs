@@ -24,7 +24,7 @@ namespace Jarvis.Framework.Tests.BusTests
         public SampleMessage ReceivedMessage { get; private set; }
     }
 
-	[TestFixture, Category("exclude_on_linux")]
+    [TestFixture, Category("exclude_on_linux")]
     public class CustomTimeoutReplyHandlerTests
     {
         IBus _bus;

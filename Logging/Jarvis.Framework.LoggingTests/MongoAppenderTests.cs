@@ -113,14 +113,14 @@ namespace Jarvis.Framework.LoggingTests
     public class MongoAppenderTests : MongoAppenderTestsBaseClass
     {
 
-        [Test]  
+        [Test]
         public void verify_single_log()
         {
             _sut.Debug("This is a logger");
             _appender.Flush();
             Assert.That(_logCollection.Count(), Is.EqualTo(1));
         }
-            
+
         [Test]
         public void verify_file_name()
         {
@@ -130,7 +130,7 @@ namespace Jarvis.Framework.LoggingTests
             Assert.That(log["fi"].ToString(), Is.StringEnding("MongoAppenderTests.cs"));
         }
 
-        [Test] 
+        [Test]
         public void verify_lots_of_log()
         {
             for (int i = 0; i < 1000; i++)
