@@ -119,10 +119,10 @@ namespace Jarvis.Framework.Tests.BusTests
                 track = tracks.Single();
             }
             while (
-                    track.CompletedAt == null && 
+                    track.CompletedAt == null &&
                     DateTime.Now.Subtract(startTime).TotalSeconds < 4
             );
-           
+
             Assert.That(track.MessageId, Is.EqualTo(sampleMessage.MessageId.ToString()));
             Assert.That(track.Description, Is.EqualTo(sampleMessage.Describe()));
             Assert.That(track.StartedAt, Is.Not.Null);

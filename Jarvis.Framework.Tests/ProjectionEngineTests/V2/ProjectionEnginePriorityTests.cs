@@ -51,7 +51,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregateId(1));
             aggregate.Create();
             Repository.Save(aggregate, Guid.NewGuid(), h => { });
-            Thread.Sleep(50);
+            Thread.Sleep(100);
             await Engine.UpdateAndWait();
 
             var rm = reader.AllUnsorted.Single();

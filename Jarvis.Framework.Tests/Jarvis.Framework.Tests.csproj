@@ -127,6 +127,7 @@
     <Compile Include="EngineTests\SagaTests\SagaTests.cs" />
     <Compile Include="EngineTests\SampleAggregate.cs" />
     <Compile Include="EngineTests\StringIdTests.cs" />
+    <Compile Include="GlobalTestInit.cs" />
     <Compile Include="MultitenantSupportTests\MultiTenantSubDependencyResolverTests.cs" />
     <Compile Include="MultitenantSupportTests\TenantManagerTests.cs" />
     <Compile Include="ProjectionEngineTests\ConcurrentCheckpointTrackerTests.cs" />

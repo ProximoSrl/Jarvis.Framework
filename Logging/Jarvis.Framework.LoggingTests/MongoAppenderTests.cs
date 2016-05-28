@@ -14,6 +14,7 @@ using NUnit.Framework;
 using System.Diagnostics;
 using System;
 using log4net.Layout;
+using System.Configuration;
 
 namespace Jarvis.Framework.LoggingTests
 {
@@ -26,11 +27,14 @@ namespace Jarvis.Framework.LoggingTests
         protected ILog _sut;
         protected Logger _logger;
 
+        String connectionString;
         [TestFixtureSetUp]
         public void TestFixtureSetup()
         {
-            var client = new MongoClient("mongodb://localhost");
-            var db = client.GetServer().GetDatabase("test-db-log");
+            connectionString = ConfigurationManager.ConnectionStrings["testDb"].ConnectionString;
+            MongoUrl url = new MongoUrl(String.Format(connectionString, "test-db-log"));
+            var client = new MongoClient(url);
+            var db = client.GetServer().GetDatabase(url.DatabaseName);
             _logCollection = db.GetCollection("logs");
             _logCollection.Drop();
 
@@ -64,7 +68,7 @@ namespace Jarvis.Framework.LoggingTests
             {
                 Settings = new MongoLog()
                 {
-                    ConnectionString = "mongodb://localhost/test-db-log",
+                    ConnectionString = String.Format(connectionString, "test-db-log"),
                     CollectionName = "logs",
                     LooseFix = looseFix,
                 },
@@ -80,7 +84,7 @@ namespace Jarvis.Framework.LoggingTests
             {
                 Settings = new MongoLog()
                 {
-                    ConnectionString = "mongodb://localhost/test-db-log",
+                    ConnectionString = String.Format(connectionString, "test-db-log"),
                     CollectionName = "logs",
                     LooseFix = looseFix,
                 }
@@ -109,14 +113,14 @@ namespace Jarvis.Framework.LoggingTests
     public class MongoAppenderTests : MongoAppenderTestsBaseClass
     {
 
-        [Test]  
+        [Test]
         public void verify_single_log()
         {
             _sut.Debug("This is a logger");
             _appender.Flush();
             Assert.That(_logCollection.Count(), Is.EqualTo(1));
         }
-            
+
         [Test]
         public void verify_file_name()
         {
@@ -126,7 +130,7 @@ namespace Jarvis.Framework.LoggingTests
             Assert.That(log["fi"].ToString(), Is.StringEnding("MongoAppenderTests.cs"));
         }
 
-        [Test] 
+        [Test]
         public void verify_lots_of_log()
         {
             for (int i = 0; i < 1000; i++)
