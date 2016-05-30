@@ -49,6 +49,11 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             _collection.Attach(this, false);
         }
 
+        public override string GetSignature()
+        {
+            return "V2";
+        }
+
         public override int Priority
         {
             get { return 3; } //higher priority than previous projection

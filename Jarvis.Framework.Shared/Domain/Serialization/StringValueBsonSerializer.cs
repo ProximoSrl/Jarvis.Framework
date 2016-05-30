@@ -2,12 +2,18 @@
 using MongoDB.Bson;
 using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
+using Fasterflect;
+using Jarvis.Framework.Shared.Helpers;
+using System.Collections.Concurrent;
 using MongoDB.Bson.Serialization.Serializers;
 
 namespace Jarvis.Framework.Shared.Domain.Serialization
 {
     public class StringValueBsonSerializer : IBsonSerializer
     {
+        private static ConcurrentDictionary<Type, FastReflectionHelper.ObjectActivator> _activators 
+            = new ConcurrentDictionary<Type, FastReflectionHelper.ObjectActivator>();
+        
         Type _t;
         public StringValueBsonSerializer(Type t)
         {
@@ -30,7 +36,14 @@ namespace Jarvis.Framework.Shared.Domain.Serialization
             }
 
             var id = context.Reader.ReadString();
-            return Activator.CreateInstance(args.NominalType, new object[] {id});
+            FastReflectionHelper.ObjectActivator activator;
+            if (!_activators.TryGetValue(args.NominalType, out activator))
+            {
+                var ctor = args.NominalType.Constructor(new Type[] { typeof(string) });
+                activator = FastReflectionHelper.GetActivator(ctor);
+                _activators[args.NominalType] = activator;
+            }
+            return activator(new object[] { id });
         }
 
 
@@ -46,7 +59,7 @@ namespace Jarvis.Framework.Shared.Domain.Serialization
                 context.Writer.WriteString(sValue);
             }
         }
-    }
+        }
 
     public class StringValueBsonSerializer<T> : StringValueBsonSerializer
     {
@@ -54,7 +67,7 @@ namespace Jarvis.Framework.Shared.Domain.Serialization
         {
 
         }
-    }
+        }
 
     public class TypedStringValueBsonSerializer<T> : SerializerBase<T> where T : StringValue
     {

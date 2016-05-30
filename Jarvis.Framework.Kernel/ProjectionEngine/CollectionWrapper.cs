@@ -182,6 +182,23 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             }
         }
 
+        public void FindAndModifyByProperty(DomainEvent e, Expression<Func<TModel, Object>> propertySelector, Object propertyValue, Action<TModel> action, bool notify = false)
+        {
+            foreach (var model in _storage.FindManyByProperty(propertySelector, propertyValue))
+            {
+                if (!model.BuiltFromEvent(e.MessageId))
+                {
+                    action(model);
+                    Save(e, model, notify);
+                }
+            }
+        }
+
+        public IEnumerable<TModel> FindByProperty(Expression<Func<TModel, Object>> propertySelector, Object propertyValue)
+        {
+            return _storage.FindManyByProperty(propertySelector, propertyValue);
+        }
+
         public void FindAndModify(DomainEvent e, TKey id, Action<TModel> action, bool notify = false)
         {
             var model = _storage.FindOneById(id);

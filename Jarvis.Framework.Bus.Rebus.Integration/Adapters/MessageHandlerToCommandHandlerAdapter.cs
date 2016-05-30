@@ -41,12 +41,12 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
             int i = 0;
             bool done = false;
             var notifyTo = message.GetContextData(MessagesConstants.ReplyToHeader);
-
             while (!done && i < 100)
             {
                 i++;
                 try
                 {
+                    _messagesTracker.ElaborationStarted(message.MessageId, DateTime.UtcNow);
                     _commandHandler.Handle(message);
                     _messagesTracker.Completed(message.MessageId, DateTime.UtcNow);
                     done = true;

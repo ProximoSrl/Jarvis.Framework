@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Jarvis.Framework.Shared.Helpers;
 
 namespace Jarvis.Framework.Tests.ProjectionsTests
 {
@@ -23,15 +24,15 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
             _inMemory = inMemory;
         }
 
-        private MongoStorage<SampleReadModel4, String> _sut;
-        private MongoCollection<SampleReadModel4> _collection;
+        private IMongoStorage<SampleReadModel4, String> _sut;
+        private IMongoCollection<SampleReadModel4> _collection;
 
         [TestFixtureSetUp]
         public void TestFixtureSetUp()
         {
             var url = new MongoUrl(ConfigurationManager.ConnectionStrings["readmodel"].ConnectionString);
             var client = new MongoClient(url);
-            var readmodelDb = client.GetServer().GetDatabase(url.DatabaseName);
+            var readmodelDb = client.GetDatabase(url.DatabaseName);
             _collection = readmodelDb.GetCollection<SampleReadModel4>("SampleReadModel4");
         }
 
@@ -102,7 +103,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
             var first = loaded.First();
             first.Value = 3;
             sut.SaveWithVersion(first, first.Version);
-            
+
             loaded = sut.FindManyByProperty(e => e.Value, 2).ToList();
             Assert.That(loaded, Has.Count.EqualTo(1));
             Assert.That(loaded[0].Id, Is.EqualTo("2"));

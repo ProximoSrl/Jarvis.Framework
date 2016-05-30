@@ -1,6 +1,8 @@
 ﻿using System;
 using Jarvis.Framework.Shared.IdentitySupport;
 using NUnit.Framework;
+using System.Diagnostics;
+using System.Collections.Generic;
 
 namespace Jarvis.Framework.Tests.EngineTests
 {
@@ -35,6 +37,26 @@ namespace Jarvis.Framework.Tests.EngineTests
 			Assert.AreEqual("SampleAggregate", identity.GetTag());
 			Assert.AreEqual(1L, identity.Id);
 		}
+
+
+        [Test, Explicit]
+        public void Conver_lots_of_identities()
+        {
+            Stopwatch timer = new Stopwatch();
+            List<String> test = new List<String>();
+            _manager.ToIdentity("SampleAggregate_2");
+            for (int i = 0; i < 1000000; i++)
+            {
+                test.Add(new SampleAggregateId(i).ToString());
+            }
+            timer.Start();
+            foreach (var item in test)
+            {
+                _manager.ToIdentity(item);
+            }
+            timer.Stop();
+            Console.WriteLine("Elapsed: {0}", timer.ElapsedMilliseconds);
+        }
 
 	    [Test]
 	    public void as_string_and_to_string_are_equal()

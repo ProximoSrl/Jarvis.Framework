@@ -63,6 +63,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             return _collection.FindOneById(id);
         }
 
+        public IEnumerable<TModel> FindManyByProperty<TValue>(Expression<Func<TModel, TValue>> propertySelector, TValue value)
+        {
+            return _collection.Find(
+                Builders<TModel>.Filter.Eq<TValue>(propertySelector, value))
+                .Sort(Builders<TModel>.Sort.Ascending(m => m.Id))
+                .ToEnumerable();
+        }
+
         public IQueryable<TModel> Where(Expression<Func<TModel, bool>> filter)
         {
             return _collection.AsQueryable().Where(filter).OrderBy(x => x.Id);
