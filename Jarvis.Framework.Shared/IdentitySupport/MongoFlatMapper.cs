@@ -103,6 +103,10 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
                 return serializer;
             }
+            else if (typeof(IIdentity).IsAssignableFrom(type))
+            {
+                return new GenericIdentityBsonSerializer();
+            }
 
             return null;
         }

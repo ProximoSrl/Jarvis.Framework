@@ -41,6 +41,39 @@ namespace Jarvis.Framework.Shared.IdentitySupport.Serialization
         }
     }
 
+    public class GenericIdentityBsonSerializer : SerializerBase<IIdentity>
+    {
+        public static IIdentityConverter IdentityConverter { get; set; }
+
+        public override IIdentity Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args)
+        {
+            if (context.Reader.CurrentBsonType == BsonType.Null)
+            {
+                context.Reader.ReadNull();
+                return null;
+            }
+
+            var id = context.Reader.ReadString();
+
+            if (IdentityConverter == null)
+                throw new Exception("Identity converter not set in EventStoreIdentityBsonSerializer");
+
+            return (EventStoreIdentity)IdentityConverter.ToIdentity(id);
+        }
+
+        public override void Serialize(BsonSerializationContext context, BsonSerializationArgs args, IIdentity value)
+        {
+            if (value == null)
+            {
+                context.Writer.WriteNull();
+            }
+            else
+            {
+                context.Writer.WriteString(value.AsString());
+            }
+        }
+    }
+
     public class TypedEventStoreIdentityBsonSerializer<T> : SerializerBase<T> where T : EventStoreIdentity
     {
 
