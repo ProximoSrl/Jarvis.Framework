@@ -10,6 +10,8 @@ using MongoDB.Bson.Serialization.Attributes;
 using NUnit.Framework;
 using Jarvis.NEventStoreEx.CommonDomainEx;
 using Jarvis.Framework.Kernel.Engine;
+using System.Collections.Generic;
+using MongoDB.Bson.Serialization.Options;
 
 namespace Jarvis.Framework.Tests.DomainTests
 {
@@ -104,6 +106,19 @@ namespace Jarvis.Framework.Tests.DomainTests
             }
         }
 
+        public class SampleNoAttributeId : EventStoreIdentity
+        {
+            public SampleNoAttributeId(long id)
+                : base(id)
+            {
+            }
+
+            public SampleNoAttributeId(string id)
+                : base(id)
+            {
+            }
+        }
+
         public class ClassWithSampleIdentity
         {
             public SampleId Value { get; set; }
@@ -135,6 +150,12 @@ namespace Jarvis.Framework.Tests.DomainTests
         {
             [BsonSerializer(typeof(IdentityArrayBsonSerializer<SampleId>))]
             public SampleId[] Value { get; set; }
+        }
+
+        public class ClassWithDictionaryOfObject
+        {
+            [BsonSerializer(typeof(Shared.IdentitySupport.Serialization.DictionaryAsObjectJarvisSerializer<Dictionary<String, Object>, String, Object>))]
+            public Dictionary<String, Object> Value { get; set; }
         }
 
 
@@ -257,6 +278,24 @@ namespace Jarvis.Framework.Tests.DomainTests
             EventStoreIdentityCustomBsonTypeMapper.Register<SampleId>();
             var val = BsonValue.Create(new SampleId(1));
             Assert.IsInstanceOf<BsonString>(val);
+        }
+
+        [Test]
+        public void should_serialize_flat_in_dictionary()
+        {
+            var instance = new ClassWithDictionaryOfObject();
+            instance.Value = new Dictionary<string, object>() { { "test", new SampleId(1) } };
+            var json = instance.ToJson();
+            Assert.AreEqual("{ \"Value\" : { \"test\" : \"Sample_1\" } }", json);
+        }
+
+        [Test]
+        public void base_smoke_dictionary()
+        {
+            var instance = new ClassWithDictionaryOfObject();
+            instance.Value = new Dictionary<string, object>() { { "test", "blabla" } };
+            var json = instance.ToJson();
+            Assert.AreEqual("{ \"Value\" : { \"test\" : \"blabla\" } }", json);
         }
     }
 }
