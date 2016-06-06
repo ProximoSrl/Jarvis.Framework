@@ -29,14 +29,14 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         {
             if (_enabled) return;
 
-            BsonClassMap.RegisterClassMap<DomainEvent>(map =>
-            {
-                map.AutoMap();
-                map
-                    .MapProperty(x => x.AggregateId)
-                    .SetSerializer(new EventStoreIdentityBsonSerializer());
+            //BsonClassMap.RegisterClassMap<DomainEvent>(map =>
+            //{
+            //    map.AutoMap();
+            //    map
+            //        .MapProperty(x => x.AggregateId)
+            //        .SetSerializer(new EventStoreIdentityBsonSerializer());
 
-            });
+            //});
 
             if (enableForAllId)
             {
@@ -91,11 +91,15 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         }
     }
 
+    /// <summary>
+    /// Class that provides the ability to autodetermine the right serializer for all 
+    /// identity to enable the FlatId approach.
+    /// </summary>
     public class EventStoreIdentitySerializationProvider : IBsonSerializationProvider
     {
         public IBsonSerializer GetSerializer(Type type)
         {
-            if (typeof(EventStoreIdentity).IsAssignableFrom(type) && !type.IsAbstract)
+            if (typeof(EventStoreIdentity).IsAssignableFrom(type))
             {
                 var serializerGeneric = typeof(TypedEventStoreIdentityBsonSerializer<>);
                 var serializerType = serializerGeneric.MakeGenericType(type);

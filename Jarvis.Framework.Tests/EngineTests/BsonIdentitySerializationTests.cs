@@ -26,13 +26,13 @@ namespace Jarvis.Framework.Tests.EngineTests
             {
                 IdentitiesRegistration.RegisterFromAssembly(GetType().Assembly);
                 var identityConverter = new IdentityManager(new InMemoryCounterService());
-                EventStoreIdentityBsonSerializer.IdentityConverter = identityConverter;
+                MongoFlatIdSerializerHelper.IdentityConverter = identityConverter;
                 identityConverter.RegisterIdentitiesFromAssembly(typeof(SampleAggregate).Assembly);
 
                 BsonClassMap.RegisterClassMap<DomainEvent>(map =>
                 {
                     map.AutoMap();
-                    map.MapProperty(x => x.AggregateId).SetSerializer(new EventStoreIdentityBsonSerializer());
+                    map.MapProperty(x => x.AggregateId).SetSerializer(new TypedEventStoreIdentityBsonSerializer<EventStoreIdentity>());
                 });
             }
             catch (Exception ex)

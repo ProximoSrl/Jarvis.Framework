@@ -8,43 +8,21 @@ using System.Collections.Generic;
 
 namespace Jarvis.Framework.Shared.IdentitySupport.Serialization
 {
-    public class EventStoreIdentityBsonSerializer : SerializerBase<EventStoreIdentity>
+    public static class MongoFlatIdSerializerHelper
     {
-        public static IIdentityConverter IdentityConverter { get; set; }
+        internal static IIdentityConverter IdentityConverter { get; set; }
 
-        public override EventStoreIdentity Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args)
+        public static T ToIdentity<T>(String id)
         {
-            if (context.Reader.CurrentBsonType == BsonType.Null)
-            {
-                context.Reader.ReadNull();
-                return null;
-            }
+            if (MongoFlatIdSerializerHelper.IdentityConverter == null)
+                throw new Exception("Identity converter not set in MongoFlatIdSerializerHelper.IdentityConverter property");
 
-            var id = context.Reader.ReadString();
-
-            if (IdentityConverter == null)
-                throw new Exception("Identity converter not set in EventStoreIdentityBsonSerializer");
-
-            return (EventStoreIdentity)IdentityConverter.ToIdentity(id);
-        }
-
-        public override void Serialize(BsonSerializationContext context, BsonSerializationArgs args, EventStoreIdentity value)
-        {
-            if (value == null)
-            {
-                context.Writer.WriteNull();
-            }
-            else
-            {
-                context.Writer.WriteString(value);
-            }
+            return (T)MongoFlatIdSerializerHelper.IdentityConverter.ToIdentity(id);
         }
     }
 
     public class GenericIdentityBsonSerializer : SerializerBase<IIdentity>
     {
-        public static IIdentityConverter IdentityConverter { get; set; }
-
         public override IIdentity Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args)
         {
             if (context.Reader.CurrentBsonType == BsonType.Null)
@@ -55,10 +33,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport.Serialization
 
             var id = context.Reader.ReadString();
 
-            if (IdentityConverter == null)
-                throw new Exception("Identity converter not set in EventStoreIdentityBsonSerializer");
-
-            return (EventStoreIdentity)IdentityConverter.ToIdentity(id);
+            return MongoFlatIdSerializerHelper.ToIdentity<EventStoreIdentity>(id);
         }
 
         public override void Serialize(BsonSerializationContext context, BsonSerializationArgs args, IIdentity value)
@@ -87,10 +62,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport.Serialization
 
             var id = context.Reader.ReadString();
 
-            if (EventStoreIdentityBsonSerializer.IdentityConverter == null)
-                throw new Exception("Identity converter not set in EventStoreIdentityBsonSerializer");
-
-            return (T)EventStoreIdentityBsonSerializer.IdentityConverter.ToIdentity(id);
+            return MongoFlatIdSerializerHelper.ToIdentity<T>(id);
         }
 
         public override void Serialize(BsonSerializationContext context, BsonSerializationArgs args, T value)
@@ -117,15 +89,13 @@ namespace Jarvis.Framework.Shared.IdentitySupport.Serialization
             }
 
             List<T> retValue = new List<T>();
-            if (EventStoreIdentityBsonSerializer.IdentityConverter == null)
-                throw new Exception("Identity converter not set in AuthIdentityBsonSerializer");
 
             context.Reader.ReadStartArray();
             
             while (context.Reader.ReadBsonType() == BsonType.String)
             {
                 var id = context.Reader.ReadString();
-                retValue.Add((T)EventStoreIdentityBsonSerializer.IdentityConverter.ToIdentity(id));
+                retValue.Add(MongoFlatIdSerializerHelper.ToIdentity<T>(id));
             }
 
             context.Reader.ReadEndArray();

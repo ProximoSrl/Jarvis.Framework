@@ -44,16 +44,17 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                 ExternalKey = newKey;
             }
         }
-        internal Boolean IsFlatMapping { get; private set; }
+
+        //internal Boolean IsFlatMapping { get; private set; }
         protected AbstractIdentityTranslator(IMongoDatabase systemDB, IIdentityGenerator identityGenerator)
         {
             IdentityGenerator = identityGenerator;
             _collection = systemDB.GetCollection<MappedIdentity>("map_" + typeof(TKey).Name.ToLower());
-            var serializer = BsonSerializer.LookupSerializer(typeof(TKey));
-            if (serializer is EventStoreIdentityBsonSerializer)
-            {
-                IsFlatMapping = true;
-            }
+            //var serializer = BsonSerializer.LookupSerializer(typeof(TKey));
+            //if (serializer is EventStoreIdentityBsonSerializer)
+            //{
+            //    IsFlatMapping = true;
+            //}
         }
 
         protected void AddAlias(TKey key, string alias)

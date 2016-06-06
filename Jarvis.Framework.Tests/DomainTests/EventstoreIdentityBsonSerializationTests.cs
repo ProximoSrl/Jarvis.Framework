@@ -16,7 +16,7 @@ namespace Jarvis.Framework.Tests.DomainTests
     [TestFixture]
     public class DomainEventIdentityBsonSerializationTests
     {
-        [BsonSerializer(typeof(EventStoreIdentityBsonSerializer))]
+        [BsonSerializer(typeof(TypedEventStoreIdentityBsonSerializer<SampleId>))]
         public class SampleId : EventStoreIdentity
         {
             public SampleId(long id)
@@ -45,13 +45,13 @@ namespace Jarvis.Framework.Tests.DomainTests
         public void SetUp()
         {
             var identityConverter = new IdentityManager(new InMemoryCounterService());
-            EventStoreIdentityBsonSerializer.IdentityConverter = identityConverter;
+            MongoFlatIdSerializerHelper.IdentityConverter = identityConverter;
             identityConverter.RegisterIdentitiesFromAssembly(typeof(SampleId).Assembly);
 
             BsonClassMap.RegisterClassMap<DomainEvent>(map =>
             {
                 map.AutoMap();
-                map.MapProperty(x => x.AggregateId).SetSerializer(new EventStoreIdentityBsonSerializer());
+                map.MapProperty(x => x.AggregateId).SetSerializer(new TypedEventStoreIdentityBsonSerializer<EventStoreIdentity>());
             });
         }
         
@@ -61,7 +61,7 @@ namespace Jarvis.Framework.Tests.DomainTests
             BsonClassMapHelper.Unregister<DomainEvent>();
 
             // class map cleanup???
-            EventStoreIdentityBsonSerializer.IdentityConverter = null;
+            MongoFlatIdSerializerHelper.IdentityConverter = null;
         }
 
         [Test]
@@ -90,7 +90,7 @@ namespace Jarvis.Framework.Tests.DomainTests
     [TestFixture]
     public class EventstoreIdentityBsonSerializationTests 
     {
-        [BsonSerializer(typeof(EventStoreIdentityBsonSerializer))]
+        [BsonSerializer(typeof(TypedEventStoreIdentityBsonSerializer<SampleId>))]
         public class SampleId : EventStoreIdentity
         {
             public SampleId(long id)
@@ -142,7 +142,7 @@ namespace Jarvis.Framework.Tests.DomainTests
         public void SetUp()
         {
             var identityConverter = new IdentityManager(new InMemoryCounterService());
-            EventStoreIdentityBsonSerializer.IdentityConverter = identityConverter;
+            MongoFlatIdSerializerHelper.IdentityConverter = identityConverter;
 
             identityConverter.RegisterIdentitiesFromAssembly(typeof(SampleId).Assembly);
 
@@ -153,7 +153,7 @@ namespace Jarvis.Framework.Tests.DomainTests
         [TestFixtureTearDown]
         public void TestFixtureTearDown()
         {
-            EventStoreIdentityBsonSerializer.IdentityConverter = null;
+            MongoFlatIdSerializerHelper.IdentityConverter = null;
         }
 
         [Test]
