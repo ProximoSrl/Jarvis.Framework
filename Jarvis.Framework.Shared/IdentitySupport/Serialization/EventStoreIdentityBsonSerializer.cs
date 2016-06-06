@@ -12,6 +12,11 @@ namespace Jarvis.Framework.Shared.IdentitySupport.Serialization
     {
         internal static IIdentityConverter IdentityConverter { get; set; }
 
+        public static void Initialize(IIdentityConverter converter)
+        {
+            MongoFlatIdSerializerHelper.IdentityConverter = converter;
+        }
+
         public static T ToIdentity<T>(String id)
         {
             if (MongoFlatIdSerializerHelper.IdentityConverter == null)
