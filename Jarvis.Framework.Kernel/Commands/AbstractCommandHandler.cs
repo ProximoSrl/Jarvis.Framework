@@ -1,4 +1,5 @@
 ﻿using Castle.Core.Logging;
+using Jarvis.Framework.Shared;
 using Jarvis.Framework.Shared.Commands;
 using Metrics;
 
@@ -6,8 +7,8 @@ namespace Jarvis.Framework.Kernel.Commands
 {
     public abstract class AbstractCommandHandler<TCommand> : ICommandHandler<TCommand> where TCommand : ICommand
     {
-        private static readonly Timer timer = Metric.Timer("RawCommandExecution", Unit.Requests);
-        private static readonly Counter commandCounter = Metric.Counter("RawCommandDuration", Unit.Custom("ms"));
+        private static readonly Timer timer = Metric.Timer("Commands", Unit.Commands);
+        private static readonly Counter commandCounter = Metric.Counter("CommandsDuration", Unit.Custom("ms"));
 
         public IExtendedLogger Logger { get; set; }
 
@@ -18,11 +19,19 @@ namespace Jarvis.Framework.Kernel.Commands
 
         public virtual void Handle(TCommand cmd)
         {
-            using (var context = timer.NewContext(cmd.GetType().Name))
+            if (JarvisFrameworkGlobalConfiguration.MetricsEnabled)
+            {
+                using (var context = timer.NewContext(cmd.GetType().Name))
+                {
+                    Execute(cmd);
+                    commandCounter.Increment(cmd.GetType().Name, context.Elapsed.Milliseconds);
+                }
+            }
+            else
             {
                 Execute(cmd);
-                commandCounter.Increment(cmd.GetType().Name, context.Elapsed.Milliseconds);
             }
+           
         }
 
         protected abstract void Execute(TCommand cmd);

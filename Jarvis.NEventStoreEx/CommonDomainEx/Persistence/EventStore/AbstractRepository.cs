@@ -8,6 +8,7 @@ using NEventStore.Persistence;
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Diagnostics;
+using Metrics;
 
 namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 {
@@ -15,7 +16,9 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 	{
 		private const string AggregateTypeHeader = "AggregateType";
 
-		private readonly IDetectConflicts _conflictDetector;
+        private static readonly Counter repositoryLoadCounter = Metric.Counter("RepositoryGetById", Unit.Custom("ticks"));
+
+        private readonly IDetectConflicts _conflictDetector;
 
 		private readonly IStoreEvents _eventStore;
 
@@ -73,6 +76,8 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 
 		public TAggregate GetById<TAggregate>(string bucketId, IIdentity id, int versionToLoad) where TAggregate : class, IAggregateEx
 		{
+            Stopwatch sw = null;
+            if (NeventStoreExGlobalConfiguration.MetricsEnabled) sw = Stopwatch.StartNew();
             //try to acquire a lock on the identity, to minimize risk of ConcurrencyException
             //do not sleep more than a certain amount of time (avoid some missing dispose).
             Int32 sleepCount = 0;
@@ -99,8 +104,12 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 			IAggregateEx aggregate = this.GetAggregate<TAggregate>(snapshot, stream);
 
 			ApplyEventsToAggregate(versionToLoad, stream, aggregate);
-
-			return aggregate as TAggregate;
+            if (NeventStoreExGlobalConfiguration.MetricsEnabled)
+            {
+                sw.Stop();
+                repositoryLoadCounter.Increment(typeof(TAggregate).Name, sw.ElapsedTicks);
+            }
+            return aggregate as TAggregate;
 		}
 
 		public virtual void Save(IAggregateEx aggregate, Guid commitId, Action<IDictionary<string, object>> updateHeaders)

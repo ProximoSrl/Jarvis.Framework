@@ -5,6 +5,9 @@ using Jarvis.Framework.Shared.Messages;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.Builders;
+using Metrics;
+using MongoDB.Bson.Serialization;
+using System.Linq;
 
 namespace Jarvis.Framework.Shared.ReadModel
 {
@@ -114,6 +117,15 @@ namespace Jarvis.Framework.Shared.ReadModel
     {
         readonly MongoCollection<TrackedMessageModel> _commands;
 
+        private static readonly Timer queueTimer = Metric.Timer("CommandWaitInQueue", Unit.Commands);
+        private static readonly Timer totalExecutionTimer = Metric.Timer("CommandTotalExecution", Unit.Commands);
+        private static readonly Counter queueCounter = Metric.Counter("CommandsWaitInQueue", Unit.Custom("ms"));
+        private static readonly Counter totalExecutionCounter = Metric.Counter("CommandsTotalExecution", Unit.Custom("ms"));
+
+        private static readonly Meter errorMeter = Metric.Meter("CommandFailures", Unit.Commands);
+
+        //private static readonly Counter retryCount = Metric.Counter("CommandsRetry", Unit.Custom("ms"));
+
         public MongoDbMessagesTracker(MongoDatabase db)
         {
             _commands = db.GetCollection<TrackedMessageModel>("messages");
@@ -162,11 +174,40 @@ namespace Jarvis.Framework.Shared.ReadModel
         public void Completed(Guid commandId, DateTime completedAt)
         {
             var id = commandId.ToString();
-            _commands.Update(
-                Query<TrackedMessageModel>.EQ(x => x.MessageId, id),
-                Update<TrackedMessageModel>.Set(x => x.CompletedAt, completedAt),
-                UpdateFlags.Upsert
-            );
+            if (JarvisFrameworkGlobalConfiguration.MetricsEnabled)
+            {
+                var completed = _commands.FindAndModify(
+                    Query<TrackedMessageModel>.EQ(x => x.MessageId, id),
+                    SortBy<TrackedMessageModel>.Ascending(x => x.MessageId),
+                    Update<TrackedMessageModel>.Set(x => x.CompletedAt, completedAt),
+                    true
+                );
+                if (completed.Ok)
+                {
+                    var tracking = completed.ModifiedDocument;
+                    TrackedMessageModel trackMessage = BsonSerializer.Deserialize<TrackedMessageModel>(tracking);
+                    if (trackMessage.StartedAt > DateTime.MinValue)
+                    {
+                        var firstExecutionValue = trackMessage.ExecutionStartTimeList[0];
+                        var queueTime = firstExecutionValue.Subtract(trackMessage.StartedAt).TotalMilliseconds;
+                        var messageType = trackMessage.Message.GetType().Name;
+                        queueTimer.Record((Int64) queueTime, TimeUnit.Milliseconds, messageType);
+                        queueCounter.Increment(messageType, (Int64)queueTime);
+
+                        var executionTime = completedAt.Subtract(trackMessage.StartedAt);
+                        totalExecutionTimer.Record((Int64)queueTime, TimeUnit.Milliseconds, messageType);
+                        totalExecutionCounter.Increment(messageType, (Int64)queueTime);
+                    }
+                }
+            }
+            else
+            {
+                _commands.Update(
+                    Query<TrackedMessageModel>.EQ(x => x.MessageId, id),
+                    Update<TrackedMessageModel>.Set(x => x.CompletedAt, completedAt),
+                    UpdateFlags.Upsert
+                );
+            }
         }
 
         public bool Dispatched(Guid commandId, DateTime dispatchedAt)
@@ -198,6 +239,7 @@ namespace Jarvis.Framework.Shared.ReadModel
                     .Set(x => x.ErrorMessage, ex.Message),
                 UpdateFlags.Upsert
             );
+            errorMeter.Mark();
         }
 
 

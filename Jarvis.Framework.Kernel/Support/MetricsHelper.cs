@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
+using Jarvis.Framework.Shared;
 
 namespace Jarvis.Framework.Kernel.Support
 {

@@ -32,6 +32,10 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Metrics, Version=0.3.5.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Metrics.NET.0.3.5\lib\net45\Metrics.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="NEventStore">
       <HintPath>..\packages\NEventStore.5.1.1\lib\net40\NEventStore.dll</HintPath>
     </Reference>
@@ -65,6 +69,7 @@
     <Compile Include="CommonDomainEx\Persistence\ISagaFactory.cs" />
     <Compile Include="CommonDomainEx\Persistence\ISagaRepositoryEx.cs" />
     <Compile Include="CommonDomainEx\Persistence\IRepositoryEx.cs" />
+    <Compile Include="GlobalConfiguration.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
