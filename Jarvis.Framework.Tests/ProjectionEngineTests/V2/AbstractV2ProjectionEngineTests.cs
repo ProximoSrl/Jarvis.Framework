@@ -20,6 +20,7 @@ using Jarvis.Framework.Shared.Helpers;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
+
     public abstract class AbstractV2ProjectionEngineTests
     {
         protected ProjectionEngine Engine;
@@ -33,7 +34,32 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
         protected IMongoCollection<Checkpoint> _checkpoints;
         protected ConcurrentCheckpointTracker _tracker;
         protected ConcurrentCheckpointStatusChecker _statusChecker;
+        protected Func<IPersistStreams, ICommitPollingClient> pollingClientFactory;
 
+        public AbstractV2ProjectionEngineTests(String pollingClientVersion = "1")
+        {
+            switch (pollingClientVersion)
+            {
+                case "1":
+                    pollingClientFactory = ps => new CommitPollingClient(
+                    ps,
+                    new CommitEnhancer(_identityConverter),
+                    OnGetPollingClientId(),
+                    NullLogger.Instance);
+                    break;
+
+                case "2":
+                    pollingClientFactory = ps => new CommitPollingClient2(
+                        ps,
+                        new CommitEnhancer(_identityConverter),
+                        OnGetPollingClientId(),
+                        NullLogger.Instance);
+                    break;
+
+                default:
+                    throw new NotSupportedException("Version not supported");
+            }
+        }
         [TestFixtureSetUp]
         public virtual void TestFixtureSetUp()
         {
@@ -103,7 +129,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
                 EventStoreConnectionString = _eventStoreConnectionString,
                 TenantId = tenantId,
                 BucketInfo = new List<BucketInfo>() { new BucketInfo() { Slots = new[] { "*" }, BufferSize = 10 } },
-                DelayedStartInMilliseconds = 1000,
+                DelayedStartInMilliseconds = 0,
                 ForcedGcSecondsInterval = 0,
                 EngineVersion = "v2",
             };
@@ -112,12 +138,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 
             _rebuildContext = new RebuildContext(RebuildSettings.NitroMode);
             StorageFactory = new MongoStorageFactory(Database, _rebuildContext);
-            Func<IPersistStreams, CommitPollingClient> pollingClientFactory = 
-                ps => new CommitPollingClient(
-                    ps, 
-                    new CommitEnhancer(_identityConverter),
-                    OnGetPollingClientId(),
-                    NullLogger.Instance);
+          
             Engine = new ProjectionEngine(
                 pollingClientFactory,
                 _tracker,

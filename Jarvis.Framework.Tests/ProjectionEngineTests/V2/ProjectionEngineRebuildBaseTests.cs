@@ -16,9 +16,13 @@ using Jarvis.Framework.Shared.Helpers;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
-
     public class ProjectionEngineRebuildBaseTests : AbstractV2ProjectionEngineTests
     {
+        public ProjectionEngineRebuildBaseTests(String pollingClientVersion) : base(pollingClientVersion)
+        {
+
+        }
+
         protected MongoReader<SampleReadModel, string> _reader1;
         protected MongoReader<SampleReadModel2, string> _reader2;
         protected MongoReader<SampleReadModel3, string> _reader3;
@@ -43,7 +47,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 
         protected override IEnumerable<IProjection> BuildProjections()
         {
-            var writer = new CollectionWrapper<SampleReadModel, string>(StorageFactory,new NotifyToNobody());
+            var writer = new CollectionWrapper<SampleReadModel, string>(StorageFactory, new NotifyToNobody());
             yield return new Projection(writer);
         }
 
@@ -97,14 +101,20 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
         }
     }
 
+    [TestFixture("1")]
+    [TestFixture("2")]
     public class BasicRebuild : ProjectionEngineRebuildBaseTests
     {
 
+        public BasicRebuild(String commitPollingVersion) : base(commitPollingVersion)
+        {
+
+        }
 
         [Test]
         public async void start_then_rebuild()
         {
-            
+
             var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregateId(1));
             aggregate.Create();
             Repository.Save(aggregate, Guid.NewGuid(), h => { });
@@ -115,7 +125,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             await Engine.UpdateAndWait();
             Assert.AreEqual(2, _reader1.AllSortedById.Count());
             Assert.That(_reader1.AllSortedById.Count(r => r.IsInRebuild), Is.EqualTo(0));
-        
+
             //now rebuild.
             ReInitAndRebuild(2);
 
@@ -126,12 +136,17 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             Assert.That(checkpoint.Current, Is.EqualTo("2"), "Checkpoint Current is written after rebuild.");
         }
 
-    
+
     }
 
-
+    [TestFixture("1")]
+    [TestFixture("2")]
     public class BasicRebuildWithNewProjectionSameSlot : ProjectionEngineRebuildBaseTests
     {
+        public BasicRebuildWithNewProjectionSameSlot(String commitPollingVersion) : base(commitPollingVersion)
+        {
+
+        }
 
         private Boolean returnTwoProjection = false;
 
@@ -162,7 +177,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             Assert.AreEqual(2, _reader1.AllSortedById.Count());
             Assert.That(_reader1.AllSortedById.Count(r => r.IsInRebuild), Is.EqualTo(0));
             Assert.AreEqual(0, _reader2.AllSortedById.Count(), "Second projection should not be enabled!!");
-           
+
             //now rebuild.
             returnTwoProjection = true;
             ReInitAndRebuild(2);
@@ -173,21 +188,28 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             var checkpoint = _checkpoints.FindOneById("Projection");
             Assert.That(checkpoint.Value, Is.EqualTo("2"), "Checkpoint is written after rebuild.");
             Assert.That(checkpoint.Current, Is.EqualTo("2"), "Checkpoint is written after rebuild.");
-        
+
             Assert.AreEqual(2, _reader2.AllSortedById.Count());
             Assert.That(_reader2.AllSortedById.Count(r => r.IsInRebuild), Is.EqualTo(2));
             checkpoint = _checkpoints.FindOneById("Projection2");
             Assert.That(checkpoint.Value, Is.EqualTo("2"), "Checkpoint is written after rebuild.");
             Assert.That(checkpoint.Current, Is.EqualTo("2"), "Checkpoint is written after rebuild.");
-        
+
         }
 
 
     }
 
+
+    [TestFixture("1")]
+    [TestFixture("2")]
     public class BasicRebuildWithNewProjectionDifferentSlot : ProjectionEngineRebuildBaseTests
     {
 
+        public BasicRebuildWithNewProjectionDifferentSlot(String commitPollingVersion) : base(commitPollingVersion)
+        {
+
+        }
         private Boolean returnTwoProjection = false;
 
         protected override IEnumerable<IProjection> BuildProjections()

@@ -16,11 +16,6 @@ using System.Threading.Tasks.Dataflow;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 {
-    public interface IPollingClientConsumer
-    {
-        void Consume(ICommit commit);
-    }
-
 
     public enum CommitPollingClientStatus
     {
@@ -29,7 +24,28 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         Faulted
     }
 
-    public class CommitPollingClient
+    public interface ICommitPollingClient
+    {
+        void StartAutomaticPolling(
+           String checkpointTokenFrom,
+           Int32 intervalInMilliseconds,
+           Int32 bufferSize,
+           String pollerName);
+
+        void Poll();
+
+        void StartManualPolling(
+           String checkpointTokenFrom,
+           Int32 intervalInMilliseconds,
+           Int32 bufferSize,
+           String pollerName);
+
+        void AddConsumer(Action<ICommit> consumerAction);
+
+        void StopPolling(Boolean setToFaulted);
+    }
+
+    public class CommitPollingClient : ICommitPollingClient
     {
         private const string command_poll = "poll";
         private const string command_stop = "stop";
@@ -62,11 +78,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             _logger = logger;
             _id = id;
             Status = CommitPollingClientStatus.Stopped;
-        }
-
-        public void AddConsumer(IPollingClientConsumer consumer)
-        {
-            AddConsumer(commit => consumer.Consume(commit));
         }
 
         public void AddConsumer(Action<ICommit> consumerAction)
@@ -118,7 +129,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             Int32 bufferSize = 4000,
             String pollerName = "CommitPollingClient")
         {
-            StartManualPolling(checkpointTokenFrom, bufferSize, pollerName);
+            StartManualPolling(checkpointTokenFrom, intervalInMilliseconds, bufferSize, pollerName);
             _pollerTimer = new System.Timers.Timer(intervalInMilliseconds);
             _pollerTimer.Elapsed += TimerCallback;
             _pollerTimer.Start();
@@ -156,6 +167,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         public void StartManualPolling(
             String checkpointTokenFrom,
+            Int32 intervalInMilliseconds,
             Int32 bufferSize = 4000,
             String pollerName = "CommitPollingClient")
         {

@@ -70,7 +70,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
 
         public void On(SampleAggregateCreated e)
         {
-            Thread.Sleep(0);
+            Thread.Sleep(10);
             _collection.Insert(e, new SampleReadModel2()
             {
                 Id = e.AggregateId,

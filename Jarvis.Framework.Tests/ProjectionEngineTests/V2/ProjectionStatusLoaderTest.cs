@@ -16,10 +16,15 @@ using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
-    [TestFixture]
-    public class ProjectionStatusLoaderTest : AbstractV2ProjectionEngineTests
-    {
 
+    [TestFixture("1")]
+    [TestFixture("2")]
+    public class ProjectionStatusLoaderTest : ProjectionEngineBasicTestBase
+    {
+        public ProjectionStatusLoaderTest(String pollingClientVersion) : base(pollingClientVersion)
+        {
+
+        }
         [TestFixtureSetUp]
         public override void TestFixtureSetUp()
         {

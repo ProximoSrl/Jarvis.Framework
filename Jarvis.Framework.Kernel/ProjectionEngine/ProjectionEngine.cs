@@ -27,10 +27,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 {
     public class ProjectionEngine : ITriggerProjectionsUpdate
     {
-        readonly Func<IPersistStreams, CommitPollingClient> _pollingClientFactory;
+        readonly Func<IPersistStreams, ICommitPollingClient> _pollingClientFactory;
 
-        private List<CommitPollingClient> _clients;
-        private Dictionary<BucketInfo, CommitPollingClient> _bucketToClient;
+        private List<ICommitPollingClient> _clients;
+        private Dictionary<BucketInfo, ICommitPollingClient> _bucketToClient;
 
         readonly IConcurrentCheckpointTracker _checkpointTracker;
 
@@ -63,7 +63,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         private readonly IRebuildContext _rebuildContext;
 
         public ProjectionEngine(
-            Func<IPersistStreams, CommitPollingClient> pollingClientFactory,
+            Func<IPersistStreams, ICommitPollingClient> pollingClientFactory,
             IConcurrentCheckpointTracker checkpointTracker,
             IProjection[] projections,
             IHousekeeper housekeeper,
@@ -91,8 +91,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 .ToDictionary(x => x.Key, x => x.OrderByDescending(p => p.Priority).ToArray());
 
             _metrics = new ProjectionMetrics(_allProjections);
-            _clients = new List<CommitPollingClient>();
-            _bucketToClient = new Dictionary<BucketInfo, CommitPollingClient>();
+            _clients = new List<ICommitPollingClient>();
+            _bucketToClient = new Dictionary<BucketInfo, ICommitPollingClient>();
         }
 
         private void DumpProjections()
@@ -155,7 +155,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             Init();
             foreach (var client in _clients)
             {
-                client.StartManualPolling(GetStartGlobalCheckpoint());
+                client.StartManualPolling(GetStartGlobalCheckpoint(), _config.PollingMsInterval, 4000, "CommitPollingClient");
             }
             if (immediatePoll) Poll();
         }
@@ -331,7 +331,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         {
             foreach (var client in _clients)
             {
-                client.StopPolling();
+                client.StopPolling(false);
             }
             _clients.Clear();
             _bucketToClient.Clear();

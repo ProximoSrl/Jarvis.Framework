@@ -62,7 +62,7 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="NEventStore, Version=6.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NEventStore.6.0.0-unstable0066\lib\net40\NEventStore.dll</HintPath>
+      <HintPath>..\packages\NEventStore.6.0.0-newcommitpolling0015\lib\net40\NEventStore.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="NEventStore.Domain, Version=6.0.0.0, Culture=neutral, processorArchitecture=MSIL">
@@ -70,7 +70,7 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="NEventStore.Persistence.MongoDB, Version=6.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NEventStore.Persistence.MongoDB.6.0.0-unstable0040\lib\net40\NEventStore.Persistence.MongoDB.dll</HintPath>
+      <HintPath>..\packages\NEventStore.Persistence.MongoDB.6.0.0-idgenerator0044\lib\net40\NEventStore.Persistence.MongoDB.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
@@ -146,14 +146,13 @@
     <Compile Include="ProjectionEngine\Client\Checkpoint.cs" />
     <Compile Include="ProjectionEngine\Client\CheckPointReplayStatus.cs" />
     <Compile Include="ProjectionEngine\Client\CommitEnhancer.cs" />
+    <Compile Include="ProjectionEngine\Client\CommitPollingClient2.cs" />
     <Compile Include="ProjectionEngine\Client\CommitPollingClient.cs" />
     <Compile Include="ProjectionEngine\Client\ConcurrentCheckpointTracker.cs" />
     <Compile Include="ProjectionEngine\Client\IConcurrentCheckpointTracker.cs" />
     <Compile Include="ProjectionEngine\Client\INotifyCommitHandled.cs" />
-    <Compile Include="ProjectionEngine\Client\JarvisPollingClientTpl.cs" />
     <Compile Include="ProjectionEngine\Client\JarvisPollingClient.cs" />
     <Compile Include="ProjectionEngine\Client\IPollingClient.cs" />
-    <Compile Include="ProjectionEngine\Client\PollingClientWrapperTpl.cs" />
     <Compile Include="ProjectionEngine\Client\PollingClientWrapper.cs" />
     <Compile Include="ProjectionEngine\Client\ProjectionMetrics.cs" />
     <Compile Include="ProjectionEngine\Client\ConcurrentCheckpointStatusChecker.cs" />
