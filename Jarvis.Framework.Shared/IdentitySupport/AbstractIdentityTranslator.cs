@@ -146,7 +146,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
         public void DeleteAliases(TKey key)
         {
-            var id = (EventStoreIdentity)key;
+            var id = key;
             _collection.DeleteMany(Builders<MappedIdentity>.Filter.Eq(f => f.AggregateId, id));
         }
     }

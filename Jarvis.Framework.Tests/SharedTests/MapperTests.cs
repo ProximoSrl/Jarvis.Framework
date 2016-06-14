@@ -37,14 +37,27 @@ namespace Jarvis.Framework.Tests.SharedTests
             {
             }
 
-            public MapperTestsId Map(string containerName)
+            public MapperTestsId Map(string externalKey)
             {
-                return base.Translate(containerName, true);
+                return base.Translate(externalKey, true);
+            }
+
+            public void Delete(string externalKey)
+            {
+                var id = Translate(externalKey, false);
+                base.DeleteAliases(id);
+            }
+
+
+            public new MapperTestsId TryTranslate(string externalKey)
+            {
+                return base.TryTranslate(externalKey);
             }
         }
 
         private MapperTestMapper sut;
-        private IMongoCollection<BsonDocument> _collection;
+        private IMongoCollection<BsonDocument> mapperCollection;
+        private IMongoCollection<BsonDocument> counterCollection;
 
         [TestFixtureSetUp]
         public void TestFixtureSetUp()
@@ -52,20 +65,47 @@ namespace Jarvis.Framework.Tests.SharedTests
             var db = TestHelper.CreateNew(ConfigurationManager.ConnectionStrings["system"].ConnectionString);
             IdentityManager manager = new IdentityManager(new CounterService(db));
             manager.RegisterIdentitiesFromAssembly(Assembly.GetExecutingAssembly());
-            _collection = db.GetCollection<BsonDocument>("map_mappertestsid");
+            mapperCollection = db.GetCollection<BsonDocument>("map_mappertestsid");
+            counterCollection = db.GetCollection<BsonDocument>("sysCounters");
             sut = new MapperTestMapper(db, manager);
         }
 
         [SetUp]
         public void SetUp()
         {
-            _collection.Database.DropCollection(_collection.CollectionNamespace.CollectionName);
+            mapperCollection.Database.DropCollection(mapperCollection.CollectionNamespace.CollectionName);
+            counterCollection.Database.DropCollection(counterCollection.CollectionNamespace.CollectionName);
         }
 
         [Test]
         public void verify_basic_mapping()
         {
             var mapId = sut.Map("TEST");
+            Assert.That(mapId.AsString(), Is.EqualTo("MapperTests_1"));
+        }
+
+        [Test]
+        public void verify_basic_delete()
+        {
+            var mapId = sut.Map("TEST");
+            Assert.That(mapId.AsString(), Is.EqualTo("MapperTests_1"));
+            sut.Delete("TEST");
+            mapId = sut.TryTranslate("TEST");
+            Assert.That(mapId, Is.Null);
+        }
+
+        [Test]
+        public void verify_tryTranslate_with_unexisting_mapping()
+        {
+            var mapId = sut.TryTranslate("TEST");
+            Assert.That(mapId, Is.Null);
+        }
+
+        [Test]
+        public void verify_tryTranslate_with_existing_mapping()
+        {
+            var mapId = sut.Map("TEST");
+            mapId = sut.TryTranslate("TEST");
             Assert.That(mapId.AsString(), Is.EqualTo("MapperTests_1"));
         }
 
@@ -78,7 +118,7 @@ namespace Jarvis.Framework.Tests.SharedTests
                 sut.Map("TEST" + i);
             });
 
-            var allRecords = _collection.Find(Builders<BsonDocument>.Filter.Empty).ToList();
+            var allRecords = mapperCollection.Find(Builders<BsonDocument>.Filter.Empty).ToList();
             Assert.That(allRecords, Has.Count.EqualTo(100));
         }
 
@@ -91,7 +131,7 @@ namespace Jarvis.Framework.Tests.SharedTests
                 sut.Map("TEST" + i);
             });
 
-            var allRecords = _collection.Find(Builders<BsonDocument>.Filter.Empty).ToList();
+            var allRecords = mapperCollection.Find(Builders<BsonDocument>.Filter.Empty).ToList();
             Assert.That(allRecords, Has.Count.EqualTo(3));
         }
     }
