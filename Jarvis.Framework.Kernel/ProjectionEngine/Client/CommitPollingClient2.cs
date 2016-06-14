@@ -42,19 +42,19 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         IPersistStreams _persistStream;
 
         public CommitPollingClient2(
-            IPersistStreams persistStream,
+            IPersistStreams persistStreams,
             ICommitEnhancer enhancer,
             String id,
             ILogger logger)
         {
-            if (persistStream == null)
+            if (persistStreams == null)
             {
                 throw new ArgumentNullException("persistStream");
             }
             _enhancer = enhancer;
             _consumers = new List<ITargetBlock<ICommit>>();
             _commandList = new BlockingCollection<string>();
-            _persistStream = persistStream;
+            _persistStream = persistStreams;
             _logger = logger;
             _id = id;
             Status = CommitPollingClientStatus.Stopped;
