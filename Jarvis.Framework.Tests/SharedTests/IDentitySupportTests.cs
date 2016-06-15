@@ -29,11 +29,11 @@ namespace Jarvis.Framework.Tests.SharedTests
         [TestFixtureSetUp]
         public void TestFixtureSetup()
         {
-            BsonSerializer.RegisterSerializer(typeof(TestFlatId), new TypedEventStoreIdentityBsonSerializer<TestFlatId>());
-            EventStoreIdentityCustomBsonTypeMapper.Register<TestFlatId>();
 
-            BsonSerializer.RegisterSerializer(typeof(TestId), new TypedEventStoreIdentityBsonSerializer<TestId>());
-            EventStoreIdentityCustomBsonTypeMapper.Register<TestId>();
+            TestHelper.RegisterSerializerForFlatId<TestId>();
+
+            TestHelper.RegisterSerializerForFlatId<TestFlatId>();
+
         }
 
         [SetUp]
@@ -46,8 +46,6 @@ namespace Jarvis.Framework.Tests.SharedTests
             _mappingFlatCollection = db.GetCollection<BsonDocument>("map_testflatid");
             sut = new TestMapper(db, manager);
             sutFlat = new TestFlatMapper(db, manager);
-
-            MongoFlatIdSerializerHelper.Initialize(manager);
         }
 
         [Test]

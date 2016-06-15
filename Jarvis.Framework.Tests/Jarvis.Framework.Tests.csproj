@@ -155,6 +155,7 @@
     <Compile Include="GlobalTestInit.cs" />
     <Compile Include="MultitenantSupportTests\MultiTenantSubDependencyResolverTests.cs" />
     <Compile Include="MultitenantSupportTests\TenantManagerTests.cs" />
+    <Compile Include="ProjectionEngineTests\CollectionWrapperTests.cs" />
     <Compile Include="ProjectionsTests\CachedMongoStorageTests.cs" />
     <Compile Include="ProjectionEngineTests\ConcurrentCheckpointTrackerTests.cs" />
     <Compile Include="ProjectionEngineTests\Concurrent\AbstractConcurrentProjectionEngineTests.cs">

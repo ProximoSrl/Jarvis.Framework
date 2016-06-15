@@ -3,6 +3,7 @@ using System.Threading;
 using Jarvis.Framework.Kernel.Events;
 using Jarvis.Framework.Kernel.ProjectionEngine;
 using Jarvis.Framework.Tests.EngineTests;
+using Jarvis.Framework.Tests.SharedTests;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests
 {
@@ -121,6 +122,26 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
                 IsInRebuild = base.IsRebuilding,
                 Timestamp = DateTime.Now.Ticks
             });
+        }
+    }
+
+    public class ProjectionTypedId : AbstractProjection
+    {
+        readonly ICollectionWrapper<SampleReadModelTestId, TestId> _collection;
+
+        public ProjectionTypedId(ICollectionWrapper<SampleReadModelTestId, TestId> collection)
+        {
+            _collection = collection;
+            _collection.Attach(this, false);
+        }
+
+        public override void Drop()
+        {
+            _collection.Drop();
+        }
+
+        public override void SetUp()
+        {
         }
     }
 }
