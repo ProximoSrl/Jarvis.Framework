@@ -16,6 +16,7 @@ using System.Threading.Tasks;
 namespace Jarvis.Framework.Tests.SharedTests
 {
     [TestFixture]
+    [Category("mongo_serialization")]
     public class MapperTests
     {
         public class MapperTestsId : EventStoreIdentity

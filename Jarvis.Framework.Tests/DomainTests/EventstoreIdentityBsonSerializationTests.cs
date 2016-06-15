@@ -16,6 +16,7 @@ using MongoDB.Bson.Serialization.Options;
 namespace Jarvis.Framework.Tests.DomainTests
 {
     [TestFixture]
+    [Category("mongo_serialization")]
     public class DomainEventIdentityBsonSerializationTests
     {
         [BsonSerializer(typeof(TypedEventStoreIdentityBsonSerializer<SampleId>))]
@@ -90,6 +91,7 @@ namespace Jarvis.Framework.Tests.DomainTests
     }
 
     [TestFixture]
+    [Category("mongo_serialization")]
     public class EventstoreIdentityBsonSerializationTests 
     {
         [BsonSerializer(typeof(TypedEventStoreIdentityBsonSerializer<SampleId>))]

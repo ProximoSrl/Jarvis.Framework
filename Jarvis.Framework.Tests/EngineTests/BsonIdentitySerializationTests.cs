@@ -12,6 +12,7 @@ using Jarvis.NEventStoreEx.CommonDomainEx;
 namespace Jarvis.Framework.Tests.EngineTests
 {
     [TestFixture]
+    [Category("mongo_serialization")]
     public class BsonIdentitySerializationTests
     {
         private SampleAggregateId _sampleAggregateId = new SampleAggregateId(1);

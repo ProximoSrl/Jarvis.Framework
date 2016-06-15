@@ -18,6 +18,7 @@ using Jarvis.Framework.Shared.Helpers;
 namespace Jarvis.Framework.Tests.SharedTests
 {
     [TestFixture]
+    [Category("mongo_serialization")]
     public class IDentitySupportTests
     {
         private TestMapper sut;
@@ -45,6 +46,8 @@ namespace Jarvis.Framework.Tests.SharedTests
             _mappingFlatCollection = db.GetCollection<BsonDocument>("map_testflatid");
             sut = new TestMapper(db, manager);
             sutFlat = new TestFlatMapper(db, manager);
+
+            MongoFlatIdSerializerHelper.Initialize(manager);
         }
 
         [Test]

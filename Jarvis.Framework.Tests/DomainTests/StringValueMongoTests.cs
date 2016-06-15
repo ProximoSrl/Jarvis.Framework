@@ -7,6 +7,7 @@ using NUnit.Framework;
 namespace Jarvis.Framework.Tests.DomainTests
 {
     [TestFixture]
+    [Category("mongo_serialization")]
     public class StringValueMongoTests
     {
         [Test]
