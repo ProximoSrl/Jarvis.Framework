@@ -28,10 +28,10 @@ namespace Jarvis.Framework.Tests.SharedTests
         [TestFixtureSetUp]
         public void TestFixtureSetup()
         {
-            BsonSerializer.RegisterSerializer(typeof(TestFlatId), new TypedEventStoreIdentityBsonSerializer<EventStoreIdentity>());
+            BsonSerializer.RegisterSerializer(typeof(TestFlatId), new TypedEventStoreIdentityBsonSerializer<TestFlatId>());
             EventStoreIdentityCustomBsonTypeMapper.Register<TestFlatId>();
 
-            BsonSerializer.RegisterSerializer(typeof(TestId), new TypedEventStoreIdentityBsonSerializer<EventStoreIdentity>());
+            BsonSerializer.RegisterSerializer(typeof(TestId), new TypedEventStoreIdentityBsonSerializer<TestId>());
             EventStoreIdentityCustomBsonTypeMapper.Register<TestId>();
         }
 
@@ -73,6 +73,18 @@ namespace Jarvis.Framework.Tests.SharedTests
         }
 
         [Test]
+        public void Verify_replace_alias_of_flat_mapping()
+        {
+            var id = sutFlat.Map("TEST");
+            var mapCount = _mappingFlatCollection.FindAll();
+            Assert.That(mapCount.Count(), Is.EqualTo(1));
+
+            sutFlat.ReplaceAlias(id, "TEST2");
+            mapCount = _mappingFlatCollection.FindAll();
+            Assert.That(mapCount.Count(), Is.EqualTo(1));
+        }
+
+        [Test]
         public void Verify_exception_of_multiple_map()
         {
             sut.Addalias(new TestId(2), "Alias2");
@@ -95,11 +107,6 @@ namespace Jarvis.Framework.Tests.SharedTests
             base(db, identityGenerator)
         {
 
-        }
-
-        public void ReplaceAlias(TestId id, String value)
-        {
-            base.ReplaceAlias(id, value);
         }
 
         public void Addalias(TestId id, String value)

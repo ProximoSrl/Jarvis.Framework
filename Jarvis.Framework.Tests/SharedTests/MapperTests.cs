@@ -48,6 +48,10 @@ namespace Jarvis.Framework.Tests.SharedTests
                 base.DeleteAliases(id);
             }
 
+            public void Replace(MapperTestsId id, String value)
+            {
+                base.ReplaceAlias(id, value);
+            }
 
             public new MapperTestsId TryTranslate(string externalKey)
             {
@@ -95,6 +99,16 @@ namespace Jarvis.Framework.Tests.SharedTests
         }
 
         [Test]
+        public void verify_delete_alias_from_base_class()
+        {
+            var mapId = sut.Map("TEST");
+            Assert.That(mapId.AsString(), Is.EqualTo("MapperTests_1"));
+            sut.DeleteAliases(mapId);
+            mapId = sut.TryTranslate("TEST");
+            Assert.That(mapId, Is.Null);
+        }
+
+        [Test]
         public void verify_tryTranslate_with_unexisting_mapping()
         {
             var mapId = sut.TryTranslate("TEST");
@@ -106,6 +120,16 @@ namespace Jarvis.Framework.Tests.SharedTests
         {
             var mapId = sut.Map("TEST");
             mapId = sut.TryTranslate("TEST");
+            Assert.That(mapId.AsString(), Is.EqualTo("MapperTests_1"));
+        }
+
+        [Test]
+        public void verify_change_mapping()
+        {
+            var mapId = sut.Map("TEST");
+            Assert.That(mapId.AsString(), Is.EqualTo("MapperTests_1"));
+            sut.Replace(mapId, "TEST2");
+            var reMapped = sut.Map("TEST2");
             Assert.That(mapId.AsString(), Is.EqualTo("MapperTests_1"));
         }
 
