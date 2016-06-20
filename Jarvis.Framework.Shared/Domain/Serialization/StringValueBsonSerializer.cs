@@ -11,9 +11,9 @@ namespace Jarvis.Framework.Shared.Domain.Serialization
 {
     public class StringValueBsonSerializer : IBsonSerializer
     {
-        private static ConcurrentDictionary<Type, FastReflectionHelper.ObjectActivator> _activators 
+        private static ConcurrentDictionary<Type, FastReflectionHelper.ObjectActivator> _activators
             = new ConcurrentDictionary<Type, FastReflectionHelper.ObjectActivator>();
-        
+
         Type _t;
         public StringValueBsonSerializer(Type t)
         {
@@ -59,15 +59,7 @@ namespace Jarvis.Framework.Shared.Domain.Serialization
                 context.Writer.WriteString(sValue);
             }
         }
-        }
-
-    public class StringValueBsonSerializer<T> : StringValueBsonSerializer
-    {
-        public StringValueBsonSerializer() : base(typeof(T))
-        {
-
-        }
-        }
+    }
 
     public class TypedStringValueBsonSerializer<T> : SerializerBase<T> where T : StringValue
     {

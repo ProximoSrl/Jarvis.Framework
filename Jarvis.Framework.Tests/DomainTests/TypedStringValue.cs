@@ -4,7 +4,7 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace Jarvis.Framework.Tests.DomainTests
 {
-    [BsonSerializer(typeof(StringValueBsonSerializer<TypedStringValueLowerCase>))]
+    [BsonSerializer(typeof(TypedStringValueBsonSerializer<TypedStringValueLowerCase>))]
     public class TypedStringValueLowerCase : LowercaseStringValue
     {
         public TypedStringValueLowerCase(string value) : base(value)
@@ -12,7 +12,7 @@ namespace Jarvis.Framework.Tests.DomainTests
         }
     }
 
-    [BsonSerializer(typeof(StringValueBsonSerializer<TypedStringValue>))]
+    [BsonSerializer(typeof(TypedStringValueBsonSerializer<TypedStringValue>))]
     public class TypedStringValue : StringValue
     {
         public TypedStringValue(string value) : base(value)
