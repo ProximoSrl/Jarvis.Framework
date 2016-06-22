@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Jarvis.Framework.Shared.IdentitySupport;
 using MongoDB.Driver;
 using NUnit.Framework;
+using Jarvis.Framework.Shared.Helpers;
 
 namespace Jarvis.Framework.Tests.ServicesTests
 {
@@ -11,14 +12,14 @@ namespace Jarvis.Framework.Tests.ServicesTests
     public class CounterServiceTests
     {
         private CounterService _service;
-        private MongoDatabase _db;
+        private IMongoDatabase _db;
 
         [SetUp]
         public void SetUp()
         {
             var url = new MongoUrl(ConfigurationManager.ConnectionStrings["system"].ConnectionString);
             var client = new MongoClient(url);
-            _db = client.GetServer().GetDatabase(url.DatabaseName);
+            _db = client.GetDatabase(url.DatabaseName);
             _db.Drop();
             _service = new CounterService(_db);
         }

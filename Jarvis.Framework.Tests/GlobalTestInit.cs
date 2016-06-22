@@ -1,4 +1,5 @@
-﻿using NUnit.Framework;
+﻿using Jarvis.Framework.Shared.Storage;
+using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
@@ -13,6 +14,10 @@ public class GlobalSetup
     [SetUp]
     public void Global_initialization_of_all_tests()
     {
+        MongoRegistration.RegisterMongoConversions(
+            "NEventStore.Persistence.MongoDB"
+        );
+
         var overrideTestDb = Environment.GetEnvironmentVariable("TEST_MONGODB");
         if (String.IsNullOrEmpty(overrideTestDb)) return;
 

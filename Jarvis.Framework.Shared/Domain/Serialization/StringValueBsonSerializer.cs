@@ -5,53 +5,90 @@ using MongoDB.Bson.Serialization;
 using Fasterflect;
 using Jarvis.Framework.Shared.Helpers;
 using System.Collections.Concurrent;
+using MongoDB.Bson.Serialization.Serializers;
 
 namespace Jarvis.Framework.Shared.Domain.Serialization
 {
     public class StringValueBsonSerializer : IBsonSerializer
     {
-        private static ConcurrentDictionary<Type, FastReflectionHelper.ObjectActivator> _activators 
+        private static ConcurrentDictionary<Type, FastReflectionHelper.ObjectActivator> _activators
             = new ConcurrentDictionary<Type, FastReflectionHelper.ObjectActivator>();
 
-        public object Deserialize(BsonReader bsonReader, Type nominalType, IBsonSerializationOptions options)
+        Type _t;
+        public StringValueBsonSerializer(Type t)
         {
-            throw new NotImplementedException();
+            _t = t;
+        }
+        public Type ValueType
+        {
+            get
+            {
+                return _t;
+            }
         }
 
-        public object Deserialize(BsonReader bsonReader, Type nominalType, Type actualType, IBsonSerializationOptions options)
+        public object Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args)
         {
-            if (bsonReader.CurrentBsonType == BsonType.Null)
+            if (context.Reader.CurrentBsonType == BsonType.Null)
             {
-                bsonReader.ReadNull();
+                context.Reader.ReadNull();
                 return null;
             }
 
-            var id = bsonReader.ReadString();
+            var id = context.Reader.ReadString();
             FastReflectionHelper.ObjectActivator activator;
-            if (!_activators.TryGetValue(nominalType, out activator))
+            if (!_activators.TryGetValue(args.NominalType, out activator))
             {
-                var ctor = nominalType.Constructor(new Type[] { typeof(string) });
+                var ctor = args.NominalType.Constructor(new Type[] { typeof(string) });
                 activator = FastReflectionHelper.GetActivator(ctor);
-                _activators[nominalType] = activator;
+                _activators[args.NominalType] = activator;
             }
             return activator(new object[] { id });
         }
 
-        public IBsonSerializationOptions GetDefaultSerializationOptions()
-        {
-            throw new NotImplementedException();
-        }
 
-        public void Serialize(BsonWriter bsonWriter, Type nominalType, object value, IBsonSerializationOptions options)
+        public void Serialize(BsonSerializationContext context, BsonSerializationArgs args, object value)
         {
-            if (value == null)
+            StringValue sValue = value as StringValue;
+            if (sValue == null || sValue.IsValid() == false)
             {
-                bsonWriter.WriteNull();
+                context.Writer.WriteNull();
             }
             else
             {
-                bsonWriter.WriteString((StringValue)value);
+                context.Writer.WriteString(sValue);
             }
         }
     }
+
+    public class TypedStringValueBsonSerializer<T> : SerializerBase<T> where T : StringValue
+    {
+        public override void Serialize(BsonSerializationContext context, BsonSerializationArgs args, T value)
+        {
+            if (value == null || value.IsValid() == false)
+            {
+                context.Writer.WriteNull();
+            }
+            else
+            {
+                String stringValue = (StringValue)value;
+                context.Writer.WriteString(stringValue);
+            }
+        }
+
+        public override T Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args)
+        {
+            if (context.Reader.CurrentBsonType == BsonType.Null)
+            {
+                context.Reader.ReadNull();
+                return null;
+            }
+
+            var id = context.Reader.ReadString();
+            return (T)Activator.CreateInstance(args.NominalType, new object[] { id });
+        }
+
+
+    }
+
 }

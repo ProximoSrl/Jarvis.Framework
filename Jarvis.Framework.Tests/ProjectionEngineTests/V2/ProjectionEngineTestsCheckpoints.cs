@@ -10,20 +10,30 @@ using Jarvis.Framework.Shared.Messages;
 using Jarvis.Framework.Shared.ReadModel;
 using Jarvis.Framework.TestHelpers;
 using Jarvis.Framework.Tests.EngineTests;
-using MongoDB.Driver.Builders;
+
 using NUnit.Framework;
+using Jarvis.Framework.Shared.Helpers;
+using MongoDB.Driver;
+
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
-    [TestFixture]
-    public class ProjectionEngineTestsCheckpoints : AbstractV2ProjectionEngineTests
+
+    [TestFixture("1")]
+    [TestFixture("2")]
+    public class ProjectionEngineTestsCheckpoints : ProjectionEngineBasicTestBase
     {
+        public ProjectionEngineTestsCheckpoints(String pollingClientVersion) : base(pollingClientVersion)
+        {
+
+        }
+
         [TestFixtureSetUp]
         public override void TestFixtureSetUp()
         {
             base.TestFixtureSetUp();
         }
-          
+
         protected override void RegisterIdentities(IdentityManager identityConverter)
         {
             identityConverter.RegisterIdentitiesFromAssembly(typeof(SampleAggregateId).Assembly);
@@ -36,7 +46,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 
         protected override IEnumerable<IProjection> BuildProjections()
         {
-            var writer = new CollectionWrapper<SampleReadModel, string>(StorageFactory,new NotifyToNobody());
+            var writer = new CollectionWrapper<SampleReadModel, string>(StorageFactory, new NotifyToNobody());
             yield return new Projection(writer);
             var writer3 = new CollectionWrapper<SampleReadModel3, string>(StorageFactory, new NotifyToNobody());
             if (returnProjection3) yield return new Projection3(writer3);
@@ -71,7 +81,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 
             //need to wait for at least one checkpoint written to database.
             DateTime startTime = DateTime.Now;
-            while (!_checkpoints.Find(Query.Null).Any() &&
+            while (!_checkpoints.FindAll().Any() &&
                 DateTime.Now.Subtract(startTime).TotalMilliseconds < 2000) //2 seconds timeout is fine
             {
                 Thread.Sleep(100);
@@ -83,16 +93,16 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
                 var allProjected = _checkpoints.FindAll().ToList();
                 foreach (var checkpoint in allProjected)
                 {
-                    Console.WriteLine("Projection {0} at checkpoint {1}", 
+                    Console.WriteLine("Projection {0} at checkpoint {1}",
                         checkpoint.Signature, checkpoint.Current);
                 }
             }
             Assert.That(projected, Is.False);
-             
+
             await Engine.UpdateAndWait();
             Assert.That(_statusChecker.IsCheckpointProjectedByAllProjection(lastCommit.CheckpointToken), Is.True);
         }
 
-        
+
     }
 }

@@ -19,9 +19,11 @@ using Jarvis.Framework.Kernel.Commands;
 using Jarvis.Framework.Shared.Commands;
 using Jarvis.Framework.Shared.Messages;
 using System.Collections.Generic;
+using Jarvis.Framework.Shared.Helpers;
 using Jarvis.NEventStoreEx.CommonDomainEx.Core;
-using CommonDomain.Persistence;
+
 using MongoDB.Driver.Linq;
+using NEventStore.Domain.Persistence;
 
 namespace Jarvis.Framework.Tests.BusTests
 {
@@ -85,7 +87,7 @@ namespace Jarvis.Framework.Tests.BusTests
         IBus _bus;
         WindsorContainer _container;
         SampleCommandHandler _handler;
-        MongoCollection<TrackedMessageModel> _messages;
+        IMongoCollection<TrackedMessageModel> _messages;
         MessageHandlerToCommandHandlerAdapter<SampleTestCommand> _handlerAdapter;
 
         [TestFixtureSetUp]
@@ -93,11 +95,11 @@ namespace Jarvis.Framework.Tests.BusTests
         {
             _container = new WindsorContainer();
             String connectionString = ConfigurationManager.ConnectionStrings["log"].ConnectionString;
-            var logUrl = new MongoUrl(connectionString);
-            var logClient = new MongoClient(logUrl);
-            var logDb = logClient.GetServer().GetDatabase(logUrl.DatabaseName);
-            _messages = logDb.GetCollection<TrackedMessageModel>("messages");
-            MongoDbMessagesTracker tracker = new MongoDbMessagesTracker(logDb);
+            var rebusUrl = new MongoUrl(connectionString);
+            var rebusClient = new MongoClient(rebusUrl);
+            var rebusDb = rebusClient.GetDatabase(rebusUrl.DatabaseName);
+            _messages = rebusDb.GetCollection<TrackedMessageModel>("messages");
+            MongoDbMessagesTracker tracker = new MongoDbMessagesTracker(rebusDb);
             BusBootstrapper bb = new BusBootstrapper(
                 _container,
                 connectionString,
@@ -158,10 +160,10 @@ namespace Jarvis.Framework.Tests.BusTests
                 track = tracks.Single();
             }
             while (
-                    track.CompletedAt == null &&
+                    track.CompletedAt == null && 
                     DateTime.Now.Subtract(startTime).TotalSeconds < 4
             );
-
+           
             Assert.That(track.MessageId, Is.EqualTo(sampleMessage.MessageId.ToString()));
             Assert.That(track.Description, Is.EqualTo(sampleMessage.Describe()));
             Assert.That(track.StartedAt, Is.Not.Null);
@@ -244,7 +246,7 @@ namespace Jarvis.Framework.Tests.BusTests
         IBus _bus;
         WindsorContainer _container;
         AnotherSampleCommandHandler _handler;
-        MongoCollection<TrackedMessageModel> _messages;
+        IMongoCollection<TrackedMessageModel> _messages;
         MessageHandlerToCommandHandlerAdapter<AnotherSampleTestCommand> _handlerAdapter;
 
         [TestFixtureSetUp]
@@ -254,7 +256,7 @@ namespace Jarvis.Framework.Tests.BusTests
             String connectionString = ConfigurationManager.ConnectionStrings["log"].ConnectionString;
             var logUrl = new MongoUrl(connectionString);
             var logClient = new MongoClient(logUrl);
-            var logDb = logClient.GetServer().GetDatabase(logUrl.DatabaseName);
+            var logDb = logClient.GetDatabase(logUrl.DatabaseName);
             _messages = logDb.GetCollection<TrackedMessageModel>("messages");
             MongoDbMessagesTracker tracker = new MongoDbMessagesTracker(logDb);
             BusBootstrapper bb = new BusBootstrapper(
@@ -378,7 +380,7 @@ namespace Jarvis.Framework.Tests.BusTests
     public class MongoDbMessagesTrackerTests
     {
         MongoDbMessagesTracker sut;
-        MongoCollection<TrackedMessageModel> _messages;
+        IMongoCollection<TrackedMessageModel> _messages;
 
         [TestFixtureSetUp]
         public void TestFixtureSetUp()
@@ -386,7 +388,7 @@ namespace Jarvis.Framework.Tests.BusTests
             String connectionString = ConfigurationManager.ConnectionStrings["log"].ConnectionString;
             var logUrl = new MongoUrl(connectionString);
             var logClient = new MongoClient(logUrl);
-            var logDb = logClient.GetServer().GetDatabase(logUrl.DatabaseName);
+            var logDb = logClient.GetDatabase(logUrl.DatabaseName);
             sut = new MongoDbMessagesTracker(logDb);
             _messages = logDb.GetCollection<TrackedMessageModel>("messages");
         }

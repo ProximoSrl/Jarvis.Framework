@@ -15,7 +15,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         readonly IInmemoryCollection<TModel, TKey> _inmemoryCollection;
         readonly MongoStorage<TModel, TKey> _storage;
         public CachedMongoStorage(
-                MongoCollection<TModel> collection,
+                IMongoCollection<TModel> collection,
                 IInmemoryCollection<TModel, TKey> inmemoryCollection
             )
         {
@@ -81,7 +81,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             public IndexCollection(IInmemoryCollection<TModel, TKey> collection)
             {
                 _collection = collection;
-            }
+        }
 
             public void Insert(TModel instance)
             {
@@ -123,9 +123,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         #endregion
 
-        public bool IndexExists(IMongoIndexKeys keys)
+        public bool IndexExists(String name)
         {
-            return _storage.IndexExists(keys);
+            return _storage.IndexExists(name);
         }
 
         void ThrowIfOperatingInMemory()
@@ -134,9 +134,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 throw new Exception("Unsupported operation while operating in memory");
         }
 
-        public void CreateIndex(IMongoIndexKeys keys, IMongoIndexOptions options = null)
+        public void CreateIndex(String name, IndexKeysDefinition<TModel> keys, CreateIndexOptions options = null)
         {
-            _storage.CreateIndex(keys, options);
+            _storage.CreateIndex(name, keys, options);
         }
 
         public void InsertBatch(IEnumerable<TModel> values)
@@ -170,9 +170,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 _storage.FindOneById(id);
         }
 
-        public IEnumerable<TModel> FindManyByProperty(
-            Expression<Func<TModel, Object>> propertySelector, 
-            Object value)
+        public IEnumerable<TModel> FindManyByProperty<TValue>(
+            Expression<Func<TModel, TValue>> propertySelector,
+            TValue value)
         {
             if (_inmemoryCollection.IsActive)
             {
@@ -264,24 +264,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             _storage.Drop();
         }
 
-        public MongoCollection<TModel> Collection {
+        public IMongoCollection<TModel> Collection {
             get
             {
                 ThrowIfOperatingInMemory();
                 return _storage.Collection;
             }
         }
-        public IEnumerable<BsonDocument> Aggregate(IEnumerable<BsonDocument> operations)
-        {
-            ThrowIfOperatingInMemory();
-            return _storage.Aggregate(operations);
-        }
 
-        public IEnumerable<BsonDocument> Aggregate(AggregateArgs aggregateArgs)
-        {
-            ThrowIfOperatingInMemory();
-            return _storage.Aggregate(aggregateArgs);
-        }
 
         public void Flush()
         {

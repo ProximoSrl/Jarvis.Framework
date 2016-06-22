@@ -1,5 +1,6 @@
 using System;
 using Jarvis.Framework.Shared.ReadModel;
+using Jarvis.Framework.Tests.SharedTests;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests
 {
@@ -29,5 +30,10 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
 
         public Int32 Value { get; set; }
 
+    }
+
+    public class SampleReadModelTestId : AbstractReadModel<TestId>
+    {
+        public String Value { get; set; }
     }
 }

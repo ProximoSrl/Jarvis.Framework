@@ -2,7 +2,7 @@
 using System.Configuration;
 using System.Diagnostics;
 using Castle.Core.Logging;
-using CommonDomain.Core;
+using NEventStore.Domain.Core;
 using Jarvis.Framework.Kernel.Commands;
 using Jarvis.Framework.Kernel.Engine;
 using Jarvis.Framework.Kernel.MultitenantSupport;
@@ -19,6 +19,7 @@ using NSubstitute;
 using NUnit.Framework;
 using System.Threading.Tasks;
 using System.Threading;
+using Jarvis.Framework.Shared.Helpers;
 
 namespace Jarvis.Framework.Tests.EngineTests
 {
@@ -26,7 +27,7 @@ namespace Jarvis.Framework.Tests.EngineTests
     public class RepositoryTests : ITenantAccessor
     {
         private RepositoryEx _repository;
-        private MongoDatabase _db;
+        private IMongoDatabase _db;
         private IStoreEvents _eventStore;
         private IdentityManager _identityConverter;
         private AggregateFactory _aggregateFactory = new AggregateFactory(null);
@@ -39,8 +40,8 @@ namespace Jarvis.Framework.Tests.EngineTests
             var connectionString = ConfigurationManager.ConnectionStrings["eventstore"].ConnectionString;
             var url = new MongoUrl(connectionString);
             var client = new MongoClient(url);
-            _db = client.GetServer().GetDatabase(url.DatabaseName);
-            _db.Drop();
+            _db = client.GetDatabase(url.DatabaseName);
+            client.DropDatabase(url.DatabaseName);
 
             _identityConverter = new IdentityManager(new InMemoryCounterService());
             _identityConverter.RegisterIdentitiesFromAssembly(GetType().Assembly);

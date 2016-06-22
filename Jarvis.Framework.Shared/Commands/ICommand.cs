@@ -4,6 +4,8 @@ using Jarvis.Framework.Shared.IdentitySupport;
 using Jarvis.Framework.Shared.Messages;
 using Jarvis.NEventStoreEx.CommonDomainEx;
 using Newtonsoft.Json;
+using MongoDB.Bson.Serialization.Attributes;
+using MongoDB.Bson.Serialization.Options;
 
 namespace Jarvis.Framework.Shared.Commands
 {
@@ -32,7 +34,9 @@ namespace Jarvis.Framework.Shared.Commands
             SetContextData(MessagesConstants.CommandTimestamp, DateTime.UtcNow.ToString("o"));
         }
 
+        [BsonDictionaryOptions(Representation = DictionaryRepresentation.ArrayOfArrays)]
         public IDictionary<string, string> Context { get; set; }
+
         public Guid MessageId { get; set; }
 
         public void SetContextData(string key, string value)

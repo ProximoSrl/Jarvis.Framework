@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Castle.Core.Logging;
-using CommonDomain.Core;
+using NEventStore.Domain.Core;
 using Jarvis.Framework.Kernel.Engine;
 using Jarvis.Framework.Kernel.Events;
 using Jarvis.Framework.Kernel.ProjectionEngine;
@@ -16,9 +16,11 @@ using NEventStore;
 using NEventStore.Persistence;
 using NSubstitute;
 using NUnit.Framework;
+using Jarvis.Framework.Shared.Helpers;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
+
     public abstract class AbstractV2ProjectionEngineTests
     {
         protected ProjectionEngine Engine;
@@ -26,13 +28,38 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
         IdentityManager _identityConverter;
         protected RepositoryEx Repository;
         protected IStoreEvents _eventStore;
-        protected MongoDatabase Database;
+        protected IMongoDatabase Database;
         RebuildContext _rebuildContext;
         protected MongoStorageFactory StorageFactory;
-        protected MongoCollection<Checkpoint> _checkpoints;
+        protected IMongoCollection<Checkpoint> _checkpoints;
         protected ConcurrentCheckpointTracker _tracker;
         protected ConcurrentCheckpointStatusChecker _statusChecker;
+        protected Func<IPersistStreams, ICommitPollingClient> pollingClientFactory;
 
+        public AbstractV2ProjectionEngineTests(String pollingClientVersion = "1")
+        {
+            switch (pollingClientVersion)
+            {
+                case "1":
+                    pollingClientFactory = ps => new CommitPollingClient(
+                    ps,
+                    new CommitEnhancer(_identityConverter),
+                    OnGetPollingClientId(),
+                    NullLogger.Instance);
+                    break;
+
+                case "2":
+                    pollingClientFactory = ps => new CommitPollingClient2(
+                        ps,
+                        new CommitEnhancer(_identityConverter),
+                        OnGetPollingClientId(),
+                        NullLogger.Instance);
+                    break;
+
+                default:
+                    throw new NotSupportedException("Version not supported");
+            }
+        }
         [TestFixtureSetUp]
         public virtual void TestFixtureSetUp()
         {
@@ -56,9 +83,9 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
         {
             var url = new MongoUrl(_eventStoreConnectionString);
             var client = new MongoClient(url);
-            Database = client.GetServer().GetDatabase(url.DatabaseName);
+            Database = client.GetDatabase(url.DatabaseName);
             _checkpoints = Database.GetCollection<Checkpoint>("checkpoints");
-            Database.Drop();
+            client.DropDatabase(url.DatabaseName);
         }
 
         [TestFixtureTearDown]
@@ -102,7 +129,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
                 EventStoreConnectionString = _eventStoreConnectionString,
                 TenantId = tenantId,
                 BucketInfo = new List<BucketInfo>() { new BucketInfo() { Slots = new[] { "*" }, BufferSize = 10 } },
-                DelayedStartInMilliseconds = 1000,
+                DelayedStartInMilliseconds = 0,
                 ForcedGcSecondsInterval = 0,
                 EngineVersion = "v2",
             };
@@ -111,12 +138,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 
             _rebuildContext = new RebuildContext(RebuildSettings.NitroMode);
             StorageFactory = new MongoStorageFactory(Database, _rebuildContext);
-            Func<IPersistStreams, CommitPollingClient> pollingClientFactory = 
-                ps => new CommitPollingClient(
-                    ps, 
-                    new CommitEnhancer(_identityConverter),
-                    OnGetPollingClientId(),
-                    NullLogger.Instance);
+          
             Engine = new ProjectionEngine(
                 pollingClientFactory,
                 _tracker,

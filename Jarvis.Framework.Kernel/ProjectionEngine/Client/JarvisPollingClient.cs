@@ -53,7 +53,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         /// </returns>
         public override IObserveCommits ObserveFrom(string checkpointToken = null)
         {
-            return new PollingObserveCommits(PersistStreams, _interval, checkpointToken, _enhancer, _boost, _tracker);
+            return new PollingObserveCommits(PersistStreams, _interval, checkpointToken, _enhancer, _boost, _tracker, null);
+        }
+
+        public override IObserveCommits ObserveFromBucket(string bucketId, string checkpointToken = null)
+        {
+            return new PollingObserveCommits(PersistStreams, _interval, checkpointToken, _enhancer, _boost, _tracker, bucketId);
         }
 
         private class PollingObserveCommits : IObserveCommits
@@ -66,12 +71,20 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             private readonly int _interval;
             private readonly Subject<ICommit> _subject = new Subject<ICommit>();
             private readonly CancellationTokenSource _stopRequested = new CancellationTokenSource();
+            private readonly String _bucketId;
             private TaskCompletionSource<Unit> _runningTaskCompletionSource;
             readonly bool _boost;
             private int _isPolling = 0;
             private IConcurrentCheckpointTracker _tracker;
 
-            public PollingObserveCommits(IPersistStreams persistStreams, int interval, string checkpointToken, ICommitEnhancer enhancer, bool boost, IConcurrentCheckpointTracker tracker)
+            public PollingObserveCommits(
+                IPersistStreams persistStreams, 
+                int interval, 
+                string checkpointToken, 
+                ICommitEnhancer enhancer, 
+                bool boost, 
+                IConcurrentCheckpointTracker tracker,
+                String bucketId)
             {
                 _persistStreams = persistStreams;
                 _checkpointToken = checkpointToken;
@@ -79,6 +92,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                 _interval = interval;
                 _boost = boost;
                 _tracker = tracker;
+                _bucketId = bucketId;
             }
 
             public IDisposable Subscribe(IObserver<ICommit> observer)
@@ -149,7 +163,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                         try
                         {
                             skippedPoolCount = 0;
-                            IEnumerable<ICommit> commits = _persistStreams.GetFrom(_checkpointToken);
+                            IEnumerable<ICommit> commits = _bucketId == null ?
+                                _persistStreams.GetFrom(_checkpointToken) :
+                                _persistStreams.GetFrom(_bucketId, _checkpointToken);
+
                             Int64 i = 0;
                             foreach (var commit in commits)
                             {

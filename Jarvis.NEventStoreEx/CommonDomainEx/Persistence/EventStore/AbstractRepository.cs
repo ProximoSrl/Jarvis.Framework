@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using CommonDomain;
-using CommonDomain.Persistence;
+using NEventStore.Domain;
+using NEventStore.Domain.Persistence;
 using NEventStore;
 using NEventStore.Persistence;
 using System.Collections.Concurrent;

@@ -10,22 +10,23 @@ using System.Configuration;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Jarvis.Framework.Shared.Helpers;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests
 {
     [TestFixture]
     public class ConcurrentCheckpointTrackerTests
     {
-        MongoDatabase _db;
+        IMongoDatabase _db;
         ConcurrentCheckpointTracker _sut;
-        MongoCollection<Checkpoint> _checkPoints;
+        IMongoCollection<Checkpoint> _checkPoints;
         [SetUp]
         public void SetUp()
         {
             var connectionString = ConfigurationManager.ConnectionStrings["readmodel"].ConnectionString;
             var url = new MongoUrl(connectionString);
             var client = new MongoClient(url);
-            _db = client.GetServer().GetDatabase(url.DatabaseName);
+            _db = client.GetDatabase(url.DatabaseName);
             var sut = new ConcurrentCheckpointTracker(_db);
 
             _checkPoints = _db.GetCollection<Checkpoint>("checkpoints");
@@ -94,7 +95,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             var projections = new IProjection[] { projection1, projection2 };
             var p1 = new Checkpoint(projection1.GetCommonName(), "42", projection1.GetSignature());
             p1.Slot = projection1.GetSlotName();
-            _checkPoints.Save(p1);
+            _checkPoints.Save(p1, p1.Id);
 
             _sut.SetUp(projections, 1);
         }
@@ -112,10 +113,10 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             var projections = new IProjection[] { projection1, projection2 };
             var p1 = new Checkpoint(projection1.GetCommonName(), "42", projection1.GetSignature());
             p1.Slot = projection1.GetSlotName();
-            _checkPoints.Save(p1);
+            _checkPoints.Save(p1, p1.Id);
             var p2 = new Checkpoint(projection2.GetCommonName(), "42", "oldSignature");
             p2.Slot = projection2.GetSlotName();
-            _checkPoints.Save(p2);
+            _checkPoints.Save(p2, p2.Id);
 
             _sut.SetUp(projections, 1);
         }
@@ -133,11 +134,11 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             var projections = new IProjection[] { projection1, projection2 };
             var p1 = new Checkpoint(projection1.GetCommonName(), "42", projection1.GetSignature());
             p1.Slot = projection1.GetSlotName();
-            _checkPoints.Save(p1);
+            _checkPoints.Save(p1, p1.Id);
 
             var p2 = new Checkpoint(projection2.GetCommonName(), "40", projection2.GetSignature());
             p2.Slot = projection1.GetSlotName();
-            _checkPoints.Save(p2);
+            _checkPoints.Save(p2, p2.Id);
 
             _sut.SetUp(projections, 1);
         }

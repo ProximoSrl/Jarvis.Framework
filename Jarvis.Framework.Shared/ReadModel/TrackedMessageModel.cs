@@ -4,10 +4,10 @@ using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.Messages;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using MongoDB.Driver.Builders;
 using Metrics;
 using MongoDB.Bson.Serialization;
 using System.Linq;
+using Jarvis.Framework.Shared.Helpers;
 
 namespace Jarvis.Framework.Shared.ReadModel
 {
@@ -115,7 +115,7 @@ namespace Jarvis.Framework.Shared.ReadModel
 
     public class MongoDbMessagesTracker : IMessagesTracker
     {
-        readonly MongoCollection<TrackedMessageModel> _commands;
+        readonly IMongoCollection<TrackedMessageModel> _commands;
 
         private static readonly Timer queueTimer = Metric.Timer("CommandWaitInQueue", Unit.Commands);
         private static readonly Timer totalExecutionTimer = Metric.Timer("CommandTotalExecution", Unit.Commands);
@@ -126,11 +126,11 @@ namespace Jarvis.Framework.Shared.ReadModel
 
         //private static readonly Counter retryCount = Metric.Counter("CommandsRetry", Unit.Custom("ms"));
 
-        public MongoDbMessagesTracker(MongoDatabase db)
+        public MongoDbMessagesTracker(IMongoDatabase db)
         {
             _commands = db.GetCollection<TrackedMessageModel>("messages");
-            _commands.CreateIndex(IndexKeys<TrackedMessageModel>.Ascending(x => x.MessageId));
-            _commands.CreateIndex(IndexKeys<TrackedMessageModel>.Ascending(x => x.IssuedBy));
+            _commands.Indexes.CreateOne(Builders<TrackedMessageModel>.IndexKeys.Ascending(x => x.MessageId));
+            _commands.Indexes.CreateOne(Builders<TrackedMessageModel>.IndexKeys.Ascending(x => x.IssuedBy));
         }
 
         public void Started(IMessage msg)
@@ -147,23 +147,23 @@ namespace Jarvis.Framework.Shared.ReadModel
                 issuedBy = ((IDomainEvent)msg).IssuedBy;
             }
 
-            _commands.Update(
-                Query<TrackedMessageModel>.EQ(x => x.MessageId, id),
-                Update<TrackedMessageModel>
+            _commands.UpdateOne(
+               Builders<TrackedMessageModel>.Filter.Eq(x=>x.MessageId, id),
+               Builders<TrackedMessageModel >.Update
                     .Set(x => x.Message, msg)
                     .Set(x => x.StartedAt, DateTime.UtcNow)
                     .Set(x => x.IssuedBy, issuedBy)
                     .Set(x => x.Description, msg.Describe()),
-                UpdateFlags.Upsert
+               new UpdateOptions() { IsUpsert = true} 
             );
         }
 
         public void ElaborationStarted(Guid commandId, DateTime startAt)
         {
             var id = commandId.ToString();
-            var updated = _commands.Update(
-                Query<TrackedMessageModel>.EQ(x => x.MessageId, id),
-                Update<TrackedMessageModel>
+            var updated = _commands.UpdateOne(
+                Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
+                 Builders<TrackedMessageModel>.Update
                     .Set(x => x.LastExecutionStartTime, startAt)
                     .Push(x => x.ExecutionStartTimeList, startAt)
                     .Inc(x => x.ExecutionCount, 1)
@@ -176,16 +176,17 @@ namespace Jarvis.Framework.Shared.ReadModel
             var id = commandId.ToString();
             if (JarvisFrameworkGlobalConfiguration.MetricsEnabled)
             {
-                var completed = _commands.FindAndModify(
-                    Query<TrackedMessageModel>.EQ(x => x.MessageId, id),
-                    SortBy<TrackedMessageModel>.Ascending(x => x.MessageId),
-                    Update<TrackedMessageModel>.Set(x => x.CompletedAt, completedAt),
-                    true
+                var trackMessage = _commands.FindOneAndUpdate(
+                    Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
+                    Builders<TrackedMessageModel>.Update.Set(x => x.CompletedAt, completedAt),
+                    new FindOneAndUpdateOptions<TrackedMessageModel, TrackedMessageModel>()
+                    {
+                        IsUpsert = true,
+                        ReturnDocument = ReturnDocument.After
+                    }
                 );
-                if (completed.Ok)
+                if (trackMessage != null)
                 {
-                    var tracking = completed.ModifiedDocument;
-                    TrackedMessageModel trackMessage = BsonSerializer.Deserialize<TrackedMessageModel>(tracking);
                     if (trackMessage.StartedAt > DateTime.MinValue)
                     {
                         var firstExecutionValue = trackMessage.ExecutionStartTimeList[0];
@@ -202,26 +203,26 @@ namespace Jarvis.Framework.Shared.ReadModel
             }
             else
             {
-                _commands.Update(
-                    Query<TrackedMessageModel>.EQ(x => x.MessageId, id),
-                    Update<TrackedMessageModel>.Set(x => x.CompletedAt, completedAt),
-                    UpdateFlags.Upsert
-                );
+                _commands.UpdateOne(
+                     Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
+                     Builders<TrackedMessageModel>.Update.Set(x => x.CompletedAt, completedAt),
+                     new UpdateOptions() { IsUpsert = true }
+                 );
             }
         }
 
         public bool Dispatched(Guid commandId, DateTime dispatchedAt)
         {
             var id = commandId.ToString();
-            var result = _commands.Update(
-                Query.And(
-                    Query<TrackedMessageModel>.EQ(x => x.MessageId, id),
-                    Query<TrackedMessageModel>.EQ(x => x.DispatchedAt, null)
+            var result = _commands.UpdateOne(
+                 Builders<TrackedMessageModel>.Filter.And(
+                    Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
+                     Builders<TrackedMessageModel>.Filter.Eq(x => x.DispatchedAt, null)
                 ),
-                Update<TrackedMessageModel>.Set(x => x.DispatchedAt, dispatchedAt)
+                Builders<TrackedMessageModel>.Update.Set(x => x.DispatchedAt, dispatchedAt)
             );
 
-            return result.DocumentsAffected > 0;
+            return result.ModifiedCount > 0;
         }
 
         public void Drop()
@@ -232,12 +233,12 @@ namespace Jarvis.Framework.Shared.ReadModel
         public void Failed(Guid commandId, DateTime failedAt, Exception ex)
         {
             var id = commandId.ToString();
-            _commands.Update(
-                Query<TrackedMessageModel>.EQ(x => x.MessageId, id),
-                Update<TrackedMessageModel>
+            _commands.UpdateOne(
+                Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
+                Builders<TrackedMessageModel>.Update
                     .Set(x => x.FailedAt, failedAt)
                     .Set(x => x.ErrorMessage, ex.Message),
-                UpdateFlags.Upsert
+                new UpdateOptions() { IsUpsert = true}
             );
             errorMeter.Mark();
         }
@@ -245,23 +246,23 @@ namespace Jarvis.Framework.Shared.ReadModel
 
     }
 
-    public class NullMessageTracker : IMessagesTracker
+    public class NullMessageTracker : IMessagesTracker 
     {
         public static NullMessageTracker Instance { get; set; }
 
-        static NullMessageTracker()
+        static NullMessageTracker() 
         {
             Instance = new NullMessageTracker();
         }
 
         public void Started(IMessage msg)
         {
-
+           
         }
 
         public void Completed(Guid commandId, DateTime completedAt)
         {
-
+            
         }
 
         public bool Dispatched(Guid commandId, DateTime dispatchedAt)
@@ -271,12 +272,12 @@ namespace Jarvis.Framework.Shared.ReadModel
 
         public void Drop()
         {
-
+            
         }
 
         public void Failed(Guid commandId, DateTime failedAt, Exception ex)
         {
-
+            
         }
 
         public void ElaborationStarted(Guid commandId, DateTime startAt)

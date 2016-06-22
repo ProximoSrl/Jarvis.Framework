@@ -50,8 +50,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         void Delete(DomainEvent e, TKey id, bool notify = false);
         void Drop();
-        void CreateIndex(IMongoIndexKeys keys, IMongoIndexOptions options = null);
-        bool IndexExists(IMongoIndexKeys keys);
+        void CreateIndex(String name, IndexKeysDefinition<TModel> keys, CreateIndexOptions options = null);
+        bool IndexExists(String name);
         void Attach(IProjection projection,  bool bEnableNotifications);
         void InsertBatch(IEnumerable<TModel> values);
     }

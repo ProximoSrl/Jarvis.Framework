@@ -2,13 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Remoting.Messaging;
-using CommonDomain.Persistence;
+
 using NEventStore;
 using NEventStore.Persistence;
 using System.Reflection;
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Diagnostics;
+using NEventStore.Domain.Persistence;
 
 namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 {

@@ -4,6 +4,7 @@ using log4net.Core;
 using MongoDB.Driver;
 using System.Collections.Concurrent;
 using System.Threading;
+using MongoDB.Bson;
 
 namespace Jarvis.Framework.MongoAppender
 {
@@ -105,7 +106,7 @@ namespace Jarvis.Framework.MongoAppender
             while (_dispatchCollection.Count > 0 && i++ < 500) Thread.Sleep(50);
         }
 
-        public MongoCollection GetCollection()
+        public IMongoCollection<BsonDocument> GetCollection()
         {
             return Settings.LogCollection;
         }

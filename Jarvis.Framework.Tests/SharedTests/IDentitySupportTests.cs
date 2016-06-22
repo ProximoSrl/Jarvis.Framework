@@ -13,22 +13,27 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Jarvis.Framework.Shared.Helpers;
 
 namespace Jarvis.Framework.Tests.SharedTests
 {
     [TestFixture]
+    [Category("mongo_serialization")]
     public class IDentitySupportTests
     {
         private TestMapper sut;
         private TestFlatMapper sutFlat;
-        private MongoCollection<BsonDocument> _mappingCollection;
-        private MongoCollection<BsonDocument> _mappingFlatCollection;
+        private IMongoCollection<BsonDocument> _mappingCollection;
+        private IMongoCollection<BsonDocument> _mappingFlatCollection;
 
         [TestFixtureSetUp]
         public void TestFixtureSetup()
         {
-            BsonSerializer.RegisterSerializer(typeof(TestFlatId), new EventStoreIdentityBsonSerializer());
-            EventStoreIdentityCustomBsonTypeMapper.Register<TestFlatId>();
+
+            TestHelper.RegisterSerializerForFlatId<TestId>();
+
+            TestHelper.RegisterSerializerForFlatId<TestFlatId>();
+
         }
 
         [SetUp]
@@ -69,6 +74,18 @@ namespace Jarvis.Framework.Tests.SharedTests
         }
 
         [Test]
+        public void Verify_replace_alias_of_flat_mapping()
+        {
+            var id = sutFlat.Map("TEST");
+            var mapCount = _mappingFlatCollection.FindAll();
+            Assert.That(mapCount.Count(), Is.EqualTo(1));
+
+            sutFlat.ReplaceAlias(id, "TEST2");
+            mapCount = _mappingFlatCollection.FindAll();
+            Assert.That(mapCount.Count(), Is.EqualTo(1));
+        }
+
+        [Test]
         public void Verify_exception_of_multiple_map()
         {
             sut.Addalias(new TestId(2), "Alias2");
@@ -87,23 +104,16 @@ namespace Jarvis.Framework.Tests.SharedTests
 
     public class TestMapper : AbstractIdentityTranslator<TestId>
     {
-        public TestMapper(MongoDatabase db, IIdentityGenerator identityGenerator) :
+        public TestMapper(IMongoDatabase db, IIdentityGenerator identityGenerator) :
             base(db, identityGenerator)
         {
 
-        }
-
-        public void ReplaceAlias(TestId id, String value)
-        {
-            base.ReplaceAlias(id, value);
         }
 
         public void Addalias(TestId id, String value)
         {
             base.AddAlias(id, value);
         }
-
-
 
         public TestId Map(String value)
         {
@@ -113,7 +123,7 @@ namespace Jarvis.Framework.Tests.SharedTests
 
     public class TestFlatMapper : AbstractIdentityTranslator<TestFlatId>
     {
-        public TestFlatMapper(MongoDatabase db, IIdentityGenerator identityGenerator) :
+        public TestFlatMapper(IMongoDatabase db, IIdentityGenerator identityGenerator) :
             base(db, identityGenerator)
         {
 

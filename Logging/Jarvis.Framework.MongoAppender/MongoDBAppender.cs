@@ -2,12 +2,13 @@
 using log4net.Appender;
 using log4net.Core;
 using MongoDB.Driver;
+using MongoDB.Bson;
 
 namespace Jarvis.Framework.MongoAppender
 {
     public interface IMongoAppenderCollectionProvider
     {
-        MongoCollection GetCollection();
+        IMongoCollection<BsonDocument> GetCollection();
     }
 
     public class MongoDBAppender : AppenderSkeleton, IMongoAppenderCollectionProvider
@@ -43,7 +44,7 @@ namespace Jarvis.Framework.MongoAppender
             }
         }
 
-        public MongoCollection GetCollection()
+        public IMongoCollection<BsonDocument> GetCollection()
         {
             return Settings.LogCollection;
         }

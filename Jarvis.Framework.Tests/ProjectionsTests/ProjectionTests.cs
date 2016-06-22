@@ -4,6 +4,7 @@ using Jarvis.Framework.Kernel.ProjectionEngine;
 using Jarvis.Framework.TestHelpers;
 using MongoDB.Driver;
 using NUnit.Framework;
+using Jarvis.Framework.Shared.Helpers;
 
 namespace Jarvis.Framework.Tests.ProjectionsTests
 {
@@ -18,7 +19,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
         {
             var url = new MongoUrl(ConfigurationManager.ConnectionStrings["readmodel"].ConnectionString);
             var client = new MongoClient(url);
-            var db = client.GetServer().GetDatabase(url.DatabaseName);
+            var db = client.GetDatabase(url.DatabaseName);
             db.Drop();
 
             _collection = new CollectionWrapper<MyReadModel, string>(new MongoStorageFactory(db, new RebuildContext(false)), new SpyNotifier());
@@ -85,6 +86,21 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
             var loaded = _collection.FindOneById(delete.AggregateId);
 
             Assert.IsNull(loaded);
+        }
+
+
+        [Test]
+        public void delete_does_not_generates_multiple_notifications()
+        {
+            var insert = new InsertEvent() { Text = "one" };
+            var delete = new DeleteEvent();
+
+            _projection.On(insert);
+            _projection.On(delete);
+            _projection.On(delete);
+
+            var loaded = _collection.FindOneById(delete.AggregateId);
+
             Assert.AreEqual(2, SpyNotifier.Counter);
         }
 
@@ -145,7 +161,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
         {
             Assert.IsTrue
                 (
-                    _collection.IndexExists(_projection.IndexKeys)
+                    _collection.IndexExists(MyProjection.IndexName)
                 );
         }
     }

@@ -14,9 +14,16 @@ using NUnit.Framework;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
-    [TestFixture]
+    [TestFixture("1")]
+    [TestFixture("2")]
     public class PollerCanStopAndRestart : AbstractV2ProjectionEngineTests
     {
+
+        public PollerCanStopAndRestart(String pollingClientVersion) : base(pollingClientVersion)
+        {
+
+        }
+
         [TestFixtureSetUp]
         public override void TestFixtureSetUp()
         {
@@ -76,7 +83,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             Boolean passed = false;
             while (
                 !(passed = _statusChecker.IsCheckpointProjectedByAllProjection(checkpointToken)) &&
-                DateTime.Now.Subtract(startTime).TotalMilliseconds < 2000)
+                DateTime.Now.Subtract(startTime).TotalMilliseconds < 7000)
 
             {
                 Thread.Sleep(100);

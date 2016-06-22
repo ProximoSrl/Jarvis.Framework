@@ -11,13 +11,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 {
     public interface IMongoStorage<TModel, TKey> where TModel : class, IReadModelEx<TKey>
     {
-        bool IndexExists(IMongoIndexKeys keys);
-        void CreateIndex(IMongoIndexKeys keys, IMongoIndexOptions options = null);
+        bool IndexExists(String name);
+        void CreateIndex(String name, IndexKeysDefinition<TModel> keys,  CreateIndexOptions options = null);
         void InsertBatch(IEnumerable<TModel> values);
         IQueryable<TModel> All { get; }
         TModel FindOneById(TKey id);
 
-        IEnumerable<TModel> FindManyByProperty(Expression<Func<TModel, Object>> propertySelector, Object value);
+        IEnumerable<TModel> FindManyByProperty<Tvalue>(Expression<Func<TModel, Tvalue>> propertySelector, Tvalue value);
 
         IQueryable<TModel> Where(Expression<Func<TModel, bool>> filter);
         bool Contains(Expression<Func<TModel, bool>> filter);
@@ -25,9 +25,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         SaveResult SaveWithVersion(TModel model, int orignalVersion);
         DeleteResult Delete(TKey id);
         void Drop();
-        MongoCollection<TModel> Collection { get; }
-        IEnumerable<BsonDocument> Aggregate(IEnumerable<BsonDocument> operations);
-        IEnumerable<BsonDocument> Aggregate(AggregateArgs aggregateArgs);
+        IMongoCollection<TModel> Collection { get; }
+
         void Flush();
     }
 }

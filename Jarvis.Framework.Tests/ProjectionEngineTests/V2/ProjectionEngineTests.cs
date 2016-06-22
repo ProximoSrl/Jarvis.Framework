@@ -11,12 +11,16 @@ using Jarvis.Framework.Shared.ReadModel;
 using Jarvis.Framework.TestHelpers;
 using Jarvis.Framework.Tests.EngineTests;
 using NUnit.Framework;
-
+using Jarvis.Framework.Shared.Helpers;
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
 
     public class ProjectionEngineBasicTestBase : AbstractV2ProjectionEngineTests
     {
+        public ProjectionEngineBasicTestBase(String pollingClientVersion) : base(pollingClientVersion)
+        {
+
+        }
 
         protected override void RegisterIdentities(IdentityManager identityConverter)
         {
@@ -30,14 +34,21 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 
         protected override IEnumerable<IProjection> BuildProjections()
         {
-            var writer = new CollectionWrapper<SampleReadModel, string>(StorageFactory,new NotifyToNobody());
+            var writer = new CollectionWrapper<SampleReadModel, string>(StorageFactory, new NotifyToNobody());
             yield return new Projection(writer);
         }
 
     }
 
+    [TestFixture("1")]
+    [TestFixture("2")]
     public class ProjectionEngineTestBasic : ProjectionEngineBasicTestBase
     {
+        public ProjectionEngineTestBasic(String pollingClientVersion) : base(pollingClientVersion)
+        {
+
+        }
+
         [Test]
         public async void run_poll_and_wait()
         {
@@ -51,8 +62,16 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
         }
     }
 
+
+    [TestFixture("1")]
+    [TestFixture("2")]
     public class ProjectionEngineWithRebuild : ProjectionEngineBasicTestBase
     {
+        public ProjectionEngineWithRebuild(String pollingClientVersion) : base(pollingClientVersion)
+        {
+
+        }
+
         protected override bool OnShouldUseNitro()
         {
             return true;
