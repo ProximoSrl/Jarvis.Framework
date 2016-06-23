@@ -11,6 +11,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Jarvis.Framework.Shared.Helpers;
+using NSubstitute;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests
 {
@@ -20,6 +21,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         IMongoDatabase _db;
         ConcurrentCheckpointTracker _sut;
         IMongoCollection<Checkpoint> _checkPoints;
+
         [SetUp]
         public void SetUp()
         {
@@ -82,6 +84,95 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             Assert.That(errors, Has.Count.EqualTo(0));
         }
 
+        [Test]
+        public void updateSlotAndSetCheckpoint_should_create_record_in_database()
+        {
+            Assert.Inconclusive("Probably this is not correct, it is better to setup the tracker and then set values");
+            var projection1 = new Projection(Substitute.For<ICollectionWrapper<SampleReadModel, String>>());
+            var projection2 = new Projection2(Substitute.For<ICollectionWrapper<SampleReadModel2, String>>());
+            var projections = new IProjection[] { projection1, projection2 };
+            _sut = new ConcurrentCheckpointTracker(_db);
+            _sut.UpdateSlotAndSetCheckpoint(projection1.GetSlotName(), projections.Select(p => p.GetCommonName()), "2");
+            var checkpoints = _checkPoints.FindAll().ToEnumerable().Where(c => c.Id != "VERSION").ToList();
+            Assert.That(checkpoints, Has.Count.EqualTo(2));
+            Assert.That(checkpoints.All(c => c.Value == "2"));
+        }
+
+
+        [Test]
+        public void verify_slot_status_all_ok()
+        {
+            //Two projection in the same slot
+            var projection1 = new Projection(Substitute.For<ICollectionWrapper<SampleReadModel, String>>());
+            var projection2 = new Projection2(Substitute.For<ICollectionWrapper<SampleReadModel2, String>>());
+            //A projection in other slot
+            var projection3 = new Projection3(Substitute.For<ICollectionWrapper<SampleReadModel3, String>>());
+
+            var projections = new IProjection[] { projection1, projection2, projection3 };
+            var checkpoint1 = new Checkpoint(projection1.GetCommonName(), "1", projection1.GetSignature());
+            var checkpoint2 = new Checkpoint(projection2.GetCommonName(), "1", projection2.GetSignature());
+            var checkpoint3 = new Checkpoint(projection3.GetCommonName(), "1", projection3.GetSignature());
+            _checkPoints.InsertMany(new[] { checkpoint1, checkpoint2, checkpoint3 });
+
+            _sut = new ConcurrentCheckpointTracker(_db);
+            var status = _sut.GetSlotsStatus(projections);
+
+            Assert.That(status.NewSlots, Has.Count.EqualTo(0));
+            Assert.That(status.SlotsThatNeedsRebuild, Has.Count.EqualTo(0));
+            Assert.That(status.SlotsWithErrors, Has.Count.EqualTo(0));
+        }
+
+        [Test]
+        public void verify_slot_status_new_projection()
+        {
+            //Two projection in the same slot
+            var projection1 = new Projection(Substitute.For<ICollectionWrapper<SampleReadModel, String>>());
+            var projection2 = new Projection2(Substitute.For<ICollectionWrapper<SampleReadModel2, String>>());
+            //A projection in other slot
+            var projection3 = new Projection3(Substitute.For<ICollectionWrapper<SampleReadModel3, String>>());
+
+            var projections = new IProjection[] { projection1, projection2, projection3 };
+            var checkpoint1 = new Checkpoint(projection1.GetCommonName(), "1", projection1.GetSignature());
+            var checkpoint2 = new Checkpoint(projection2.GetCommonName(), "1", projection2.GetSignature());
+           
+            _checkPoints.InsertMany(new[] { checkpoint1, checkpoint2, });
+
+            _sut = new ConcurrentCheckpointTracker(_db);
+            var status = _sut.GetSlotsStatus(projections);
+
+            Assert.That(status.NewSlots, Is.EquivalentTo(new[] { projection3.GetSlotName()}));
+
+            Assert.That(status.SlotsThatNeedsRebuild, Has.Count.EqualTo(0));
+            Assert.That(status.SlotsWithErrors, Has.Count.EqualTo(0));
+        }
+
+        [Test]
+        public void verify_status_for_slot_that_needs_to_be_rebuilded()
+        {
+            //Two projection in the same slot
+            var projection1 = new Projection(Substitute.For<ICollectionWrapper<SampleReadModel, String>>());
+           
+            var projections = new IProjection[] { projection1 };
+            var checkpoint1 = new Checkpoint(projection1.GetCommonName(), "1", projection1.GetSignature() + "modified");
+
+            _checkPoints.InsertMany(new[] { checkpoint1, });
+
+            _sut = new ConcurrentCheckpointTracker(_db);
+            var status = _sut.GetSlotsStatus(projections);
+            Assert.That(status.SlotsThatNeedsRebuild, Has.Count.EqualTo(1));
+        }
+
+        [Test]
+        public void verify_slot_status_error()
+        {
+            var projections = SetupTwoProjectionsError();
+
+            _sut = new ConcurrentCheckpointTracker(_db);
+            var status = _sut.GetSlotsStatus(projections);
+      
+            Assert.That(status.SlotsWithErrors, Has.Count.EqualTo(1));
+        }
+
         private void SetupOneProjectionNew()
         {
             _sut = new ConcurrentCheckpointTracker(_db);
@@ -121,7 +212,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             _sut.SetUp(projections, 1, false);
         }
 
-        private void SetupTwoProjectionsError()
+        private IProjection[] SetupTwoProjectionsError()
         {
             _sut = new ConcurrentCheckpointTracker(_db);
             var rebuildContext = new RebuildContext(false);
@@ -141,6 +232,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             _checkPoints.Save(p2, p2.Id);
 
             _sut.SetUp(projections, 1, false);
+            return projections;
         }
     }
 }
