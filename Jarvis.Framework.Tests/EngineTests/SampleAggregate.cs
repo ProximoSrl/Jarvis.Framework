@@ -63,6 +63,12 @@ namespace Jarvis.Framework.Tests.EngineTests
             RaiseEvent(new SampleAggregateTouched());
         }
 
+        public void DoubleTouch()
+        {
+            RaiseEvent(new SampleAggregateTouched());
+            RaiseEvent(new SampleAggregateTouched());
+        }
+
         public IDictionary<string, object> ExposeContext
         {
             get { return Context;}
@@ -87,6 +93,12 @@ namespace Jarvis.Framework.Tests.EngineTests
     public class SampleAggregateTouched : DomainEvent
     {
     }
+
+    public class SampleAggregateBaseEvent : DomainEvent { }
+
+    public class SampleAggregateDerived1 : SampleAggregateBaseEvent { }
+
+    public class SampleAggregateDerived2 : SampleAggregateBaseEvent { }
 
     public class SampleAggregateInvalidated : DomainEvent
     {

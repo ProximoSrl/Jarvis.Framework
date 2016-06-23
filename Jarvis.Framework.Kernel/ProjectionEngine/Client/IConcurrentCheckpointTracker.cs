@@ -12,7 +12,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         void Clear();
         string GetCheckpoint(IProjection projection);
         Int64 GetMinCheckpoint();
-        void SetUp(IProjection[] projections, int version);
+        void SetUp(IProjection[] projections, int version, Boolean setupMetrics);
         bool NeedsRebuild(IProjection projection);
 
         void RebuildStarted(IProjection projection, String lastCommit);

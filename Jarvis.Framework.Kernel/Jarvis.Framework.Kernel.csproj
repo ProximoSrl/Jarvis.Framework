@@ -174,14 +174,20 @@
     <Compile Include="ProjectionEngine\MongoStorageFactory.cs" />
     <Compile Include="ProjectionEngine\ProjectionEngine.cs" />
     <Compile Include="ProjectionEngine\RebuildContext.cs" />
+    <Compile Include="ProjectionEngine\Rebuild\EventUnwinder.cs" />
+    <Compile Include="ProjectionEngine\Rebuild\RebuildProjectionEngine.cs" />
+    <Compile Include="ProjectionEngine\Rebuild\RebuildProjectionSlotDispatcher.cs" />
+    <Compile Include="ProjectionEngine\Rebuild\UnwindedDomainEvent.cs" />
     <Compile Include="ProjectionEngine\RecycleBin\RecycleBin.cs" />
     <Compile Include="ProjectionEngine\SaveResult.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Store\SagaFactory.cs" />
     <Compile Include="Store\SnapshotsHelper.cs" />
+    <Compile Include="Support\GuaranteedDeliveryBroadcastBlock.cs" />
     <Compile Include="Support\IProjectionMetricsDotNetConfigurer.cs" />
     <Compile Include="Support\MetricsHealthCheck.cs" />
     <Compile Include="Support\MetricsHelper.cs" />
+    <Compile Include="Support\ProjectionEventInspector.cs" />
     <Compile Include="Support\ProjectionMetricsConfigurer.cs" />
     <Compile Include="Support\ProjectionMetricsLoader.cs" />
   </ItemGroup>

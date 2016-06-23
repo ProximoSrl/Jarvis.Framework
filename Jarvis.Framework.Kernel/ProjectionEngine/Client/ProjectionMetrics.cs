@@ -81,9 +81,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         private readonly IDictionary<string, Meter> _meters;
 
-        public ProjectionMetrics(IProjection[] projections)
+        public ProjectionMetrics(IEnumerable<IProjection> projections)
         {
-            _meters = new Dictionary<string, Meter>((int)(projections.Length * 1.3));
+            _meters = new Dictionary<string, Meter>((int)(projections.Count() * 1.3));
             foreach (var projection in projections)
             {
                 _meters.Add(projection.GetCommonName(), new Meter());

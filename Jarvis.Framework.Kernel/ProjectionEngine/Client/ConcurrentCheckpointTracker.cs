@@ -84,7 +84,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             _projectionToSlot[id] = checkPoint.Slot;
         }
 
-        public void SetUp(IProjection[] projections, int version)
+        public void SetUp(IProjection[] projections, int version, Boolean setupMetrics)
         {
             var versionInfo = _checkpoints.FindOneById("VERSION");
             if (versionInfo == null)
@@ -123,12 +123,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             foreach (var slot in projections.Select(p => p.GetSlotName()).Distinct())
             {
                 var slotName = slot;
-                MetricsHelper.SetCheckpointCountToDispatch(slot, () => GetCheckpointCount(slotName));
+                if (setupMetrics) MetricsHelper.SetCheckpointCountToDispatch(slot, () => GetCheckpointCount(slotName));
                 _checkpointSlotTracker[slot] = 0;
                 _slotRebuildTracker[slot] = false;
             }
 
-            MetricsHelper.SetCheckpointCountToDispatch("", GetCheckpointMaxCount);
+            if (setupMetrics) MetricsHelper.SetCheckpointCountToDispatch("", GetCheckpointMaxCount);
         }
 
         private double GetCheckpointMaxCount()
@@ -202,7 +202,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             _slotRebuildTracker[_projectionToSlot[projectionName]] = false;
             var checkpoint = _checkpoints.FindOneById(projectionName);
             checkpoint.RebuildStop = DateTime.UtcNow;
-            checkpoint.RebuildTotalSeconds = (long)(checkpoint.RebuildStop - checkpoint.RebuildStart).Value.TotalSeconds;
+            if (checkpoint != null && checkpoint.RebuildStop.HasValue && checkpoint.RebuildStart.HasValue)
+            {
+                checkpoint.RebuildTotalSeconds = (long)(checkpoint.RebuildStop - checkpoint.RebuildStart).Value.TotalSeconds;
+            }
+
             checkpoint.Events = meter.TotalEvents;
             checkpoint.RebuildActualSeconds = (double)meter.TotalElapsed / TimeSpan.TicksPerSecond;
             checkpoint.Details = meter;

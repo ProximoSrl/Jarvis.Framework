@@ -97,7 +97,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             p1.Slot = projection1.GetSlotName();
             _checkPoints.Save(p1, p1.Id);
 
-            _sut.SetUp(projections, 1);
+            _sut.SetUp(projections, 1, false);
         }
 
         private void SetupOneProjectionChangedSignature()
@@ -118,7 +118,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             p2.Slot = projection2.GetSlotName();
             _checkPoints.Save(p2, p2.Id);
 
-            _sut.SetUp(projections, 1);
+            _sut.SetUp(projections, 1, false);
         }
 
         private void SetupTwoProjectionsError()
@@ -140,7 +140,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             p2.Slot = projection1.GetSlotName();
             _checkPoints.Save(p2, p2.Id);
 
-            _sut.SetUp(projections, 1);
+            _sut.SetUp(projections, 1, false);
         }
     }
 }

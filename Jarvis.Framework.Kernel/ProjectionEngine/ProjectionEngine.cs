@@ -257,7 +257,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         void ConfigureProjections()
         {
-            _checkpointTracker.SetUp(_allProjections, 1);
+            _checkpointTracker.SetUp(_allProjections, 1, true);
             var lastCommit = GetLastCommitId();
             foreach (var slot in _projectionsBySlot)
             {
