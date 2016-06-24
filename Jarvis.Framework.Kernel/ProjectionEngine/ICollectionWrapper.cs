@@ -30,7 +30,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         /// <param name="propertySelector"></param>
         /// <param name="action"></param>
         /// <param name="notify"></param>
-        void FindAndModifyByProperty(DomainEvent e, Expression<Func<TModel, Object>> propertySelector, Object propertyValue, Action<TModel> action, bool notify = false);
+        void FindAndModifyByProperty<TProperty>(DomainEvent e, Expression<Func<TModel, TProperty>> propertySelector, TProperty propertyValue, Action<TModel> action, bool notify = false);
 
         /// <summary>
         /// Optimize the "in memory" collection allowing to search for a given object that has
@@ -43,7 +43,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         /// <param name="propertySelector"></param>
         /// <param name="action"></param>
         /// <param name="notify"></param>
-        IEnumerable<TModel> FindByProperty(Expression<Func<TModel, Object>> propertySelector, Object propertyValue);
+        IEnumerable<TModel> FindByProperty<TProperty>(Expression<Func<TModel, TProperty>> propertySelector, TProperty propertyValue);
 
 
         void Save(DomainEvent e, TModel model, bool notify = false);
