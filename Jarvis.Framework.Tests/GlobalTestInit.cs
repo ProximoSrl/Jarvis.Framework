@@ -21,6 +21,7 @@ public class GlobalSetup
         var overrideTestDb = Environment.GetEnvironmentVariable("TEST_MONGODB");
         if (String.IsNullOrEmpty(overrideTestDb)) return;
 
+        Console.WriteLine("Mongodb database is overriden with TEST_MONGODB environment variable:" + overrideTestDb);
         var overrideTestDbQueryString = Environment.GetEnvironmentVariable("TEST_MONGODB_QUERYSTRING");
         var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
         var connectionStringsSection = (ConnectionStringsSection)config.GetSection("connectionStrings");
