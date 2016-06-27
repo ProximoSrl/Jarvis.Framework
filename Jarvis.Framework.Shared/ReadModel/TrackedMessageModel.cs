@@ -8,6 +8,7 @@ using Metrics;
 using MongoDB.Bson.Serialization;
 using System.Linq;
 using Jarvis.Framework.Shared.Helpers;
+using Castle.Core.Logging;
 
 namespace Jarvis.Framework.Shared.ReadModel
 {
@@ -126,11 +127,14 @@ namespace Jarvis.Framework.Shared.ReadModel
 
         //private static readonly Counter retryCount = Metric.Counter("CommandsRetry", Unit.Custom("ms"));
 
+        public ILogger Logger { get; set; }
+
         public MongoDbMessagesTracker(IMongoDatabase db)
         {
             _commands = db.GetCollection<TrackedMessageModel>("messages");
             _commands.Indexes.CreateOne(Builders<TrackedMessageModel>.IndexKeys.Ascending(x => x.MessageId));
             _commands.Indexes.CreateOne(Builders<TrackedMessageModel>.IndexKeys.Ascending(x => x.IssuedBy));
+            Logger = NullLogger.Instance;
         }
 
         public void Started(IMessage msg)
@@ -148,13 +152,13 @@ namespace Jarvis.Framework.Shared.ReadModel
             }
 
             _commands.UpdateOne(
-               Builders<TrackedMessageModel>.Filter.Eq(x=>x.MessageId, id),
-               Builders<TrackedMessageModel >.Update
+               Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
+               Builders<TrackedMessageModel>.Update
                     .Set(x => x.Message, msg)
                     .Set(x => x.StartedAt, DateTime.UtcNow)
                     .Set(x => x.IssuedBy, issuedBy)
                     .Set(x => x.Description, msg.Describe()),
-               new UpdateOptions() { IsUpsert = true} 
+               new UpdateOptions() { IsUpsert = true }
             );
         }
 
@@ -189,15 +193,24 @@ namespace Jarvis.Framework.Shared.ReadModel
                 {
                     if (trackMessage.StartedAt > DateTime.MinValue)
                     {
-                        var firstExecutionValue = trackMessage.ExecutionStartTimeList[0];
-                        var queueTime = firstExecutionValue.Subtract(trackMessage.StartedAt).TotalMilliseconds;
-                        var messageType = trackMessage.Message.GetType().Name;
-                        queueTimer.Record((Int64) queueTime, TimeUnit.Milliseconds, messageType);
-                        queueCounter.Increment(messageType, (Int64)queueTime);
+                        if (trackMessage.ExecutionStartTimeList != null &&
+                            trackMessage.ExecutionStartTimeList.Length > 0)
+                        {
+                            var firstExecutionValue = trackMessage.ExecutionStartTimeList[0];
+                            var queueTime = firstExecutionValue.Subtract(trackMessage.StartedAt).TotalMilliseconds;
 
-                        var executionTime = completedAt.Subtract(trackMessage.StartedAt);
-                        totalExecutionTimer.Record((Int64)queueTime, TimeUnit.Milliseconds, messageType);
-                        totalExecutionCounter.Increment(messageType, (Int64)queueTime);
+                            var messageType = trackMessage.Message.GetType().Name;
+                            queueTimer.Record((Int64)queueTime, TimeUnit.Milliseconds, messageType);
+                            queueCounter.Increment(messageType, (Int64)queueTime);
+
+                            var executionTime = completedAt.Subtract(trackMessage.StartedAt);
+                            totalExecutionTimer.Record((Int64)queueTime, TimeUnit.Milliseconds, messageType);
+                            totalExecutionCounter.Increment(messageType, (Int64)queueTime);
+                        }
+                        else
+                        {
+                            Logger.WarnFormat("Command id {0} received completed event but ExecutionStartTimeList is empty", commandId);
+                        }
                     }
                 }
             }
@@ -238,7 +251,7 @@ namespace Jarvis.Framework.Shared.ReadModel
                 Builders<TrackedMessageModel>.Update
                     .Set(x => x.FailedAt, failedAt)
                     .Set(x => x.ErrorMessage, ex.Message),
-                new UpdateOptions() { IsUpsert = true}
+                new UpdateOptions() { IsUpsert = true }
             );
             errorMeter.Mark();
         }
@@ -246,23 +259,23 @@ namespace Jarvis.Framework.Shared.ReadModel
 
     }
 
-    public class NullMessageTracker : IMessagesTracker 
+    public class NullMessageTracker : IMessagesTracker
     {
         public static NullMessageTracker Instance { get; set; }
 
-        static NullMessageTracker() 
+        static NullMessageTracker()
         {
             Instance = new NullMessageTracker();
         }
 
         public void Started(IMessage msg)
         {
-           
+
         }
 
         public void Completed(Guid commandId, DateTime completedAt)
         {
-            
+
         }
 
         public bool Dispatched(Guid commandId, DateTime dispatchedAt)
@@ -272,12 +285,12 @@ namespace Jarvis.Framework.Shared.ReadModel
 
         public void Drop()
         {
-            
+
         }
 
         public void Failed(Guid commandId, DateTime failedAt, Exception ex)
         {
-            
+
         }
 
         public void ElaborationStarted(Guid commandId, DateTime startAt)
