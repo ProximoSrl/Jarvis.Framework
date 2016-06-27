@@ -147,6 +147,26 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         }
 
         [Test]
+        public void verify_slot_status_new_projection_when_db_empty()
+        {
+            //Two projection in the same slot
+            var projection1 = new Projection(Substitute.For<ICollectionWrapper<SampleReadModel, String>>());
+            var projection2 = new Projection2(Substitute.For<ICollectionWrapper<SampleReadModel2, String>>());
+            //A projection in other slot
+            var projection3 = new Projection3(Substitute.For<ICollectionWrapper<SampleReadModel3, String>>());
+
+            var projections = new IProjection[] { projection1, projection2, projection3 };
+
+            _sut = new ConcurrentCheckpointTracker(_db);
+            var status = _sut.GetSlotsStatus(projections);
+
+            Assert.That(status.NewSlots, Has.Count.EqualTo(0));
+
+            Assert.That(status.SlotsThatNeedsRebuild, Has.Count.EqualTo(0));
+            Assert.That(status.SlotsWithErrors, Has.Count.EqualTo(0));
+        }
+
+        [Test]
         public void verify_status_for_slot_that_needs_to_be_rebuilded()
         {
             //Two projection in the same slot

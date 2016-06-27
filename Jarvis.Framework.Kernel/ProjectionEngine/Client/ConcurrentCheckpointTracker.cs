@@ -348,25 +348,29 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                     Projection = p,
                     Checkpoint = allCheckpoint.ContainsKey(p.GetCommonName()) ? allCheckpoint[p.GetCommonName()] : null, 
                 });
-
-
-            foreach (var slot in slots)
+            Int64 maxCheckpoint = 0;
+            if (allCheckpoint.Any())
+                maxCheckpoint = allCheckpoint.Select(c => Int64.Parse(c.Value.Value)).Max();
+            if (maxCheckpoint > 0) //if we have no dispatched commit, we have no need to rebuild or do anything
             {
-                if (slot.All(s => s.Checkpoint == null))
+                foreach (var slot in slots)
                 {
-                    returnValue.NewSlots.Add(slot.Key);
-                }
-                else if (slot.Where(s => s.Checkpoint != null).Select(s => s.Checkpoint.Value).Distinct().Count() > 1)
-                {
-                    returnValue.SlotsWithErrors.Add(new CheckpointSlotStatus.SlotError()
+                    if (slot.All(s => s.Checkpoint == null))
                     {
-                        SlotName = slot.Key,
-                        Errors = String.Format("Error in slot {0}, not all projection at the same checkpoint value. Please check reamodel db!", slot.Key),
-                    });
-                }
-                else if (slot.Any(s => s.Checkpoint == null || s.Checkpoint.Signature != s.Projection.GetSignature()))
-                {
-                    returnValue.SlotsThatNeedsRebuild.Add(slot.Key);
+                        returnValue.NewSlots.Add(slot.Key);
+                    }
+                    else if (slot.Where(s => s.Checkpoint != null).Select(s => s.Checkpoint.Value).Distinct().Count() > 1)
+                    {
+                        returnValue.SlotsWithErrors.Add(new CheckpointSlotStatus.SlotError()
+                        {
+                            SlotName = slot.Key,
+                            Errors = String.Format("Error in slot {0}, not all projection at the same checkpoint value. Please check reamodel db!", slot.Key),
+                        });
+                    }
+                    else if (slot.Any(s => s.Checkpoint == null || s.Checkpoint.Signature != s.Projection.GetSignature()))
+                    {
+                        returnValue.SlotsThatNeedsRebuild.Add(slot.Key);
+                    }
                 }
             }
             return returnValue;
