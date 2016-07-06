@@ -42,7 +42,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             {
                 var propertyValue = instance.GetPropertyValue(_propertyName);
                 EnsureCache(propertyValue);
-                var belongingSet = base[propertyValue];
+                var belongingSet = propertyValue == null ? nullEntry : base[propertyValue];
                 if (_ownershipMap.ContainsKey(instance.Id) &&
                     _ownershipMap[instance.Id] != belongingSet)
                 {
@@ -60,9 +60,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 }
             }
 
+            HashSet<TModel> nullEntry;
             private void EnsureCache(object propertyValue)
             {
-                if (!base.ContainsKey(propertyValue))
+                if (propertyValue == null)
+                {
+                    if (nullEntry == null) nullEntry = new HashSet<TModel>();
+                }
+                else if (!base.ContainsKey(propertyValue))
                 {
                     base[propertyValue] = new HashSet<TModel>();
                 }
@@ -71,6 +76,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             public IEnumerable<TModel> GetByPropertyValue(Object propertyValue)
             {
                 EnsureCache(propertyValue);
+                if (propertyValue == null) return nullEntry;
                 return base[propertyValue];
             }
         }

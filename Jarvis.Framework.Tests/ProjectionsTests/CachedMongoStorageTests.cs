@@ -55,6 +55,16 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
         }
 
         [Test]
+        public void verify_that_null_is_indexed()
+        {
+            var sut = CreateSut();
+            sut.Insert(new SampleReadModel4() { Id = "1", Name = "A Name" });
+            sut.Insert(new SampleReadModel4() { Id = "2", Name = null });
+            var element = sut.FindManyByProperty(e => e.Name, null); //This will force index creation
+            Assert.That(element.Single().Id, Is.EqualTo("2"));
+        }
+
+        [Test]
         public void Insert_Batch_and_retrieve_with_property()
         {
             var sut = CreateSut();
