@@ -147,6 +147,28 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         }
 
         [Test]
+        public void verify_new_projection_when_zero_events_dispatched()
+        {
+            //Two projection in the same slot
+            var projection1 = new Projection(Substitute.For<ICollectionWrapper<SampleReadModel, String>>());
+            var projection2 = new Projection2(Substitute.For<ICollectionWrapper<SampleReadModel2, String>>());
+            //A projection in other slot
+            var projection3 = new Projection3(Substitute.For<ICollectionWrapper<SampleReadModel3, String>>());
+
+            var projections = new IProjection[] { projection1, projection2, projection3 };
+            var checkpoint1 = new Checkpoint(projection1.GetCommonName(), "1", projection1.GetSignature());
+            var checkpoint2 = new Checkpoint(projection2.GetCommonName(), "1", projection2.GetSignature());
+            var checkpoint3 = new Checkpoint(projection3.GetCommonName(), "0", projection3.GetSignature());
+
+            _checkPoints.InsertMany(new[] { checkpoint1, checkpoint2, checkpoint3 });
+
+            _sut = new ConcurrentCheckpointTracker(_db);
+            var status = _sut.GetSlotsStatus(projections);
+
+            Assert.That(status.NewSlots, Is.EquivalentTo(new[] { projection3.GetSlotName() }));
+        }
+
+        [Test]
         public void verify_slot_status_new_projection_when_db_empty()
         {
             //Two projection in the same slot

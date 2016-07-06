@@ -355,7 +355,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             {
                 foreach (var slot in slots)
                 {
-                    if (slot.All(s => s.Checkpoint == null))
+                    if (slot.All(s => s.Checkpoint == null || s.Checkpoint.Value == "0"))
                     {
                         returnValue.NewSlots.Add(slot.Key);
                     }
