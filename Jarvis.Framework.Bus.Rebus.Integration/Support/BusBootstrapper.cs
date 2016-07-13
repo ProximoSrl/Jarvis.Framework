@@ -73,6 +73,14 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 
         public void StartWithAppConfig(Boolean immediateStart)
         {
+            if (Configuration == null)
+            {
+                throw new ConfigurationErrorsException(
+@"Configuration property is null!
+You probably forgot to register JarvisRebusConfiguration instance in Castle 
+or manually set the Configuration property of this instance.");
+            }
+
             var busConfiguration = CreateDefaultBusConfiguration();
 
             _bus = busConfiguration
