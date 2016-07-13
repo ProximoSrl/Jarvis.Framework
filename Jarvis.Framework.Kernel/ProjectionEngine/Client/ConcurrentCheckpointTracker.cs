@@ -158,7 +158,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         {
             return _checkpoints.FindAll()
                 .ToList()
-                .Where(c => !String.IsNullOrEmpty(c.Value))
+                .Where(c => !String.IsNullOrEmpty(c.Value) && c.Id != "VERSION")
                 .Max(c => LongCheckpoint.Parse(c.Value).LongValue);
         }
 
