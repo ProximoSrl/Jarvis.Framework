@@ -24,7 +24,7 @@
       <dependency id="Castle.Windsor" version="3.3.0" />
 
       <dependency id="Fasterflect" version="2.1.3" />
-	 
+	  <dependency id="Metrics.NET" version="0.3.7" />
     </dependencies>
   </metadata>
 
