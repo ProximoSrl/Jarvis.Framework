@@ -107,6 +107,7 @@
     <Compile Include="Helpers\Reflect.cs" />
     <Compile Include="Helpers\FastReflectionHelper.cs" />
     <Compile Include="IdentitySupport\AbstractIdentity.cs" />
+    <Compile Include="IdentitySupport\StringToIdentityAssociator.cs" />
     <Compile Include="IdentitySupport\AbstractIdentityTranslator.cs" />
     <Compile Include="IdentitySupport\CounterService.cs" />
     <Compile Include="IdentitySupport\EventStoreIdentity.cs" />

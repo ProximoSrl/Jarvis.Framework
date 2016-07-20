@@ -1,6 +1,7 @@
 using System;
 using Jarvis.Framework.Shared.ReadModel;
 using Jarvis.Framework.Tests.SharedTests;
+using Jarvis.Framework.Tests.SharedTests.IdentitySupport;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests
 {

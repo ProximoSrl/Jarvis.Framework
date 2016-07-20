@@ -4,6 +4,7 @@ using Jarvis.Framework.Shared.IdentitySupport.Serialization;
 using Jarvis.Framework.Shared.Messages;
 using Jarvis.Framework.Tests.EngineTests;
 using Jarvis.Framework.Tests.SharedTests;
+using Jarvis.Framework.Tests.SharedTests.IdentitySupport;
 using Jarvis.Framework.Tests.Support;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;

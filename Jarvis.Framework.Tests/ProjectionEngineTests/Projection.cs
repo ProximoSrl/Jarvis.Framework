@@ -4,6 +4,7 @@ using Jarvis.Framework.Kernel.Events;
 using Jarvis.Framework.Kernel.ProjectionEngine;
 using Jarvis.Framework.Tests.EngineTests;
 using Jarvis.Framework.Tests.SharedTests;
+using Jarvis.Framework.Tests.SharedTests.IdentitySupport;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests
 {
