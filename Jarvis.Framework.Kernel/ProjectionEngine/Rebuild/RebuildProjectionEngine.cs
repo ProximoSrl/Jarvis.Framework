@@ -135,7 +135,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 
                 var projectionsForThisSlot = _projectionsBySlot[slotName];
                 Int64 maximumDispatchedValue = projectionsForThisSlot
-                    .Select(p => LongCheckpoint.Parse(_checkpointTracker.GetCheckpoint(p)).LongValue)
+                    .Select(p => _checkpointTracker.GetCheckpoint(p))
                     .Max();
                 var dispatcher = new RebuildProjectionSlotDispatcher(_logger, slotName, _config, projectionsForThisSlot, _checkpointTracker, maximumDispatchedValue);
                 MetricsHelper.SetCheckpointCountToDispatch(slotName, () => dispatcher.CheckpointToDispatch);
@@ -263,7 +263,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                             _checkpointTracker.UpdateSlotAndSetCheckpoint(
                                 dispatcher.SlotName, 
                                 dispatcher.Projections.Select(p => p.GetCommonName()), 
-                                dispatcher.LastCheckpointDispatched.ToString());
+                                dispatcher.LastCheckpointDispatched);
 
                             dispatcherWaitingToFinish.Remove(dispatcher);
                             Logger.InfoFormat("Rebuild ended for slot {0}", dispatcher.SlotName);
@@ -285,37 +285,34 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
             }
         }
 
-        string GetStartGlobalCheckpoint()
+        Int64 GetStartGlobalCheckpoint()
         {
             var checkpoints = _projectionsBySlot.Keys.Select(GetStartCheckpointForSlot).Distinct().ToArray();
-            var min = checkpoints.Any() ? checkpoints.Min(x => LongCheckpoint.Parse(x).LongValue) : 0;
+            var min = checkpoints.Any() ? checkpoints.Min() : 0;
 
-            return new LongCheckpoint(min).Value;
+            return min;
         }
 
-        string GetStartCheckpointForSlot(string slotName)
+        Int64 GetStartCheckpointForSlot(string slotName)
         {
-            LongCheckpoint min = null;
+            Int64 min = 0;
 
             var projections = _projectionsBySlot[slotName];
             foreach (var projection in projections)
             {
                 if (_checkpointTracker.NeedsRebuild(projection))
-                    return null;
+                    return 0;
 
                 var currentValue = _checkpointTracker.GetCurrent(projection);
-                if (currentValue == null)
-                    return null;
-
-                var currentCheckpoint = LongCheckpoint.Parse(currentValue);
-
-                if (min == null || currentCheckpoint.LongValue < min.LongValue)
+                if (currentValue == 0)
+                    return 0;
+                if (currentValue < min)
                 {
-                    min = currentCheckpoint;
+                    min = currentValue;
                 }
             }
 
-            return min.Value;
+            return min;
         }
 
         void ConfigureProjections()
@@ -328,8 +325,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                     .Select(projection =>
                     {
                         var checkpoint = _checkpointTracker.GetCheckpoint(projection);
-                        var longCheckpoint = LongCheckpoint.Parse(checkpoint);
-                        return longCheckpoint.LongValue;
+                        var longCheckpoint = checkpoint;
+                        return longCheckpoint;
                     })
                     .Max();
 
@@ -340,7 +337,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                     if (maxCheckpointDispatchedInSlot > 0)
                     {
                         _checkpointTracker.SetCheckpoint(projection.GetCommonName(),
-                            maxCheckpointDispatchedInSlot.ToString());
+                            maxCheckpointDispatchedInSlot);
                         projection.Drop();
                         projection.StartRebuild(_rebuildContext);
                         _checkpointTracker.RebuildStarted(projection, lastCommit);
@@ -368,7 +365,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
             }
         }
 
-        private String GetLastCommitId()
+        private Int64 GetLastCommitId()
         {
             var collection = GetMongoCommitsCollection();
             var lastCommit = collection
@@ -377,9 +374,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                 .Limit(1)
                 .FirstOrDefault();
 
-            if (lastCommit == null) return null;
+            if (lastCommit == null) return 0;
 
-            return lastCommit["_id"].ToString();
+            return lastCommit["_id"].AsInt64;
         }
 
         void HandleError(Exception exception)

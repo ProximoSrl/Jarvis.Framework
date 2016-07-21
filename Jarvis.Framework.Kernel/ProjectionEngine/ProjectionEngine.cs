@@ -216,43 +216,38 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                     b.Slots.Any(s => s.Equals(slotName, StringComparison.OrdinalIgnoreCase))) ??
                     _config.BucketInfo.Single(b => b.Slots[0] == "*");
                 var client = _bucketToClient[slotBucket];
-                client.AddConsumer(commit => DispatchCommit(commit, name, LongCheckpoint.Parse(startCheckpoint)));
+                client.AddConsumer(commit => DispatchCommit(commit, name, startCheckpoint));
             }
 
             MetricsHelper.SetProjectionEngineCurrentDispatchCount(() => _countOfConcurrentDispatchingCommit);
         }
 
-        string GetStartGlobalCheckpoint()
+        Int64 GetStartGlobalCheckpoint()
         {
             var checkpoints = _projectionsBySlot.Keys.Select(GetStartCheckpointForSlot).Distinct().ToArray();
-            var min = checkpoints.Any() ? checkpoints.Min(x => LongCheckpoint.Parse(x).LongValue) : 0;
+            var min = checkpoints.Any() ? checkpoints.Min() : 0;
 
-            return new LongCheckpoint(min).Value;
+            return min;
         }
 
-        string GetStartCheckpointForSlot(string slotName)
+        Int64 GetStartCheckpointForSlot(string slotName)
         {
-            LongCheckpoint min = null;
+            Int64 min = 0;
 
             var projections = _projectionsBySlot[slotName];
             foreach (var projection in projections)
             {
                 if (_checkpointTracker.NeedsRebuild(projection))
-                    return null;
+                    return 0;
 
                 var currentValue = _checkpointTracker.GetCurrent(projection);
-                if (currentValue == null)
-                    return null;
-
-                var currentCheckpoint = LongCheckpoint.Parse(currentValue);
-
-                if (min == null || currentCheckpoint.LongValue < min.LongValue)
+                if (currentValue < min)
                 {
-                    min = currentCheckpoint;
+                    min = currentValue;
                 }
             }
 
-            return min.Value;
+            return min;
         }
 
         void ConfigureProjections()
@@ -264,9 +259,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 var maxCheckpointDispatchedInSlot = slot.Value
                     .Select(projection =>
                     {
-                        var checkpoint = _checkpointTracker.GetCheckpoint(projection);
-                        var longCheckpoint = LongCheckpoint.Parse(checkpoint);
-                        return longCheckpoint.LongValue;
+                        return _checkpointTracker.GetCheckpoint(projection);
                     })
                     .Max();
 
@@ -278,7 +271,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                         if (maxCheckpointDispatchedInSlot > 0)
                         {
                             _checkpointTracker.SetCheckpoint(projection.GetCommonName(),
-                                maxCheckpointDispatchedInSlot.ToString());
+                                maxCheckpointDispatchedInSlot);
                             projection.Drop();
                             projection.StartRebuild(_rebuildContext);
                             _checkpointTracker.RebuildStarted(projection, lastCommit);
@@ -308,7 +301,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             }
         }
 
-        private String GetLastCommitId()
+        private Int64 GetLastCommitId()
         {
             var collection = GetMongoCommitsCollection();
             var lastCommit = collection
@@ -317,9 +310,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 .Limit(1)
                 .FirstOrDefault();
 
-            if (lastCommit == null) return null;
+            if (lastCommit == null) return 0;
 
-            return lastCommit["_id"].ToString();
+            return lastCommit["_id"].AsInt64;
         }
 
         void HandleError(Exception exception)
@@ -344,7 +337,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         private ConcurrentDictionary<String, Int64> lastCheckpointDispatched =
             new ConcurrentDictionary<string, long>();
 
-        void DispatchCommit(ICommit commit, string slotName, LongCheckpoint startCheckpoint)
+        void DispatchCommit(ICommit commit, string slotName, Int64 startCheckpoint)
         {
             Interlocked.Increment(ref _countOfConcurrentDispatchingCommit);
             //Console.WriteLine("[{0:00}] - Slot {1}", Thread.CurrentThread.ManagedThreadId, slotName);
@@ -352,32 +345,32 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
             if (Logger.IsDebugEnabled) Logger.DebugFormat("Dispatching checkpoit {0} on tenant {1}", commit.CheckpointToken, _config.TenantId);
             TenantContext.Enter(_config.TenantId);
-            var chkpoint = LongCheckpoint.Parse(commit.CheckpointToken);
+            var chkpoint = commit.CheckpointToken;
 
             if (!lastCheckpointDispatched.ContainsKey(slotName))
             {
                 lastCheckpointDispatched[slotName] = 0;
             }
-            if (!(lastCheckpointDispatched[slotName] < chkpoint.LongValue))
+            if (!(lastCheckpointDispatched[slotName] < chkpoint))
             {
                 var error = String.Format("Sequence broken, last checkpoint for slot {0} was {1} and now we dispatched {2}",
-                        slotName, lastCheckpointDispatched[slotName], chkpoint.LongValue);
+                        slotName, lastCheckpointDispatched[slotName], chkpoint);
                 Logger.Error(error);
                 throw new Exception(error);
             }
 
-            if (lastCheckpointDispatched[slotName] + 1 != chkpoint.LongValue)
+            if (lastCheckpointDispatched[slotName] + 1 != chkpoint)
             {
                 if (lastCheckpointDispatched[slotName] > 0)
                 {
                     Logger.DebugFormat("Sequence of commit non consecutive, last dispatched {0} receiving {1}",
-                      lastCheckpointDispatched[slotName], chkpoint.LongValue);
+                      lastCheckpointDispatched[slotName], chkpoint);
                 }
             }
-            lastCheckpointDispatched[slotName] = chkpoint.LongValue;
+            lastCheckpointDispatched[slotName] = chkpoint;
 
 
-            if (chkpoint.LongValue <= startCheckpoint.LongValue)
+            if (chkpoint <= startCheckpoint)
             {
                 //Already dispatched, skip it.
                 Interlocked.Decrement(ref _countOfConcurrentDispatchingCommit);
@@ -497,16 +490,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 _notifyCommitHandled.SetDispatched(commit);
 
             // ok in multithread wihout locks!
-            if (_maxDispatchedCheckpoint < chkpoint.LongValue)
+            if (_maxDispatchedCheckpoint < chkpoint)
             {
                 if (Logger.IsDebugEnabled)
                 {
                     Logger.DebugFormat("Updating last dispatched checkpoint from {0} to {1}",
                         _maxDispatchedCheckpoint,
-                        chkpoint.LongValue
+                        chkpoint
                     );
                 }
-                _maxDispatchedCheckpoint = chkpoint.LongValue;
+                _maxDispatchedCheckpoint = chkpoint;
             }
 
             if (Logger.IsDebugEnabled) Logger.ThreadProperties["commit"] = null;

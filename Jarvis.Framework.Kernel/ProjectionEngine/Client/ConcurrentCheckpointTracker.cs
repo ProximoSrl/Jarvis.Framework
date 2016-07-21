@@ -17,8 +17,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
     public class ConcurrentCheckpointTracker : IConcurrentCheckpointTracker
     {
         readonly IMongoCollection<Checkpoint> _checkpoints;
-        private ConcurrentDictionary<string, string> _checkpointTracker;
-        private ConcurrentDictionary<string, string> _currentCheckpointTracker;
+        private ConcurrentDictionary<string, Int64> _checkpointTracker;
+        private ConcurrentDictionary<string, Int64> _currentCheckpointTracker;
 
         /// <summary>
         /// Used for Metrics.NET.
@@ -54,16 +54,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         public void Clear()
         {
-            _checkpointTracker = new ConcurrentDictionary<string, string>();
+            _checkpointTracker = new ConcurrentDictionary<string, Int64>();
             _checkpointSlotTracker = new ConcurrentDictionary<string, Int64>();
             _projectionToSlot = new ConcurrentDictionary<String, String>();
             _slotRebuildTracker = new ConcurrentDictionary<string, bool>();
-            _currentCheckpointTracker = new ConcurrentDictionary<string, string>();
+            _currentCheckpointTracker = new ConcurrentDictionary<string, Int64>();
             _checkpointErrors = new List<string>();
             _higherCheckpointToDispatchInRebuild = 0;
         }
 
-        void Add(IProjection projection, string defaultValue)
+        void Add(IProjection projection, Int64 defaultValue)
         {
             var id = projection.GetCommonName();
             var projectionSignature = projection.GetSignature();
@@ -96,12 +96,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             var versionInfo = _checkpoints.FindOneById("VERSION");
             if (versionInfo == null)
             {
-                versionInfo = new Checkpoint("VERSION", "0", null);
+                versionInfo = new Checkpoint("VERSION", 0, null);
             }
 
-            int currentVersion = int.Parse(versionInfo.Value);
+            int currentVersion = (Int32) versionInfo.Value;
 
-            string projectionStartFormCheckpointValue = new LongCheckpoint(0).Value;
+            Int64 projectionStartFormCheckpointValue = 0L;
             if (currentVersion == 0)
             {
                 var eventsVersion = _checkpoints.FindOneById("events");
@@ -123,7 +123,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             // mark db
             if (version > currentVersion)
             {
-                versionInfo.Value = new LongCheckpoint(version).Value;
+                versionInfo.Value = version;
                 _checkpoints.Save(versionInfo, versionInfo.Id);
             }
 
@@ -150,7 +150,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         public Int64 GetMinCheckpoint()
         {
-            return _currentCheckpointTracker.Values.Select(Int64.Parse).Min();
+            return _currentCheckpointTracker.Values.Min();
         }
 
      
@@ -158,8 +158,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         {
             return _checkpoints.FindAll()
                 .ToList()
-                .Where(c => !String.IsNullOrEmpty(c.Value) && c.Id != "VERSION")
-                .Max(c => LongCheckpoint.Parse(c.Value).LongValue);
+                .Where(c => c.Id != "VERSION")
+                .Max(c => c.Value);
         }
 
         public bool NeedsRebuild(IProjection projection)
@@ -176,7 +176,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             //return current.LongValue < last.LongValue;
         }
 
-        public void RebuildStarted(IProjection projection, String lastCommitId)
+        public void RebuildStarted(IProjection projection, Int64 lastCommitId)
         {
             var projectionName = projection.GetCommonName();
             _checkpoints.UpdateOne(
@@ -191,8 +191,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             );
             //Check if some commit was deleted and lastCommitId in Eventstore 
             //is lower than the latest dispatched commit.
-            var trackerLastValue = LongCheckpoint.Parse(_checkpointTracker[projection.GetCommonName()]).LongValue;
-            var lastCommitIdLong = LongCheckpoint.Parse(lastCommitId).LongValue;
+            var trackerLastValue = _checkpointTracker[projection.GetCommonName()];
+            var lastCommitIdLong = lastCommitId;
             if (trackerLastValue > 0)
             {
                 //new projection, it has no dispatched checkpoint.
@@ -229,7 +229,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             _checkpoints.Save(checkpoint, checkpoint.Id);
         }
 
-        public void UpdateSlot(string slotName, string checkpointToken)
+        public void UpdateSlot(string slotName, Int64 checkpointToken)
         {
             if (_slotRebuildTracker[slotName] == false)
             {
@@ -244,8 +244,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         public void UpdateSlotAndSetCheckpoint(
             string slotName, 
             IEnumerable<String> projectionIdList, 
-            string valueCheckpointToken,
-            string currentCheckpointToken = null)
+            Int64 valueCheckpointToken,
+            Int64? currentCheckpointToken = null)
         {
             _checkpoints.UpdateMany(
                    Builders<Checkpoint>.Filter.Eq("Slot", slotName),
@@ -253,23 +253,23 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                     .Set("Current", currentCheckpointToken ?? valueCheckpointToken)
                     .Set("Value", valueCheckpointToken )
               );
-            _currentCheckpointTracker.AddOrUpdate(slotName, currentCheckpointToken, (key, value) => currentCheckpointToken);
+            _currentCheckpointTracker.AddOrUpdate(slotName, currentCheckpointToken ?? 0, (key, value) => currentCheckpointToken ?? 0);
             foreach (var projectionId in projectionIdList)
             {
-                _checkpointTracker.AddOrUpdate(projectionId, key => currentCheckpointToken, (key, currentValue) => currentCheckpointToken);
+                _checkpointTracker.AddOrUpdate(projectionId, key => currentCheckpointToken ?? 0, (key, currentValue) => currentCheckpointToken ?? 0);
             }
         }
 
-        public string GetCurrent(IProjection projection)
+        public Int64 GetCurrent(IProjection projection)
         {
             var checkpoint = _checkpoints.FindOneById(projection.GetCommonName());
             if (checkpoint == null)
-                return null;
+                return 0;
 
-            return checkpoint.Current;
+            return checkpoint.Current ?? 0;
         }
 
-        public void SetCheckpoint(string id, string value)
+        public void SetCheckpoint(string id, Int64 value)
         {
             _checkpoints.UpdateOne(
                  Builders<Checkpoint>.Filter.Eq("_id", id),
@@ -279,12 +279,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             _checkpointTracker.AddOrUpdate(id, key => value, (key, currentValue) => value);
         }
 
-        public CheckPointReplayStatus GetCheckpointStatus(string id, string checkpoint)
+        public CheckPointReplayStatus GetCheckpointStatus(string id, Int64 checkpoint)
         {
-            string lastDispatched = _checkpointTracker[id];
+            Int64 lastDispatched = _checkpointTracker[id];
 
-            var currentCheckpointValue = LongCheckpoint.Parse(checkpoint).LongValue;
-            long lastDispatchedValue = LongCheckpoint.Parse(lastDispatched).LongValue;
+            var currentCheckpointValue = checkpoint;
+            long lastDispatchedValue = lastDispatched;
 
             bool isLast = currentCheckpointValue == lastDispatchedValue;
             bool isReplay = currentCheckpointValue <= lastDispatchedValue;
@@ -292,12 +292,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             return new CheckPointReplayStatus(isLast, isReplay);
         }
 
-        public string GetCheckpoint(IProjection projection)
+        public Int64 GetCheckpoint(IProjection projection)
         {
             var id = projection.GetCommonName();
             if (_checkpointTracker.ContainsKey(id))
                 return _checkpointTracker[id];
-            return null;
+            return 0;
         }
 
         public List<string> GetCheckpointErrors()
@@ -319,7 +319,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                         String error;
                         //error, ve have not all projection at the same checkpoint 
                         if (allCheckpoints
-                            .Where(k => k.Value != "0")
+                            .Where(k => k.Value != 0)
                             .Select(k => k.Value)
                             .Distinct().Count() == 1)
                         {
@@ -350,12 +350,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                 });
             Int64 maxCheckpoint = 0;
             if (allCheckpoint.Any())
-                maxCheckpoint = allCheckpoint.Select(c => Int64.Parse(c.Value.Value)).Max();
+                maxCheckpoint = allCheckpoint.Select(c => c.Value.Value).Max();
             if (maxCheckpoint > 0) //if we have no dispatched commit, we have no need to rebuild or do anything
             {
                 foreach (var slot in slots)
                 {
-                    if (slot.All(s => s.Checkpoint == null || s.Checkpoint.Value == "0"))
+                    if (slot.All(s => s.Checkpoint == null || s.Checkpoint.Value == 0))
                     {
                         returnValue.NewSlots.Add(slot.Key);
                     }

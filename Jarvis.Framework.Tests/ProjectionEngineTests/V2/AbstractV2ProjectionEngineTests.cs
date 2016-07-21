@@ -41,12 +41,13 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             switch (pollingClientVersion)
             {
                 case "1":
-                    pollingClientFactory = ps => new CommitPollingClient(
-                    ps,
-                    new CommitEnhancer(_identityConverter),
-                    OnGetPollingClientId(),
-                    NullLogger.Instance);
-                    break;
+                    throw new NotSupportedException("Version 1 of projection engine was removed due to migration to NES6");
+                    //pollingClientFactory = ps => new CommitPollingClient(
+                    //ps,
+                    //new CommitEnhancer(_identityConverter),
+                    //OnGetPollingClientId(),
+                    //NullLogger.Instance);
+                    //break;
 
                 case "2":
                     pollingClientFactory = ps => new CommitPollingClient2(

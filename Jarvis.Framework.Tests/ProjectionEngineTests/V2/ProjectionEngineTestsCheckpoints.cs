@@ -57,7 +57,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
         public async void run_poller()
         {
 
-            var projected = _statusChecker.IsCheckpointProjectedByAllProjection("2");
+            var projected = _statusChecker.IsCheckpointProjectedByAllProjection(2);
             if (projected)
             {
                 var allProjected = _checkpoints.FindAll().ToList();
@@ -76,7 +76,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             aggregate.Create();
             Repository.Save(aggregate, Guid.NewGuid(), h => { });
 
-            var stream = _eventStore.Advanced.GetFrom("0");
+            var stream = _eventStore.Advanced.GetFrom(0);
             var lastCommit = stream.Last();
 
             //need to wait for at least one checkpoint written to database.

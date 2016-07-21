@@ -63,7 +63,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             aggregate.Create();
             Repository.Save(aggregate, Guid.NewGuid(), h => { });
 
-            var stream = _eventStore.Advanced.GetFrom("0");
+            var stream = _eventStore.Advanced.GetFrom(0);
             var lastCommit = stream.Last();
             await Engine.UpdateAndWait();
 

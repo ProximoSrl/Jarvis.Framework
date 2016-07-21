@@ -94,7 +94,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             } while (
                         (
                             checkpoint == null ||
-                            checkpoint.Value != numberOfTotalCommits.ToString()
+                            checkpoint.Value != numberOfTotalCommits
                          ) &&
                          DateTime.Now.Subtract(startWait).TotalMilliseconds < 5000
                      );

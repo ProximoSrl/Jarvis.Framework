@@ -7,8 +7,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 	public class Checkpoint
 	{
 		public string Id { get; protected set; }
-		public string Value { get; set; }
-        public string Current { get; set; }
+		public Int64 Value { get; set; }
+        public Int64? Current { get; set; }
         public string Signature { get; set; }
         public string Slot { get; set; }
 
@@ -27,7 +27,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 	    public ProjectionMetrics.Meter Details { get; set; }
 
 
-        public Checkpoint(string id, string value, string signature)
+        public Checkpoint(string id, Int64 value, string signature)
 		{
 			Id = id;
 			Value = value;
