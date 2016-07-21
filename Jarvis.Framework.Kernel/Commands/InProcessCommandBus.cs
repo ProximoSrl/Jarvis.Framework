@@ -143,6 +143,7 @@ namespace Jarvis.Framework.Kernel.Commands
             {
                 try
                 {
+                    _messagesTracker.ElaborationStarted(command.MessageId, DateTime.UtcNow);
                     handler.Handle(command);
                     _messagesTracker.Completed(command.MessageId, DateTime.UtcNow);
                     done = true;
