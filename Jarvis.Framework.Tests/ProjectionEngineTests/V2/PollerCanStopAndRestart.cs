@@ -14,8 +14,8 @@ using NUnit.Framework;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
-    [TestFixture("1")]
-    [TestFixture(2)]
+    //[TestFixture("1")]
+    [TestFixture("2")]
     public class PollerCanStopAndRestart : AbstractV2ProjectionEngineTests
     {
 
@@ -52,7 +52,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
         }
 
         [Test]
-        public async void stop_and_restart_polling_should_work()
+        public void stop_and_restart_polling_should_work()
         {
             var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregateId(1));
             aggregate.Create();

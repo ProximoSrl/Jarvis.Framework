@@ -92,7 +92,7 @@ namespace Jarvis.Framework.Kernel.Support
                     Int64 current;
                     if (!metric["Current"].IsBsonNull)
                     {
-                        current = Int64.Parse(metric["Current"].AsString);
+                        current = metric["Current"].AsInt64;
                     }
                     else
                     {

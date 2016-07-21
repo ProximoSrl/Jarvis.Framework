@@ -69,7 +69,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 
                 Event.SetPropertyValue(d => d.Version, Version);
                 Event.SetPropertyValue(d => d.Context, Context);
-                Event.SetPropertyValue(d => d.CheckpointToken, CheckpointToken.ToString());
+                Event.SetPropertyValue(d => d.CheckpointToken, CheckpointToken);
             }
 
             return Event;

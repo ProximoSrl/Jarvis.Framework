@@ -232,7 +232,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         Int64 GetStartCheckpointForSlot(string slotName)
         {
-            Int64 min = 0;
+            Int64 min = Int64.MaxValue;
 
             var projections = _projectionsBySlot[slotName];
             foreach (var projection in projections)

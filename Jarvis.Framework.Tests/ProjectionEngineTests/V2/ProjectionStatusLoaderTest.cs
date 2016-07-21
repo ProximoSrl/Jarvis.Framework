@@ -17,7 +17,7 @@ using System.Threading.Tasks;
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
 
-    [TestFixture("1")]
+    //[TestFixture("1")]
     [TestFixture("2")]
     public class ProjectionStatusLoaderTest : ProjectionEngineBasicTestBase
     {

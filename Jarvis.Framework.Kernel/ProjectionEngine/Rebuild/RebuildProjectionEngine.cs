@@ -295,7 +295,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 
         Int64 GetStartCheckpointForSlot(string slotName)
         {
-            Int64 min = 0;
+            Int64 min = Int64.MaxValue;
 
             var projections = _projectionsBySlot[slotName];
             foreach (var projection in projections)
@@ -304,8 +304,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                     return 0;
 
                 var currentValue = _checkpointTracker.GetCurrent(projection);
-                if (currentValue == 0)
-                    return 0;
                 if (currentValue < min)
                 {
                     min = currentValue;
