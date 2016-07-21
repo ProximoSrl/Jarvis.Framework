@@ -85,7 +85,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
             _logger.InfoFormat("Unwind events starting from commit {0}", startToken);
 
             //Since we could have crashed during unwind of last commit, we want to reunwind again last commit
-            String checkpointToken = (startToken - 1).ToString();
+            Int64 checkpointToken = startToken - 1;
             _unwindedEventCollection.DeleteMany(Builders<UnwindedDomainEvent>.Filter.Gte(e => e.CheckpointToken, startToken));
 
             Int64 count = 0;
@@ -119,7 +119,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                 var id = commit.CheckpointToken + "_" + ordinal;
                 UnwindedDomainEvent unwinded = new UnwindedDomainEvent();
                 unwinded.Id = id;
-                unwinded.CheckpointToken = LongCheckpoint.Parse(commit.CheckpointToken).LongValue;
+                unwinded.CheckpointToken = commit.CheckpointToken;
                 unwinded.EventSequence = ordinal;
                 unwinded.EventType = evt.Body.GetType().Name;
                 unwinded.Event = (DomainEvent)evt.Body;

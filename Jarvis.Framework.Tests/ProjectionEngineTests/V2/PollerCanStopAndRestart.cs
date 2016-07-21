@@ -14,7 +14,7 @@ using NUnit.Framework;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
-    [TestFixture("1")]
+    //[TestFixture("1")]
     [TestFixture("2")]
     public class PollerCanStopAndRestart : AbstractV2ProjectionEngineTests
     {
@@ -52,13 +52,13 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
         }
 
         [Test]
-        public async void stop_and_restart_polling_should_work()
+        public void stop_and_restart_polling_should_work()
         {
             var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregateId(1));
             aggregate.Create();
             Repository.Save(aggregate, Guid.NewGuid(), h => { });
 
-            Boolean checkpointPassed = WaitForCheckpoint("1");
+            Boolean checkpointPassed = WaitForCheckpoint(1);
             Assert.IsTrue(checkpointPassed, "Automatic poller does not work.");
 
             Engine.Stop();
@@ -67,17 +67,17 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             aggregate.Create();
             Repository.Save(aggregate, Guid.NewGuid(), h => { });
 
-            checkpointPassed = WaitForCheckpoint("2");
+            checkpointPassed = WaitForCheckpoint(2);
             Assert.IsFalse(checkpointPassed, "Automatic poller is still working after stop.");
 
             Engine.Start();
 
-            checkpointPassed = WaitForCheckpoint("2");
+            checkpointPassed = WaitForCheckpoint(2);
             Assert.IsTrue(checkpointPassed, "Automatic poller is not restarted correctly.");
 
         }
 
-        private Boolean WaitForCheckpoint(string checkpointToken)
+        private Boolean WaitForCheckpoint(Int64 checkpointToken)
         {
             DateTime startTime = DateTime.Now;
             Boolean passed = false;

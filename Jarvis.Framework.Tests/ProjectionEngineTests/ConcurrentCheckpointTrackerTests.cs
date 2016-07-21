@@ -92,10 +92,10 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             var projection2 = new Projection2(Substitute.For<ICollectionWrapper<SampleReadModel2, String>>());
             var projections = new IProjection[] { projection1, projection2 };
             _sut = new ConcurrentCheckpointTracker(_db);
-            _sut.UpdateSlotAndSetCheckpoint(projection1.GetSlotName(), projections.Select(p => p.GetCommonName()), "2");
+            _sut.UpdateSlotAndSetCheckpoint(projection1.GetSlotName(), projections.Select(p => p.GetCommonName()), 2);
             var checkpoints = _checkPoints.FindAll().ToEnumerable().Where(c => c.Id != "VERSION").ToList();
             Assert.That(checkpoints, Has.Count.EqualTo(2));
-            Assert.That(checkpoints.All(c => c.Value == "2"));
+            Assert.That(checkpoints.All(c => c.Value == 2));
         }
 
 
@@ -109,9 +109,9 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             var projection3 = new Projection3(Substitute.For<ICollectionWrapper<SampleReadModel3, String>>());
 
             var projections = new IProjection[] { projection1, projection2, projection3 };
-            var checkpoint1 = new Checkpoint(projection1.GetCommonName(), "1", projection1.GetSignature());
-            var checkpoint2 = new Checkpoint(projection2.GetCommonName(), "1", projection2.GetSignature());
-            var checkpoint3 = new Checkpoint(projection3.GetCommonName(), "1", projection3.GetSignature());
+            var checkpoint1 = new Checkpoint(projection1.GetCommonName(), 1, projection1.GetSignature());
+            var checkpoint2 = new Checkpoint(projection2.GetCommonName(), 1, projection2.GetSignature());
+            var checkpoint3 = new Checkpoint(projection3.GetCommonName(), 1, projection3.GetSignature());
             _checkPoints.InsertMany(new[] { checkpoint1, checkpoint2, checkpoint3 });
 
             _sut = new ConcurrentCheckpointTracker(_db);
@@ -132,8 +132,8 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             var projection3 = new Projection3(Substitute.For<ICollectionWrapper<SampleReadModel3, String>>());
 
             var projections = new IProjection[] { projection1, projection2, projection3 };
-            var checkpoint1 = new Checkpoint(projection1.GetCommonName(), "1", projection1.GetSignature());
-            var checkpoint2 = new Checkpoint(projection2.GetCommonName(), "1", projection2.GetSignature());
+            var checkpoint1 = new Checkpoint(projection1.GetCommonName(), 1, projection1.GetSignature());
+            var checkpoint2 = new Checkpoint(projection2.GetCommonName(), 1, projection2.GetSignature());
            
             _checkPoints.InsertMany(new[] { checkpoint1, checkpoint2, });
 
@@ -156,9 +156,9 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             var projection3 = new Projection3(Substitute.For<ICollectionWrapper<SampleReadModel3, String>>());
 
             var projections = new IProjection[] { projection1, projection2, projection3 };
-            var checkpoint1 = new Checkpoint(projection1.GetCommonName(), "1", projection1.GetSignature());
-            var checkpoint2 = new Checkpoint(projection2.GetCommonName(), "1", projection2.GetSignature());
-            var checkpoint3 = new Checkpoint(projection3.GetCommonName(), "0", projection3.GetSignature());
+            var checkpoint1 = new Checkpoint(projection1.GetCommonName(), 1, projection1.GetSignature());
+            var checkpoint2 = new Checkpoint(projection2.GetCommonName(), 1, projection2.GetSignature());
+            var checkpoint3 = new Checkpoint(projection3.GetCommonName(), 0, projection3.GetSignature());
 
             _checkPoints.InsertMany(new[] { checkpoint1, checkpoint2, checkpoint3 });
 
@@ -195,7 +195,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             var projection1 = new Projection(Substitute.For<ICollectionWrapper<SampleReadModel, String>>());
            
             var projections = new IProjection[] { projection1 };
-            var checkpoint1 = new Checkpoint(projection1.GetCommonName(), "1", projection1.GetSignature() + "modified");
+            var checkpoint1 = new Checkpoint(projection1.GetCommonName(), 1, projection1.GetSignature() + "modified");
 
             _checkPoints.InsertMany(new[] { checkpoint1, });
 
@@ -226,7 +226,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             var projection1 = new Projection(writer1);
             var projection2 = new Projection2(writer2);
             var projections = new IProjection[] { projection1, projection2 };
-            var p1 = new Checkpoint(projection1.GetCommonName(), "42", projection1.GetSignature());
+            var p1 = new Checkpoint(projection1.GetCommonName(), 42, projection1.GetSignature());
             p1.Slot = projection1.GetSlotName();
             _checkPoints.Save(p1, p1.Id);
 
@@ -244,10 +244,10 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             var projection1 = new Projection(writer1);
             var projection2 = new Projection2(writer2);
             var projections = new IProjection[] { projection1, projection2 };
-            var p1 = new Checkpoint(projection1.GetCommonName(), "42", projection1.GetSignature());
+            var p1 = new Checkpoint(projection1.GetCommonName(), 42, projection1.GetSignature());
             p1.Slot = projection1.GetSlotName();
             _checkPoints.Save(p1, p1.Id);
-            var p2 = new Checkpoint(projection2.GetCommonName(), "42", "oldSignature");
+            var p2 = new Checkpoint(projection2.GetCommonName(), 42, "oldSignature");
             p2.Slot = projection2.GetSlotName();
             _checkPoints.Save(p2, p2.Id);
 
@@ -265,11 +265,11 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             var projection1 = new Projection(writer1);
             var projection2 = new Projection2(writer2);
             var projections = new IProjection[] { projection1, projection2 };
-            var p1 = new Checkpoint(projection1.GetCommonName(), "42", projection1.GetSignature());
+            var p1 = new Checkpoint(projection1.GetCommonName(), 42, projection1.GetSignature());
             p1.Slot = projection1.GetSlotName();
             _checkPoints.Save(p1, p1.Id);
 
-            var p2 = new Checkpoint(projection2.GetCommonName(), "40", projection2.GetSignature());
+            var p2 = new Checkpoint(projection2.GetCommonName(), 40, projection2.GetSignature());
             p2.Slot = projection1.GetSlotName();
             _checkPoints.Save(p2, p2.Id);
 

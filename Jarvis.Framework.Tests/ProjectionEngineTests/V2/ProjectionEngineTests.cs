@@ -40,7 +40,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 
     }
 
-    [TestFixture("1")]
+    //[TestFixture("1")]
     [TestFixture("2")]
     public class ProjectionEngineTestBasic : ProjectionEngineBasicTestBase
     {
@@ -63,7 +63,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
     }
 
 
-    [TestFixture("1")]
+    //[TestFixture("1")]
     [TestFixture("2")]
     public class ProjectionEngineWithRebuild : ProjectionEngineBasicTestBase
     {
@@ -88,7 +88,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             await Engine.UpdateAndWait();
             Assert.AreEqual(1, reader.AllSortedById.Count());
             var checkpoint = _checkpoints.FindOneById("Projection");
-            Assert.That(checkpoint.Value, Is.EqualTo("1"), "Checkpoint is written after rebuild.");
+            Assert.That(checkpoint.Value, Is.EqualTo(1), "Checkpoint is written after rebuild.");
         }
     }
 

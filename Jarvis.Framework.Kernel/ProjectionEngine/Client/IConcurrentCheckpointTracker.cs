@@ -6,11 +6,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 {
     public interface IConcurrentCheckpointTracker
     {
-        void SetCheckpoint(string id, string value);
+        void SetCheckpoint(string id, Int64 value);
         
-        CheckPointReplayStatus GetCheckpointStatus(string id, string checkpoint);
+        CheckPointReplayStatus GetCheckpointStatus(string id, Int64 checkpoint);
 
-        string GetCheckpoint(IProjection projection);
+        Int64 GetCheckpoint(IProjection projection);
         Int64 GetMinCheckpoint();
 
         /// <summary>
@@ -30,16 +30,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         bool NeedsRebuild(IProjection projection);
 
-        void RebuildStarted(IProjection projection, String lastCommit);
+        void RebuildStarted(IProjection projection, Int64 lastCommit);
         void RebuildEnded(IProjection projection, ProjectionMetrics.Meter meter);
-        void UpdateSlot(string slotName, string checkpointToken);
-        string GetCurrent(IProjection projection);
+        void UpdateSlot(string slotName, Int64 checkpointToken);
+        Int64 GetCurrent(IProjection projection);
 
         void UpdateSlotAndSetCheckpoint(
             string slotName, 
             IEnumerable<String> projectionIdList,
-            string valueCheckpointToken,
-            string currentCheckpointToken = null);
+            Int64 valueCheckpointToken,
+            Int64? currentCheckpointToken = null);
 
         /// <summary>
         /// Return a list of errors if there are anomalies in projection

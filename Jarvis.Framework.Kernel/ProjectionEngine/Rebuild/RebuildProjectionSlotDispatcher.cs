@@ -68,8 +68,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 
         internal void DispatchEvent(DomainEvent evt)
         {
-            var chkpoint = LongCheckpoint.Parse(evt.CheckpointToken);
-            if (chkpoint.LongValue > LastCheckpointDispatched)
+            var chkpoint = evt.CheckpointToken;
+            if (chkpoint > LastCheckpointDispatched)
             {
                 if (_logger.IsDebugEnabled) _logger.DebugFormat("Discharded event {0} commit {1} because last checkpoint dispatched for slot {2} is {3}.", evt.CommitId, evt.CheckpointToken, SlotName, _maxCheckpointDispatched);
                 return;
@@ -148,7 +148,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                 ClearLoggerThreadPropertiesForEventDispatchLoop();
                 throw;
             }
-            _lastCheckpointRebuilded = chkpoint.LongValue;
+            _lastCheckpointRebuilded = chkpoint;
             if (_logger.IsDebugEnabled) _logger.ThreadProperties["commit"] = null;
             Interlocked.Decrement(ref RebuildProjectionMetrics.CountOfConcurrentDispatchingCommit);
         }

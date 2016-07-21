@@ -16,7 +16,7 @@ using NUnit.Framework;
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
 
-    [TestFixture("1")]
+    //[TestFixture("1")]
     [TestFixture("2")]
     public class ProjectionEngineTestsRemovedProjection : ProjectionEngineBasicTestBase
     {
@@ -61,7 +61,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             aggregate.Create();
             Repository.Save(aggregate, Guid.NewGuid(), h => { });
 
-            var stream = _eventStore.Advanced.GetFrom("0");
+            var stream = _eventStore.Advanced.GetFrom(0);
             var lastCommit = stream.Last();
             await Engine.UpdateAndWait();
             Assert.That(_statusChecker.IsCheckpointProjectedByAllProjection(lastCommit.CheckpointToken), Is.True);
@@ -75,7 +75,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             aggregate.Create();
             Repository.Save(aggregate, Guid.NewGuid(), h => { });
 
-            stream = _eventStore.Advanced.GetFrom("0");
+            stream = _eventStore.Advanced.GetFrom(0);
             lastCommit = stream.Last();
             await Engine.UpdateAndWait();
             Assert.That(_statusChecker.IsCheckpointProjectedByAllProjection(lastCommit.CheckpointToken), Is.True);

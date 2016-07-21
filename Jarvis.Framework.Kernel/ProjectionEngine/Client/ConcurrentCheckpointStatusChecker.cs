@@ -17,15 +17,15 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             _checkpoints = readmodelDb.GetCollection<Checkpoint>("checkpoints");
         }
 
-        public bool IsCheckpointProjectedByAllProjection(string checkpointToken)
+        public bool IsCheckpointProjectedByAllProjection(Int64 checkpointToken)
         {
-            return ProjectionsPassedCheckpoint(Convert.ToInt64(checkpointToken));
+            return ProjectionsPassedCheckpoint(checkpointToken);
         }
 
         private bool ProjectionsPassedCheckpoint(long checkpointToken)
         {
             // Extracts all the projections that have not passed the checkpoint yet.
-            var checkpointString = checkpointToken.ToString();
+            var checkpointString = checkpointToken;
             var behindProjections = _checkpoints
                 .Find(
                     Builders< Checkpoint>.Filter.And(

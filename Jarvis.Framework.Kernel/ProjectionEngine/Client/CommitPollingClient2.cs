@@ -100,25 +100,25 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         private Int64 _lastActivityTickCount;
 
         public void StartAutomaticPolling(
-          String checkpointTokenFrom,
+          Int64 checkpointTokenFrom,
           Int32 intervalInMilliseconds,
           Int32 bufferSize = 4000,
           String pollerName = "CommitPollingClient")
         {
             Init(checkpointTokenFrom, intervalInMilliseconds, bufferSize, pollerName);
-            _innerClient.StartFrom(checkpointTokenFrom.ToString());
+            _innerClient.StartFrom(checkpointTokenFrom);
         }
 
-        public void StartManualPolling(String checkpointTokenFrom, Int32 intervalInMilliseconds, Int32 bufferSize = 4000, String pollerName = "CommitPollingClient")
+        public void StartManualPolling(Int64 checkpointTokenFrom, Int32 intervalInMilliseconds, Int32 bufferSize = 4000, String pollerName = "CommitPollingClient")
         {
             Init(checkpointTokenFrom, intervalInMilliseconds, bufferSize, pollerName);
             _innerClient.ConfigurePollingFunction();
         }
 
-        private void Init(string checkpointTokenFrom, int intervalInMilliseconds, int bufferSize, string pollerName)
+        private void Init(Int64 checkpointTokenFrom, int intervalInMilliseconds, int bufferSize, string pollerName)
         {
             _bufferSize = bufferSize;
-            _checkpointTokenCurrent = Int64.Parse(checkpointTokenFrom);
+            _checkpointTokenCurrent = checkpointTokenFrom;
             LastException = null;
             //prepare single poller thread.
             CreateTplChain();
@@ -229,7 +229,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                     return PollingClient2.HandlingResult.Retry;
                 }
                 _postErrors = 0;
-                _checkpointTokenCurrent = Int64.Parse(commit.CheckpointToken);
+                _checkpointTokenCurrent = commit.CheckpointToken;
                 return PollingClient2.HandlingResult.MoveToNext;
             }
             catch (Exception ex)

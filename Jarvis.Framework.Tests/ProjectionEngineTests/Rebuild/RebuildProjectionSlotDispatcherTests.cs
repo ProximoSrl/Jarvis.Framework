@@ -40,13 +40,13 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         public void verify_finished_with_consecutive_events()
         {
             InitSut();
-            DispatchEvent("1");
+            DispatchEvent(1);
             Assert.That(sut.Finished, Is.False);
-            DispatchEvent("2");
+            DispatchEvent(2);
             Assert.That(sut.Finished, Is.False);
-            DispatchEvent("3");
+            DispatchEvent(3);
             Assert.That(sut.Finished, Is.False);
-            DispatchEvent("4");
+            DispatchEvent(4);
             Assert.That(sut.Finished, Is.True);
         }
 
@@ -54,13 +54,13 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         public void verify_finished_with_no_consecutive_events()
         {
             InitSut();
-            DispatchEvent("1");
+            DispatchEvent(1);
             Assert.That(sut.Finished, Is.False);
-            DispatchEvent("4");
+            DispatchEvent(4);
             Assert.That(sut.Finished, Is.True);
         }
 
-        private SampleAggregateCreated DispatchEvent(String checkpointToken)
+        private SampleAggregateCreated DispatchEvent(Int64 checkpointToken)
         {
             var evt = new SampleAggregateCreated()
             {
