@@ -160,6 +160,39 @@ namespace Jarvis.Framework.Tests.EngineTests
                 Assert.Fail("We expect an exception of type InvariantNotSatifiedException but we catched " + ex.GetType().Name);
             }
         }
+         
+        [Test]
+        public void repository_raise_domain_exception_when_domain_rule_failed()
+        {
+            var sampleAggregateId = new SampleAggregateId(1);
+
+            var state = new SampleAggregate.State() { TouchCount = 3 };
+            IDomainRule<SampleAggregate.State> rule = new TouchCountRule(3);
+
+            var aggregate = TestAggregateFactory
+                .Create<SampleAggregate, SampleAggregate.State>(state, sampleAggregateId)
+                .AssignRulesForTest(new[] { rule});
+            aggregate.Create();
+            aggregate.Touch(); //this is good, but state does not validate external rule.
+            try
+            {
+                _repository.Save(aggregate, new Guid("135E4E5F-3D65-43AC-9D8D-8A8B0EFF8501"), null);
+                Assert.Fail("We expect a DomainException");
+            }
+            catch (DomainException ex)
+            {
+                Assert.That(ex.AggregateId, Is.EqualTo(sampleAggregateId.AsString()));
+                Assert.That(ex.Message, Is.StringContaining("Rule violated, cannot touch more than 3 times"));
+            }
+            catch (AssertionException ex)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                Assert.Fail("We expect an exception of type DomainException but we catched " + ex.GetType().Name);
+            }
+        }
 
         [Test]
         public void repository_command_handler_should_set_context()
@@ -220,6 +253,23 @@ namespace Jarvis.Framework.Tests.EngineTests
                 repo1.Save(aggregate, Guid.NewGuid(), null); //should not throw
                 Assert.IsTrue(task.Result); //inner should not throw.
             }
+        }
+
+    }
+
+    internal class TouchCountRule : IDomainRule<SampleAggregate.State>
+    {
+        private Int32 _maxTouchCount;
+
+        public TouchCountRule(Int32 maxTouchCount)
+        {
+            _maxTouchCount = maxTouchCount;
+        }
+
+        public void Validate(IIdentity id, SampleAggregate.State state)
+        {
+            if (state.TouchCount > _maxTouchCount)
+                throw new DomainException(id, String.Format("Rule violated, cannot touch more than {0} times", _maxTouchCount));
         }
 
     }

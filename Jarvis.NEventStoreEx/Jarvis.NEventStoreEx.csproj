@@ -65,6 +65,7 @@
     <Compile Include="CommonDomainEx\Persistence\ISagaFactory.cs" />
     <Compile Include="CommonDomainEx\Persistence\ISagaRepositoryEx.cs" />
     <Compile Include="CommonDomainEx\Persistence\IRepositoryEx.cs" />
+    <Compile Include="CommonDomainEx\IDomainRulesChecker.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

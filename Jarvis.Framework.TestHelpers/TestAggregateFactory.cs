@@ -49,25 +49,33 @@ namespace Jarvis.Framework.TestHelpers
         {
             return Create<T, TState>(new TState(), identity, 0);
         }
-/*
-        public static T Create<T>() where T : AggregateRoot
-        {
-            var ctor = typeof(T).Constructor(Flags.Default, new Type[] { });
-            if (ctor == null)
-                throw new MissingMethodException(string.Format("{0} missing default ctor",typeof(T).FullName));
-            return (T)ctor.CreateInstance();
-        }
-        public static T Create<T>(IEnumerable<DomainEvent> events) where T : AggregateRoot
-        {
-            var aggregate = Create<T>();
-            var iagg = (IAggregateEx)aggregate;
-            foreach (var domainEvent in events)
-            {
-                iagg.ApplyEvent(domainEvent);
-            }
 
+        public static T AssignRulesForTest<T, TState>(this T aggregate, IDomainRule<TState>[] rules)
+             where T : AggregateRoot
+            where TState : AggregateState, new()
+        {
+            aggregate.SetFieldValue("_externalRules", rules);
             return aggregate;
         }
-*/
+        /*
+                public static T Create<T>() where T : AggregateRoot
+                {
+                    var ctor = typeof(T).Constructor(Flags.Default, new Type[] { });
+                    if (ctor == null)
+                        throw new MissingMethodException(string.Format("{0} missing default ctor",typeof(T).FullName));
+                    return (T)ctor.CreateInstance();
+                }
+                public static T Create<T>(IEnumerable<DomainEvent> events) where T : AggregateRoot
+                {
+                    var aggregate = Create<T>();
+                    var iagg = (IAggregateEx)aggregate;
+                    foreach (var domainEvent in events)
+                    {
+                        iagg.ApplyEvent(domainEvent);
+                    }
+
+                    return aggregate;
+                }
+        */
     }
 }
