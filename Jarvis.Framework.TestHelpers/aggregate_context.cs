@@ -16,7 +16,7 @@ namespace Jarvis.Framework.TestHelpers
         where TAggregate : AggregateRoot<TState>
         where TState : AggregateState, new()
     {
-        private static TAggregate aggregate;
+        private static TAggregate _aggregate;
         // ReSharper disable StaticFieldInGenericType
         private static IDisposable test_executions_context;
         private static string impersonatig_use_id = "prxm\\prxdev";
@@ -25,7 +25,7 @@ namespace Jarvis.Framework.TestHelpers
         {
             get
             {
-                return aggregate;
+                return _aggregate;
             }
         }
 
@@ -46,26 +46,32 @@ namespace Jarvis.Framework.TestHelpers
 
         Establish context = () =>
         {
-            aggregate = null;
+            _aggregate = null;
 //            test_executions_context = new ImpersonatedContext(impersonatig_use_id);
         };
 
-        private static TState _State;
+        private static TState _state;
         protected static TState State
         {
-            get { return _State; }
+            get { return _state; }
         }
 
         protected static void Create(IIdentity id)
         {
-            _State = new TState();
-            aggregate = TestAggregateFactory.Create<TAggregate, TState>(_State, id, 0);
+            _state = new TState();
+            _aggregate = TestAggregateFactory.Create<TAggregate, TState>(_state, id, 0);
         }
 
         protected static void SetUp(TState state, IIdentity id)
         {
-            _State = state;
-            aggregate = TestAggregateFactory.Create<TAggregate, TState>(_State, id, 99999);
+            _state = state;
+            _aggregate = TestAggregateFactory.Create<TAggregate, TState>(_state, id, 99999);
+        }
+
+        protected static void SetUp(TState state, TAggregate aggregate)
+        {
+            _state = state;
+            _aggregate = aggregate;
         }
 
         private Cleanup stuff = () => test_executions_context.Dispose();

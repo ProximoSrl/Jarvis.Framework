@@ -10,6 +10,29 @@ using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.IdentitySupport
 {
+    public interface IStringToIdentityAssociator<TId> where TId : EventStoreIdentity
+    {
+        /// <summary>
+        /// Create an association between key and id, it fails if key was already 
+        /// associated. It could fail if id was already associated to multiple key
+        /// but this depends by the specific implementation.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        Boolean Associate(String key , TId id);
+
+        /// <summary>
+        /// Associate the id to the key, but if an association was already present
+        /// for id, it will update. It fails if key is already associated to another
+        /// id.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        Boolean AssociateOrUpdate(String key, TId id);
+    }
+
     /// <summary>
     /// Allow association of a string with an Id, it is similar to 
     /// <see cref="AbstractIdentityTranslator{TKey}"/> but this class does not
@@ -17,19 +40,22 @@ namespace Jarvis.Framework.Shared.IdentitySupport
     /// a string and an Id. No another Id could be associated to the very same string except
     /// if the association is broken
     /// </summary>
-    public abstract class StringToIdentityAssociator<TId>  where TId : EventStoreIdentity
+    public abstract class MongoStringToIdentityAssociator<TId>  : IStringToIdentityAssociator<TId>
+        where TId : EventStoreIdentity
     {
         public ILogger Logger { get; set; }
 
         private readonly IMongoCollection<Association> _collection;
 
-        private class Association
+        protected IMongoCollection<Association> Collection { get { return _collection; } }
+
+        protected class Association
         {
             [BsonId]
-            internal string Key { get; private set; }
+            public string Key { get; private set; }
 
             [BsonElement]
-            internal TId Id { get; private set; }
+            public TId Id { get; private set; }
 
             public Association(string key, TId id)
             {
@@ -47,7 +73,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         /// <param name="collectionName"></param>
         /// <param name="allowDuplicateId">If true allow two different key to be mapped to the same Id, if false
         /// ensure that an id can be associated only to a single key and vice versa</param>
-        protected StringToIdentityAssociator(IMongoDatabase systemDB, String collectionName, Boolean allowDuplicateId = true)
+        protected MongoStringToIdentityAssociator(IMongoDatabase systemDB, String collectionName, Boolean allowDuplicateId = true)
         {
             _collection = systemDB.GetCollection<Association>(collectionName);
             _allowDuplicateId = allowDuplicateId;
@@ -60,10 +86,24 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
         public virtual Boolean Associate(String key, TId id)
         {
+            return OnAssociate(key, id, a => _collection.InsertOne(a));
+        }
+
+
+        public bool AssociateOrUpdate(string key, TId id)
+        {
+            return OnAssociate(key, id, a => {
+                DeleteAssociationWithId(id);
+                OnAssociate(key, id, a1 => _collection.InsertOne(a1));
+            });
+        }
+
+        protected virtual Boolean OnAssociate(String key, TId id, Action<Association> saveRoutine)
+        {
             try
             {
                 var mapped = new Association(key, id);
-                _collection.InsertOne(mapped);
+                saveRoutine(mapped);
                 if (Logger.IsDebugEnabled) Logger.DebugFormat("Mapping between {0} and {1} was created correctly!", key, id);
                 return true;
             }
@@ -88,6 +128,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                 throw;
             }
         }
+
 
 
         public void DeleteAssociationWithId(TId id)
@@ -117,5 +158,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
             return association.Id;
         }
+
+      
     }
 }

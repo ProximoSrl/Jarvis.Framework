@@ -117,6 +117,8 @@
     <Compile Include="Engine\AggregateSnapshot.cs" />
     <Compile Include="Engine\AggregateState.cs" />
     <Compile Include="Engine\DomainAggregateDeletedException.cs" />
+    <Compile Include="Engine\ISnapshotPersister.cs" />
+    <Compile Include="ProjectionEngine\Unfolder\Projector.cs" />
     <Compile Include="Engine\InvalidAggregateOperationException.cs" />
     <Compile Include="Engine\SagaMessage.cs" />
     <Compile Include="Engine\Snapshots\SnapshotClassMap.cs" />
@@ -180,6 +182,10 @@
     <Compile Include="ProjectionEngine\Rebuild\UnwindedDomainEvent.cs" />
     <Compile Include="ProjectionEngine\RecycleBin\RecycleBin.cs" />
     <Compile Include="ProjectionEngine\SaveResult.cs" />
+    <Compile Include="ProjectionEngine\Unfolder\QueryModelRepository.cs" />
+    <Compile Include="ProjectionEngine\Unfolder\IProjectorFactory.cs" />
+    <Compile Include="ProjectionEngine\Unfolder\IQueryModelRepository.cs" />
+    <Compile Include="ProjectionEngine\Unfolder\TReadModel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Store\SagaFactory.cs" />
     <Compile Include="Store\SnapshotsHelper.cs" />

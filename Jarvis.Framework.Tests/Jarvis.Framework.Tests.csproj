@@ -144,6 +144,8 @@
     <Compile Include="EngineTests\BsonIdentitySerializationTests.cs" />
     <Compile Include="EngineTests\EngineSetupTests.cs" />
     <Compile Include="EngineTests\EventsDispatcherTests.cs" />
+    <Compile Include="EngineTests\SnapshotPersistenceTest.cs" />
+    <Compile Include="EngineTests\Unfolder\EventUnfolderTests.cs" />
     <Compile Include="EngineTests\IdentityConverterTests.cs" />
     <Compile Include="EngineTests\RepositoryTests.cs" />
     <Compile Include="EngineTests\SagaTests\BillPrinted.cs" />

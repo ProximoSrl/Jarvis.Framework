@@ -102,7 +102,38 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             Assert.That(id, Is.Null);
         }
 
-        private class TestIdentityAssociation : StringToIdentityAssociator<TestId> 
+        [Test]
+        public void verify_update_associate_or_update_first_call()
+        {
+            var result = sut.AssociateOrUpdate(key1, id1);
+            Assert.That(result, Is.True);
+            var key = sut.GetKeyFromId(id1);
+            Assert.That(key, Is.EqualTo(key1));
+        }
+
+        [Test]
+        public void verify_update_associate_is_idempotent()
+        {
+            var result = sut.AssociateOrUpdate(key1, id1);
+            Assert.That(result, Is.True);
+            result = sut.AssociateOrUpdate(key1, id1);
+            Assert.That(result, Is.True);
+
+            var key = sut.GetKeyFromId(id1);
+            Assert.That(key, Is.EqualTo(key1));
+        }
+
+        [Test]
+        public void verify_update_update_association()
+        {
+            sut.Associate(key1, id1);
+            var result = sut.AssociateOrUpdate(key2, id1);
+            Assert.That(result, Is.True);
+            var key = sut.GetKeyFromId(id1);
+            Assert.That(key, Is.EqualTo(key2));
+        }
+
+        private class TestIdentityAssociation : MongoStringToIdentityAssociator<TestId> 
         {
             public TestIdentityAssociation(IMongoDatabase database)
                 :base (database, "TestIdentity")
@@ -112,7 +143,7 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
 
         }
 
-        private class TestIdentityAssociationWithUniqueId : StringToIdentityAssociator<TestId>
+        private class TestIdentityAssociationWithUniqueId : MongoStringToIdentityAssociator<TestId>
         {
             public TestIdentityAssociationWithUniqueId(IMongoDatabase database)
                 : base(database, "TestIdentityUnique", false)

@@ -8,4 +8,5 @@ namespace Jarvis.Framework.Kernel.Engine
         void Restore(IMementoEx snapshot);
         IMementoEx GetSnapshot();
     }
+
 }
