@@ -62,7 +62,7 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="NEventStore, Version=6.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NEventStore.6.0.0-unstable0086\lib\net40\NEventStore.dll</HintPath>
+      <HintPath>..\packages\NEventStore.6.0.0-unstable0091\lib\net40\NEventStore.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="NEventStore.Domain, Version=6.0.0.0, Culture=neutral, processorArchitecture=MSIL">
@@ -106,6 +106,7 @@
     <Compile Include="Engine\AggregateState.cs" />
     <Compile Include="Engine\DomainAggregateDeletedException.cs" />
     <Compile Include="Engine\ISnapshotPersister.cs" />
+    <Compile Include="ProjectionEngine\Client\ICommitPollingClient.cs" />
     <Compile Include="ProjectionEngine\Unfolder\Projector.cs" />
     <Compile Include="Engine\InvalidAggregateOperationException.cs" />
     <Compile Include="Engine\SagaMessage.cs" />
@@ -137,7 +138,6 @@
     <Compile Include="ProjectionEngine\Client\CheckPointReplayStatus.cs" />
     <Compile Include="ProjectionEngine\Client\CommitEnhancer.cs" />
     <Compile Include="ProjectionEngine\Client\CommitPollingClient2.cs" />
-    <Compile Include="ProjectionEngine\Client\CommitPollingClient.cs" />
     <Compile Include="ProjectionEngine\Client\ConcurrentCheckpointTracker.cs" />
     <Compile Include="ProjectionEngine\Client\IConcurrentCheckpointTracker.cs" />
     <Compile Include="ProjectionEngine\Client\INotifyCommitHandled.cs" />

@@ -51,7 +51,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             }
             _enhancer = enhancer;
             _consumers = new List<ITargetBlock<ICommit>>();
-            _commandList = new BlockingCollection<string>();
             _persistStream = persistStreams;
             _logger = logger;
             _id = id;
@@ -89,13 +88,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         #region polling
 
-        private BlockingCollection<String> _commandList;
-
         private Int64 _checkpointTokenCurrent;
 
         private CancellationTokenSource _stopRequested = new CancellationTokenSource();
 
-        private Int64 _lastActivityTickCount;
 
         public void StartAutomaticPolling(
           Int64 checkpointTokenFrom,
@@ -141,8 +137,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                     exception = exception.Replace("{", "{{").Replace("}", "}}");
                     return HealthCheckResult.Unhealthy("Faulted (exception in consumer): " + exception);
                 }
-                var elapsed = Math.Abs(Environment.TickCount - _lastActivityTickCount);
-                if (elapsed > 5000)
+                var elapsed = DateTime.UtcNow - _innerClient.LastActivityTimestamp;
+                if (elapsed.TotalMilliseconds > 5000)
                 {
                     //more than 5 seconds without a poll, polling probably is stopped
                     return HealthCheckResult.Unhealthy(String.Format("poller stuck, last polling {0} ms ago", elapsed));
@@ -151,7 +147,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                 return HealthCheckResult.Healthy("Poller alive");
             });
         }
-
 
 
         public void StopPolling(Boolean setToFaulted = false)
@@ -193,7 +188,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         {
             try
             {
-                _lastActivityTickCount = Environment.TickCount; //much faster than DateTime.now or UtcNow.
                 if (_stopRequested.IsCancellationRequested)
                 {
                     CloseTplChain();

@@ -37,7 +37,7 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="NEventStore, Version=6.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NEventStore.6.0.0-unstable0086\lib\net40\NEventStore.dll</HintPath>
+      <HintPath>..\packages\NEventStore.6.0.0-unstable0091\lib\net40\NEventStore.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="NEventStore.Domain, Version=6.0.0.0, Culture=neutral, processorArchitecture=MSIL">
