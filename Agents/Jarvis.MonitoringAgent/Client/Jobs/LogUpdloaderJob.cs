@@ -1,5 +1,4 @@
 ﻿using Castle.Core.Logging;
-using Jarvis.MonitoringAgent.Common.Jarvis.MonitoringAgent.Common;
 using Jarvis.MonitoringAgent.Support;
 using Quartz;
 using System;
@@ -10,6 +9,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using Jarvis.MonitoringAgent.Common.Jarvis.MonitoringAgent.Common;
 
 namespace Jarvis.MonitoringAgent.Client.Jobs
 {

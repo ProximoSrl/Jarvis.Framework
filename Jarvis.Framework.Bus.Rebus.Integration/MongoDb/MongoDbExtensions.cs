@@ -1,6 +1,7 @@
-﻿using Rebus.Configuration;
+﻿using Rebus;
+using Rebus.Configuration;
 
-namespace Rebus.MongoDb
+namespace Jarvis.Framework.Bus.Rebus.Integration.MongoDb
 {
     /// <summary>
     /// Configuration extensions to allow for fluently configuring Rebus with MongoDB

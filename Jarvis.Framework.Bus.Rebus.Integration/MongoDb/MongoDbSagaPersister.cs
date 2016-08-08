@@ -1,20 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Timers;
+using Jarvis.Framework.Shared.Helpers;
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Conventions;
 using MongoDB.Driver;
-using MongoDB.Bson.Serialization;
-using MongoDB.Bson;
-using System.Linq;
-using Ponder;
+using Rebus;
 using Rebus.Logging;
-using MongoDB.Bson.Serialization.Serializers;
-using System.Linq.Expressions;
-using Jarvis.Framework.Shared.Helpers;
 
-namespace Rebus.MongoDb
+namespace Jarvis.Framework.Bus.Rebus.Integration.MongoDb
 {
     /// <summary>
     /// MongoDB implementation of Rebus' <see cref="IStoreSagaData"/>. Will store saga data as they are serialized by the

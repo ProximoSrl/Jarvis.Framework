@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using Rebus;
 using Rebus.Timeout;
-using System.Linq;
 
-namespace Rebus.MongoDb
+namespace Jarvis.Framework.Bus.Rebus.Integration.MongoDb
 {
     /// <summary>
     /// Implementation of <see cref="IStoreTimeouts"/> that stores timeouts in a MongoDB
@@ -40,7 +41,7 @@ namespace Rebus.MongoDb
         /// <summary>
         /// Adds the timeout to the underlying collection of timeouts
         /// </summary>
-        public void Add(Timeout.Timeout newTimeout)
+        public void Add(global::Rebus.Timeout.Timeout newTimeout)
         {
             var doc = new BsonDocument()
                 .Add(CorrIdProperty, newTimeout.CorrelationId)

@@ -1,5 +1,4 @@
-﻿using Jarvis.MonitoringAgent.Common.Jarvis.MonitoringAgent.Common;
-using NUnit.Framework;
+﻿using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -7,6 +6,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using Jarvis.MonitoringAgent.Common.Jarvis.MonitoringAgent.Common;
 
 namespace Jarvis.MonitoringAgent.Tests.Common
 {

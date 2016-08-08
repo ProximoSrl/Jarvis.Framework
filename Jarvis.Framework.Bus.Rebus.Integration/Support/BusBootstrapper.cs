@@ -9,6 +9,7 @@ using System.Text;
 using Castle.MicroKernel.Registration;
 using Castle.Windsor;
 using Jarvis.Framework.Bus.Rebus.Integration.Logging;
+using Jarvis.Framework.Bus.Rebus.Integration.MongoDb;
 using Jarvis.Framework.Bus.Rebus.Integration.Serializers;
 using Jarvis.Framework.Shared.Commands;
 using Jarvis.Framework.Shared.Messages;
@@ -19,7 +20,6 @@ using Rebus.Bus;
 using Rebus.Castle.Windsor;
 using Rebus.Configuration;
 using Rebus.Messages;
-using Rebus.MongoDb;
 using Rebus.Shared;
 using Rebus.Transports.Msmq;
 

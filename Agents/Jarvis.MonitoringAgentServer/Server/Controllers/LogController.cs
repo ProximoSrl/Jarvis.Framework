@@ -1,5 +1,4 @@
 ﻿using Castle.Core.Logging;
-using Jarvis.MonitoringAgent.Common.Jarvis.MonitoringAgent.Common;
 using Jarvis.MonitoringAgentServer.Server.Data;
 using Jarvis.MonitoringAgentServer.Support;
 using MongoDB.Bson;
@@ -16,6 +15,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web.Http;
+using Jarvis.MonitoringAgent.Common.Jarvis.MonitoringAgent.Common;
 
 namespace Jarvis.MonitoringAgentServer.Server.Controllers
 {

@@ -1,7 +1,7 @@
 ﻿using System;
 using MongoDB.Driver;
 
-namespace Rebus.MongoDb
+namespace Jarvis.Framework.Bus.Rebus.Integration.MongoDb
 {
     internal class MongoHelper
     {

@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Linq;
-using MongoDB.Driver;
 using MongoDB.Bson;
+using MongoDB.Driver;
+using Rebus;
 
-namespace Rebus.MongoDb
+namespace Jarvis.Framework.Bus.Rebus.Integration.MongoDb
 {
     /// <summary>
     /// MongoDB implementation of Rebus' <see cref="IStoreSubscriptions"/>. Will store subscriptions in one document per

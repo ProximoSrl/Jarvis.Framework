@@ -22,8 +22,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
     /// </summary>
     public class CommitPollingClient2 : ICommitPollingClient
     {
-        private const string command_poll = "poll";
-        private const string command_stop = "stop";
         private int _bufferSize = 4000;
         private readonly int _interval;
         readonly ICommitEnhancer _enhancer;
