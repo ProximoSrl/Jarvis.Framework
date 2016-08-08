@@ -105,6 +105,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         {
             Init(checkpointTokenFrom, intervalInMilliseconds, bufferSize, pollerName);
             _innerClient.StartFrom(checkpointTokenFrom);
+            Status = CommitPollingClientStatus.Polling;
         }
 
         public void StartManualPolling(Int64 checkpointTokenFrom, Int32 intervalInMilliseconds, Int32 bufferSize = 4000, String pollerName = "CommitPollingClient")

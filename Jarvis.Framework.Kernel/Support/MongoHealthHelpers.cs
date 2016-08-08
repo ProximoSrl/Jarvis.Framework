@@ -15,7 +15,8 @@ namespace Jarvis.Framework.Kernel.Support
 
             public String ConnectionString { get; set; }
 
-            public ConnectionInfo(String name, String connectionString)
+
+            public ConnectionInfo(String name, String connectionString) : this()
             {
                 Name = name;
                 ConnectionString = connectionString;
