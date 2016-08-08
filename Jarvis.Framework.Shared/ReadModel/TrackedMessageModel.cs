@@ -116,7 +116,13 @@ namespace Jarvis.Framework.Shared.ReadModel
 
     public class MongoDbMessagesTracker : IMessagesTracker
     {
-        readonly IMongoCollection<TrackedMessageModel> _commands;
+        private IMongoCollection<TrackedMessageModel> _commands;
+        IMongoCollection<TrackedMessageModel> Commands
+        {
+            get {
+                return _commands ?? (_commands = GetCollection());
+            }
+        }
 
         private static readonly Timer queueTimer = Metric.Timer("CommandWaitInQueue", Unit.Commands);
         private static readonly Timer totalExecutionTimer = Metric.Timer("CommandTotalExecution", Unit.Commands);
@@ -129,12 +135,28 @@ namespace Jarvis.Framework.Shared.ReadModel
 
         public ILogger Logger { get; set; }
 
+        private IMongoDatabase _db;
+
+        private Boolean _initialized = false;
+
         public MongoDbMessagesTracker(IMongoDatabase db)
         {
-            _commands = db.GetCollection<TrackedMessageModel>("messages");
-            _commands.Indexes.CreateOne(Builders<TrackedMessageModel>.IndexKeys.Ascending(x => x.MessageId));
-            _commands.Indexes.CreateOne(Builders<TrackedMessageModel>.IndexKeys.Ascending(x => x.IssuedBy));
+            _db = db;
             Logger = NullLogger.Instance;
+        }
+
+        private IMongoCollection<TrackedMessageModel> GetCollection() {
+
+            var state = _db.Client.Cluster.Description.State;
+            //Check if db is operational.
+            if (state == MongoDB.Driver.Core.Clusters.ClusterState.Connected)
+            {
+                var collection = _db.GetCollection<TrackedMessageModel>("messages");
+                collection.Indexes.CreateOne(Builders<TrackedMessageModel>.IndexKeys.Ascending(x => x.MessageId));
+                collection.Indexes.CreateOne(Builders<TrackedMessageModel>.IndexKeys.Ascending(x => x.IssuedBy));
+                return collection;
+            }
+            return null;
         }
 
         public void Started(IMessage msg)
@@ -151,7 +173,7 @@ namespace Jarvis.Framework.Shared.ReadModel
                 issuedBy = ((IDomainEvent)msg).IssuedBy;
             }
 
-            _commands.UpdateOne(
+            Commands.UpdateOne(
                Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
                Builders<TrackedMessageModel>.Update
                     .Set(x => x.Message, msg)
@@ -165,7 +187,7 @@ namespace Jarvis.Framework.Shared.ReadModel
         public void ElaborationStarted(Guid commandId, DateTime startAt)
         {
             var id = commandId.ToString();
-            var updated = _commands.UpdateOne(
+            var updated = Commands.UpdateOne(
                 Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
                  Builders<TrackedMessageModel>.Update
                     .Set(x => x.LastExecutionStartTime, startAt)
@@ -180,7 +202,7 @@ namespace Jarvis.Framework.Shared.ReadModel
             var id = commandId.ToString();
             if (JarvisFrameworkGlobalConfiguration.MetricsEnabled)
             {
-                var trackMessage = _commands.FindOneAndUpdate(
+                var trackMessage = Commands.FindOneAndUpdate(
                     Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
                     Builders<TrackedMessageModel>.Update.Set(x => x.CompletedAt, completedAt),
                     new FindOneAndUpdateOptions<TrackedMessageModel, TrackedMessageModel>()
@@ -216,7 +238,7 @@ namespace Jarvis.Framework.Shared.ReadModel
             }
             else
             {
-                _commands.UpdateOne(
+                Commands.UpdateOne(
                      Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
                      Builders<TrackedMessageModel>.Update.Set(x => x.CompletedAt, completedAt),
                      new UpdateOptions() { IsUpsert = true }
@@ -227,7 +249,7 @@ namespace Jarvis.Framework.Shared.ReadModel
         public bool Dispatched(Guid commandId, DateTime dispatchedAt)
         {
             var id = commandId.ToString();
-            var result = _commands.UpdateOne(
+            var result = Commands.UpdateOne(
                  Builders<TrackedMessageModel>.Filter.And(
                     Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
                      Builders<TrackedMessageModel>.Filter.Eq(x => x.DispatchedAt, null)
@@ -240,13 +262,13 @@ namespace Jarvis.Framework.Shared.ReadModel
 
         public void Drop()
         {
-            _commands.Drop();
+            Commands.Drop();
         }
 
         public void Failed(Guid commandId, DateTime failedAt, Exception ex)
         {
             var id = commandId.ToString();
-            _commands.UpdateOne(
+            Commands.UpdateOne(
                 Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
                 Builders<TrackedMessageModel>.Update
                     .Set(x => x.FailedAt, failedAt)

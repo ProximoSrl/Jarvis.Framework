@@ -73,11 +73,17 @@ namespace Jarvis.Framework.MongoAppender
 
         public Boolean LooseFix { get; set; }
 
-        public void SetupCollection()
+        public Boolean SetupCollection()
         {
             var uri = new MongoUrl(ConnectionString);
             var client = new MongoClient(uri);
             IMongoDatabase db = client.GetDatabase(uri.DatabaseName);
+
+            var state = client.Cluster.Description.State;
+            //Check if db is operational.
+            if (state != MongoDB.Driver.Core.Clusters.ClusterState.Connected)
+                return false; 
+
             Int64 cappedSize;
             if (!Int64.TryParse(CappedSizeInMb, out cappedSize))
             {
@@ -135,6 +141,7 @@ namespace Jarvis.Framework.MongoAppender
 
             createIndexResult = LogCollection.Indexes.CreateOne(Builders<BsonDocument>.IndexKeys
                 .Ascending(FieldNames.Level).Ascending(FieldNames.Thread).Ascending(FieldNames.Loggername));
+            return true;
         }
 
         public BsonDocument LoggingEventToBSON(LoggingEvent loggingEvent)

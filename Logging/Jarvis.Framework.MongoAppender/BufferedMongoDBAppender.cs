@@ -5,6 +5,7 @@ using MongoDB.Driver;
 using System.Collections.Concurrent;
 using System.Threading;
 using MongoDB.Bson;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.MongoAppender
 {
@@ -20,14 +21,12 @@ namespace Jarvis.Framework.MongoAppender
         {
             foreach (var events in _dispatchCollection.GetConsumingEnumerable())
             {
-                try
+                if (_initializationFailed) 
                 {
-                    Settings.InsertBatch(events);
+                    //Since we are in a different thread we can pay the price of trying to reinitialize everything.
+                    Initialize();
                 }
-                catch (Exception ex)
-                {
-                    //I do not want to stop logging if some error occours.
-                }
+                TryInsertBatch(events);
             }
         }
 
@@ -36,6 +35,7 @@ namespace Jarvis.Framework.MongoAppender
         public Boolean SaveOnDifferentThread { get; set; }
 
         public Int32 MaxNumberOfObjectInBuffer { get; set; }
+
         private Int32 _maxBufferSize;
 
         protected override bool RequiresLayout
@@ -47,9 +47,23 @@ namespace Jarvis.Framework.MongoAppender
 
         public override void ActivateOptions()
         {
+            Initialize();
+            base.ActivateOptions();
+        }
+
+        private Boolean _initializing = false;
+        private void Initialize()
+        {
             try
             {
-                if (Settings.LooseFix) 
+                var collectionInitialized = Settings.SetupCollection();
+                if (!collectionInitialized)
+                {
+                    _initializationFailed = true;
+                    return;
+                }
+
+                if (Settings.LooseFix)
                 {
                     //default Fix value is ALL, we need to avoid fixing some values that are
                     //too heavy. We skip FixFlags.UserName and FixFlags.LocationInfo
@@ -58,7 +72,7 @@ namespace Jarvis.Framework.MongoAppender
                         FixFlags.Properties | FixFlags.ThreadName;
                 }
                 _maxBufferSize = MaxNumberOfObjectInBuffer / BufferSize;
-                Settings.SetupCollection();
+                
                 this.Evaluator = new log4net.Core.LevelEvaluator(Level.Error);
                 _dispatchCollection = new BlockingCollection<LoggingEvent[]>();
 
@@ -66,19 +80,17 @@ namespace Jarvis.Framework.MongoAppender
                 pollerThread.Name = "BufferedMongoDbAppender-Dispatcher";
                 pollerThread.IsBackground = false;
                 pollerThread.Start();
+                _initializationFailed = false; //initialization successful.
             }
             catch (Exception e)
             {
                 _initializationFailed = true;
                 ErrorHandler.Error("Exception while initializing MongoDB Appender", e, ErrorCode.GenericFailure);
             }
-            base.ActivateOptions();
         }
 
         protected override void SendBuffer(LoggingEvent[] events)
         {
-            if (_initializationFailed) return; //mongo database not initialized, no need to log.
-
             if (SaveOnDifferentThread)
             {
                 if (_dispatchCollection != null && !_dispatchCollection.IsCompleted)
@@ -88,13 +100,29 @@ namespace Jarvis.Framework.MongoAppender
             }
             else 
             {
+                TryInsertBatch(events);
+            }
+        }
+
+        private void TryInsertBatch(LoggingEvent[] events)
+        {
+            if (_initializationFailed) return; 
+
+            try
+            {
                 Settings.InsertBatch(events);
+            }
+            catch (Exception ex)
+            {
+                //I do not want to stop logging if some error occours.
             }
         }
 
         public override void Flush()
         {
             base.Flush();
+
+            if (_initializationFailed) return;
             Int32 i = 0;
             while (_dispatchCollection.Count > 0 && i++ < 500) Thread.Sleep(50);
         }
@@ -102,6 +130,8 @@ namespace Jarvis.Framework.MongoAppender
         public override void Flush(bool flushLossyBuffer)
         {
             base.Flush(flushLossyBuffer);
+
+            if (_initializationFailed) return;
             Int32 i = 0;
             while (_dispatchCollection.Count > 0 && i++ < 500) Thread.Sleep(50);
         }
@@ -114,6 +144,8 @@ namespace Jarvis.Framework.MongoAppender
         protected override void OnClose()
         {
             base.OnClose();
+
+            if (_initializationFailed) return;
             _dispatchCollection.CompleteAdding();
         }
     }
