@@ -14,7 +14,7 @@ namespace Jarvis.Framework.Kernel.Support
         private readonly MongoClient client;
 
         public DatabaseHealthCheck(String dbDescription, String serverUrl)
-           : base("MongoDatabaseCheck:" + dbDescription)
+           : base("MongoDatabaseCheck: " + dbDescription)
         {
             var url = new MongoUrl(serverUrl);
             client = new MongoClient(url);
@@ -27,7 +27,7 @@ namespace Jarvis.Framework.Kernel.Support
             if (state == MongoDB.Driver.Core.Clusters.ClusterState.Connected)
                 return HealthCheckResult.Healthy();
 
-            return HealthCheckResult.Unhealthy("Cluster state is disconnected");
+            return HealthCheckResult.Unhealthy("Unable to connect to Mongo Db Instance.!");
         }
     }
 }

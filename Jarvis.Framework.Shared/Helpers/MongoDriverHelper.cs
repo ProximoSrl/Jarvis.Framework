@@ -88,7 +88,6 @@ namespace Jarvis.Framework.Shared.Helpers
                 return (Dictionary<Tkey, Tvalue>)result;
             }
         }
-
     }
 
 }

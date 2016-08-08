@@ -181,6 +181,7 @@
     <Compile Include="Support\IProjectionMetricsDotNetConfigurer.cs" />
     <Compile Include="Support\MetricsHealthCheck.cs" />
     <Compile Include="Support\MetricsHelper.cs" />
+    <Compile Include="Support\MongoHealthHelpers.cs" />
     <Compile Include="Support\ProjectionEventInspector.cs" />
     <Compile Include="Support\ProjectionMetricsConfigurer.cs" />
     <Compile Include="Support\ProjectionMetricsLoader.cs" />
