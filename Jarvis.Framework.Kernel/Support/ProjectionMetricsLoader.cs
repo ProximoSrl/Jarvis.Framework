@@ -4,6 +4,7 @@ using System.Linq;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Jarvis.Framework.Shared.Helpers;
+using MongoDB.Driver.Core.Clusters;
 
 namespace Jarvis.Framework.Kernel.Support
 {
@@ -17,12 +18,16 @@ namespace Jarvis.Framework.Kernel.Support
 
         private Dictionary<String, SlotStatus> _lastMetrics;
         private Int64 _lastDelay;
+        private IMongoDatabase _eventStoreDatabase;
+        private IMongoDatabase _readModelDatabase;
 
         public ProjectionStatusLoader(
             IMongoDatabase eventStoreDatabase,
             IMongoDatabase readModelDatabase,
             Int32 pollingIntervalInSeconds = 5)
         {
+            _eventStoreDatabase = eventStoreDatabase;
+            _readModelDatabase = readModelDatabase;
             _pollingIntervalInSeconds = pollingIntervalInSeconds;
             _commitsCollection = eventStoreDatabase.GetCollection<BsonDocument>("Commits");
             _checkpointCollection = readModelDatabase.GetCollection<BsonDocument>("checkpoints");
@@ -53,7 +58,16 @@ namespace Jarvis.Framework.Kernel.Support
         {
             if (DateTime.Now.Subtract(lastPoll).TotalSeconds > _pollingIntervalInSeconds)
             {
+                if (_eventStoreDatabase.Client.Cluster.Description.State != ClusterState.Connected ||
+                    _readModelDatabase.Client.Cluster.Description.State != ClusterState.Connected)
+                {
+                    //database is down, we cannot read values.
+                    lastPoll = DateTime.Now;
+                    return;
+                }
+
                 _lastDelay = 0;
+
                 var lastCommitDoc = _commitsCollection
                     .FindAll()
                     .Sort(Builders<BsonDocument>.Sort.Descending("_id"))
