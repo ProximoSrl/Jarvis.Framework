@@ -44,6 +44,8 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 
         public CustomJsonSerializer CustomSerializer { get; private set; }
 
+        public Boolean UseCustomSerializer { get; private set; }
+
         private IStartableBus _bus;
 
         private Boolean _busStarted = false;
@@ -103,6 +105,8 @@ or manually set the Configuration property of this instance.");
                 .Events(e => e.MessageSent += OnMessageSent)
                 .Events(e => e.PoisonMessage += OnPoisonMessage)
                 .SpecifyOrderOfHandlers(pipeline => pipeline.Use(new RemoveDefaultTimeoutReplyHandlerFilter()));
+
+            UseCustomSerializer = true; //TODO: Make this parametric if needed
             return busConfiguration;
         }
 
@@ -243,6 +247,16 @@ or manually set the Configuration property of this instance.");
 
         private ICommand GetCommandFromMessage(ReceivedTransportMessage message)
         {
+            if (UseCustomSerializer)
+            {
+                var deserializedMessage = CustomSerializer.Deserialize(message);
+                if (deserializedMessage != null && deserializedMessage.Messages.Length > 0)
+                {
+                    var command = deserializedMessage.Messages[0] as ICommand;
+                    if (command != null) return command;
+                }
+            }
+
             string body;
             switch (message.Headers["rebus-encoding"].ToString().ToLowerInvariant())
             {
