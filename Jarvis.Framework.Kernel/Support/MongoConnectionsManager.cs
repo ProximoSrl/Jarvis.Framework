@@ -1,4 +1,5 @@
-﻿using MongoDB.Driver;
+﻿using Castle.Core.Logging;
+using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,6 +10,8 @@ namespace Jarvis.Framework.Kernel.Support
 {
     public class MongoConnectionsManager
     {
+        public ILogger Logger { get; set; }
+
         public struct ConnectionInfo
         {
             public String Name { get; set; }
@@ -27,6 +30,7 @@ namespace Jarvis.Framework.Kernel.Support
 
         public MongoConnectionsManager(ConnectionInfo[] connectionStrings)
         {
+            Logger = NullLogger.Instance;
             _connectionStrings = connectionStrings;
             SetupHealthCheck();
         }
@@ -44,7 +48,10 @@ namespace Jarvis.Framework.Kernel.Support
             foreach (var connection in _connectionStrings)
             {
                 if (!CheckConnection(connection.ConnectionString))
+                {
+                    Logger.DebugFormat("Check database failed for connection {0}", connection.ConnectionString);
                     return false;
+                }
             }
             return true;
         }
