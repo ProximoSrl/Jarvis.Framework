@@ -119,7 +119,8 @@ namespace Jarvis.Framework.Shared.ReadModel
         private IMongoCollection<TrackedMessageModel> _commands;
         IMongoCollection<TrackedMessageModel> Commands
         {
-            get {
+            get
+            {
                 return _commands ?? (_commands = GetCollection());
             }
         }
@@ -145,7 +146,8 @@ namespace Jarvis.Framework.Shared.ReadModel
             Logger = NullLogger.Instance;
         }
 
-        private IMongoCollection<TrackedMessageModel> GetCollection() {
+        private IMongoCollection<TrackedMessageModel> GetCollection()
+        {
 
             var state = _db.Client.Cluster.Description.State;
             //Check if db is operational.
@@ -161,103 +163,134 @@ namespace Jarvis.Framework.Shared.ReadModel
 
         public void Started(IMessage msg)
         {
-            var id = msg.MessageId.ToString();
-            string issuedBy = null;
-
-            if (msg is ICommand)
+            try
             {
-                issuedBy = ((ICommand)msg).GetContextData("user.id");
+                var id = msg.MessageId.ToString();
+                string issuedBy = null;
+
+                if (msg is ICommand)
+                {
+                    issuedBy = ((ICommand)msg).GetContextData("user.id");
+                }
+                else if (msg is IDomainEvent)
+                {
+                    issuedBy = ((IDomainEvent)msg).IssuedBy;
+                }
+
+                Commands.UpdateOne(
+                   Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
+                   Builders<TrackedMessageModel>.Update
+                        .Set(x => x.Message, msg)
+                        .Set(x => x.StartedAt, DateTime.UtcNow)
+                        .Set(x => x.IssuedBy, issuedBy)
+                        .Set(x => x.Description, msg.Describe()),
+                   new UpdateOptions() { IsUpsert = true }
+                );
             }
-            else if (msg is IDomainEvent)
+            catch (Exception ex)
             {
-                issuedBy = ((IDomainEvent)msg).IssuedBy;
+                Logger.ErrorFormat(ex, "Unable to track Started event of Message {0} [{1}] - {2}", msg.Describe(), msg.MessageId, ex.Message);
             }
 
-            Commands.UpdateOne(
-               Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
-               Builders<TrackedMessageModel>.Update
-                    .Set(x => x.Message, msg)
-                    .Set(x => x.StartedAt, DateTime.UtcNow)
-                    .Set(x => x.IssuedBy, issuedBy)
-                    .Set(x => x.Description, msg.Describe()),
-               new UpdateOptions() { IsUpsert = true }
-            );
         }
 
         public void ElaborationStarted(Guid commandId, DateTime startAt)
         {
-            var id = commandId.ToString();
-            var updated = Commands.UpdateOne(
-                Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
-                 Builders<TrackedMessageModel>.Update
-                    .Set(x => x.LastExecutionStartTime, startAt)
-                    .Push(x => x.ExecutionStartTimeList, startAt)
-                    .Inc(x => x.ExecutionCount, 1)
-            );
+            try
+            {
+                var id = commandId.ToString();
+                var updated = Commands.UpdateOne(
+                    Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
+                     Builders<TrackedMessageModel>.Update
+                        .Set(x => x.LastExecutionStartTime, startAt)
+                        .Push(x => x.ExecutionStartTimeList, startAt)
+                        .Inc(x => x.ExecutionCount, 1)
+                );
+            }
+            catch (Exception ex)
+            {
+                Logger.ErrorFormat(ex, "Unable to track ElaborationStarted event of Message {0} - {1}", commandId, ex.Message);
+            }
+
 
         }
 
         public void Completed(Guid commandId, DateTime completedAt)
         {
-            var id = commandId.ToString();
-            if (JarvisFrameworkGlobalConfiguration.MetricsEnabled)
+            try
             {
-                var trackMessage = Commands.FindOneAndUpdate(
-                    Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
-                    Builders<TrackedMessageModel>.Update.Set(x => x.CompletedAt, completedAt),
-                    new FindOneAndUpdateOptions<TrackedMessageModel, TrackedMessageModel>()
-                    {
-                        IsUpsert = true,
-                        ReturnDocument = ReturnDocument.After
-                    }
-                );
-                if (trackMessage != null)
+                var id = commandId.ToString();
+                if (JarvisFrameworkGlobalConfiguration.MetricsEnabled)
                 {
-                    if (trackMessage.StartedAt > DateTime.MinValue)
-                    {
-                        if (trackMessage.ExecutionStartTimeList != null &&
-                            trackMessage.ExecutionStartTimeList.Length > 0)
+                    var trackMessage = Commands.FindOneAndUpdate(
+                        Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
+                        Builders<TrackedMessageModel>.Update.Set(x => x.CompletedAt, completedAt),
+                        new FindOneAndUpdateOptions<TrackedMessageModel, TrackedMessageModel>()
                         {
-                            var firstExecutionValue = trackMessage.ExecutionStartTimeList[0];
-                            var queueTime = firstExecutionValue.Subtract(trackMessage.StartedAt).TotalMilliseconds;
-
-                            var messageType = trackMessage.Message.GetType().Name;
-                            queueTimer.Record((Int64)queueTime, TimeUnit.Milliseconds, messageType);
-                            queueCounter.Increment(messageType, (Int64)queueTime);
-
-                            var executionTime = completedAt.Subtract(trackMessage.StartedAt);
-                            totalExecutionTimer.Record((Int64)queueTime, TimeUnit.Milliseconds, messageType);
-                            totalExecutionCounter.Increment(messageType, (Int64)queueTime);
+                            IsUpsert = true,
+                            ReturnDocument = ReturnDocument.After
                         }
-                        else
+                    );
+                    if (trackMessage != null)
+                    {
+                        if (trackMessage.StartedAt > DateTime.MinValue)
                         {
-                            Logger.WarnFormat("Command id {0} received completed event but ExecutionStartTimeList is empty", commandId);
+                            if (trackMessage.ExecutionStartTimeList != null &&
+                                trackMessage.ExecutionStartTimeList.Length > 0)
+                            {
+                                var firstExecutionValue = trackMessage.ExecutionStartTimeList[0];
+                                var queueTime = firstExecutionValue.Subtract(trackMessage.StartedAt).TotalMilliseconds;
+
+                                var messageType = trackMessage.Message.GetType().Name;
+                                queueTimer.Record((Int64)queueTime, TimeUnit.Milliseconds, messageType);
+                                queueCounter.Increment(messageType, (Int64)queueTime);
+
+                                var executionTime = completedAt.Subtract(trackMessage.StartedAt);
+                                totalExecutionTimer.Record((Int64)queueTime, TimeUnit.Milliseconds, messageType);
+                                totalExecutionCounter.Increment(messageType, (Int64)queueTime);
+                            }
+                            else
+                            {
+                                Logger.WarnFormat("Command id {0} received completed event but ExecutionStartTimeList is empty", commandId);
+                            }
                         }
                     }
                 }
+                else
+                {
+                    Commands.UpdateOne(
+                         Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
+                         Builders<TrackedMessageModel>.Update.Set(x => x.CompletedAt, completedAt),
+                         new UpdateOptions() { IsUpsert = true }
+                     );
+                }
             }
-            else
+            catch (Exception ex)
             {
-                Commands.UpdateOne(
-                     Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
-                     Builders<TrackedMessageModel>.Update.Set(x => x.CompletedAt, completedAt),
-                     new UpdateOptions() { IsUpsert = true }
-                 );
+                Logger.ErrorFormat(ex, "Unable to track Completed event of Message {0} - {1}", commandId, ex.Message);
             }
         }
 
         public bool Dispatched(Guid commandId, DateTime dispatchedAt)
         {
-            var id = commandId.ToString();
-            var result = Commands.UpdateOne(
-                 Builders<TrackedMessageModel>.Filter.And(
-                    Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
-                     Builders<TrackedMessageModel>.Filter.Eq(x => x.DispatchedAt, null)
-                ),
-                Builders<TrackedMessageModel>.Update.Set(x => x.DispatchedAt, dispatchedAt)
-            );
+            try
+            {
+                var id = commandId.ToString();
+                var result = Commands.UpdateOne(
+                     Builders<TrackedMessageModel>.Filter.And(
+                        Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
+                         Builders<TrackedMessageModel>.Filter.Eq(x => x.DispatchedAt, null)
+                    ),
+                    Builders<TrackedMessageModel>.Update.Set(x => x.DispatchedAt, dispatchedAt)
+                );
 
-            return result.ModifiedCount > 0;
+                return result.ModifiedCount > 0;
+            }
+            catch (Exception ex)
+            {
+                Logger.ErrorFormat(ex, "Unable to track Dispatched event of Message {0} - {1}", commandId, ex.Message);
+            }
+            return false;
         }
 
         public void Drop()
@@ -267,15 +300,22 @@ namespace Jarvis.Framework.Shared.ReadModel
 
         public void Failed(Guid commandId, DateTime failedAt, Exception ex)
         {
-            var id = commandId.ToString();
-            Commands.UpdateOne(
-                Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
-                Builders<TrackedMessageModel>.Update
-                    .Set(x => x.FailedAt, failedAt)
-                    .Set(x => x.ErrorMessage, ex.Message),
-                new UpdateOptions() { IsUpsert = true }
-            );
-            errorMeter.Mark();
+            try
+            {
+                var id = commandId.ToString();
+                Commands.UpdateOne(
+                    Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
+                    Builders<TrackedMessageModel>.Update
+                        .Set(x => x.FailedAt, failedAt)
+                        .Set(x => x.ErrorMessage, ex.Message),
+                    new UpdateOptions() { IsUpsert = true }
+                );
+                errorMeter.Mark();
+            }
+            catch (Exception iex)
+            {
+                Logger.ErrorFormat(iex, "Unable to track Failed event of Message {0} - {1}", commandId, ex.Message);
+            }
         }
 
 
