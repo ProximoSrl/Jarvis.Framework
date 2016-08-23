@@ -3,6 +3,7 @@ using System.Linq;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Rebus;
+using Castle.Core.Logging;
 
 namespace Jarvis.Framework.Bus.Rebus.Integration.MongoDb
 {
@@ -15,14 +16,19 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.MongoDb
     {
         readonly string collectionName;
         readonly IMongoDatabase database;
+        ILogger logger;
 
         /// <summary>
         /// Constructs the storage to persist subscriptions in the given collection, in the database specified by the connection string.
         /// </summary>
-        public MongoDbSubscriptionStorage(string connectionString, string collectionName)
+        public MongoDbSubscriptionStorage(
+            string connectionString,
+            string collectionName,
+            ILogger logger)
         {
             this.collectionName = collectionName;
-            database = database = MongoHelper.GetDatabase(connectionString);
+            this.database = MongoHelper.GetDatabase(connectionString);
+            this.logger = logger;
         }
 
         /// <summary>
@@ -34,16 +40,39 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.MongoDb
 
             var criteria = Builders<BsonDocument>.Filter.Eq("_id", eventType.FullName);
             var update = Builders<BsonDocument>.Update.AddToSet("endpoints", subscriberInputQueue);
+            //Sometimes registration are done probably with multiple threads, and the insert fails
+            //due to index violation. We can safely ignore that error
+            try
+            {
+                PersistRegistration(eventType, subscriberInputQueue, collection, criteria, update);
+            }
+            catch (MongoWriteException wex)
+            {
+                this.logger.WarnFormat(wex, "Error registering subscription for event type {0} in queue {1}",
+                    eventType.FullName, subscriberInputQueue);
+            }
+            catch (Exception ex)
+            {
+                this.logger.ErrorFormat(ex, "Error registering subscription for event type {0} in queue {1}",
+                    eventType.FullName, subscriberInputQueue);
+                throw;
+            }
 
+
+
+        }
+
+        private void PersistRegistration(Type eventType, string subscriberInputQueue, IMongoCollection<BsonDocument> collection, FilterDefinition<BsonDocument> criteria, UpdateDefinition<BsonDocument> update)
+        {
             var safeModeResult = collection.WithWriteConcern(WriteConcern.Acknowledged).UpdateOne(
-                criteria, 
-                update, 
-                new UpdateOptions() {
-                        IsUpsert = true,
-                });
-
+                               criteria,
+                               update,
+                               new UpdateOptions()
+                               {
+                                   IsUpsert = true,
+                               });
             EnsureResultIsGood(safeModeResult, "Removing {0} from {1} where _id is {2}",
-                             subscriberInputQueue, collectionName, eventType.FullName);
+                       subscriberInputQueue, collectionName, eventType.FullName);
         }
 
         /// <summary>

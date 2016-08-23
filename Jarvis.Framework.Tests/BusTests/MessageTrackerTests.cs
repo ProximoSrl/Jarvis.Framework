@@ -94,6 +94,7 @@ namespace Jarvis.Framework.Tests.BusTests
         public void TestFixtureSetUp()
         {
             _container = new WindsorContainer();
+            
             String connectionString = ConfigurationManager.ConnectionStrings["log"].ConnectionString;
             var rebusUrl = new MongoUrl(connectionString);
             var rebusClient = new MongoClient(rebusUrl);
@@ -117,8 +118,11 @@ namespace Jarvis.Framework.Tests.BusTests
                 }
             };
             bb.Configuration = configuration;
-            bb.StartWithConfigurationProperty(true);
+            bb.Start();
+            var startableBus = _container.Resolve<IStartableBus>();
+            startableBus.Start();
             _bus = _container.Resolve<IBus>();
+            
             _handler = new SampleCommandHandler();
             _handlerAdapter = new MessageHandlerToCommandHandlerAdapter<SampleTestCommand>(
                 _handler, tracker, _bus);
@@ -276,7 +280,10 @@ namespace Jarvis.Framework.Tests.BusTests
                 }
             };
             bb.Configuration = configuration;
-            bb.StartWithConfigurationProperty(true);
+            bb.Start();
+            var startableBus = _container.Resolve<IStartableBus>();
+            startableBus.Start();
+
             _bus = _container.Resolve<IBus>();
             _handler = new AnotherSampleCommandHandler();
             _handlerAdapter = new MessageHandlerToCommandHandlerAdapter<AnotherSampleTestCommand>(
