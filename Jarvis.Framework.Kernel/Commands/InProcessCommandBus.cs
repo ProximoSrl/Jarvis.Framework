@@ -13,6 +13,7 @@ using Jarvis.Framework.Shared.MultitenantSupport;
 using Newtonsoft.Json;
 using Jarvis.Framework.Shared.ReadModel;
 using Jarvis.Framework.Shared.Messages;
+using Jarvis.Framework.Shared.Logging;
 
 namespace Jarvis.Framework.Kernel.Commands
 {
@@ -27,9 +28,9 @@ namespace Jarvis.Framework.Kernel.Commands
     public abstract class InProcessCommandBus : IInProcessCommandBus
     {
         private readonly IKernel _kernel;
-        private ILogger _logger = NullLogger.Instance;
+        private IExtendedLogger _logger = NullLogger.Instance;
 
-        public ILogger Logger
+        public IExtendedLogger Logger
         {
             get { return _logger; }
             set { _logger = value; }
@@ -42,8 +43,8 @@ namespace Jarvis.Framework.Kernel.Commands
             _messagesTracker = messagesTracker;
         }
 
-        public InProcessCommandBus(IKernel kernel, IMessagesTracker messagesTracker) 
-            :this(messagesTracker)
+        public InProcessCommandBus(IKernel kernel, IMessagesTracker messagesTracker)
+            : this(messagesTracker)
         {
             _kernel = kernel;
         }
@@ -52,7 +53,7 @@ namespace Jarvis.Framework.Kernel.Commands
         {
             return SendLocal(command, impersonatingUser);
         }
-     
+
         public ICommand Defer(TimeSpan delay, ICommand command, string impersonatingUser = null)
         {
             Logger.WarnFormat("Sending command {0} without delay", command.MessageId);
@@ -61,50 +62,58 @@ namespace Jarvis.Framework.Kernel.Commands
 
         public ICommand SendLocal(ICommand command, string impersonatingUser = null)
         {
-            PrepareCommand(command, impersonatingUser);
-            var msg = command as IMessage;
-            if (msg != null) 
+            try
             {
-                _messagesTracker.Started(msg);
-            }
-
-            if (Logger.IsDebugEnabled)
-            {
-                Logger.DebugFormat(
-                    "Sending command {0}:\n{1}",
-                    command.GetType().FullName,
-                    JsonConvert.SerializeObject(command, Formatting.Indented)
-                );
-            }
-
-            var handlers = ResolveHandlers(command);
-
-            if (handlers.Length == 0)
-            {
-                throw new Exception(string.Format("Command {0} does not have any handler", command.GetType().FullName));
-            }
-
-            if (handlers.Length > 1)
-            {
-                var b = new StringBuilder();
-                b.AppendFormat("Command {0} has too many handlers\n", command.GetType().FullName);
-
-                foreach (ICommandHandler handler in handlers)
+                Logger.MarkCommandExecution(command);
+                PrepareCommand(command, impersonatingUser);
+                var msg = command as IMessage;
+                if (msg != null)
                 {
-                    b.AppendFormat("\t{0}", handler.GetType().FullName);
+                    _messagesTracker.Started(msg);
                 }
+
+                if (Logger.IsDebugEnabled)
+                {
+                    Logger.DebugFormat(
+                        "Sending command {0}:\n{1}",
+                        command.GetType().FullName,
+                        JsonConvert.SerializeObject(command, Formatting.Indented)
+                    );
+                }
+
+                var handlers = ResolveHandlers(command);
+
+                if (handlers.Length == 0)
+                {
+                    throw new Exception(string.Format("Command {0} does not have any handler", command.GetType().FullName));
+                }
+
+                if (handlers.Length > 1)
+                {
+                    var b = new StringBuilder();
+                    b.AppendFormat("Command {0} has too many handlers\n", command.GetType().FullName);
+
+                    foreach (ICommandHandler handler in handlers)
+                    {
+                        b.AppendFormat("\t{0}", handler.GetType().FullName);
+                    }
+                    ReleaseHandlers(handlers);
+                    throw new Exception(b.ToString());
+                }
+
+                Handle(handlers[0], command);
+
                 ReleaseHandlers(handlers);
-                throw new Exception(b.ToString());
+
+                return command;
             }
-            
-            Handle(handlers[0],command);
-
-            ReleaseHandlers(handlers);
-
-            return command;
+            finally
+            {
+                Logger.ClearCommandExecution();
+            }
         }
 
-        protected virtual  void PrepareCommand(ICommand command, string impersonatingUser = null)
+        protected virtual void PrepareCommand(ICommand command, string impersonatingUser = null)
         {
             var userId = command.GetContextData("user.id");
 
@@ -121,7 +130,7 @@ namespace Jarvis.Framework.Kernel.Commands
         }
 
         protected virtual string ImpersonateUser(
-            ICommand command, 
+            ICommand command,
             string impersonatingUser)
         {
             return impersonatingUser ?? GetCurrentExecutingUser();
@@ -155,7 +164,7 @@ namespace Jarvis.Framework.Kernel.Commands
                     // retry
                     Logger.WarnFormat(
                         "Handled {0} {1}, concurrency exception. Retrying",
-                        command.GetType().FullName, 
+                        command.GetType().FullName,
                         command.MessageId
                     );
                     if (i++ > 5)
@@ -179,7 +188,7 @@ namespace Jarvis.Framework.Kernel.Commands
 
         protected virtual ICommandHandler[] ResolveHandlers(ICommand command)
         {
-            var handlerType = typeof (ICommandHandler<>).MakeGenericType(new[] {command.GetType()});
+            var handlerType = typeof(ICommandHandler<>).MakeGenericType(new[] { command.GetType() });
             var handlers = _kernel.ResolveAll(handlerType).Cast<ICommandHandler>().ToArray();
             return handlers;
         }
@@ -212,7 +221,7 @@ namespace Jarvis.Framework.Kernel.Commands
             var currentTenant = _tenantAccessor.Current;
             if (currentTenant != null)
             {
-                var handlerType = typeof (ICommandHandler<>).MakeGenericType(new[] {command.GetType()});
+                var handlerType = typeof(ICommandHandler<>).MakeGenericType(new[] { command.GetType() });
                 return currentTenant.Container.ResolveAll(handlerType).Cast<ICommandHandler>().ToArray();
             }
 

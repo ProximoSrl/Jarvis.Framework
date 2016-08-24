@@ -8,6 +8,7 @@ using Jarvis.Framework.Shared.Messages;
 using Jarvis.Framework.Shared.ReadModel;
 using Jarvis.NEventStoreEx.CommonDomainEx.Core;
 using Rebus;
+using Jarvis.Framework.Shared.Logging;
 
 namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
 {
@@ -17,8 +18,8 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
     /// <typeparam name="T">CommandType</typeparam>
     public class MessageHandlerToCommandHandlerAdapter<T> : IHandleMessages<T> where T : ICommand
     {
-        private ILogger _logger = NullLogger.Instance;
-        public ILogger Logger
+        private IExtendedLogger _logger = NullLogger.Instance;
+        public IExtendedLogger Logger
         {
             get { return _logger; }
             set { _logger = value; }
@@ -37,67 +38,75 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
 
         public void Handle(T message)
         {
-            if (Logger.IsDebugEnabled) Logger.DebugFormat("Handling {0} {1}", message.GetType().FullName, message.MessageId);
-            int i = 0;
-            bool done = false;
-            var notifyTo = message.GetContextData(MessagesConstants.ReplyToHeader);
-            while (!done && i < 100)
+            try
             {
-                i++;
-                try
+                Logger.MarkCommandExecution(message);
+                if (Logger.IsDebugEnabled) Logger.DebugFormat("Handling {0} {1}", message.GetType().FullName, message.MessageId);
+                int i = 0;
+                bool done = false;
+                var notifyTo = message.GetContextData(MessagesConstants.ReplyToHeader);
+                while (!done && i < 100)
                 {
-                    _messagesTracker.ElaborationStarted(message.MessageId, DateTime.UtcNow);
-                    _commandHandler.Handle(message);
-                    _messagesTracker.Completed(message.MessageId, DateTime.UtcNow);
-                    done = true;
+                    i++;
+                    try
+                    {
+                        _messagesTracker.ElaborationStarted(message.MessageId, DateTime.UtcNow);
+                        _commandHandler.Handle(message);
+                        _messagesTracker.Completed(message.MessageId, DateTime.UtcNow);
+                        done = true;
 
-                    if (notifyTo != null && message.GetContextData("disable-success-reply", "false") != "true")
-                    {
-                        var replyCommand = new CommandHandled(
-                            notifyTo,
-                            message.MessageId,
-                            CommandHandled.CommandResult.Handled,
-                            message.Describe()
-                        );
-                        replyCommand.CopyHeaders(message);
-                        _bus.Reply(replyCommand);
+                        if (notifyTo != null && message.GetContextData("disable-success-reply", "false") != "true")
+                        {
+                            var replyCommand = new CommandHandled(
+                                notifyTo,
+                                message.MessageId,
+                                CommandHandled.CommandResult.Handled,
+                                message.Describe()
+                            );
+                            replyCommand.CopyHeaders(message);
+                            _bus.Reply(replyCommand);
+                        }
                     }
-                }
-                catch (ConflictingCommandException ex)
-                {
-                    // retry
-                    if (Logger.IsDebugEnabled) Logger.DebugFormat("Handled {0} {1}, concurrency exception. Retry count: {2}", message.GetType().FullName, message.MessageId, i);
-                    if (i++ > 5)
+                    catch (ConflictingCommandException ex)
                     {
-                        Thread.Sleep(new Random(DateTime.Now.Millisecond).Next(i * 10));
+                        // retry
+                        if (Logger.IsDebugEnabled) Logger.DebugFormat("Handled {0} {1}, concurrency exception. Retry count: {2}", message.GetType().FullName, message.MessageId, i);
+                        if (i++ > 5)
+                        {
+                            Thread.Sleep(new Random(DateTime.Now.Millisecond).Next(i * 10));
+                        }
                     }
-                }
-                catch (DomainException ex)
-                {
-                    done = true;
-                    _messagesTracker.Failed(message.MessageId, DateTime.UtcNow, ex);
+                    catch (DomainException ex)
+                    {
+                        done = true;
+                        _messagesTracker.Failed(message.MessageId, DateTime.UtcNow, ex);
 
-                    if (notifyTo != null)
-                    {
-                        var replyCommand = new CommandHandled(
-                            notifyTo,
-                            message.MessageId,
-                            CommandHandled.CommandResult.Failed,
-                            message.Describe(),
-                            ex.Message,
-                            true
-                        );
-                        replyCommand.CopyHeaders(message);
-                        _bus.Reply(replyCommand);
+                        if (notifyTo != null)
+                        {
+                            var replyCommand = new CommandHandled(
+                                notifyTo,
+                                message.MessageId,
+                                CommandHandled.CommandResult.Failed,
+                                message.Describe(),
+                                ex.Message,
+                                true
+                            );
+                            replyCommand.CopyHeaders(message);
+                            _bus.Reply(replyCommand);
+                        }
                     }
                 }
+                if (done == false)
+                {
+                    var exception = new Exception("Command failed. Too many Conflicts");
+                    _messagesTracker.Failed(message.MessageId, DateTime.UtcNow, exception);
+                }
+                if (Logger.IsDebugEnabled) Logger.DebugFormat("Handled {0} {1}", message.GetType().FullName, message.MessageId);
             }
-            if (done == false)
+            finally
             {
-                var exception = new Exception("Command failed. Too many Conflicts");
-                _messagesTracker.Failed(message.MessageId, DateTime.UtcNow, exception);
+                Logger.ClearCommandExecution();
             }
-            if (Logger.IsDebugEnabled) Logger.DebugFormat("Handled {0} {1}", message.GetType().FullName, message.MessageId);
         }
     }
 }

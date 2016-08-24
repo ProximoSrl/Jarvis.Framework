@@ -124,6 +124,8 @@
     <Compile Include="IdentitySupport\Serialization\EventStoreIdentityCustomBsonTypeMapper.cs" />
     <Compile Include="IoC\TransientNotTrackingLifestyle.cs" />
     <Compile Include="JarvisFrameworkGlobalConfiguration.cs" />
+    <Compile Include="Logging\LoggingConstants.cs" />
+    <Compile Include="Logging\LoggingHelper.cs" />
     <Compile Include="Logging\NEventStoreLog4NetLogger.cs" />
     <Compile Include="Messages\CommandHandled.cs" />
     <Compile Include="Messages\Constants.cs" />

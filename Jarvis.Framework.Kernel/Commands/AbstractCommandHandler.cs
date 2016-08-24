@@ -1,6 +1,7 @@
 ﻿using Castle.Core.Logging;
 using Jarvis.Framework.Shared;
 using Jarvis.Framework.Shared.Commands;
+using Jarvis.Framework.Shared.Logging;
 using Metrics;
 
 namespace Jarvis.Framework.Kernel.Commands
@@ -40,14 +41,12 @@ namespace Jarvis.Framework.Kernel.Commands
         {
             try
             {
-                Logger.ThreadProperties["cmdid"] = command.MessageId;
-                Logger.ThreadProperties["cmdtype"] = command.GetType();
+                Logger.MarkCommandExecution(command);
                 Handle((TCommand)command);
             }
             finally
             {
-                Logger.ThreadProperties["commandId"] = null;
-                Logger.ThreadProperties["cmdtype"] = null;
+                Logger.ClearCommandExecution();
             }
 
         }
