@@ -6,6 +6,8 @@ Licenses:
 
 ##Docs:
 
+- General Usage
+	- [Mongo Custom Serializers](Wiki/Usage/mongoserializers.md)
 - [Metrics](Wiki/Metrics/metrics.md)
 	- [Projection](Wiki/Metrics/projections.md)
 
