@@ -8,6 +8,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         void StartAutomaticPolling(
             Int64 checkpointTokenFrom,
             Int32 intervalInMilliseconds,
+            Int64 checkpointTokenSequenced,
             Int32 bufferSize,
             String pollerName);
 

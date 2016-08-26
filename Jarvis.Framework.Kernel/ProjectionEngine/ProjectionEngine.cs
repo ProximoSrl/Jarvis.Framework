@@ -168,6 +168,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 bucket.Value.StartAutomaticPolling(
                     GetStartGlobalCheckpoint(),
                     _config.PollingMsInterval,
+                    maxCheckpointRebuilded,
                     bucket.Key.BufferSize,
                     "CommitPollingClient-" + bucket.Key.Slots.Aggregate((s1, s2) => s1 + ',' + s2));
             }
@@ -250,6 +251,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             return min;
         }
 
+        private Int64 maxCheckpointRebuilded = 0;
+
         void ConfigureProjections()
         {
             _checkpointTracker.SetUp(_allProjections, 1, true);
@@ -283,6 +286,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                             //so we need to immediately stop rebuilding.
                             projection.StopRebuild();
                         }
+                        maxCheckpointRebuilded = Math.Max(maxCheckpointRebuilded,_checkpointTracker.GetCheckpoint(projection));
                     }
 
                     projection.SetUp();

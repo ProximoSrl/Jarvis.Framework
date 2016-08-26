@@ -92,25 +92,35 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         private CancellationTokenSource _stopRequested = new CancellationTokenSource();
 
-
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="checkpointTokenFrom"></param>
+        /// <param name="intervalInMilliseconds"></param>
+        /// <param name="checkpointTokenSequenced">When there is a rebuild we already know that commit until the
+        /// rebuild checkpoint are already sequenced so there is no need to wait for them. All CheckpointToken
+        /// less than this value are considered to be sequenced.</param>
+        /// <param name="bufferSize"></param>
+        /// <param name="pollerName"></param>
         public void StartAutomaticPolling(
           Int64 checkpointTokenFrom,
           Int32 intervalInMilliseconds,
+          Int64 checkpointTokenSequenced,
           Int32 bufferSize = 4000,
           String pollerName = "CommitPollingClient")
         {
-            Init(checkpointTokenFrom, intervalInMilliseconds, bufferSize, pollerName);
+            Init(checkpointTokenFrom, intervalInMilliseconds,checkpointTokenSequenced, bufferSize, pollerName);
             _innerClient.StartFrom(checkpointTokenFrom);
             Status = CommitPollingClientStatus.Polling;
         }
 
         public void StartManualPolling(Int64 checkpointTokenFrom, Int32 intervalInMilliseconds, Int32 bufferSize = 4000, String pollerName = "CommitPollingClient")
         {
-            Init(checkpointTokenFrom, intervalInMilliseconds, bufferSize, pollerName);
+            Init(checkpointTokenFrom, intervalInMilliseconds, 0,bufferSize, pollerName);
             _innerClient.ConfigurePollingFunction();
         }
 
-        private void Init(Int64 checkpointTokenFrom, int intervalInMilliseconds, int bufferSize, string pollerName)
+        private void Init(Int64 checkpointTokenFrom, int intervalInMilliseconds, Int64 checkpointTokenSequenced, int bufferSize, string pollerName)
         {
             _bufferSize = bufferSize;
             _checkpointTokenCurrent = checkpointTokenFrom;
@@ -119,7 +129,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             CreateTplChain();
 
             _sequencer = new CommitSequencer(DispatchCommit, _checkpointTokenCurrent, 2000);
-            _innerClient = new PollingClient2(_persistStream, _sequencer.Handle, intervalInMilliseconds);
+            _innerClient = new PollingClient2(
+                _persistStream,
+                c =>
+                {
+                    if (c.CheckpointToken <= checkpointTokenSequenced)
+                        return DispatchCommit(c);
+
+                    return _sequencer.Handle(c);
+                },
+                intervalInMilliseconds);
 
             MetricsHelper.SetCommitPollingClientBufferSize(pollerName, () => GetClientBufferSize());
             //Set health check for polling
