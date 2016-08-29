@@ -5,6 +5,7 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using Rebus;
 using Rebus.Timeout;
+using Castle.Core.Logging;
 
 namespace Jarvis.Framework.Bus.Rebus.Integration.MongoDb
 {
@@ -20,12 +21,13 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.MongoDb
         const string DataProperty = "data";
         const string IdProperty = "_id";
         readonly IMongoCollection<BsonDocument> collection;
+        readonly ILogger logger;
 
         /// <summary>
         /// Constructs the timeout storage, connecting to the Mongo database pointed to by the given connection string,
         /// storing the timeouts in the given collection
         /// </summary>
-        public MongoDbTimeoutStorage(string connectionString, string collectionName)
+        public MongoDbTimeoutStorage(string connectionString, string collectionName, ILogger logger)
         {
             var database = MongoHelper.GetDatabase(connectionString);
             collection = database.GetCollection<BsonDocument>(collectionName);
@@ -36,6 +38,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.MongoDb
                     Background = true,
                     Unique = false,
                 });
+            this.logger = logger;
         }
 
         /// <summary>

@@ -1,4 +1,5 @@
-﻿using Rebus;
+﻿using Castle.Core.Logging;
+using Rebus;
 using Rebus.Configuration;
 
 namespace Jarvis.Framework.Bus.Rebus.Integration.MongoDb
@@ -11,15 +12,21 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.MongoDb
         /// <summary>
         /// Configures Rebus to store subscriptions in the given collection in MongoDB, in the database specified by the connection string
         /// </summary>
-        public static void StoreInMongoDb(this RebusSubscriptionsConfigurer configurer, string connectionString, string collectionName)
+        public static void StoreInMongoDb(
+            this RebusSubscriptionsConfigurer configurer, 
+            string connectionString, 
+            string collectionName,
+            ILogger logger)
         {
-            configurer.Use(new MongoDbSubscriptionStorage(connectionString, collectionName));
+            configurer.Use(new MongoDbSubscriptionStorage(connectionString, collectionName, logger));
         }
 
         /// <summary>
         /// Configures Rebus to store saga data in MongoDB, in the database specified by the connection string
         /// </summary>
-        public static MongoDbSagaPersisterConfigurationBuilder StoreInMongoDb(this RebusSagasConfigurer configurer, string connectionString)
+        public static MongoDbSagaPersisterConfigurationBuilder StoreInMongoDb(
+            this RebusSagasConfigurer configurer, 
+            string connectionString)
         {
             var persister = new MongoDbSagaPersister(connectionString);
             configurer.Use(persister);
@@ -29,10 +36,13 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.MongoDb
         /// <summary>
         /// Configures Rebus to store timeouts internally in the given collection in MongoDB, in the database specified by the connection string
         /// </summary>
-        public static void StoreInMongoDb(this RebusTimeoutsConfigurer configurer, string connectionString,
-                                          string collectionName)
+        public static void StoreInMongoDb(
+            this RebusTimeoutsConfigurer configurer, 
+            string connectionString,
+            string collectionName,
+            ILogger logger)
         {
-            configurer.Use(new MongoDbTimeoutStorage(connectionString, collectionName));
+            configurer.Use(new MongoDbTimeoutStorage(connectionString, collectionName, logger));
         }
 
         /// <summary>
