@@ -22,6 +22,8 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Debug\Jarvis.Framework.Shared.XML</DocumentationFile>
+    <NoWarn>1591</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -70,7 +72,7 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="NEventStore.Persistence.MongoDB, Version=6.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NEventStore.Persistence.MongoDB.6.0.0-unstable0058\lib\net40\NEventStore.Persistence.MongoDB.dll</HintPath>
+      <HintPath>..\packages\NEventStore.Persistence.MongoDB.6.0.0-unstable0077\lib\net40\NEventStore.Persistence.MongoDB.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
@@ -117,7 +119,6 @@
     <Compile Include="IdentitySupport\CounterService.cs" />
     <Compile Include="IdentitySupport\EventStoreIdentity.cs" />
     <Compile Include="IdentitySupport\ICounterService.cs" />
-    <Compile Include="IdentitySupport\IdentitiesRegistration.cs" />
     <Compile Include="IdentitySupport\IdentityManager.cs" />
     <Compile Include="IdentitySupport\IIdentityConverter.cs" />
     <Compile Include="IdentitySupport\MongoFlatMapper.cs" />
@@ -147,8 +148,6 @@
     <Compile Include="ReadModel\IReadModel.cs" />
     <Compile Include="ReadModel\IReadModelEx.cs" />
     <Compile Include="ReadModel\MongoReader.cs" />
-    <Compile Include="Storage\MessagesRegistration.cs" />
-    <Compile Include="Storage\MongoRegistration.cs" />
     <Compile Include="Store\VersionInfoAttribute.cs" />
   </ItemGroup>
   <ItemGroup>

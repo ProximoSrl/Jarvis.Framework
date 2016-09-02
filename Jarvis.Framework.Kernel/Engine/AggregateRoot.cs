@@ -102,11 +102,14 @@ namespace Jarvis.Framework.Kernel.Engine
 
         public AggregateSnapshot<TState> Snapshot()
         {
+            //to avoid any problem with multithread or external references, whenever
+            //the aggregate root creates a snapshot it cloned the state to avoid
+            //external code reference internal state.
             return new AggregateSnapshot<TState>
             {
                 Id = this.Id,
                 Version = this.Version,
-                State = _internalState
+                State = (TState) _internalState.Clone()
             };
         }
 
@@ -118,8 +121,10 @@ namespace Jarvis.Framework.Kernel.Engine
         void ISnapshotable.Restore(IMementoEx snapshot)
         {
             var snap = (AggregateSnapshot<TState>)snapshot;
-            this._internalState = snap.State;
-            this.Version = snap.Version;
+            //it is important to clone to avoid external code reference internal state
+            this._internalState = (TState) snap.State.Clone(); 
+            this.SnapshotRestoreVersion = this.Version = snap.Version;
+            
             if (!Id.Equals(snap.Id))
                 throw new AggregateException(String.Format("Error restoring snapshot: Id mismatch. Snapshot id: {0} aggregate id: {1} [snapshot version {2}] ", 
                     snap.Id, Id, snap.Version));

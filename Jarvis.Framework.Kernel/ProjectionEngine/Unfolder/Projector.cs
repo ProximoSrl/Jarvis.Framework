@@ -11,6 +11,7 @@ using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Security.Policy;
 using Jarvis.Framework.Kernel.Engine;
+using Jarvis.NEventStoreEx.CommonDomainEx.Persistence;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Unfolder
 {
@@ -30,7 +31,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Unfolder
 
         public virtual Object Clone()
         {
-            return DeepCloneMe(this);
+            return DeepCloneMe();
         }
 
         /// <summary>
@@ -39,14 +40,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Unfolder
         /// serialization gives us the advantage of automatic creation of deep cloned
         /// object.
         /// </summary>
-        /// <param name="objectToClone"></param>
         /// <returns></returns>
-        protected virtual Object DeepCloneMe(Object objectToClone)
+        protected virtual Object DeepCloneMe()
         {
             IFormatter formatter = new BinaryFormatter();
             using (Stream stream = new MemoryStream())
             {
-                formatter.Serialize(stream, objectToClone);
+                formatter.Serialize(stream, this);
                 stream.Seek(0, SeekOrigin.Begin);
                 return formatter.Deserialize(stream);
             }

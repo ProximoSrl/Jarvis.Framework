@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Configuration;
-using Jarvis.Framework.Shared.Storage;
 using NUnit.Framework;
+using Jarvis.Framework.Kernel.Support;
+using Jarvis.Framework.Shared.IdentitySupport;
 
 namespace Jarvis.Framework.Tests
 {
@@ -14,7 +15,8 @@ namespace Jarvis.Framework.Tests
             MongoRegistration.RegisterMongoConversions(
                 "NEventStore.Persistence.MongoDB"
                 );
-
+            MongoFlatMapper.EnableFlatMapping(true);
+            MongoRegistration.RegisterAssembly(GetType().Assembly);
             var overrideTestDb = Environment.GetEnvironmentVariable("TEST_MONGODB");
             if (String.IsNullOrEmpty(overrideTestDb)) return;
 

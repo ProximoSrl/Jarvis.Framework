@@ -8,6 +8,7 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using NUnit.Framework;
 using Jarvis.NEventStoreEx.CommonDomainEx;
+using Jarvis.Framework.Kernel.Support;
 
 namespace Jarvis.Framework.Tests.EngineTests
 {
@@ -25,7 +26,6 @@ namespace Jarvis.Framework.Tests.EngineTests
         {
             try
             {
-                IdentitiesRegistration.RegisterFromAssembly(GetType().Assembly);
                 var identityConverter = new IdentityManager(new InMemoryCounterService());
                 MongoFlatIdSerializerHelper.IdentityConverter = identityConverter;
                 identityConverter.RegisterIdentitiesFromAssembly(typeof(SampleAggregate).Assembly);

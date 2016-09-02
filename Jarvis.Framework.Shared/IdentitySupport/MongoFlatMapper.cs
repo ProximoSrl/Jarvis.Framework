@@ -29,65 +29,13 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         {
             if (_enabled) return;
 
-            //BsonClassMap.RegisterClassMap<DomainEvent>(map =>
-            //{
-            //    map.AutoMap();
-            //    map
-            //        .MapProperty(x => x.AggregateId)
-            //        .SetSerializer(new EventStoreIdentityBsonSerializer());
-
-            //});
-
             if (enableForAllId)
             {
                 BsonSerializer.RegisterSerializationProvider(new EventStoreIdentitySerializationProvider());
                 BsonSerializer.RegisterSerializationProvider(new StringValueSerializationProvider());
-                //AppDomain.CurrentDomain.AssemblyLoad += CurrentDomain_AssemblyLoad;
-                //AddSerializerForAllStringBasedIdFromThisApplication();
             }
 
             _enabled = true;
-        }
-
-        private static void CurrentDomain_AssemblyLoad(object sender, AssemblyLoadEventArgs args)
-        {
-            AddSerializerForAllStringBasedIdFromAssembly(args.LoadedAssembly);
-        }
-
-        public static void AddSerializerForAllStringBasedIdFromAssembly(Assembly assembly)
-        {
-            var serializerGeneric = typeof(TypedEventStoreIdentityBsonSerializer<>);
-            var asmName = assembly.FullName;
-            _logger.InfoFormat("Scanning assembly {0} for Mongo flat mapping", asmName);
-            foreach (var type in assembly.GetTypes()
-                .Where(t => typeof(IIdentity).IsAssignableFrom(t) && !t.IsAbstract))
-            {
-                var fullName = type.FullName;
-                _logger.DebugFormat("Registered IIdentity type {0}", type.FullName);
-                var serializerType = serializerGeneric.MakeGenericType(type);
-                BsonSerializer.RegisterSerializer(type, (IBsonSerializer)Activator.CreateInstance(serializerType));
-                EventStoreIdentityCustomBsonTypeMapper.Register(type);
-            }
-
-            var serializerStringGeneric = typeof(TypedStringValueBsonSerializer<>);
-
-            foreach (var type in assembly.GetTypes()
-              .Where(t => typeof(StringValue).IsAssignableFrom(t) && !t.IsAbstract))
-            {
-                _logger.DebugFormat("Registered LowercaseStringValue type {0}", type.FullName);
-                var serializerType = serializerStringGeneric.MakeGenericType(type);
-                BsonSerializer.RegisterSerializer(type, (IBsonSerializer)Activator.CreateInstance(serializerType));
-                //BsonSerializer.RegisterSerializer(type, new StringValueBsonSerializer(type));
-                StringValueCustomBsonTypeMapper.Register(type);
-            }
-        }
-
-        public static void AddSerializerForAllStringBasedIdFromThisApplication()
-        {
-            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
-            {
-                AddSerializerForAllStringBasedIdFromAssembly(assembly);
-            }
         }
     }
 

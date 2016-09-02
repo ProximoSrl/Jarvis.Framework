@@ -4,6 +4,7 @@ using Jarvis.Framework.Kernel.Engine;
 using Jarvis.Framework.Kernel.ProjectionEngine.Unfolder;
 using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.IdentitySupport;
+using Jarvis.NEventStoreEx.CommonDomainEx.Persistence;
 using MongoDB.Driver;
 using NEventStore;
 using NSubstitute;

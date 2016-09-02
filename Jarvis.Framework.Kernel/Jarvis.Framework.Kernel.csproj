@@ -22,6 +22,8 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Debug\Jarvis.Framework.Kernel.XML</DocumentationFile>
+    <NoWarn>1591</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -70,7 +72,7 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="NEventStore.Persistence.MongoDB, Version=6.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NEventStore.Persistence.MongoDB.6.0.0-unstable0058\lib\net40\NEventStore.Persistence.MongoDB.dll</HintPath>
+      <HintPath>..\packages\NEventStore.Persistence.MongoDB.6.0.0-unstable0077\lib\net40\NEventStore.Persistence.MongoDB.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
@@ -181,6 +183,7 @@
     <Compile Include="Support\IProjectionMetricsDotNetConfigurer.cs" />
     <Compile Include="Support\MetricsHealthCheck.cs" />
     <Compile Include="Support\MetricsHelper.cs" />
+    <Compile Include="Support\MongoRegistration.cs" />
     <Compile Include="Support\MongoConnectionsManager.cs" />
     <Compile Include="Support\ProjectionEventInspector.cs" />
     <Compile Include="Support\ProjectionMetricsConfigurer.cs" />

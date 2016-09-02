@@ -3,12 +3,15 @@ using System.Threading;
 using Castle.Core.Logging;
 using NEventStore.Domain.Persistence;
 using Jarvis.Framework.Kernel.Commands;
+using Jarvis.Framework.Kernel.ProjectionEngine.Client;
+using Jarvis.Framework.Kernel.Support;
 using Jarvis.Framework.Shared.Commands;
 using Jarvis.Framework.Shared.Messages;
 using Jarvis.Framework.Shared.ReadModel;
 using Jarvis.NEventStoreEx.CommonDomainEx.Core;
 using Rebus;
 using Jarvis.Framework.Shared.Logging;
+using Metrics;
 
 namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
 {
@@ -18,6 +21,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
     /// <typeparam name="T">CommandType</typeparam>
     public class MessageHandlerToCommandHandlerAdapter<T> : IHandleMessages<T> where T : ICommand
     {
+   
         private IExtendedLogger _logger = NullLogger.Instance;
         public IExtendedLogger Logger
         {
@@ -69,8 +73,9 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
                     }
                     catch (ConflictingCommandException ex)
                     {
+                        MetricsHelper.MarkConcurrencyException();
                         // retry
-                        if (Logger.IsDebugEnabled) Logger.DebugFormat("Handled {0} {1}, concurrency exception. Retry count: {2}", message.GetType().FullName, message.MessageId, i);
+                        if (Logger.IsInfoEnabled) Logger.InfoFormat(ex, "Handled {0} {1}, concurrency exception. Retry count: {2}", message.GetType().FullName, message.MessageId, i);
                         if (i++ > 5)
                         {
                             Thread.Sleep(new Random(DateTime.Now.Millisecond).Next(i * 10));
@@ -78,6 +83,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
                     }
                     catch (DomainException ex)
                     {
+                        MetricsHelper.MarkDomainException();
                         done = true;
                         _messagesTracker.Failed(message.MessageId, DateTime.UtcNow, ex);
 

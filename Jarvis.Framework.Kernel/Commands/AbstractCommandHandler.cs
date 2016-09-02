@@ -8,7 +8,7 @@ namespace Jarvis.Framework.Kernel.Commands
 {
     public abstract class AbstractCommandHandler<TCommand> : ICommandHandler<TCommand> where TCommand : ICommand
     {
-        private static readonly Timer timer = Metric.Timer("Commands", Unit.Commands);
+        private static readonly Timer timer = Metric.Timer("Commands Execution", Unit.Commands);
         private static readonly Counter commandCounter = Metric.Counter("CommandsDuration", Unit.Custom("ms"));
 
         public IExtendedLogger Logger { get; set; }

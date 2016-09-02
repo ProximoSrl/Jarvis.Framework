@@ -32,6 +32,8 @@ namespace Jarvis.Framework.Tests.EngineTests
             var loggerFactory = Substitute.For<ILoggerFactory>();
             loggerFactory.Create(Arg.Any<Type>()).Returns(NullLogger.Instance);
             _factory = new EventStoreFactory(loggerFactory);
+
+            TestHelper.RegisterSerializerForFlatId<SampleAggregateId>();
         }
 
         [Test]

@@ -9,65 +9,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Jarvis.Framework.Kernel.ProjectionEngine.Unfolder;
+using Jarvis.NEventStoreEx.CommonDomainEx.Persistence;
 
 namespace Jarvis.Framework.Kernel.Engine
 {
-    /// <summary>
-    /// This interface abstract the concept of a class that it is able to 
-    /// persist and load <see cref="ISnapshot"/> instances.
-    /// </summary>
-    public interface ISnapshotPersister
-    {
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="snapshot"></param>
-        /// <param name="type">We can have different type of snapshot, for standard aggregate or for 
-        /// event unfolder and this parameter allows the caller to specify a type that generates the snapshot</param>
-        void Persist(ISnapshot snapshot, String type);
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="streamId"></param>
-        /// <param name="version">If you need to restore an aggregate at version X you 
-        /// should get a snapshot that is not greater than X. This parameter allow you to avoid 
-        /// loading a snapshot taken at version token greater than this value.</param>
-        /// <returns></returns>
-        ISnapshot Load(String streamId, Int32 version, String type);
-
-        /// <summary>
-        /// Clear all checkpoints taken before a certain checkpoint. 
-        /// </summary>
-        /// <param name="streamId"></param>
-        /// <param name="version"></param>
-        void Clear(String streamId, Int32 version, String type);
-    }
-
-    public class NullSnapshotPersister : ISnapshotPersister
-    {
-        public static readonly NullSnapshotPersister Instance;
-
-        static NullSnapshotPersister()
-        {
-            Instance = new NullSnapshotPersister();
-        }
-
-        public void Clear(string streamId, Int32 version, String type)
-        {
-           
-        }
-
-        public ISnapshot Load(string streamId, Int32 version, String type)
-        {
-            return null;
-        }
-
-        public void Persist(ISnapshot snapshot, String type)
-        {
-            
-        }
-    }
 
     public class MongoSnapshotPersisterProvider : ISnapshotPersister
     {
@@ -102,23 +47,23 @@ namespace Jarvis.Framework.Kernel.Engine
                 .Ascending(s => s.StreamRevision));
         }
 
-        public void Clear(string streamId, Int32 version, String type)
+        public void Clear(string streamId, Int32 versionUpTo, String type)
         {
             _snapshotCollection.DeleteMany(Builders<SnapshotPersister>.Filter
                 .And(
                     Builders<SnapshotPersister>.Filter.Eq(s => s.StreamId, streamId),
                     Builders<SnapshotPersister>.Filter.Eq(s => s.Type, type),
-                    Builders<SnapshotPersister>.Filter.Lte(s => s.StreamRevision, version)
+                    Builders<SnapshotPersister>.Filter.Lte(s => s.StreamRevision, versionUpTo)
                 ));
         }
 
-        public ISnapshot Load(string streamId, Int32 version, String type)
+        public ISnapshot Load(string streamId, Int32 versionUpTo, String type)
         {
             var record =  _snapshotCollection.Find(Builders<SnapshotPersister>.Filter
                 .And(
                     Builders<SnapshotPersister>.Filter.Eq(s => s.StreamId, streamId),
                     Builders<SnapshotPersister>.Filter.Eq(s => s.Type, type),
-                    Builders<SnapshotPersister>.Filter.Lte(s => s.StreamRevision, version)
+                    Builders<SnapshotPersister>.Filter.Lte(s => s.StreamRevision, versionUpTo)
                 ))
                 .Sort(Builders<SnapshotPersister>.Sort.Descending(s => s.StreamRevision))
                 .FirstOrDefault();

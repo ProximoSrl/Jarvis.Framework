@@ -8,12 +8,14 @@ using Castle.MicroKernel;
 using NEventStore.Domain.Persistence;
 using Jarvis.Framework.Kernel.Engine;
 using Jarvis.Framework.Kernel.Store;
+using Jarvis.Framework.Kernel.Support;
 using Jarvis.Framework.Shared.Commands;
 using Jarvis.Framework.Shared.MultitenantSupport;
 using Newtonsoft.Json;
 using Jarvis.Framework.Shared.ReadModel;
 using Jarvis.Framework.Shared.Messages;
 using Jarvis.Framework.Shared.Logging;
+using Jarvis.NEventStoreEx.CommonDomainEx.Core;
 
 namespace Jarvis.Framework.Kernel.Commands
 {
@@ -161,16 +163,23 @@ namespace Jarvis.Framework.Kernel.Commands
                 }
                 catch (ConflictingCommandException ex)
                 {
+                    MetricsHelper.MarkConcurrencyException();
                     // retry
-                    Logger.WarnFormat(
+                    Logger.InfoFormat(
+                        ex,
                         "Handled {0} {1}, concurrency exception. Retrying",
                         command.GetType().FullName,
                         command.MessageId
                     );
                     if (i++ > 5)
                     {
-                        Thread.Sleep(new Random(DateTime.Now.Millisecond).Next(i * 10));
+                        Thread.Sleep(new Random(DateTime.Now.Millisecond).Next(i*10));
                     }
+                }
+                catch (DomainException ex)
+                {
+                    MetricsHelper.MarkDomainException();
+                    _messagesTracker.Failed(command.MessageId, DateTime.UtcNow, ex);
                 }
             }
             var exception = new Exception("Command failed. Too many Conflicts");

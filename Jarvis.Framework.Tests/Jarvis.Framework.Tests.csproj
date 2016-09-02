@@ -77,7 +77,7 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="NEventStore.Persistence.MongoDB, Version=6.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NEventStore.Persistence.MongoDB.6.0.0-unstable0058\lib\net40\NEventStore.Persistence.MongoDB.dll</HintPath>
+      <HintPath>..\packages\NEventStore.Persistence.MongoDB.6.0.0-unstable0077\lib\net40\NEventStore.Persistence.MongoDB.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
@@ -118,6 +118,7 @@
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Runtime.Caching" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -148,7 +149,7 @@
     <Compile Include="EngineTests\SnapshotPersistenceTest.cs" />
     <Compile Include="EngineTests\Unfolder\EventUnfolderTests.cs" />
     <Compile Include="EngineTests\IdentityConverterTests.cs" />
-    <Compile Include="EngineTests\RepositoryTests.cs" />
+    <Compile Include="NeventStoreExTests\Persistence\RepositoryTests.cs" />
     <Compile Include="EngineTests\SagaTests\BillPrinted.cs" />
     <Compile Include="EngineTests\SagaTests\DeliverPizzaSaga2.cs" />
     <Compile Include="EngineTests\SagaTests\DeliverPizzaSaga.cs" />
@@ -162,6 +163,8 @@
     <Compile Include="GlobalTestInit.cs" />
     <Compile Include="MultitenantSupportTests\MultiTenantSubDependencyResolverTests.cs" />
     <Compile Include="MultitenantSupportTests\TenantManagerTests.cs" />
+    <Compile Include="NeventStoreExTests\Persistence\ShapshotPersistenceStrategiesTests.cs" />
+    <Compile Include="NeventStoreExTests\Persistence\SnapshotManagerTests.cs" />
     <Compile Include="ProjectionEngineTests\CollectionWrapperTests.cs" />
     <Compile Include="ProjectionEngineTests\Rebuild\EventUnwinderTests.cs" />
     <Compile Include="ProjectionEngineTests\Rebuild\ProjectionEventInspectorTests.cs" />
@@ -227,7 +230,9 @@
     <None Include="App.config">
       <SubType>Designer</SubType>
     </None>
-    <None Include="packages.config" />
+    <None Include="packages.config">
+      <SubType>Designer</SubType>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Jarvis.Framework.Bus.Rebus.Integration\Jarvis.Framework.Bus.Rebus.Integration.csproj">

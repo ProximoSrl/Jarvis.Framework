@@ -76,6 +76,31 @@ namespace Jarvis.Framework.Tests.EngineTests
         }
 
         [Test]
+        public void discriminator_error_verification()
+        {
+            const string streamId = "Sample_1";
+            Snapshot s = new Snapshot(_bucket, streamId, 1, new AggregateSnapshot<TestAggregateState1>() {
+                Id = new SampleAggregateId(1),
+                Version = 1,
+                State = new TestAggregateState1() { Value = 42}
+                });
+
+            sut.Persist(s, _type);
+
+            s = new Snapshot(_bucket, streamId, 1, new AggregateSnapshot<TestAggregateState2>()
+            {
+                Id = new SampleAggregateId(1),
+                Version = 1,
+                State = new TestAggregateState2() { Property = "CIAO" }
+            });
+
+            sut.Persist(s, _type);
+
+            var reloaded = sut.Load(streamId, 1, _type);
+
+        }
+
+        [Test]
         public void Basic_persistence_of_snapshot_memento()
         {
             const string streamId = "test2_a";
@@ -128,5 +153,19 @@ namespace Jarvis.Framework.Tests.EngineTests
             Assert.That(reloaded.StreamRevision, Is.EqualTo(5));
             Assert.That(reloaded.Payload, Is.EqualTo("PAYLOAD2"));
         }
+
+        #region Helper classes
+
+        public class TestAggregateState1 : AggregateState
+        {
+            public Int32 Value { get; set; }
+        }
+
+        public class TestAggregateState2 : AggregateState
+        {
+            public String Property { get; set; }
+        }
+        #endregion
+
     }
 }

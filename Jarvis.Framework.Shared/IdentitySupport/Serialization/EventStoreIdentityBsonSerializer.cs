@@ -79,7 +79,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport.Serialization
             }
             else
             {
-                context.Writer.WriteString(value);
+                context.Writer.WriteString(value.AsString());
             }
         }
     }

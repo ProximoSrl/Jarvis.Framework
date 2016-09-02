@@ -27,8 +27,15 @@ namespace Jarvis.Framework.Tests.EngineTests
         {
             public Boolean ShouldBeFalse { get; private set; }
 
+            public Int32 TouchCount { get; set; }
+
             protected void When(SampleAggregateCreated evt)
             {
+            }
+
+            protected void When(SampleAggregateTouched evt)
+            {
+                TouchCount++;
             }
 
             protected void When(SampleAggregateInvalidated evt)
@@ -42,10 +49,16 @@ namespace Jarvis.Framework.Tests.EngineTests
 
                 return InvariantCheckResult.Success;
             }
+
+            protected override object DeepCloneMe()
+            {
+                return new State() { TouchCount = this.TouchCount };
+            }
         }
 
         public SampleAggregate()
         {
+            
         }
 
 		public void Create()
@@ -73,6 +86,8 @@ namespace Jarvis.Framework.Tests.EngineTests
         {
             get { return Context;}
         }
+
+        public new State InternalState { get { return base.InternalState; } }
     }
 
     public class SampleAggregateForInspection : SampleAggregate

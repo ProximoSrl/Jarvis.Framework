@@ -7,6 +7,7 @@ using Jarvis.NEventStoreEx.CommonDomainEx;
 using NEventStore;
 using Jarvis.Framework.Kernel.Engine;
 using Jarvis.Framework.Shared.Events;
+using Jarvis.NEventStoreEx.CommonDomainEx.Persistence;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Unfolder
 {

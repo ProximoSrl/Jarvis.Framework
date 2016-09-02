@@ -11,7 +11,7 @@ using NUnit.Framework;
 using Jarvis.NEventStoreEx.CommonDomainEx;
 using Jarvis.Framework.Kernel.Engine;
 using System.Collections.Generic;
-using MongoDB.Bson.Serialization.Options;
+
 
 namespace Jarvis.Framework.Tests.DomainTests
 {
@@ -57,7 +57,7 @@ namespace Jarvis.Framework.Tests.DomainTests
                 map.MapProperty(x => x.AggregateId).SetSerializer(new TypedEventStoreIdentityBsonSerializer<EventStoreIdentity>());
             });
         }
-        
+
         [TearDown]
         public void TearDown()
         {
@@ -92,7 +92,7 @@ namespace Jarvis.Framework.Tests.DomainTests
 
     [TestFixture]
     [Category("mongo_serialization")]
-    public class EventstoreIdentityBsonSerializationTests 
+    public class EventstoreIdentityBsonSerializationTests
     {
         [BsonSerializer(typeof(TypedEventStoreIdentityBsonSerializer<SampleId>))]
         public class SampleId : EventStoreIdentity
@@ -215,11 +215,13 @@ namespace Jarvis.Framework.Tests.DomainTests
             Assert.AreEqual("{ \"Value\" : \"Sample_1\" }", json);
         }
 
-        
+
         [Test]
         public void should_serialize_array()
         {
-            var instance = new ClassWithArrayIdentity { Value = new SampleId[] {
+            var instance = new ClassWithArrayIdentity
+            {
+                Value = new SampleId[] {
                     new SampleId("Sample_1"),
                     new SampleId("Sample_2"),
                 }

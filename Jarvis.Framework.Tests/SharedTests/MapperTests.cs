@@ -11,7 +11,9 @@ using System.Configuration;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using Castle.Components.DictionaryAdapter;
 
 namespace Jarvis.Framework.Tests.SharedTests
 {
@@ -34,7 +36,8 @@ namespace Jarvis.Framework.Tests.SharedTests
 
         public class MapperTestMapper : AbstractIdentityTranslator<MapperTestsId>
         {
-            public MapperTestMapper(IMongoDatabase systemDB, IIdentityGenerator identityGenerator) : base(systemDB, identityGenerator)
+            public MapperTestMapper(IMongoDatabase systemDB, IIdentityGenerator identityGenerator)
+                : base(systemDB, identityGenerator)
             {
             }
 
@@ -137,14 +140,30 @@ namespace Jarvis.Framework.Tests.SharedTests
         [Test]
         public void verify_multithread_mapping()
         {
-            var sequence = Enumerable.Range(1, 100);
-            Parallel.ForEach(sequence, i =>
+            Int32 iteration = 0;
+            var sequence = Enumerable.Range(0, 100);
+            List<String> generated = new List<string>(100);
+            try
             {
-                sut.Map("TEST" + i);
-            });
-
+                Parallel.ForEach(sequence, i =>
+                {
+                    Interlocked.Increment(ref iteration);
+                    generated.Add(sut.Map("TEST" + i));
+                });
+            }
+            catch (Exception ex)
+            {
+                Assert.Fail("Exception at iteration " + iteration + ": " + ex.ToString());    
+            }
+          
             var allRecords = mapperCollection.Find(Builders<BsonDocument>.Filter.Empty).ToList();
             Assert.That(allRecords, Has.Count.EqualTo(100));
+            for (int i = 1; i <= 100; i++)
+            {
+                if (!generated.Contains("MapperTests_" + i))
+                    Assert.Fail("Id " + i + " is missing");
+            }
+            Assert.That(generated.Distinct().Count(), Is.EqualTo(100));
         }
 
         [Test]
