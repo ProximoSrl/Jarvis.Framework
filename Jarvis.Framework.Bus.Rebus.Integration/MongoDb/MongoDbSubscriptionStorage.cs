@@ -32,6 +32,29 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.MongoDb
         }
 
         /// <summary>
+        /// Executes an action that involve writing in MongoDb and retry if there are
+        /// Write Exception due to concurrency.
+        /// </summary>
+        /// <param name="action"></param>
+        /// <param name="message">A descriptive message of the operation.</param>
+        private void ExecuteWithRetry(Action action, String message)
+        {
+            Int32 count = 0;
+            do
+            {
+                try
+                {
+                    action();
+                    return;
+                }
+                catch (MongoWriteException wex)
+                {
+                    this.logger.DebugFormat(wex, "Error in executing action {0}", message);
+                }
+            } while (count++ < 3);
+        }
+
+        /// <summary>
         /// Adds the given subscriber input queue to the collection of endpoints listed as subscribers of the given event type
         /// </summary>
         public void Store(Type eventType, string subscriberInputQueue)
@@ -44,12 +67,11 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.MongoDb
             //due to index violation. We can safely ignore that error
             try
             {
-                PersistRegistration(eventType, subscriberInputQueue, collection, criteria, update);
-            }
-            catch (MongoWriteException wex)
-            {
-                this.logger.WarnFormat(wex, "Error registering subscription for event type {0} in queue {1}",
+                var description = String.Format("Error registering subscription for event type {0} in queue {1}",
                     eventType.FullName, subscriberInputQueue);
+                ExecuteWithRetry(
+                    () => PersistRegistration(eventType, subscriberInputQueue, collection, criteria, update),
+                    description);
             }
             catch (Exception ex)
             {
@@ -57,9 +79,6 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.MongoDb
                     eventType.FullName, subscriberInputQueue);
                 throw;
             }
-
-
-
         }
 
         private void PersistRegistration(Type eventType, string subscriberInputQueue, IMongoCollection<BsonDocument> collection, FilterDefinition<BsonDocument> criteria, UpdateDefinition<BsonDocument> update)
