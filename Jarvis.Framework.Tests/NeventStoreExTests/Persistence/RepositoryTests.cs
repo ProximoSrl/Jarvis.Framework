@@ -184,7 +184,7 @@ namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
             {
                 Repository = _sut,
                 AggregateFactory = _aggregateFactory,
-                RepositorySingleAggregateFactory = new AggregateCachedRepositoryFactory(() => _sut)
+                AggregateCachedRepositoryFactory = new AggregateCachedRepositoryFactory(() => _sut)
             };
 
             handler.Handle(cmd);

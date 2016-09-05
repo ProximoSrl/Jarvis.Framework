@@ -27,7 +27,7 @@ namespace Jarvis.Framework.Kernel.Commands
         /// it is better to use <see cref="IAggregateCachedRepository{TAggregate}"/> because
         /// it internally uses caches to cache the repository.
         /// </summary>
-        public IAggregateCachedRepositoryFactory RepositorySingleAggregateFactory { get; set; }
+        public IAggregateCachedRepositoryFactory AggregateCachedRepositoryFactory { get; set; }
 
         // ReSharper restore MemberCanBeProtected.Global
         private Guid _commitId;
@@ -66,7 +66,7 @@ namespace Jarvis.Framework.Kernel.Commands
                 //Lock is NEEDED because multiple thread cannot access the very same aggregate.
                 lock (NamedLocker.Instance.GetLock(id.Id))
                 {
-                    using (var repo = RepositorySingleAggregateFactory.Create<TAggregate>(id))
+                    using (var repo = AggregateCachedRepositoryFactory.Create<TAggregate>(id))
                     {
                         var aggregate = repo.Aggregate;
                         if (!createIfNotExists && aggregate.Version == 0)

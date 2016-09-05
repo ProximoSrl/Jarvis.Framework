@@ -7,6 +7,7 @@ using Jarvis.Framework.Kernel.Store;
 using Jarvis.Framework.Shared.Events;
 using Jarvis.NEventStoreEx.CommonDomainEx;
 using Machine.Specifications;
+using Fasterflect;
 
 namespace Jarvis.Framework.TestHelpers
 {
@@ -50,28 +51,19 @@ namespace Jarvis.Framework.TestHelpers
 //            test_executions_context = new ImpersonatedContext(impersonatig_use_id);
         };
 
-        private static TState _state;
         protected static TState State
         {
-            get { return _state; }
+            get { return (TState) _aggregate.GetPropertyValue("InternalState"); }
         }
 
         protected static void Create(IIdentity id)
         {
-            _state = new TState();
-            _aggregate = TestAggregateFactory.Create<TAggregate, TState>(_state, id, 0);
+            _aggregate = TestAggregateFactory.Create<TAggregate, TState>(new TState(), id, 0);
         }
 
         protected static void SetUp(TState state, IIdentity id)
         {
-            _state = state;
-            _aggregate = TestAggregateFactory.Create<TAggregate, TState>(_state, id, 99999);
-        }
-
-        protected static void SetUp(TState state, TAggregate aggregate)
-        {
-            _state = state;
-            _aggregate = aggregate;
+            _aggregate = TestAggregateFactory.Create<TAggregate, TState>(state, id, 99999);
         }
 
         private Cleanup stuff = () => test_executions_context.Dispose();

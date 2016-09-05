@@ -25,7 +25,6 @@ namespace Jarvis.Framework.TestHelpers
 
             aggregate.AssignAggregateId(identity);
             ((ISnapshotable)aggregate).Restore(snapshot);
-
             return aggregate;
         }
 
