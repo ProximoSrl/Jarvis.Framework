@@ -1,9 +1,11 @@
 ﻿using Castle.Core.Logging;
 using MongoDB.Driver;
+using MongoDB.Driver.Core.Clusters;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.Support
@@ -60,8 +62,16 @@ namespace Jarvis.Framework.Kernel.Support
         {
             var url = new MongoUrl(connection);
             var client = new MongoClient(url);
-            var state = client.Cluster.Description.State;
-            return state == MongoDB.Driver.Core.Clusters.ClusterState.Connected;
+            Task.Factory.StartNew(() => client.ListDatabases()); //forces a database connection
+            Int32 spinCount = 0;
+            ClusterState clusterState;
+
+            while ((clusterState = client.Cluster.Description.State) != ClusterState.Connected &&
+                spinCount++ < 100)
+            {
+                Thread.Sleep(20);
+            }
+            return clusterState == MongoDB.Driver.Core.Clusters.ClusterState.Connected;
         }
 
 

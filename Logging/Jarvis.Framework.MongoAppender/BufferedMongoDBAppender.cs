@@ -91,6 +91,8 @@ namespace Jarvis.Framework.MongoAppender
 
         protected override void SendBuffer(LoggingEvent[] events)
         {
+            if (_initializationFailed) return;
+
             if (SaveOnDifferentThread)
             {
                 if (_dispatchCollection != null && !_dispatchCollection.IsCompleted)

@@ -9,6 +9,9 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 
 using System.Reflection;
+using System.Threading.Tasks;
+using MongoDB.Driver.Core.Clusters;
+using System.Threading;
 
 namespace Jarvis.Framework.MongoAppender
 {
@@ -79,10 +82,22 @@ namespace Jarvis.Framework.MongoAppender
             var client = new MongoClient(uri);
             IMongoDatabase db = client.GetDatabase(uri.DatabaseName);
 
-            var state = client.Cluster.Description.State;
-            //Check if db is operational.
-            if (state != MongoDB.Driver.Core.Clusters.ClusterState.Connected)
-                return false; 
+            Task.Factory.StartNew(() =>
+            {
+                var result = client.ListDatabases();
+                Console.Write(result.ToList());
+            }); //forces a database connection
+            Int32 spinCount = 0;
+            ClusterState clusterState;
+
+            while ((clusterState = client.Cluster.Description.State) != ClusterState.Connected &&
+                spinCount++ < 100)
+            {
+                Thread.Sleep(20);
+            }
+            //database is not operational;
+            if (clusterState != ClusterState.Connected)
+                return false;
 
             Int64 cappedSize;
             if (!Int64.TryParse(CappedSizeInMb, out cappedSize))
@@ -95,7 +110,8 @@ namespace Jarvis.Framework.MongoAppender
                 .ToList();
             if (!collections.Contains(CollectionName))
             {
-                var craeteCollectionOptions = new CreateCollectionOptions() {
+                var craeteCollectionOptions = new CreateCollectionOptions()
+                {
                     Capped = true,
                     MaxSize = 1024L * 1024L * cappedSize
                 };
@@ -103,43 +119,14 @@ namespace Jarvis.Framework.MongoAppender
             }
             LogCollection = db.GetCollection<BsonDocument>(CollectionName);
             CreateIndexOptions options = new CreateIndexOptions();
-            const string ttlIndex = FieldNames.Timestamp + "_-1";
-            var index = LogCollection.Indexes.List().ToList().SingleOrDefault(x => x["name"].AsString == ttlIndex);
-            String createIndexResult;
-           
-            if (index != null)
-            {
-                //if (ExpireAfter != null)
-                //{
-                //    if (index.op != ExpireAfter.ToTimeSpan())
-                //    {
-                //        var d = new CommandDocument()
-                //        {
-                //            {   "collMod", CollectionName   },
-                //            {
-                //                "index", new BsonDocument
-                //                {
-                //                    {"keyPattern", new BsonDocument {{FieldNames.Timestamp, -1}}},
-                //                    {"expireAfterSeconds", (int)(ExpireAfter.ToTimeSpan().TotalSeconds)}
-                //                }
-                //            }
-                //        };
 
-                //        db.RunCommand(d);
-                //    }
-                //}
-            }
-            else
+            if (ExpireAfter != null)
             {
-                if (ExpireAfter != null)
-                {
-                    options.ExpireAfter = ExpireAfter.ToTimeSpan();
-                }
-
-                createIndexResult = LogCollection.Indexes.CreateOne(Builders<BsonDocument>.IndexKeys.Descending(FieldNames.Timestamp), options);
+                options.ExpireAfter = ExpireAfter.ToTimeSpan();
             }
 
-            createIndexResult = LogCollection.Indexes.CreateOne(Builders<BsonDocument>.IndexKeys
+            LogCollection.Indexes.CreateOne(Builders<BsonDocument>.IndexKeys.Descending(FieldNames.Timestamp), options);
+            LogCollection.Indexes.CreateOne(Builders<BsonDocument>.IndexKeys
                 .Ascending(FieldNames.Level).Ascending(FieldNames.Thread).Ascending(FieldNames.Loggername));
             return true;
         }
@@ -286,7 +273,7 @@ namespace Jarvis.Framework.MongoAppender
         public void Insert(BsonDocument doc)
         {
 
-                    LogCollection.InsertOne(doc);
+            LogCollection.InsertOne(doc);
 
         }
     }
