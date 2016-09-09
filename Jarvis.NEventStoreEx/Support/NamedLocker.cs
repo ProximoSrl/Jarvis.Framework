@@ -27,7 +27,10 @@ namespace Jarvis.NEventStoreEx.Support
 
         private NamedLocker()
         {
-
+            for (int i = 0; i <= DefaultModulus; i++)
+            {
+                GetLock(i);
+            }
         }
 
         private readonly ConcurrentDictionary<Int32, object> _lockDict = 
