@@ -22,15 +22,30 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
         public long GetNext(string serie)
         {
-            var counter = _counters.FindOneAndUpdate(
-                Builders<IdentityCounter>.Filter.Eq(x => x.Id, serie),
-                Builders<IdentityCounter>.Update.Inc(x => x.Last, 1),
-                new FindOneAndUpdateOptions<IdentityCounter, IdentityCounter>() {
-                    ReturnDocument = ReturnDocument.After,
-                    IsUpsert = true,
-                });
+            Int32 count = 0;
+            while (count++ < 5)
+            {
+                try
+                {
+                    var counter = _counters.FindOneAndUpdate(
+                                    Builders<IdentityCounter>.Filter.Eq(x => x.Id, serie),
+                                    Builders<IdentityCounter>.Update.Inc(x => x.Last, 1),
+                                    new FindOneAndUpdateOptions<IdentityCounter, IdentityCounter>()
+                                    {
+                                        ReturnDocument = ReturnDocument.After,
+                                        IsUpsert = true,
+                                    });
+                    return counter.Last;
+                }
+                catch (MongoCommandException ex)
+                {
+                    //We can tolerate only duplicate exception
+                    if (!ex.Message.Contains("E11000"))
+                        throw;
+                }
+            }
 
-            return counter.Last;
+            throw new ApplicationException("Unable to generate next number for serie " + serie);
         }
     }
 
