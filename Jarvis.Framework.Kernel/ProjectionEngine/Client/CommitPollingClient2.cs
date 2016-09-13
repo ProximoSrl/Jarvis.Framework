@@ -213,6 +213,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                     return PollingClient2.HandlingResult.Stop;
                 }
 
+                if (commit.StreamId.StartsWith("system.empty"))
+                {
+                    _logger.DebugFormat("Found empty commit - {0}", commit.CheckpointToken);
+                    return PollingClient2.HandlingResult.MoveToNext;
+                }
                 _enhancer.Enhance(commit);
                 var task = _buffer.SendAsync(commit);
                 //wait till the commit is stored in tpl queue
@@ -246,6 +251,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             }
             catch (Exception ex)
             {
+                _logger.ErrorFormat(ex, "Error in dispatching commit {0} - {1}", commit.CheckpointToken, ex.Message);
                 return PollingClient2.HandlingResult.Stop;
             }
         }
