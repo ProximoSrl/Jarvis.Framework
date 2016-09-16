@@ -1,4 +1,5 @@
-﻿using Castle.Core.Logging;
+﻿using System;
+using Castle.Core.Logging;
 using NEventStore.Logging;
 
 namespace Jarvis.Framework.Shared.Logging
@@ -6,6 +7,45 @@ namespace Jarvis.Framework.Shared.Logging
     public class NEventStoreLog4NetLogger : ILog
     {
         private readonly ILogger _logger;
+
+        public bool IsVerboseEnabled
+        {
+            get
+            {
+                return _logger.IsDebugEnabled;
+            }
+        }
+
+        public bool IsDebugEnabled
+        {
+            get
+            {
+                return _logger.IsDebugEnabled;
+            }
+        }
+
+        public bool IsInfoEnabled
+        {
+            get
+            {
+                return _logger.IsInfoEnabled;
+            }
+        }
+
+        public LogLevel LogLevel
+        {
+            get
+            {
+                if (_logger.IsDebugEnabled)
+                    return LogLevel.Debug;
+                if (_logger.IsInfoEnabled)
+                    return LogLevel.Info;
+                if (_logger.IsWarnEnabled)
+                    return LogLevel.Warn;
+
+                return LogLevel.Error;
+            }
+        }
 
         public NEventStoreLog4NetLogger(ILogger logger)
         {
