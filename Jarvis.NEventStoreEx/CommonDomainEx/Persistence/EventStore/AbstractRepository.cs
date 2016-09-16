@@ -184,7 +184,7 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
                 catch (DuplicateCommitException dex)
                 {
                     stream.ClearChanges();
-                    _logger.Warn(String.Format("Duplicate commit exception bucket {0} - id {1} - commitid {2}. \n{3}", bucketId, aggregate.Id, commitId, dex));
+                    _logger.Debug(String.Format("Duplicate commit exception bucket {0} - id {1} - commitid {2}. \n{3}", bucketId, aggregate.Id, commitId, dex));
                     return 0; //no events commited
                 }
                 catch (ConcurrencyException e)
