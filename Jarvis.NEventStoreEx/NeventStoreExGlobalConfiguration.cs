@@ -52,7 +52,7 @@ namespace Jarvis.NEventStoreEx
 
         public static void EnableRepositoryLockOnAggregateId()
         {
-            RepositoryLockOnAggregateId = false;
+            RepositoryLockOnAggregateId = true;
         }
 
         public static void SetLockThreadSleepCount(Int32 lockThreadSleepCount)
