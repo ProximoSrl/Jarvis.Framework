@@ -120,7 +120,8 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
                 _eventStore,
                 new AggregateFactory(),
                 new ConflictDetector(),
-                _identityConverter
+                _identityConverter,
+               NSubstitute.Substitute.For<NEventStore.Logging.ILog>()
            );
         }
 

@@ -21,6 +21,7 @@ using Jarvis.Framework.Kernel.ProjectionEngine.Rebuild;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 using Jarvis.Framework.Shared.IdentitySupport.Serialization;
 using Jarvis.Framework.Kernel.ProjectionEngine;
+using NEventStore.Logging;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 {
@@ -30,6 +31,8 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
       
         string _eventStoreConnectionString;
         IdentityManager _identityConverter;
+        ILog _logger;
+
         protected RepositoryEx Repository;
         protected IStoreEvents _eventStore;
         protected IMongoDatabase _db;
@@ -41,6 +44,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         [TestFixtureSetUp]
         public virtual void TestFixtureSetUp()
         {
+            _logger = NSubstitute.Substitute.For<ILog>();
             _eventStoreConnectionString = ConfigurationManager.ConnectionStrings["eventstore"].ConnectionString; ;
             var url = new MongoUrl(_eventStoreConnectionString);
             var client = new MongoClient(url);
@@ -82,7 +86,8 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
                 _eventStore,
                 new AggregateFactory(),
                 new ConflictDetector(),
-                _identityConverter
+                _identityConverter,
+                _logger
            );
         }
 

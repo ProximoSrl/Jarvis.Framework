@@ -65,7 +65,8 @@ namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
                 _eventStore,
                 _aggregateFactory, 
                 new ConflictDetector(), 
-                _identityConverter
+                _identityConverter,
+                NSubstitute.Substitute.For<NEventStore.Logging.ILog>()
             );
             repositoryEx.SnapshotManager = Substitute.For<ISnapshotManager>();
             repositoryEx.SnapshotManager.Load("", 0, typeof(SampleAggregate)).ReturnsForAnyArgs<ISnapshot>((ISnapshot)null);
@@ -110,7 +111,8 @@ namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
                     _eventStore,
                     _aggregateFactory,
                     new ConflictDetector(),
-                    _identityConverter))
+                    _identityConverter,
+                    NSubstitute.Substitute.For<NEventStore.Logging.ILog>()))
                 {
                     var loaded = repo.GetById<SampleAggregate>(sampleAggregateId);
                 }

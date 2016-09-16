@@ -54,19 +54,27 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
         /// </summary>
         private static readonly ConcurrentDictionary<IIdentity, Int64> IdSerializerDictionary;
 
+        public NEventStore.Logging.ILog _logger;
+
         static AbstractRepository()
         {
             IdSerializerDictionary = new ConcurrentDictionary<IIdentity, Int64>();
             _lastAssignedIdentity = 0;
         }
 
-        protected AbstractRepository(IStoreEvents eventStore, IConstructAggregatesEx factory, IDetectConflicts conflictDetector, IIdentityConverter identityConverter)
+        protected AbstractRepository(
+            IStoreEvents eventStore, 
+            IConstructAggregatesEx factory, 
+            IDetectConflicts conflictDetector, 
+            IIdentityConverter identityConverter,
+            NEventStore.Logging.ILog logger)
         {
             this._eventStore = eventStore;
             this._factory = factory;
             this._conflictDetector = conflictDetector;
             this._identityConverter = identityConverter;
             this._identity = Interlocked.Increment(ref _lastAssignedIdentity);
+            _logger = logger;
         }
 
         public void Dispose()
@@ -173,13 +181,15 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
                     aggregate.ClearUncommittedEvents();
                     return uncommittedEvents;
                 }
-                catch (DuplicateCommitException)
+                catch (DuplicateCommitException dex)
                 {
                     stream.ClearChanges();
+                    _logger.Warn(String.Format("Duplicate commit exception bucket {0} - id {1} - commitid {2}. \n{3}", bucketId, aggregate.Id, commitId, dex));
                     return 0; //no events commited
                 }
                 catch (ConcurrencyException e)
                 {
+                    _logger.Warn(String.Format("Concurrency Exception bucket {0} - id {1} - commitid {2}. \n{3}",bucketId, aggregate.Id, commitId, e));
                     if (this.ThrowOnConflict(stream, commitEventCount))
                     {
                         //@@FIX -> aggiungere prima del lancio dell'eccezione
