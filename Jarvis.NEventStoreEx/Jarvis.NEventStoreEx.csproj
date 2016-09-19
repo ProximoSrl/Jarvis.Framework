@@ -56,6 +56,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CommonDomainEx\Core\AlwaysConflict.cs" />
     <Compile Include="CommonDomainEx\Core\ConventionEventRouterEx.cs" />
     <Compile Include="CommonDomainEx\Core\AggregateBaseEx.cs" />
     <Compile Include="CommonDomainEx\Core\DomainException.cs" />
