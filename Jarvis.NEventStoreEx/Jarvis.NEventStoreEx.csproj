@@ -90,7 +90,6 @@
     <Compile Include="CommonDomainEx\Persistence\NullSnapshotPersistenceStrategy.cs" />
     <Compile Include="CommonDomainEx\Persistence\NullSnapshotPersister.cs" />
     <Compile Include="CommonDomainEx\Persistence\NumberOfCommitsShapshotPersistenceStrategy.cs" />
-    <Compile Include="CommonDomainEx\Persistence\OnlyDiskSnapshotManager.cs" />
     <Compile Include="NeventStoreExGlobalConfiguration.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Support\NamedLocker.cs" />
