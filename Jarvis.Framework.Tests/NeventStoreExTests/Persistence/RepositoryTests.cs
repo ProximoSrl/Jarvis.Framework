@@ -141,6 +141,48 @@ namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
         }
 
         [Test]
+        public void can_reuse_repository_with_same_aggregate()
+        {
+            var sampleAggregateId = new SampleAggregateId(1);
+            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(
+                new SampleAggregate.State(),
+                sampleAggregateId
+            );
+            aggregate.Create();
+            _sut.Save(aggregate, Guid.NewGuid(), null);
+
+            aggregate.Touch();
+            _sut.Save(aggregate, Guid.NewGuid(), null);
+
+            var stream = _eventStore.OpenStream("Jarvis", sampleAggregateId, int.MinValue, int.MaxValue);
+
+            Assert.IsNotNull(stream);
+            Assert.AreEqual(2, stream.CommittedEvents.Count);
+        }
+
+        [Test]
+        public void can_reuse_repository_reloading_aggregate()
+        {
+            var sampleAggregateId = new SampleAggregateId(1);
+            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(
+                new SampleAggregate.State(),
+                sampleAggregateId
+            );
+            aggregate.Create();
+            _sut.Save(aggregate, Guid.NewGuid(), null);
+
+            var reloaded = _sut.GetById<SampleAggregate>(sampleAggregateId);
+
+            reloaded.Touch();
+            _sut.Save(reloaded, Guid.NewGuid(), null);
+
+            var stream = _eventStore.OpenStream("Jarvis", sampleAggregateId, int.MinValue, int.MaxValue);
+
+            Assert.IsNotNull(stream);
+            Assert.AreEqual(2, stream.CommittedEvents.Count);
+        }
+
+        [Test]
         public void can_save_and_load()
         {
             var sampleAggregateId = new SampleAggregateId(1);

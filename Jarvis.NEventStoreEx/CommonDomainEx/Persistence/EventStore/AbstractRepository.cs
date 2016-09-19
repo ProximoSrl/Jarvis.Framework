@@ -292,15 +292,9 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
             return stream;
         }
 
-        private static string GetKeyForStreamDictionary(string bucketId, IIdentity id)
-        {
-            return bucketId + "@" + id;
-        }
-
         private IEventStream PrepareStream(string bucketId, IAggregateEx aggregate, Dictionary<string, object> headers)
         {
             IEventStream stream;
-            var streamsId = GetKeyForStreamDictionary(bucketId, aggregate.Id); 
             if (!this._streams.TryGetValue(aggregate, out stream))
             {
                 this._streams[aggregate] = stream = this._eventStore.CreateStream(bucketId, aggregate.Id.AsString());
