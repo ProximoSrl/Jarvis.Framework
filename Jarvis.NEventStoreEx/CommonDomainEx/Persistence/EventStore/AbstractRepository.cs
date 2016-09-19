@@ -31,7 +31,7 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
         /// When a stream is opened it is stored in dictionary 
         /// to avoid re-open on save.
         /// </summary>
-        private readonly IDictionary<IAggregateEx, IEventStream> _streams = 
+        private readonly IDictionary<IAggregateEx, IEventStream> _streams =
             new Dictionary<IAggregateEx, IEventStream>();
 
         /// <summary>
@@ -68,9 +68,9 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
         }
 
         protected AbstractRepository(
-            IStoreEvents eventStore, 
-            IConstructAggregatesEx factory, 
-            IDetectConflicts conflictDetector, 
+            IStoreEvents eventStore,
+            IConstructAggregatesEx factory,
+            IDetectConflicts conflictDetector,
             IIdentityConverter identityConverter,
             NEventStore.Logging.ILog logger)
         {
@@ -108,7 +108,7 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
             Stopwatch sw = null;
             if (NeventStoreExGlobalConfiguration.MetricsEnabled) sw = Stopwatch.StartNew();
 
-            if (NeventStoreExGlobalConfiguration.RepositoryLockOnAggregateId) 
+            if (NeventStoreExGlobalConfiguration.RepositoryLockOnAggregateId)
             {
                 //try to acquire a lock on the identity, to minimize risk of ConcurrencyException
                 //do not sleep more than a certain amount of time (avoid some missing dispose).
@@ -178,7 +178,7 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
             Int32 uncommittedEvents = aggregate.GetUncommittedEvents().Count;
             while (true)
             {
-  
+
                 IEventStream stream = this.PrepareStream(bucketId, aggregate, headers);
                 int commitEventCount = stream.CommittedEvents.Count;
 
@@ -196,7 +196,7 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
                 }
                 catch (ConcurrencyException e)
                 {
-                    _logger.Warn(String.Format("Concurrency Exception bucket {0} - id {1} - commitid {2}. \n{3}",bucketId, aggregate.Id, commitId, e));
+                    _logger.Warn(String.Format("Concurrency Exception bucket {0} - id {1} - commitid {2}. \n{3}", bucketId, aggregate.Id, commitId, e));
                     if (this.ThrowOnConflict(stream, commitEventCount))
                     {
                         //@@FIX -> aggiungere prima del lancio dell'eccezione
@@ -230,15 +230,12 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
                     ReleaseAggregateId(id);
                 }
             }
-            lock (this._streams)
+            foreach (var stream in this._streams)
             {
-                foreach (var stream in this._streams)
-                {
-                    stream.Value.Dispose();
-                }
-
-                this._streams.Clear();
+                stream.Value.Dispose();
             }
+
+            this._streams.Clear();
         }
 
         private void ReleaseAggregateId(IIdentity id)
