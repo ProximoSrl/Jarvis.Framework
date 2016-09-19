@@ -27,7 +27,12 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
         private readonly IConstructAggregatesEx _factory;
         private readonly IIdentityConverter _identityConverter;
 
-        private readonly IDictionary<string, IEventStream> _streams = new Dictionary<string, IEventStream>();
+        /// <summary>
+        /// When a stream is opened it is stored in dictionary 
+        /// to avoid re-open on save.
+        /// </summary>
+        private readonly IDictionary<IAggregateEx, IEventStream> _streams = 
+            new Dictionary<IAggregateEx, IEventStream>();
 
         /// <summary>
         /// This is used to keep a better track of locking, because each unique instance of repository
@@ -118,6 +123,8 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
             ISnapshot snapshot = this.GetSnapshot<TAggregate>(bucketId, id, versionToLoad);
             IEventStream stream = this.OpenStream(bucketId, id, versionToLoad, snapshot);
             IAggregateEx aggregate = this.GetAggregate<TAggregate>(snapshot, stream);
+            //cache loaded stream to avoid reload during save.
+            _streams[aggregate] = stream;
 
             ApplyEventsToAggregate(versionToLoad, stream, aggregate);
             if (NeventStoreExGlobalConfiguration.MetricsEnabled)
@@ -277,17 +284,12 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
         private IEventStream OpenStream(string bucketId, IIdentity id, int version, ISnapshot snapshot)
         {
             IEventStream stream;
-            var streamsId = GetKeyForStreamDictionary(bucketId, id);
-            if (this._streams.TryGetValue(streamsId, out stream))
-            {
-                return stream;
-            }
 
             stream = snapshot == null ?
                            this._eventStore.OpenStream(bucketId, id.AsString(), 0, version)
                          : this._eventStore.OpenStream(snapshot, version);
 
-            return this._streams[streamsId] = stream;
+            return stream;
         }
 
         private static string GetKeyForStreamDictionary(string bucketId, IIdentity id)
@@ -298,10 +300,10 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
         private IEventStream PrepareStream(string bucketId, IAggregateEx aggregate, Dictionary<string, object> headers)
         {
             IEventStream stream;
-            var streamsId = bucketId + "@" + aggregate.Id;
-            if (!this._streams.TryGetValue(streamsId, out stream))
+            var streamsId = GetKeyForStreamDictionary(bucketId, aggregate.Id); 
+            if (!this._streams.TryGetValue(aggregate, out stream))
             {
-                this._streams[streamsId] = stream = this._eventStore.CreateStream(bucketId, aggregate.Id.AsString());
+                this._streams[aggregate] = stream = this._eventStore.CreateStream(bucketId, aggregate.Id.AsString());
             }
 
             foreach (var item in headers)
