@@ -308,7 +308,7 @@ namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
                 ((IAggregateEx)aggregate).ApplyEvent(new SampleAggregateTouched());
             }
             _sut.SnapshotManager = new CachedSnapshotManager( 
-                new MongoSnapshotPersisterProvider(_db),
+                new MongoSnapshotPersisterProvider(_db, NullLogger.Instance),
                 new NullSnapshotPersistenceStrategy());
             //this will save the snapshot
             _sut.Save(aggregate, new Guid("135E4E5F-3D65-43AC-9D8D-8A8B0EFF8501"), null);

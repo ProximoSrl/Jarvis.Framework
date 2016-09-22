@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Jarvis.Framework.Kernel.ProjectionEngine.Unfolder;
 using Jarvis.NEventStoreEx.CommonDomainEx.Persistence;
+using Castle.Core.Logging;
 
 namespace Jarvis.Framework.Kernel.Engine
 {
@@ -34,10 +35,14 @@ namespace Jarvis.Framework.Kernel.Engine
         }
 
         #endregion
+
         private readonly IMongoDatabase _mongoDatabase;
+
         private readonly IMongoCollection<SnapshotPersister> _snapshotCollection;
 
-        public MongoSnapshotPersisterProvider(IMongoDatabase mongoDatabase)
+        private readonly ILogger _logger;
+
+        public MongoSnapshotPersisterProvider(IMongoDatabase mongoDatabase, ILogger logger)
         {
             _mongoDatabase = mongoDatabase;
             _snapshotCollection = _mongoDatabase.GetCollection<SnapshotPersister>("Snapshots");
@@ -45,6 +50,7 @@ namespace Jarvis.Framework.Kernel.Engine
                 .Ascending(s => s.StreamId)
                 .Ascending(s => s.Type)
                 .Ascending(s => s.StreamRevision));
+            this._logger = logger;
         }
 
         public void Clear(string streamId, Int32 versionUpTo, String type)
@@ -59,7 +65,9 @@ namespace Jarvis.Framework.Kernel.Engine
 
         public ISnapshot Load(string streamId, Int32 versionUpTo, String type)
         {
-            var record =  _snapshotCollection.Find(Builders<SnapshotPersister>.Filter
+            try
+            {
+                var record = _snapshotCollection.Find(Builders<SnapshotPersister>.Filter
                 .And(
                     Builders<SnapshotPersister>.Filter.Eq(s => s.StreamId, streamId),
                     Builders<SnapshotPersister>.Filter.Eq(s => s.Type, type),
@@ -67,21 +75,35 @@ namespace Jarvis.Framework.Kernel.Engine
                 ))
                 .Sort(Builders<SnapshotPersister>.Sort.Descending(s => s.StreamRevision))
                 .FirstOrDefault();
-            if (record == null) return null;
+                if (record == null) return null;
 
-            return new Snapshot(record.BucketId, record.StreamId, record.StreamRevision, record.Payload);
+                return new Snapshot(record.BucketId, record.StreamId, record.StreamRevision, record.Payload);
+            }
+            catch (Exception ex)
+            {
+                _logger.ErrorFormat(ex, "Unable to load snapshot for stream {0}", streamId);
+            }
+            return null;
         }
 
         public void Persist(ISnapshot snapshot, String type)
         {
-            SnapshotPersister record = new SnapshotPersister();
-            record.Id = ObjectId.GenerateNewId();
-            record.Type = type;
-            record.StreamId = snapshot.StreamId;
-            record.StreamRevision = snapshot.StreamRevision;
-            record.Payload = snapshot.Payload;
-            record.BucketId = snapshot.BucketId;
-            _snapshotCollection.InsertOne(record);
+            try
+            {
+                SnapshotPersister record = new SnapshotPersister();
+                record.Id = ObjectId.GenerateNewId();
+                record.Type = type;
+                record.StreamId = snapshot.StreamId;
+                record.StreamRevision = snapshot.StreamRevision;
+                record.Payload = snapshot.Payload;
+                record.BucketId = snapshot.BucketId;
+                _snapshotCollection.InsertOne(record);
+            }
+            catch (Exception ex)
+            {
+                _logger.ErrorFormat(ex, "Unable to persist snapshot for stream {0}", snapshot.StreamId);
+            }
+           
         }
     }
 
