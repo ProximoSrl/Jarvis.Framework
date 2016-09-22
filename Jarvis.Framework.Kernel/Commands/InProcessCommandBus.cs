@@ -180,6 +180,7 @@ namespace Jarvis.Framework.Kernel.Commands
                 {
                     MetricsHelper.MarkDomainException();
                     _messagesTracker.Failed(command.MessageId, DateTime.UtcNow, ex);
+                    throw; //rethrow domain exception.
                 }
             }
             var exception = new Exception("Command failed. Too many Conflicts");
