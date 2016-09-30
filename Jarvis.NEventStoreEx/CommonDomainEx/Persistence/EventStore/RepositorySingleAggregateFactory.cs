@@ -26,6 +26,8 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 
             public IAggregateEx Aggregate { get; private set; }
 
+            public Boolean InUse { get; set; }
+
             public CacheEntry(IRepositoryEx repositoryEx, IAggregateEx aggregate)
             {
                 RepositoryEx = repositoryEx;
@@ -38,11 +40,6 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
             var cacheEntry = arguments.CacheItem.Value as CacheEntry;
             if (cacheEntry != null && cacheEntry.RepositoryEx != null)
                 cacheEntry.RepositoryEx.Dispose();
-        }
-
-        static AggregateCachedRepositoryFactory()
-        {
-
         }
 
         readonly Func<IRepositoryEx> _repositoryFactory;
@@ -67,13 +64,16 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
             _cacheDisabled = cacheDisabled;
         }
 
+        Int32 _isGettingCache = 0;
+
         IAggregateCachedRepository<TAggregate> IAggregateCachedRepositoryFactory.Create<TAggregate>(IIdentity id)
         {
             if (!_cacheDisabled)
             {
                 //lock is necessary because only if a lock is aquired we can be 100% sure that a single thread is accessing
                 //cached repository and entity.
-                var cached = Cache.Get(id.AsString()) as CacheEntry;
+                CacheEntry cached = GetCache(id);
+
                 IRepositoryEx innerRepository;
                 TAggregate aggregate = null;
                 if (cached != null)
@@ -102,6 +102,27 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 
             }
             return new SingleUseAggregateCachedRepository<TAggregate>(_repositoryFactory(), id);
+        }
+
+        private CacheEntry GetCache(IIdentity id)
+        {
+            CacheEntry cached = null;
+            try
+            {
+                if (Interlocked.CompareExchange(ref _isGettingCache, 1, 0) == 0)
+                {
+                    cached = Cache.Get(id.AsString()) as CacheEntry;
+                    Cache.Remove(id.AsString());
+                    if (cached == null || cached.InUse) return null;
+                    cached.InUse = true;
+                }
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _isGettingCache, 0);
+            }
+
+            return cached;
         }
 
         private void DisposeRepository(IIdentity id, IRepositoryEx repositoryEx)
