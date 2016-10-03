@@ -101,6 +101,11 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
                             _bus.Reply(replyCommand);
                         }
                     }
+                    catch (Exception ex)
+                    {
+                        _messagesTracker.Failed(message.MessageId, DateTime.UtcNow, ex);
+                        throw; //rethrow exception.
+                    }
                 }
                 if (done == false)
                 {

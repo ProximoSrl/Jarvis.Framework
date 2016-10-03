@@ -112,6 +112,11 @@ namespace Jarvis.Framework.Shared.ReadModel
         public string Description { get; set; }
         public string IssuedBy { get; set; }
         public string ErrorMessage { get; set; }
+
+        /// <summary>
+        /// List of all error messages.
+        /// </summary>
+        public String[] ErrorMessages { get; set; }
     }
 
     public class MongoDbMessagesTracker : IMessagesTracker
@@ -258,9 +263,13 @@ namespace Jarvis.Framework.Shared.ReadModel
                 }
                 else
                 {
+                    //track completed date, delete all error messages.
                     Commands.UpdateOne(
                          Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
-                         Builders<TrackedMessageModel>.Update.Set(x => x.CompletedAt, completedAt),
+                         Builders<TrackedMessageModel>.Update
+                            .Set(x => x.CompletedAt, completedAt)
+                            .Set(x => x.FailedAt, null)
+                            .Set(x => x.ErrorMessage, null),
                          new UpdateOptions() { IsUpsert = true }
                      );
                 }
@@ -307,7 +316,8 @@ namespace Jarvis.Framework.Shared.ReadModel
                     Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
                     Builders<TrackedMessageModel>.Update
                         .Set(x => x.FailedAt, failedAt)
-                        .Set(x => x.ErrorMessage, ex.Message),
+                        .Set(x => x.ErrorMessage, ex.Message)
+                        .Push(x => x.ErrorMessages, ex.ToString()),
                     new UpdateOptions() { IsUpsert = true }
                 );
                 errorMeter.Mark();

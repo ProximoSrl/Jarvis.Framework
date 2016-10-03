@@ -173,7 +173,7 @@ namespace Jarvis.Framework.Kernel.Commands
                     );
                     if (i++ > 5)
                     {
-                        Thread.Sleep(new Random(DateTime.Now.Millisecond).Next(i*10));
+                        Thread.Sleep(new Random(DateTime.Now.Millisecond).Next(i * 10));
                     }
                 }
                 catch (DomainException ex)
@@ -181,6 +181,11 @@ namespace Jarvis.Framework.Kernel.Commands
                     MetricsHelper.MarkDomainException();
                     _messagesTracker.Failed(command.MessageId, DateTime.UtcNow, ex);
                     throw; //rethrow domain exception.
+                }
+                catch (Exception ex)
+                {
+                    _messagesTracker.Failed(command.MessageId, DateTime.UtcNow, ex);
+                    throw; //rethrow exception.
                 }
             }
             var exception = new Exception("Command failed. Too many Conflicts");
