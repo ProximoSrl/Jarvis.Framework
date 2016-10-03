@@ -27,6 +27,8 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
         private readonly IConstructAggregatesEx _factory;
         private readonly IIdentityConverter _identityConverter;
 
+        private Boolean _disposed;
+
         /// <summary>
         /// When a stream is opened it is stored in dictionary 
         /// to avoid re-open on save.
@@ -105,6 +107,9 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 
         public TAggregate GetById<TAggregate>(string bucketId, IIdentity id, int versionToLoad) where TAggregate : class, IAggregateEx
         {
+            if (_disposed)
+                throw new ObjectDisposedException("This instance of repository was already disposed");
+
             Stopwatch sw = null;
             if (NeventStoreExGlobalConfiguration.MetricsEnabled) sw = Stopwatch.StartNew();
 
@@ -174,6 +179,9 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
         /// <returns></returns>
         public Int32 Save(string bucketId, IAggregateEx aggregate, Guid commitId, Action<IDictionary<string, object>> updateHeaders)
         {
+            if (_disposed)
+                throw new ObjectDisposedException("This instance of repository was already disposed");
+
             Dictionary<string, object> headers = PrepareHeaders(aggregate, updateHeaders);
             Int32 uncommittedEvents = aggregate.GetUncommittedEvents().Count;
             while (true)
@@ -218,6 +226,7 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 
         protected virtual void Dispose(bool disposing)
         {
+            _disposed = true;
             if (!disposing)
             {
                 return;

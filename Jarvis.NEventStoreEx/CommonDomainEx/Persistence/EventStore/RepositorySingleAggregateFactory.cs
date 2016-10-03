@@ -38,7 +38,7 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
         private static void RemovedCallback(CacheEntryRemovedArguments arguments)
         {
             var cacheEntry = arguments.CacheItem.Value as CacheEntry;
-            if (cacheEntry != null && cacheEntry.RepositoryEx != null)
+            if (cacheEntry != null && cacheEntry.RepositoryEx != null && !cacheEntry.InUse)
                 cacheEntry.RepositoryEx.Dispose();
         }
 
@@ -112,9 +112,11 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
                 if (Interlocked.CompareExchange(ref _isGettingCache, 1, 0) == 0)
                 {
                     cached = Cache.Get(id.AsString()) as CacheEntry;
-                    Cache.Remove(id.AsString());
                     if (cached == null || cached.InUse) return null;
+
                     cached.InUse = true;
+                    //remover after is in use
+                    Cache.Remove(id.AsString()); //does not call dispose because in use.
                 }
             }
             finally
@@ -142,6 +144,7 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
         private void OnException(IIdentity id, IRepositoryEx repositoryEx)
         {
             //remove the repository from cache, this will really dispose wrapped repository
+            repositoryEx.Dispose();
             Cache.Remove(id.AsString());
         }
 
