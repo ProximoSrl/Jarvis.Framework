@@ -107,7 +107,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                     _logger.InfoFormat("Unwinded block of 10000 commit, now we are at checkpoint {0}", checkpointToken);
                 }
             }
-            _unwindedEventCollection.InsertMany(batchEventUnwind);
+            if (batchEventUnwind.Count > 0)
+            {
+                _unwindedEventCollection.InsertMany(batchEventUnwind);
+            }
+            
             _logger.InfoFormat("Unwind events ends, started from commit {0} and ended with commit {1}", startToken, checkpointToken);
         }
 
