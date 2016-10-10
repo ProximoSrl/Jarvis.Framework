@@ -362,17 +362,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                     projection.SetUp();
                 }
             }
-            var errors = _checkpointTracker.GetCheckpointErrors();
-            if (errors.Any())
-            {
-                StringBuilder fullError = new StringBuilder();
-                foreach (var error in errors)
-                {
-                    Logger.ErrorFormat("CheckpointError: {0}", error);
-                    fullError.AppendLine(error);
-                }
-                throw new Exception(String.Format("Found {0} errors in checkpoint status: {1}", errors.Count, fullError.ToString()));
-            }
+            //Standard projection engine now executes check for GetCheckpointErrors but
+            //it is not useful here, because we are in rebuild, so every error will be fixed.
         }
 
         private Int64 GetLastCommitId()
