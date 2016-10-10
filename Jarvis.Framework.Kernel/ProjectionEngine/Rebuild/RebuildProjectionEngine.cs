@@ -201,14 +201,17 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
             List<RebuildProjectionSlotDispatcher> dispatchers,
             List<String> allEventTypesHandledByAllSlots)
         {
+            Int64 lastCheckpointTokenDispatchedToConsumer = 0;
+            Stopwatch sw = Stopwatch.StartNew();
+
+            var eventCollection = _eventUnwinder.UnwindedCollection;
+            Int64 lastDispatched = 0;
+            Int64 maxEventDispatched = dispatchers.Max(d => d.LastCheckpointDispatched);
+            Int64 totalEventToDispatch = eventCollection.Count(Builders<UnwindedDomainEvent>.Filter.Lte(e => e.CheckpointToken, maxEventDispatched));
+            Int64 dispatchedEvents = 0;
+
             try
             {
-                var eventCollection = _eventUnwinder.UnwindedCollection;
-                Int64 lastDispatched = 0;
-                Int64 maxEventDispatched = dispatchers.Max(d => d.LastCheckpointDispatched);
-                Int64 totalEventToDispatch = eventCollection.Count(Builders<UnwindedDomainEvent>.Filter.Lte(e => e.CheckpointToken, maxEventDispatched));
-                Int64 dispatchedEvents = 0;
-                Stopwatch sw = Stopwatch.StartNew();
                 var query = eventCollection
                     .Find(
                          Builders<UnwindedDomainEvent>.Filter.Or(
@@ -231,6 +234,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                     //wait till the commit is stored in tpl queue
                     task.Wait();
                     dispatchedEvents++;
+                    lastCheckpointTokenDispatchedToConsumer = eventUnwinded.CheckpointToken;
                 }
 
                 _logger.InfoFormat("Finished loading events for bucket {0} wait for tpl to finish flush", bucketInfo);
@@ -238,7 +242,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                 Thread.Sleep(100);
 
                 //create a list of dispatcher to wait for finish
-
                 List<RebuildProjectionSlotDispatcher> dispatcherWaitingToFinish = dispatchers.ToList();
                 while (dispatcherWaitingToFinish.Count > 0)
                 {
@@ -251,7 +254,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                         {
                             foreach (var projection in dispatcher.Projections)
                             {
-                                projection.StopRebuild();
+                                try
+                                {
+                                    projection.StopRebuild();
+                                }
+                                catch (Exception ex)
+                                {
+                                    _logger.ErrorFormat(ex, "Error in StopRebuild for projection {0}", projection.GetCommonName());
+                                    throw;
+                                }
+                               
                                 var meter = _metrics.GetMeter(projection.GetCommonName());
                                 _checkpointTracker.RebuildEnded(projection, meter);
 
@@ -261,8 +273,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                                 );
                             }
                             _checkpointTracker.UpdateSlotAndSetCheckpoint(
-                                dispatcher.SlotName, 
-                                dispatcher.Projections.Select(p => p.GetCommonName()), 
+                                dispatcher.SlotName,
+                                dispatcher.Projections.Select(p => p.GetCommonName()),
                                 dispatcher.LastCheckpointDispatched);
 
                             dispatcherWaitingToFinish.Remove(dispatcher);
@@ -280,7 +292,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
             }
             catch (Exception ex)
             {
-                _logger.FatalFormat(ex, "Unable to poll event from UnwindedCollection: {0}", ex.Message);
+                _logger.FatalFormat(ex, "Unable to poll event from UnwindedCollection: {0} - Last good checkpoint dispatched {1}", ex.Message, lastCheckpointTokenDispatchedToConsumer);
                 throw;
             }
         }
