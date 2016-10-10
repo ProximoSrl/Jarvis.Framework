@@ -53,18 +53,19 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Unfolder
                 {
                     projector.Restore(memento);
                     startsFromEvent = snapshot.StreamRevision;
-
                 }
             }
 
             using (var events = _eventStore.OpenStream(projector.BucketId, id.AsString(), startsFromEvent, to))
             {
+                Int32 eventCount = 0;
                 foreach (var evt in events.CommittedEvents)
                 {
                     projector.ApplyEvent((DomainEvent)evt.Body);
+                    eventCount++;
                 }
 
-                if (projector.ShouldSnapshot())
+                if (projector.ShouldSnapshot(eventCount))
                 {
                     memento = projector.GetSnapshot();
                     snapshot = new Snapshot(id.AsString(), events.StreamRevision, memento);

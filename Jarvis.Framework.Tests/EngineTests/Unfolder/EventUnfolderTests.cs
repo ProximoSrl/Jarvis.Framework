@@ -340,7 +340,7 @@ namespace Jarvis.Framework.Tests.EngineTests.Unfolder
             }
         }
 
-        internal override bool ShouldSnapshot()
+        public override bool ShouldSnapshot(int numOfEventsLoaded)
         {
             return ShouldSnapshotReturn;
         }
