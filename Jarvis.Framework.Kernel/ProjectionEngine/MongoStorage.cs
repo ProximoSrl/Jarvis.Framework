@@ -7,7 +7,7 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using Jarvis.Framework.Shared.Helpers;
 using MongoDB.Driver.Linq;
-using Jarvis.Framework.Shared.Helpers;
+
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
 {
@@ -37,15 +37,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             {
                 _collection.Indexes.CreateOne(keys, options);
             }
-            catch (MongoCommandException ex)
+            catch (MongoCommandException)
             {
-                //probably index exists with different options, lets check if name is specified
+                //probably index exists with different options, drop and recreate
                 String indexName = name;
                 _collection.Indexes.DropOne(indexName);
                 _collection.Indexes.CreateOne(keys, options);
             }
-
-
         }
 
         public void InsertBatch(IEnumerable<TModel> values)

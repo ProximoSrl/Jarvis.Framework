@@ -74,7 +74,6 @@ namespace Jarvis.Framework.Shared.ReadModel
         /// Timestamp when message is "started", with bus it is the time the message is sent to the bus
         /// this is the timestamp the message is generated.
         /// </summary>
-        /// <param name="msg"></param>
         public DateTime StartedAt { get; set; }
 
         /// <summary>
@@ -142,8 +141,6 @@ namespace Jarvis.Framework.Shared.ReadModel
         public ILogger Logger { get; set; }
 
         private IMongoDatabase _db;
-
-        private Boolean _initialized = false;
 
         public MongoDbMessagesTracker(IMongoDatabase db)
         {

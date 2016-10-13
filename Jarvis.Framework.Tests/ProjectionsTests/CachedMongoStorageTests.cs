@@ -24,7 +24,6 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
             _inMemory = inMemory;
         }
 
-        private IMongoStorage<SampleReadModel4, String> _sut;
         private IMongoCollection<SampleReadModel4> _collection;
 
         [TestFixtureSetUp]

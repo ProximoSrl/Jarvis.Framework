@@ -353,7 +353,7 @@ namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
                     repo.Save(Guid.NewGuid(), updateHeaders => { });
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 //Ignore the exception 
             }
