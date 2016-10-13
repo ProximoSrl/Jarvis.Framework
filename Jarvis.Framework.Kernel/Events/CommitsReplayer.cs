@@ -146,7 +146,12 @@ namespace Jarvis.Framework.Kernel.Events
             get { return IsRebuilding; }
         }
 
-
+        /// <summary>
+        /// Priority of the projection, the lesser is the value, the later it is
+        /// executed in the slot. If you want this projection to be executed 
+        /// after another projection of the same slot you need to give it a lower
+        /// priority.
+        /// </summary>
         public virtual int Priority
         {
             get { return 0; }

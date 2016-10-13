@@ -1,5 +1,7 @@
 ##Version 2.0
 
+###Core
+
 ####Complete refactor of BusBootstrapper
 
 BusBoostrapper has only the duty of registering IBus but now implements IStartable, then you should register BusStarter if you want to automatically start the bus with the IStartable interface.
@@ -15,3 +17,10 @@ The typical usage pattern is to register both classes with this code. BusBootstr
 	    .WithStartablePriorityHigh(),
 	Component
 	    .For<BusStarter>(),
+
+####Notification transformer for ICollectionWrapper
+
+ICollectionWrapper interface renamed property PrepareForNotification to TransformForNotification to reflect the fact that now the projection is able to change the notification object that is sent when a readamodel is updated.
+
+This is necessary for really big readmodel, where probably the UI is interested only in a very few set of property and not the entire object.
+
