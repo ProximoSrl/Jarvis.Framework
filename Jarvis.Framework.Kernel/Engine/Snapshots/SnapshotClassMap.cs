@@ -2,11 +2,21 @@
 using System.Linq;
 using System.Reflection;
 using MongoDB.Bson.Serialization;
+using Jarvis.Framework.Kernel.ProjectionEngine.Unfolder;
 
 namespace Jarvis.Framework.Kernel.Engine.Snapshots
 {
     public static class SnapshotRegistration
     {
+        static SnapshotRegistration()
+        {
+            if (!BsonClassMap.IsClassMapRegistered(typeof(EventUnfolderMemento)))
+            {
+                var cma = new SnapshotClassMap(typeof(EventUnfolderMemento));
+                BsonClassMap.RegisterClassMap<EventUnfolderMemento>();
+            }
+        }
+
         public static void AutomapAggregateState(Assembly assembly)
         {
             var stateTypes = assembly.GetTypes()
@@ -20,6 +30,23 @@ namespace Jarvis.Framework.Kernel.Engine.Snapshots
                 {
                     var cma = new SnapshotClassMap(st);
                     BsonClassMap.RegisterClassMap(cma);
+                }
+            }
+        }
+
+        public static void AutomapAggregateQueryModel(Assembly assembly)
+        {
+            var inMemoryProjectionTypes = assembly.GetTypes()
+               .Where(x => typeof(BaseAggregateQueryModel).IsAssignableFrom(x) && x.IsClass && !x.IsAbstract);
+
+            // automap dello stato
+            foreach (var projectionType in inMemoryProjectionTypes)
+            {
+                if (!BsonClassMap.IsClassMapRegistered(projectionType))
+                {
+                    var classMap = new BsonClassMap(projectionType);
+                    classMap.AutoMap();
+                    BsonClassMap.RegisterClassMap(classMap);
                 }
             }
         }
