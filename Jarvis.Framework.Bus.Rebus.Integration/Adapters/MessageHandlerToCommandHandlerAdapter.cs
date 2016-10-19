@@ -100,6 +100,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
                             replyCommand.CopyHeaders(message);
                             _bus.Reply(replyCommand);
                         }
+                        _logger.ErrorFormat("DomainException on command {0}: {1}", message.GetType(), ex.Message);
                     }
                     catch (Exception ex)
                     {
