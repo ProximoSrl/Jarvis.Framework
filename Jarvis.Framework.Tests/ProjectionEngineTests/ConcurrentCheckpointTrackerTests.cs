@@ -119,7 +119,6 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
 
             Assert.That(status.NewSlots, Has.Count.EqualTo(0));
             Assert.That(status.SlotsThatNeedsRebuild, Has.Count.EqualTo(0));
-            Assert.That(status.SlotsWithErrors, Has.Count.EqualTo(0));
         }
 
         [Test]
@@ -143,7 +142,6 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             Assert.That(status.NewSlots, Is.EquivalentTo(new[] { projection3.GetSlotName()}));
 
             Assert.That(status.SlotsThatNeedsRebuild, Has.Count.EqualTo(0));
-            Assert.That(status.SlotsWithErrors, Has.Count.EqualTo(0));
         }
 
         [Test]
@@ -185,7 +183,6 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             Assert.That(status.NewSlots, Has.Count.EqualTo(0));
 
             Assert.That(status.SlotsThatNeedsRebuild, Has.Count.EqualTo(0));
-            Assert.That(status.SlotsWithErrors, Has.Count.EqualTo(0));
         }
 
         [Test]
@@ -212,7 +209,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             _sut = new ConcurrentCheckpointTracker(_db);
             var status = _sut.GetSlotsStatus(projections);
       
-            Assert.That(status.SlotsWithErrors, Has.Count.EqualTo(1));
+            Assert.That(status.SlotsThatNeedsRebuild, Has.Count.EqualTo(1));
         }
 
         private void SetupOneProjectionNew()
