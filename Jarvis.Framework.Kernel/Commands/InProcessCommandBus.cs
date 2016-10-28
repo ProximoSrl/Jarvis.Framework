@@ -178,16 +178,19 @@ namespace Jarvis.Framework.Kernel.Commands
                 }
                 catch (DomainException ex)
                 {
+                    _logger.ErrorFormat(ex, "DomainException on command {0} [MessageId: {1}]: {2}", command.GetType(), command.MessageId, ex.Message);
                     MetricsHelper.MarkDomainException();
                     _messagesTracker.Failed(command.MessageId, DateTime.UtcNow, ex);
                     throw; //rethrow domain exception.
                 }
                 catch (Exception ex)
                 {
+                    _logger.ErrorFormat(ex, "Generic Exception on command {0} [MessageId: {1}]: {2}", command.GetType(), command.MessageId, ex.Message);
                     _messagesTracker.Failed(command.MessageId, DateTime.UtcNow, ex);
                     throw; //rethrow exception.
                 }
             }
+            _logger.ErrorFormat("Too many conflict on command {0} [MessageId: {1}]", command.GetType(), command.MessageId);
             var exception = new Exception("Command failed. Too many Conflicts");
             _messagesTracker.Failed(command.MessageId, DateTime.UtcNow, exception);
             throw exception;

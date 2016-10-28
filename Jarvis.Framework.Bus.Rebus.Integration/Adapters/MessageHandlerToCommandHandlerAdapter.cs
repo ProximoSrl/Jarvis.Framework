@@ -104,12 +104,14 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
                     }
                     catch (Exception ex)
                     {
+                        _logger.ErrorFormat(ex, "Generic Exception on command {0} [MessageId: {1}]: {2}", message.GetType(), message.MessageId, ex.Message);
                         _messagesTracker.Failed(message.MessageId, DateTime.UtcNow, ex);
                         throw; //rethrow exception.
                     }
                 }
                 if (done == false)
                 {
+                    _logger.ErrorFormat("Too many conflict on command {0} [MessageId: {1}]", message.GetType(), message.MessageId);
                     var exception = new Exception("Command failed. Too many Conflicts");
                     _messagesTracker.Failed(message.MessageId, DateTime.UtcNow, exception);
                 }

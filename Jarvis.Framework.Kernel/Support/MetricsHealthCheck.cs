@@ -85,7 +85,6 @@ namespace Jarvis.Framework.Kernel.Support
         /// Gets the count.
         /// http://blog.codebeside.org/archive/2008/08/27/counting-the-number-of-messages-in-a-message-queue-in.aspx
         /// </summary>
-        /// <param name="self">The self.</param>
         /// <returns></returns>
         public int GetCount()
         {
