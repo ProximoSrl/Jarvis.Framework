@@ -67,17 +67,17 @@ namespace Jarvis.Framework.Kernel.Support
                 //some queue can throw exception because are not active, as an example if there are no message in health
                 //and noone is polling it, it will result in an error.
                 _logger.WarnFormat(ex, "Error reading count of message in queue {0}", _queueName);
-
-                using (var queue = new MessageQueue(_queueName))
-                {
-                    //force the queue to activate, if this fails the check fails.
-                    using (var enumerator = queue.GetMessageEnumerator2())
-                    {
-                        enumerator.MoveNext();
-                    }
-                }
+                PeekQueueToActivate();
             }
             return HealthCheckResult.Healthy();
+        }
+
+        private void PeekQueueToActivate()
+        {
+            using (var queue = new MessageQueue(_queueName))
+            {
+                queue.Peek(TimeSpan.FromSeconds(1));
+            }
         }
 
         /// <summary>
