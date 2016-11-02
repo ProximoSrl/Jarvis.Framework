@@ -263,7 +263,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
             {
                 _logger.InfoFormat("Finished loading events for bucket {0} wait for tpl to finish flush", bucketInfo);
                 buffer.Complete();
-                Thread.Sleep(100);
+                broadcaster.Completion.Wait(); //wait for all event to be broadcasted.
+                Thread.Sleep(1000); //wait for another secondo before finishing.
 
                 //create a list of dispatcher to wait for finish
                 List<RebuildProjectionSlotDispatcher> dispatcherWaitingToFinish = dispatchers.ToList();
