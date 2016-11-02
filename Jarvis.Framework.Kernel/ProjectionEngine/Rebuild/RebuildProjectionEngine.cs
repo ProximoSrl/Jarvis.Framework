@@ -201,42 +201,66 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
             List<RebuildProjectionSlotDispatcher> dispatchers,
             List<String> allEventTypesHandledByAllSlots)
         {
-            Int64 lastCheckpointTokenDispatchedToConsumer = 0;
             Stopwatch sw = Stopwatch.StartNew();
 
             var eventCollection = _eventUnwinder.UnwindedCollection;
-            Int64 lastDispatched = 0;
+            Int64 lastCheckpointTokenDispatched = 0;
+            Int32 lastSequenceDispatched = 0;
             Int64 maxEventDispatched = dispatchers.Max(d => d.LastCheckpointDispatched);
             Int64 totalEventToDispatch = eventCollection.Count(Builders<UnwindedDomainEvent>.Filter.Lte(e => e.CheckpointToken, maxEventDispatched));
             Int64 dispatchedEvents = 0;
 
+            //this is the main cycle that continue to poll events and send to the tpl buffer
+            Boolean done = false;
+            while (!done)
+            {
+                try
+                {
+                    var query = eventCollection
+                        .Find(
+                                //Greater than last dispatched, less than maximum dispatched and one of the events that are elaborated by at least one of the projection
+                                Builders<UnwindedDomainEvent>.Filter.And(
+                                    Builders<UnwindedDomainEvent>.Filter.Or( //this is the condition on last dispatched
+                                        Builders<UnwindedDomainEvent>.Filter.Gt(e => e.CheckpointToken, lastCheckpointTokenDispatched), //or checkpoint token is greater than last dispatched.
+                                        Builders<UnwindedDomainEvent>.Filter.And( //or is equal to the last dispatched, but the EventSequence is greater.
+                                            Builders<UnwindedDomainEvent>.Filter.Gt(e => e.EventSequence, lastSequenceDispatched),
+                                            Builders<UnwindedDomainEvent>.Filter.Eq(e => e.CheckpointToken, lastCheckpointTokenDispatched)
+                                        )
+                                    ),
+                                    Builders<UnwindedDomainEvent>.Filter.Lte(e => e.CheckpointToken, maxEventDispatched), //less than or equal max event dispatched.
+                                    Builders<UnwindedDomainEvent>.Filter.Or( //should be one of the handled type, or the last one.
+                                        Builders<UnwindedDomainEvent>.Filter.In(e => e.EventType, allEventTypesHandledByAllSlots),
+                                        Builders<UnwindedDomainEvent>.Filter.Eq(e => e.CheckpointToken, maxEventDispatched)
+                                    )
+                             )
+                        )
+                        .Sort(Builders<UnwindedDomainEvent>.Sort.Ascending(e => e.CheckpointToken).Ascending(e => e.EventSequence));
+                    foreach (var eventUnwinded in query.ToEnumerable())
+                    {
+                        var evt = eventUnwinded.GetEvent();
+                        if (_logger.IsDebugEnabled) _logger.DebugFormat("TPL queued event {0}/{1} for bucket {2}", eventUnwinded.CheckpointToken, eventUnwinded.EventSequence, bucketInfo);
+                        var task = buffer.SendAsync(evt);
+                        //wait till the commit is stored in tpl queue
+                        task.Wait();
+                        dispatchedEvents++;
+                        lastSequenceDispatched = eventUnwinded.EventSequence;
+                        lastCheckpointTokenDispatched = eventUnwinded.CheckpointToken;
+                    }
+                    done = true;
+                }
+                catch (MongoException ex)
+                {
+                    _logger.WarnFormat(ex, "Unable to poll event from UnwindedCollection: {0} - Last good checkpoint dispatched {1}", ex.Message, lastCheckpointTokenDispatched);
+                }
+                catch (Exception ex)
+                {
+                    _logger.FatalFormat(ex, "Unable to poll event from UnwindedCollection: {0} - Last good checkpoint dispatched {1}", ex.Message, lastCheckpointTokenDispatched);
+                }
+            }
+
+
             try
             {
-                var query = eventCollection
-                    .Find(
-                         Builders<UnwindedDomainEvent>.Filter.Or(
-                            //Greater than last dispatched, less than maximum dispatched and one of the events that are elaborated by at least one of the projection
-                            Builders<UnwindedDomainEvent>.Filter.And(
-                                Builders<UnwindedDomainEvent>.Filter.Gt(e => e.CheckpointToken, lastDispatched),
-                                Builders<UnwindedDomainEvent>.Filter.Lte(e => e.CheckpointToken, maxEventDispatched),
-                                Builders<UnwindedDomainEvent>.Filter.In(e => e.EventType, allEventTypesHandledByAllSlots)
-                            ),
-                            //or the last event, because it is used to know when the rebuild ended, always send last event.
-                            Builders<UnwindedDomainEvent>.Filter.Eq(e => e.CheckpointToken, maxEventDispatched)
-                         )
-                    )
-                    .Sort(Builders<UnwindedDomainEvent>.Sort.Ascending(e => e.CheckpointToken).Ascending(e => e.EventSequence));
-                foreach (var eventUnwinded in query.ToEnumerable())
-                {
-                    var evt = eventUnwinded.GetEvent();
-                    if (_logger.IsDebugEnabled) _logger.DebugFormat("TPL queued event {0}/{1} for bucket {2}", eventUnwinded.CheckpointToken, eventUnwinded.EventSequence, bucketInfo);
-                    var task = buffer.SendAsync(evt);
-                    //wait till the commit is stored in tpl queue
-                    task.Wait();
-                    dispatchedEvents++;
-                    lastCheckpointTokenDispatchedToConsumer = eventUnwinded.CheckpointToken;
-                }
-
                 _logger.InfoFormat("Finished loading events for bucket {0} wait for tpl to finish flush", bucketInfo);
                 buffer.Complete();
                 Thread.Sleep(100);
@@ -263,7 +287,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                                     _logger.ErrorFormat(ex, "Error in StopRebuild for projection {0}", projection.GetCommonName());
                                     throw;
                                 }
-                               
+
                                 var meter = _metrics.GetMeter(projection.GetCommonName());
                                 _checkpointTracker.RebuildEnded(projection, meter);
 
@@ -288,11 +312,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                 sw.Stop();
                 _logger.InfoFormat("Bucket {0} finished dispathing all events for slots: {1}", bucketInfo, dispatchers.Select(d => d.SlotName).Aggregate((s1, s2) => s1 + ", " + s2));
                 _status.BucketDone(bucketInfo, dispatchedEvents, sw.ElapsedMilliseconds, totalEventToDispatch);
-                //TODO: signal end to all projection to flush nitro.
             }
             catch (Exception ex)
             {
-                _logger.FatalFormat(ex, "Unable to poll event from UnwindedCollection: {0} - Last good checkpoint dispatched {1}", ex.Message, lastCheckpointTokenDispatchedToConsumer);
+                _logger.FatalFormat(ex, "Error during rebuild finish {0}", ex.Message);
                 throw;
             }
         }

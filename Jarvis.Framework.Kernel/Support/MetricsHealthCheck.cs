@@ -54,30 +54,32 @@ namespace Jarvis.Framework.Kernel.Support
 
         protected override HealthCheckResult Check()
         {
-            try
-            {
-                var count = GetCount();
-                if (count > _messageLimit)
-                    return HealthCheckResult.Unhealthy("Queue {0} has {1} messages waiting in queue, exceeding maximum allowable limit of {2}",
-                        _queueName, count, _messageLimit);
 
-            }
-            catch (Exception ex)
+            PeekQueueToActivate();
+            var count = GetCount();
+            if (count > _messageLimit)
             {
-                //some queue can throw exception because are not active, as an example if there are no message in health
-                //and noone is polling it, it will result in an error.
-                _logger.WarnFormat(ex, "Error reading count of message in queue {0}", _queueName);
-                PeekQueueToActivate();
+                return HealthCheckResult.Unhealthy("Queue {0} has {1} messages waiting in queue, exceeding maximum allowable limit of {2}",
+                    _queueName, count, _messageLimit);
             }
+
             return HealthCheckResult.Healthy();
         }
 
         private void PeekQueueToActivate()
         {
-            using (var queue = new MessageQueue(_queueName))
+            try
             {
-                queue.Peek(TimeSpan.FromSeconds(1));
+                using (var queue = new MessageQueue(_queueName))
+                {
+                    queue.Peek(TimeSpan.FromSeconds(1));
+                }
             }
+            catch (Exception)
+            {
+                //ignore exception, just peek the queue to force activation
+            }
+
         }
 
         /// <summary>
