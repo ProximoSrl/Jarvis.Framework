@@ -187,7 +187,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                 var _broadcaster = GuaranteedDeliveryBroadcastBlock.Create(consumers, bucketInfo, 3000);
                 _buffer.LinkTo(_broadcaster, new DataflowLinkOptions() { PropagateCompletion = true });
 
-                Task.Factory.StartNew(() => StartPoll(_buffer, _broadcaster, bucketInfo, dispatcherList, allTypeHandledStringList));
+                Task.Factory.StartNew(() => StartPoll(_buffer, _broadcaster, bucketInfo, dispatcherList, allTypeHandledStringList, consumers));
             }
 
             MetricsHelper.SetProjectionEngineCurrentDispatchCount(() => RebuildProjectionMetrics.CountOfConcurrentDispatchingCommit);
@@ -199,7 +199,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
             ActionBlock<DomainEvent> broadcaster,
             String bucketInfo,
             List<RebuildProjectionSlotDispatcher> dispatchers,
-            List<String> allEventTypesHandledByAllSlots)
+            List<String> allEventTypesHandledByAllSlots,
+            List<ActionBlock<DomainEvent>> consumers)
         {
             Stopwatch sw = Stopwatch.StartNew();
 
@@ -264,6 +265,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                 _logger.InfoFormat("Finished loading events for bucket {0} wait for tpl to finish flush", bucketInfo);
                 buffer.Complete();
                 broadcaster.Completion.Wait(); //wait for all event to be broadcasted.
+                Task.WaitAll(consumers.Select(c => c.Completion).ToArray()); //wait for all consumers to complete.
+
                 Thread.Sleep(1000); //wait for another secondo before finishing.
 
                 //create a list of dispatcher to wait for finish
