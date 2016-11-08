@@ -284,6 +284,44 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
     }
 
     [TestFixture]
+    public class correct_handling_of_signature : RebuildProjectionEngineBaseTests
+    {
+        CollectionWrapper<SampleReadModel, string> _writer1;
+        CollectionWrapper<SampleReadModel3, string> _writer3;
+        Projection _projection1;
+        Projection3 _projection3;
+
+        protected override IEnumerable<IProjection> BuildProjections()
+        {
+            _writer1 = new CollectionWrapper<SampleReadModel, string>(_storageFactory, new NotifyToNobody());
+            yield return _projection1 = new Projection(_writer1);
+            _writer3 = new CollectionWrapper<SampleReadModel3, string>(_storageFactory, new NotifyToNobody());
+            yield return _projection3 = new Projection3(_writer3); //projection3 has a different slot
+        }
+
+
+        [Test]
+        public void signature_is_honored()
+        {
+            CreateAggregate(1);
+            CreateAggregate(2);
+            CreateAggregate(3);
+
+            ConcurrentCheckpointTracker thisTracker = new ConcurrentCheckpointTracker(_db);
+            thisTracker.SetUp(new IProjection[] { _projection1, _projection3 }, 1, false);
+            thisTracker.UpdateSlotAndSetCheckpoint(_projection1.GetSlotName(), new[] { _projection1.GetCommonName() }, 1);
+            thisTracker.UpdateSlotAndSetCheckpoint(_projection3.GetSlotName(), new[] { _projection3.GetCommonName() }, 1);
+
+            //now change signature.
+            _projection3.Signature = "Modified";
+            var status = sut.Rebuild();
+            WaitForFinish(status);
+            var checkpoint = _checkpointCollection.AsQueryable().Single(c => c.Id == _projection3.GetCommonName());
+            Assert.That(checkpoint.Signature, Is.EqualTo(_projection3.Signature));
+        }
+    }
+
+    [TestFixture]
     public class rebuild_test_with_nitro : RebuildProjectionEngineBaseTests
     {
 

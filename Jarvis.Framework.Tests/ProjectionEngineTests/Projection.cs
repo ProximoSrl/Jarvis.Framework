@@ -91,6 +91,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         {
             _collection = collection;
             _collection.Attach(this, false);
+            Signature = base.GetSignature();
         }
 
         public override int Priority
@@ -102,6 +103,14 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         {
             _collection.Drop();
         }
+
+        public String Signature { get; set; }
+
+        public override string GetSignature()
+        {
+            return Signature;
+        }
+
         public override string GetSlotName()
         {
             return "OtherSlotName";

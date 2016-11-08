@@ -17,7 +17,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
     public class ConcurrentCheckpointTracker : IConcurrentCheckpointTracker
     {
         readonly IMongoCollection<Checkpoint> _checkpoints;
+
         private ConcurrentDictionary<string, Int64> _checkpointTracker;
+
         private ConcurrentDictionary<string, Int64> _currentCheckpointTracker;
 
         /// <summary>
@@ -210,8 +212,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                 Math.Min(trackerLastValue, lastCommitIdLong));
         }
 
-
-
         public void RebuildEnded(IProjection projection, ProjectionMetrics.Meter meter)
         {
             var projectionName = projection.GetCommonName();
@@ -226,6 +226,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             checkpoint.Events = meter.TotalEvents;
             checkpoint.RebuildActualSeconds = (double)meter.TotalElapsed / TimeSpan.TicksPerSecond;
             checkpoint.Details = meter;
+            checkpoint.Signature = projection.GetSignature();
             _checkpoints.Save(checkpoint, checkpoint.Id);
         }
 
