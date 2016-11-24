@@ -2,15 +2,22 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using CommonDomain;
+using NEventStore.Domain;
 using Jarvis.NEventStoreEx.CommonDomainEx.Core;
 using NEventStore;
+using Jarvis.NEventStoreEx.Support;
 
 namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 {
     public static class SnapshotsSettings
     {
         static readonly HashSet<Type> SnapshotOptOut = new HashSet<Type>();
+
+
+        static SnapshotsSettings()
+        {
+        }
+
         public static void OptOut(Type type)
         {
             SnapshotOptOut.Add(type);
@@ -30,12 +37,23 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
     public class RepositoryEx : AbstractRepository, IRepositoryEx
     {
 
-        public RepositoryEx(IStoreEvents eventStore, IConstructAggregatesEx factory, IDetectConflicts conflictDetector, IIdentityConverter identityConverter)
-            : base(eventStore, factory, conflictDetector, identityConverter)
+        /// <summary>
+        /// used to persist snapshots of aggregates.
+        /// </summary>
+        public ISnapshotManager SnapshotManager { get; set; }
+
+        public RepositoryEx(
+            IStoreEvents eventStore, 
+            IConstructAggregatesEx factory, 
+            IDetectConflicts conflictDetector, 
+            IIdentityConverter identityConverter,
+            NEventStore.Logging.ILog logger)
+            : base(eventStore, factory, conflictDetector, identityConverter, logger)
         {
+            SnapshotManager = NullSnapshotManager.Instance; //Default behavior is avoid snapshot entirely.
         }
 
-        public override void Save(IAggregateEx aggregate, Guid commitId, Action<IDictionary<string, object>> updateHeaders)
+        public override Int32 Save(IAggregateEx aggregate, Guid commitId, Action<IDictionary<string, object>> updateHeaders)
         {
             var checker = aggregate as IInvariantsChecker;
             if (checker != null)
@@ -47,13 +65,16 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
                 }
             }
 
-            Save(GetBucketFor(aggregate), aggregate, commitId, updateHeaders);
+            var bucketId = GetBucketFor(aggregate);
+            var numOfEvents = Save(bucketId, aggregate, commitId, updateHeaders);
+            //If we reach here we need to check if we want to persiste a snapshot.
+            SnapshotManager.Snapshot(aggregate, bucketId, numOfEvents);
+            return numOfEvents;
         }
 
         public override TAggregate GetById<TAggregate>(IIdentity id, int versionToLoad)
         {
             return this.GetById<TAggregate>(GetBucketFor<TAggregate>(id), id, versionToLoad);
-
         }
 
         public override TAggregate GetById<TAggregate>(IIdentity id)
@@ -92,8 +113,7 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
             if (SnapshotsSettings.HasOptedOut(typeof(TAggregate)))
                 return null;
 
-            return base.GetSnapshot<TAggregate>(bucketId, id, version);
+            return SnapshotManager.Load(id.AsString(), version, typeof(TAggregate));
         }
-
     }
 }

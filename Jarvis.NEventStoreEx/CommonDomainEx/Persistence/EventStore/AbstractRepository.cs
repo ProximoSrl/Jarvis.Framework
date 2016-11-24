@@ -1,134 +1,211 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using CommonDomain;
-using CommonDomain.Persistence;
+using NEventStore.Domain;
+using NEventStore.Domain.Persistence;
 using NEventStore;
 using NEventStore.Persistence;
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Diagnostics;
+using Metrics;
+using Jarvis.NEventStoreEx.Support;
 
 namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 {
     public class AbstractRepository : IRepositoryEx
-	{
-		private const string AggregateTypeHeader = "AggregateType";
+    {
+        private const string AggregateTypeHeader = "AggregateType";
 
-		private readonly IDetectConflicts _conflictDetector;
+        private static readonly Counter RepositoryLoadCounter = Metric.Counter("RepositoryGetById", Unit.Custom("ticks"));
+        private static readonly Counter FailedLockCounter = Metric.Counter("AbstractRepositoryFailedLocks", Unit.Calls);
 
-		private readonly IStoreEvents _eventStore;
+        private readonly IDetectConflicts _conflictDetector;
 
-		private readonly IConstructAggregatesEx _factory;
-		private readonly IIdentityConverter _identityConverter;
-		//private readonly IDictionary<string, ISnapshot> _snapshots = new Dictionary<string, ISnapshot>();
+        private readonly IStoreEvents _eventStore;
 
-		private readonly IDictionary<string, IEventStream> _streams = new Dictionary<string, IEventStream>();
+        private readonly IConstructAggregatesEx _factory;
+        private readonly IIdentityConverter _identityConverter;
 
-        private readonly HashSet<IIdentity> identityAcquireLock = new HashSet<IIdentity>();
-
-        private readonly Int64 _identity;
-        private static Int64 _actualIdentity;
+        private Boolean _disposed;
+		public Boolean Disposed { get { return _disposed; } }
 
         /// <summary>
-        /// ConcurrentBag has no simple way to remove specific element.
+        /// When a stream is opened it is stored in dictionary 
+        /// to avoid re-open on save.
         /// </summary>
-        protected static ConcurrentDictionary<IIdentity, Int64> idSerializerDictionary;
+        private readonly IDictionary<IAggregateEx, IEventStream> _streams =
+            new Dictionary<IAggregateEx, IEventStream>();
+
+        /// <summary>
+        /// This is used to keep a better track of locking, because each unique instance of repository
+        /// will have its unique index, and each lock is marked with that index.
+        /// </summary>
+        private readonly Int64 _identity;
+
+        /// <summary>
+        /// This is the last identity assigned.
+        /// </summary>
+        private static Int64 _lastAssignedIdentity;
+
+        /// <summary>
+        /// This hashset contains the identities this instance of repository had obtained an exclusive lock to. 
+        /// The real instance that holds all locked entities is <see cref="IdSerializerDictionary"/> property.
+        /// It is necessary to remove all the lock after this instance is disposed.
+        /// </summary>
+        private readonly HashSet<IIdentity> _identitiesLocked = new HashSet<IIdentity>();
+
+        /// <summary>
+        /// This dictionary is used to hold a list of the aggregate ids that are acutally locked.
+        /// It is used to avoid two threads to access at the very same moment the same entity
+        /// thus avoiding unnecessary ConcurrencyException.
+        /// </summary>
+        private static readonly ConcurrentDictionary<IIdentity, Int64> IdSerializerDictionary;
+
+        public NEventStore.Logging.ILog _logger;
 
         static AbstractRepository()
         {
-            idSerializerDictionary =  new ConcurrentDictionary<IIdentity, Int64>();
-            _actualIdentity = 0;
+            IdSerializerDictionary = new ConcurrentDictionary<IIdentity, Int64>();
+            _lastAssignedIdentity = 0;
         }
 
-        protected AbstractRepository(IStoreEvents eventStore, IConstructAggregatesEx factory, IDetectConflicts conflictDetector, IIdentityConverter identityConverter)
-		{
-			this._eventStore = eventStore;
-			this._factory = factory;
-			this._conflictDetector = conflictDetector;
-			this._identityConverter = identityConverter;
-            this._identity = Interlocked.Increment(ref _actualIdentity);
+        protected AbstractRepository(
+            IStoreEvents eventStore,
+            IConstructAggregatesEx factory,
+            IDetectConflicts conflictDetector,
+            IIdentityConverter identityConverter,
+            NEventStore.Logging.ILog logger)
+        {
+            this._eventStore = eventStore;
+            this._factory = factory;
+            this._conflictDetector = conflictDetector;
+            this._identityConverter = identityConverter;
+            this._identity = Interlocked.Increment(ref _lastAssignedIdentity);
+            _logger = logger;
         }
 
-		public void Dispose()
-		{
-			this.Dispose(true);
-			GC.SuppressFinalize(this);
-		}
+        public void Dispose()
+        {
+            this.Dispose(true);
+            GC.SuppressFinalize(this);
+        }
 
-		public virtual TAggregate GetById<TAggregate>(IIdentity id) where TAggregate : class, IAggregateEx
-		{
-			return this.GetById<TAggregate>(Bucket.Default, id);
-		}
+        public virtual TAggregate GetById<TAggregate>(IIdentity id) where TAggregate : class, IAggregateEx
+        {
+            return this.GetById<TAggregate>(Bucket.Default, id);
+        }
 
-		public virtual TAggregate GetById<TAggregate>(IIdentity id, int versionToLoad) where TAggregate : class, IAggregateEx
-		{
-			return this.GetById<TAggregate>(Bucket.Default, id, versionToLoad);
-		}
+        public virtual TAggregate GetById<TAggregate>(IIdentity id, int versionToLoad) where TAggregate : class, IAggregateEx
+        {
+            return this.GetById<TAggregate>(Bucket.Default, id, versionToLoad);
+        }
 
-		public TAggregate GetById<TAggregate>(string bucketId, IIdentity id) where TAggregate : class, IAggregateEx
-		{
-			return this.GetById<TAggregate>(bucketId, id, int.MaxValue);
-		}
+        public TAggregate GetById<TAggregate>(string bucketId, IIdentity id) where TAggregate : class, IAggregateEx
+        {
+            return this.GetById<TAggregate>(bucketId, id, int.MaxValue);
+        }
 
-		public TAggregate GetById<TAggregate>(string bucketId, IIdentity id, int versionToLoad) where TAggregate : class, IAggregateEx
-		{
-            //try to acquire a lock on the identity, to minimize risk of ConcurrencyException
-            //do not sleep more than a certain amount of time (avoid some missing dispose).
+        public TAggregate GetById<TAggregate>(string bucketId, IIdentity id, int versionToLoad) where TAggregate : class, IAggregateEx
+        {
+            if (_disposed)
+                throw new ObjectDisposedException("This instance of repository was already disposed");
+
+            Stopwatch sw = null;
+            if (NeventStoreExGlobalConfiguration.MetricsEnabled) sw = Stopwatch.StartNew();
+
+            if (NeventStoreExGlobalConfiguration.RepositoryLockOnAggregateId)
+            {
+                //try to acquire a lock on the identity, to minimize risk of ConcurrencyException
+                //do not sleep more than a certain amount of time (avoid some missing dispose).
+                bool lockAcquired = TryAcquireLock(id);
+                if (lockAcquired == false)
+                {
+                    //There is nothing to do if a lock failed to be aquired, but it worth to be signaled.
+                    FailedLockCounter.Increment();
+                }
+            }
+
+            ISnapshot snapshot = this.GetSnapshot<TAggregate>(bucketId, id, versionToLoad);
+            IEventStream stream = this.OpenStream(bucketId, id, versionToLoad, snapshot);
+            IAggregateEx aggregate = this.GetAggregate<TAggregate>(snapshot, stream);
+            //cache loaded stream to avoid reload during save.
+            _streams[aggregate] = stream;
+
+            ApplyEventsToAggregate(versionToLoad, stream, aggregate);
+            if (NeventStoreExGlobalConfiguration.MetricsEnabled)
+            {
+                sw.Stop();
+                RepositoryLoadCounter.Increment(typeof(TAggregate).Name, sw.ElapsedTicks);
+            }
+            return aggregate as TAggregate;
+        }
+
+        /// <summary>
+        /// Try to acquire the lock, if more than 5 second passed the lock is not acquired and the 
+        /// method returns false.
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        private bool TryAcquireLock(IIdentity id)
+        {
             Int32 sleepCount = 0;
             Boolean lockAcquired = false;
-            while (!(lockAcquired = idSerializerDictionary.TryAdd(id, _identity)) && sleepCount < 100)
+            var stopCycle = 100 + NeventStoreExGlobalConfiguration.LockThreadSleepCount;
+            while (!(lockAcquired = IdSerializerDictionary.TryAdd(id, _identity)) && sleepCount < stopCycle)
             {
-                //some other thread is accessing that entity. Sleeping is the best choiche, because
-                //the lock will be removed after a save, involving IO.
-                Thread.Sleep(50);
+                //some other thread is accessing that entity. Do a very fast spinning for a while, then sleep for a little.
+                if (sleepCount < 100)
+                    Thread.SpinWait(100 * sleepCount);
+                else
+                    Thread.Sleep(50);
                 sleepCount++;
             }
-            if (lockAcquired == true)
+            if (lockAcquired) _identitiesLocked.Add(id);
+            return lockAcquired;
+        }
+
+        public virtual Int32 Save(IAggregateEx aggregate, Guid commitId, Action<IDictionary<string, object>> updateHeaders)
+        {
+            return Save(Bucket.Default, aggregate, commitId, updateHeaders);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="bucketId"></param>
+        /// <param name="aggregate"></param>
+        /// <param name="commitId"></param>
+        /// <param name="updateHeaders"></param>
+        /// <returns></returns>
+        public Int32 Save(string bucketId, IAggregateEx aggregate, Guid commitId, Action<IDictionary<string, object>> updateHeaders)
+        {
+            if (_disposed)
+                throw new ObjectDisposedException("This instance of repository was already disposed");
+
+            Dictionary<string, object> headers = PrepareHeaders(aggregate, updateHeaders);
+            Int32 uncommittedEvents = aggregate.GetUncommittedEvents().Count;
+            while (true)
             {
-                identityAcquireLock.Add(id);
-                //Debug.WriteLine("Lock acquired [{3}] for identity {0} _identity {1}, stored {2}", id, _identity, idSerializerDictionary[id], lockAcquired);
-            }
-            //else
-            //{
-            //    //Debug.WriteLine("Acquire failed sleepCount = {0}", sleepCount);
-            //}
-            
-            ISnapshot snapshot = this.GetSnapshot<TAggregate>(bucketId, id, versionToLoad);
-			IEventStream stream = this.OpenStream(bucketId, id, versionToLoad, snapshot);
-			IAggregateEx aggregate = this.GetAggregate<TAggregate>(snapshot, stream);
 
-			ApplyEventsToAggregate(versionToLoad, stream, aggregate);
-
-			return aggregate as TAggregate;
-		}
-
-		public virtual void Save(IAggregateEx aggregate, Guid commitId, Action<IDictionary<string, object>> updateHeaders)
-		{
-			Save(Bucket.Default, aggregate, commitId, updateHeaders);
-		}
-
-		public void Save(string bucketId, IAggregateEx aggregate, Guid commitId, Action<IDictionary<string, object>> updateHeaders)
-		{
-			Dictionary<string, object> headers = PrepareHeaders(aggregate, updateHeaders);
-			while (true)
-			{
-				IEventStream stream = this.PrepareStream(bucketId, aggregate, headers);
-				int commitEventCount = stream.CommittedEvents.Count;
+                IEventStream stream = this.PrepareStream(bucketId, aggregate, headers);
+                int commitEventCount = stream.CommittedEvents.Count;
 
                 try
                 {
                     stream.CommitChanges(commitId);
                     aggregate.ClearUncommittedEvents();
-                    return;
+                    return uncommittedEvents;
                 }
-                catch (DuplicateCommitException)
+                catch (DuplicateCommitException dex)
                 {
                     stream.ClearChanges();
-                    return;
+                    _logger.Debug(String.Format("Duplicate commit exception bucket {0} - id {1} - commitid {2}. \n{3}", bucketId, aggregate.Id, commitId, dex));
+                    return 0; //no events commited
                 }
                 catch (ConcurrencyException e)
                 {
+                    _logger.Warn(String.Format("Concurrency Exception bucket {0} - id {1} - commitid {2}. \n{3}", bucketId, aggregate.Id, commitId, e));
                     if (this.ThrowOnConflict(stream, commitEventCount))
                     {
                         //@@FIX -> aggiungere prima del lancio dell'eccezione
@@ -145,144 +222,124 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
                 {
                     ReleaseAggregateId(aggregate.Id);
                 }
-			}
-		}
+            }
+        }
 
-		protected virtual void Dispose(bool disposing)
-		{
-			if (!disposing)
-			{
-				return;
-			}
-            //Clear all lock if not already done.
-            if (identityAcquireLock.Count > 0)
+        protected virtual void Dispose(bool disposing)
+        {
+            _disposed = true;
+            if (!disposing)
             {
-                foreach (var id in identityAcquireLock.ToList())
+                return;
+            }
+            //Clear all lock if not already done.
+            if (_identitiesLocked.Count > 0)
+            {
+                foreach (var id in _identitiesLocked.ToList())
                 {
                     ReleaseAggregateId(id);
                 }
             }
-            lock (this._streams)
-			{
-				foreach (var stream in this._streams)
-				{
-					stream.Value.Dispose();
-				}
+            foreach (var stream in this._streams)
+            {
+                stream.Value.Dispose();
+            }
 
-				//this._snapshots.Clear();
-				this._streams.Clear();
-			}
-		}
+            this._streams.Clear();
+        }
 
         private void ReleaseAggregateId(IIdentity id)
         {
             Int64 outTempValue;
 
-            if (idSerializerDictionary.TryGetValue(id, out outTempValue))
+            if (IdSerializerDictionary.TryGetValue(id, out outTempValue))
             {
                 if (outTempValue == _identity)
                 {
-                    //Debug.WriteLine("Removed lock for aggregate {0} with _identity {1} from Repository {2}", id, outTempValue, _identity);
-                    idSerializerDictionary.TryRemove(id, out outTempValue);
+                    IdSerializerDictionary.TryRemove(id, out outTempValue);
                 }
             }
-            if (identityAcquireLock.Contains(id))
+            if (_identitiesLocked.Contains(id))
             {
-                identityAcquireLock.Remove(id);
+                _identitiesLocked.Remove(id);
             }
         }
 
         private static void ApplyEventsToAggregate(int versionToLoad, IEventStream stream, IAggregateEx aggregate)
-		{
-			if (versionToLoad == 0 || aggregate.Version < versionToLoad)
-			{
-				foreach (var @event in stream.CommittedEvents.Select(x => x.Body))
-				{
-					aggregate.ApplyEvent(@event);
-				}
-			}
-		}
+        {
+            if (versionToLoad == 0 || aggregate.Version < versionToLoad)
+            {
+                foreach (var @event in stream.CommittedEvents.Select(x => x.Body))
+                {
+                    aggregate.ApplyEvent(@event);
+                }
+            }
+        }
 
-		private IAggregateEx GetAggregate<TAggregate>(ISnapshot snapshot, IEventStream stream)
-		{
-			IMementoEx memento = snapshot == null ? null : snapshot.Payload as IMementoEx;
-			return this._factory.Build(typeof(TAggregate), _identityConverter.ToIdentity(stream.StreamId), memento);
-		}
+        private IAggregateEx GetAggregate<TAggregate>(ISnapshot snapshot, IEventStream stream)
+        {
+            IMementoEx memento = snapshot == null ? null : snapshot.Payload as IMementoEx;
+            return this._factory.Build(typeof(TAggregate), _identityConverter.ToIdentity(stream.StreamId), memento);
+        }
 
         protected virtual ISnapshot GetSnapshot<TAggregate>(string bucketId, IIdentity id, int version)
-		{
-			ISnapshot snapshot;
-			var snapshotId = bucketId + "@" + id;
-            //if (!this._snapshots.TryGetValue(snapshotId, out snapshot))
-            //{
-            //    this._snapshots[snapshotId] = snapshot = this._eventStore.Advanced.GetSnapshot(bucketId, id.AsString(), version);
-            //}
-            //else
-            //{
-            //    //Debug.WriteLine("Snapshot found");
-            //} 
-            snapshot = this._eventStore.Advanced.GetSnapshot(bucketId, id.AsString(), version);
+        {
+            var snapshot = this._eventStore.Advanced.GetSnapshot(bucketId, id.AsString(), version);
             return snapshot;
-		}
+        }
 
-		private IEventStream OpenStream(string bucketId, IIdentity id, int version, ISnapshot snapshot)
-		{
-			IEventStream stream;
-			var streamsId = bucketId +"@"+id;
-			if (this._streams.TryGetValue(streamsId, out stream))
-			{
-				return stream;
-			}
+        private IEventStream OpenStream(string bucketId, IIdentity id, int version, ISnapshot snapshot)
+        {
+            IEventStream stream;
 
-			stream = snapshot == null ? 
+            stream = snapshot == null ?
                            this._eventStore.OpenStream(bucketId, id.AsString(), 0, version)
-				         : this._eventStore.OpenStream(snapshot, version);
+                         : this._eventStore.OpenStream(snapshot, version);
 
-			return this._streams[streamsId] = stream;
-		}
+            return stream;
+        }
 
-		private IEventStream PrepareStream(string bucketId, IAggregateEx aggregate, Dictionary<string, object> headers)
-		{
-			IEventStream stream;
-			var streamsId = bucketId +"@"+ aggregate.Id;
-			if (!this._streams.TryGetValue(streamsId, out stream))
-			{
-				this._streams[streamsId] = stream = this._eventStore.CreateStream(bucketId, aggregate.Id.AsString());
-			}
+        private IEventStream PrepareStream(string bucketId, IAggregateEx aggregate, Dictionary<string, object> headers)
+        {
+            IEventStream stream;
+            if (!this._streams.TryGetValue(aggregate, out stream))
+            {
+                this._streams[aggregate] = stream = this._eventStore.CreateStream(bucketId, aggregate.Id.AsString());
+            }
 
-			foreach (var item in headers)
-			{
-				stream.UncommittedHeaders[item.Key] = item.Value;
-			}
+            foreach (var item in headers)
+            {
+                stream.UncommittedHeaders[item.Key] = item.Value;
+            }
 
-			aggregate.GetUncommittedEvents()
-			         .Cast<object>()
-			         .Select(x => new EventMessage { Body = x })
-			         .ToList()
-			         .ForEach(stream.Add);
+            aggregate.GetUncommittedEvents()
+                     .Cast<object>()
+                     .Select(x => new EventMessage { Body = x })
+                     .ToList()
+                     .ForEach(stream.Add);
 
-			return stream;
-		}
+            return stream;
+        }
 
-		private static Dictionary<string, object> PrepareHeaders(
-			IAggregateEx aggregate, Action<IDictionary<string, object>> updateHeaders)
-		{
-			var headers = new Dictionary<string, object>();
+        private static Dictionary<string, object> PrepareHeaders(
+            IAggregateEx aggregate, Action<IDictionary<string, object>> updateHeaders)
+        {
+            var headers = new Dictionary<string, object>();
 
-			headers[AggregateTypeHeader] = aggregate.GetType().FullName;
-			if (updateHeaders != null)
-			{
-				updateHeaders(headers);
-			}
+            headers[AggregateTypeHeader] = aggregate.GetType().FullName;
+            if (updateHeaders != null)
+            {
+                updateHeaders(headers);
+            }
 
-			return headers;
-		}
+            return headers;
+        }
 
-		private bool ThrowOnConflict(IEventStream stream, int skip)
-		{
-			IEnumerable<object> committed = stream.CommittedEvents.Skip(skip).Select(x => x.Body);
-			IEnumerable<object> uncommitted = stream.UncommittedEvents.Select(x => x.Body);
-			return this._conflictDetector.ConflictsWith(uncommitted, committed);
-		}
-	}
+        private bool ThrowOnConflict(IEventStream stream, int skip)
+        {
+            IEnumerable<object> committed = stream.CommittedEvents.Skip(skip).Select(x => x.Body);
+            IEnumerable<object> uncommitted = stream.UncommittedEvents.Select(x => x.Body);
+            return this._conflictDetector.ConflictsWith(uncommitted, committed);
+        }
+    }
 }

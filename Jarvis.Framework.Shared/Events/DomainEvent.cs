@@ -67,7 +67,7 @@ namespace Jarvis.Framework.Shared.Events
         /// Commit checkpoint
         /// </summary>
         [BsonIgnore]
-        public string CheckpointToken { get; private set; }
+        public Int64 CheckpointToken { get; private set; }
 
         /// <summary>
         /// Costruttore 

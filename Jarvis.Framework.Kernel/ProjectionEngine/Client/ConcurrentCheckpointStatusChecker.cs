@@ -1,6 +1,5 @@
 ﻿using MongoDB.Bson;
 using MongoDB.Driver;
-using MongoDB.Driver.Builders;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,34 +10,35 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 {
     public class ConcurrentCheckpointStatusChecker
     {
-        private readonly MongoCollection<Checkpoint> _checkpoints;
+        private readonly IMongoCollection<Checkpoint> _checkpoints;
 
-        public ConcurrentCheckpointStatusChecker(MongoDatabase readmodelDb)
+        public ConcurrentCheckpointStatusChecker(IMongoDatabase readmodelDb)
         {
             _checkpoints = readmodelDb.GetCollection<Checkpoint>("checkpoints");
         }
 
-        public bool IsCheckpointProjectedByAllProjection(string checkpointToken)
+        public bool IsCheckpointProjectedByAllProjection(Int64 checkpointToken)
         {
-            return ProjectionsPassedCheckpoint(Convert.ToInt64(checkpointToken));
+            return ProjectionsPassedCheckpoint(checkpointToken);
         }
 
         private bool ProjectionsPassedCheckpoint(long checkpointToken)
         {
             // Extracts all the projections that have not passed the checkpoint yet.
+            var checkpointString = checkpointToken;
             var behindProjections = _checkpoints
                 .Find(
-                    Query.And(
-                        Query<Checkpoint>.EQ(x => x.Active, true),
-                        Query<Checkpoint>.NE(x => x.Id, "VERSION"),
-                        Query.Or(
-                            Query.Where("this.Current < " + checkpointToken),
-                            Query.EQ("Current", BsonNull.Value)
+                    Builders< Checkpoint>.Filter.And(
+                        Builders<Checkpoint>.Filter.Eq(x => x.Active, true),
+                        Builders<Checkpoint>.Filter.Ne(x => x.Id, "VERSION"),
+                        Builders<Checkpoint>.Filter.Or(
+                            Builders<Checkpoint>.Filter.Lt(x => x.Current, checkpointString),
+                            Builders<Checkpoint>.Filter.Eq("Current", BsonNull.Value)
                         )
                         
                     )
                 )
-                .SetFields(Fields.Include("_id"));
+                .Project(Builders<Checkpoint>.Projection.Include("_id"));
 
             return behindProjections.Any() == false;
         }

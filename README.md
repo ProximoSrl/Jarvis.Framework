@@ -1,13 +1,13 @@
 J.A.R.V.I.S. Framework - Proximo srl (c)
 ====
-Licenses:
-- Framework: AGPL - Affero General Public License
-- NEventStoreEx: MIT
 
 ##Docs:
 
+- General Usage
+	- [Mongo Custom Serializers](Wiki/Usage/mongoserializers.md)
 - [Metrics](Wiki/Metrics/metrics.md)
 	- [Projection](Wiki/Metrics/projections.md)
+- [Breaking Changes](Wiki/BreakingChanges.md)
 
 ###GitFlow
 
@@ -16,3 +16,4 @@ This project is now using GitFlow with standard configuration. You can configure
 (c) Proximo srl 2015
 
 <img src="http://demo.prxm.it:8811/app/rest/builds/buildType:CqrsFramework_Ci/statusIcon" alt="build status">
+

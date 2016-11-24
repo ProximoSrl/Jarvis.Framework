@@ -11,6 +11,7 @@ using Castle.MicroKernel.Resolvers.SpecializedResolvers;
 using Castle.Windsor;
 using Microsoft.Owin.Hosting;
 using MongoDB.Driver;
+using MongoDB.Bson;
 
 namespace Jarvis.Framework.LogViewer.Host.Support
 {
@@ -35,10 +36,10 @@ namespace Jarvis.Framework.LogViewer.Host.Support
                 _container.Install(new ApiInstaller());
                 var url = new MongoUrl(config.MongoDbConnection);
                 var client = new MongoClient(url);
-                var mongoDb = client.GetServer().GetDatabase(url.DatabaseName);
-                _container.Register(Component.For<MongoDatabase>().Instance(mongoDb));
+                var mongoDb = client.GetDatabase(url.DatabaseName);
+                _container.Register(Component.For<IMongoDatabase>().Instance(mongoDb));
                 _container.Register(
-                    Component.For<MongoCollection>().Instance(mongoDb.GetCollection(config.MongoDbDefaultCollectionLog)));
+                    Component.For<IMongoCollection<BsonDocument>>().Instance(mongoDb.GetCollection<BsonDocument>(config.MongoDbDefaultCollectionLog)));
 
                 StartOptions options = new StartOptions();
                 foreach (var address in _serverAddressList)

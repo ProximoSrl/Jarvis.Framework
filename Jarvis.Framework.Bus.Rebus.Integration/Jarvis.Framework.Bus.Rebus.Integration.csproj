@@ -22,6 +22,8 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Debug\Jarvis.Framework.Bus.Rebus.Integration.XML</DocumentationFile>
+    <NoWarn>1591</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -50,16 +52,33 @@
       <HintPath>..\packages\log4net.1.2.10\lib\2.0\log4net.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="MongoDB.Bson, Version=1.10.0.62, Culture=neutral, PublicKeyToken=f686731cfb9cc103, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\mongocsharpdriver.1.10.0\lib\net35\MongoDB.Bson.dll</HintPath>
+    <Reference Include="Metrics, Version=0.3.7.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Metrics.NET.0.3.7\lib\net45\Metrics.dll</HintPath>
+      <Private>True</Private>
     </Reference>
-    <Reference Include="MongoDB.Driver, Version=1.10.0.62, Culture=neutral, PublicKeyToken=f686731cfb9cc103, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\mongocsharpdriver.1.10.0\lib\net35\MongoDB.Driver.dll</HintPath>
+    <Reference Include="MongoDB.Bson, Version=2.3.0.157, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\MongoDB.Bson.2.3.0\lib\net45\MongoDB.Bson.dll</HintPath>
+      <Private>True</Private>
     </Reference>
-    <Reference Include="NEventStore">
-      <HintPath>..\packages\NEventStore.5.1.1\lib\net40\NEventStore.dll</HintPath>
+    <Reference Include="MongoDB.Driver, Version=2.3.0.157, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\MongoDB.Driver.2.3.0\lib\net45\MongoDB.Driver.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="MongoDB.Driver.Core, Version=2.3.0.157, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\MongoDB.Driver.Core.2.3.0\lib\net45\MongoDB.Driver.Core.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="NEventStore, Version=6.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\NEventStore.6.0.0-unstable0097\lib\net40\NEventStore.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="NEventStore.Domain, Version=6.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\NEventStore.Domain.6.0.0-unstable0027\lib\net40\NEventStore.Domain.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="NEventStore.Persistence.MongoDB, Version=6.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\NEventStore.Persistence.MongoDB.6.0.0-unstable0090\lib\net40\NEventStore.Persistence.MongoDB.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -68,11 +87,9 @@
     <Reference Include="Rebus">
       <HintPath>..\packages\Rebus.0.71.1\lib\NET40\Rebus.dll</HintPath>
     </Reference>
-    <Reference Include="Rebus.Castle.Windsor">
+    <Reference Include="Rebus.Castle.Windsor, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\Rebus.Castle.Windsor.0.71.1\lib\NET40\Rebus.Castle.Windsor.dll</HintPath>
-    </Reference>
-    <Reference Include="Rebus.MongoDb">
-      <HintPath>..\packages\Rebus.MongoDb.0.71.1\lib\NET40\Rebus.MongoDb.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
@@ -91,6 +108,11 @@
     <Compile Include="Logging\Log4NetLogger.cs" />
     <Compile Include="Logging\Log4NetLoggerFactory.cs" />
     <Compile Include="Logging\Log4NetLoggingExtension.cs" />
+    <Compile Include="MongoDb\MongoDbExtensions.cs" />
+    <Compile Include="MongoDb\MongoDbSagaPersister.cs" />
+    <Compile Include="MongoDb\MongoDbSubscriptionStorage.cs" />
+    <Compile Include="MongoDb\MongoDbTimeoutStorage.cs" />
+    <Compile Include="MongoDb\MongoHelper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Serializers\JsonSerializerWithProtectedPropertiesSupport.cs" />
     <Compile Include="Support\CommandHandlersRegistration.cs" />

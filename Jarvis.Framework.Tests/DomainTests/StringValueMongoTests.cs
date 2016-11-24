@@ -7,6 +7,7 @@ using NUnit.Framework;
 namespace Jarvis.Framework.Tests.DomainTests
 {
     [TestFixture]
+    [Category("mongo_serialization")]
     public class StringValueMongoTests
     {
         [Test]
@@ -16,6 +17,24 @@ namespace Jarvis.Framework.Tests.DomainTests
             var json = instance.ToJson();
 
             Assert.AreEqual("{ \"Value\" : \"abc_123\" }", json);
+        }
+
+        [Test]
+        public void should_serialize_lowercase_null()
+        {
+            var instance = new ClassWithTypedStringValueLowerCase { Value = null };
+            var json = instance.ToJson();
+
+            Assert.AreEqual("{ \"Value\" : null }", json);
+        }
+
+        [Test]
+        public void should_serialize_lowercase_null_value()
+        {
+            var instance = new ClassWithTypedStringValueLowerCase { Value = new TypedStringValueLowerCase(null) };
+            var json = instance.ToJson();
+
+            Assert.AreEqual("{ \"Value\" : null }", json);
         }
 
         [Test]

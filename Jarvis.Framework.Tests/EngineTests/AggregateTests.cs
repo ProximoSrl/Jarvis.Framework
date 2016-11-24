@@ -6,6 +6,7 @@ using Jarvis.Framework.Kernel.Engine;
 using Jarvis.Framework.Kernel.Store;
 using Jarvis.Framework.Shared.Events;
 using Jarvis.NEventStoreEx.CommonDomainEx;
+using NUnit.Core;
 using NUnit.Framework;
 
 // ReSharper disable InconsistentNaming
@@ -28,5 +29,15 @@ namespace Jarvis.Framework.Tests.EngineTests
 			var aggregate = new SampleAggregate();
 			Assert.IsFalse(aggregate.HasBeenCreated);
 		}
+
+        [Test]
+        public void uncommitted_events_not_stored_during_reply()
+        {
+            var aggregate = (IAggregateEx) new SampleAggregate();
+            aggregate.ApplyEvent(new SampleAggregateCreated());
+            aggregate.ApplyEvent(new SampleAggregateTouched());
+
+            Assert.That(aggregate.GetUncommittedEvents().Count, Is.EqualTo(0));
+        }    
 	}
 }

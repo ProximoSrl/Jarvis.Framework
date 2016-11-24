@@ -14,9 +14,15 @@ using NUnit.Framework;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
-    [TestFixture]
+    //[TestFixture("1")]
+    [TestFixture("2")]
     public class ProjectionEnginePriorityTests : AbstractV2ProjectionEngineTests
     {
+
+        public ProjectionEnginePriorityTests(String pollingClientVersion) : base(pollingClientVersion)
+        {
+
+        }
 
         [TestFixtureSetUp]
         public override void TestFixtureSetUp()

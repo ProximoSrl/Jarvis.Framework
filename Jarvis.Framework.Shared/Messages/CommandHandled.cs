@@ -1,4 +1,6 @@
 ﻿using Jarvis.Framework.Shared.Commands;
+using MongoDB.Bson.Serialization.Attributes;
+using MongoDB.Bson.Serialization.Options;
 using System;
 using System.Collections.Generic;
 
@@ -22,6 +24,7 @@ namespace Jarvis.Framework.Shared.Messages
 
         public bool IsDomainException { get; private set; }
 
+        [BsonDictionaryOptions(Representation = DictionaryRepresentation.ArrayOfArrays)]
         public IDictionary<string, string> Context { get; private set; }
 
         private String GetContextData(String key, String defaultValue = "")

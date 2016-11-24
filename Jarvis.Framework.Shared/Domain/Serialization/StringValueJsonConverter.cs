@@ -1,10 +1,16 @@
 using System;
 using Newtonsoft.Json;
+using Fasterflect;
+using System.Collections.Concurrent;
+using Jarvis.Framework.Shared.Helpers;
 
 namespace Jarvis.Framework.Shared.Domain.Serialization
 {
     public class StringValueJsonConverter : JsonConverter
     {
+        private static ConcurrentDictionary<Type, FastReflectionHelper.ObjectActivator> _activators
+            = new ConcurrentDictionary<Type, FastReflectionHelper.ObjectActivator>();
+
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
         {
             var id = (string)((StringValue)value);
@@ -15,7 +21,15 @@ namespace Jarvis.Framework.Shared.Domain.Serialization
         {
             if (reader.TokenType == JsonToken.String)
             {
-                var typedId = Activator.CreateInstance(objectType, new object[] {Convert.ToString((object) reader.Value)});
+                FastReflectionHelper.ObjectActivator activator;
+                if (!_activators.TryGetValue(objectType, out activator))
+                {
+                    var ctor = objectType.Constructor(new Type[] { typeof(string) });
+                    activator = FastReflectionHelper.GetActivator(ctor);
+                    _activators[objectType] = activator;
+                }
+
+                var typedId = activator(new object[] { Convert.ToString((object)reader.Value) });
                 return typedId;
             }
             return null;

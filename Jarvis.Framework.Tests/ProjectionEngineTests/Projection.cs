@@ -3,6 +3,8 @@ using System.Threading;
 using Jarvis.Framework.Kernel.Events;
 using Jarvis.Framework.Kernel.ProjectionEngine;
 using Jarvis.Framework.Tests.EngineTests;
+using Jarvis.Framework.Tests.SharedTests;
+using Jarvis.Framework.Tests.SharedTests.IdentitySupport;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests
 {
@@ -49,6 +51,11 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             _collection.Attach(this, false);
         }
 
+        public override string GetSignature()
+        {
+            return "V2";
+        }
+
         public override int Priority
         {
             get { return 3; } //higher priority than previous projection
@@ -65,13 +72,13 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
 
         public void On(SampleAggregateCreated e)
         {
-            Thread.Sleep(0);
             _collection.Insert(e, new SampleReadModel2()
             {
                 Id = e.AggregateId,
                 IsInRebuild = base.IsRebuilding,
                 Timestamp = DateTime.Now.Ticks
             });
+            Thread.Sleep(10);
         }
     }
 
@@ -84,6 +91,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         {
             _collection = collection;
             _collection.Attach(this, false);
+            Signature = base.GetSignature();
         }
 
         public override int Priority
@@ -95,6 +103,14 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         {
             _collection.Drop();
         }
+
+        public String Signature { get; set; }
+
+        public override string GetSignature()
+        {
+            return Signature;
+        }
+
         public override string GetSlotName()
         {
             return "OtherSlotName";
@@ -116,6 +132,26 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
                 IsInRebuild = base.IsRebuilding,
                 Timestamp = DateTime.Now.Ticks
             });
+        }
+    }
+
+    public class ProjectionTypedId : AbstractProjection
+    {
+        readonly ICollectionWrapper<SampleReadModelTestId, TestId> _collection;
+
+        public ProjectionTypedId(ICollectionWrapper<SampleReadModelTestId, TestId> collection)
+        {
+            _collection = collection;
+            _collection.Attach(this, false);
+        }
+
+        public override void Drop()
+        {
+            _collection.Drop();
+        }
+
+        public override void SetUp()
+        {
         }
     }
 }

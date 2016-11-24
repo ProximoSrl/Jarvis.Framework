@@ -1,13 +1,12 @@
 ﻿using System;
 using Jarvis.Framework.Shared.MultitenantSupport;
 using MongoDB.Driver;
-using MongoDB.Driver.Builders;
 
 namespace Jarvis.Framework.Shared.IdentitySupport
 {
     public class CounterService : ICounterService
     {
-        readonly MongoCollection<IdentityCounter> _counters;
+        readonly IMongoCollection<IdentityCounter> _counters;
 
         public class IdentityCounter
         {
@@ -15,7 +14,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             public long Last { get; set; }
         }
 
-        public CounterService(MongoDatabase db)
+        public CounterService(IMongoDatabase db)
         {
             if (db == null) throw new ArgumentNullException("db");
             _counters = db.GetCollection<IdentityCounter>("sysCounters");
@@ -23,17 +22,30 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
         public long GetNext(string serie)
         {
-            var result = _counters.FindAndModify(new FindAndModifyArgs()
+            Int32 count = 0;
+            while (count++ < 5)
             {
-                Query = Query<IdentityCounter>.EQ(x => x.Id, serie),
-                Update = Update<IdentityCounter>.Inc(x => x.Last, 1),
-                SortBy = SortBy.Null,
-                VersionReturned = FindAndModifyDocumentVersion.Modified,
-                Upsert = true
-            });
+                try
+                {
+                    var counter = _counters.FindOneAndUpdate(
+                                    Builders<IdentityCounter>.Filter.Eq(x => x.Id, serie),
+                                    Builders<IdentityCounter>.Update.Inc(x => x.Last, 1),
+                                    new FindOneAndUpdateOptions<IdentityCounter, IdentityCounter>()
+                                    {
+                                        ReturnDocument = ReturnDocument.After,
+                                        IsUpsert = true,
+                                    });
+                    return counter.Last;
+                }
+                catch (MongoCommandException ex)
+                {
+                    //We can tolerate only duplicate exception
+                    if (!ex.Message.Contains("E11000"))
+                        throw;
+                }
+            }
 
-            var counter = result.GetModifiedDocumentAs<IdentityCounter>().Last;
-            return counter;
+            throw new ApplicationException("Unable to generate next number for serie " + serie);
         }
     }
 

@@ -1,6 +1,6 @@
 ﻿using MongoDB.Bson;
 using MongoDB.Driver;
-using MongoDB.Driver.Builders;
+
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
@@ -41,8 +41,8 @@ namespace Jarvis.Framework.ElasticLogPoller.Importers
             get { return String.Format("mongo: {0} collection {1}", Connection, Collection); }
         }
 
-        private MongoCollection<BsonDocument> _collection;
-        private MongoCollection<ImportCheckpoint> _checkpointCollection;
+        private IMongoCollection<BsonDocument> _collection;
+        private IMongoCollection<ImportCheckpoint> _checkpointCollection;
         private ImportCheckpoint _checkpoint;
 
         public override void Configure()
@@ -50,8 +50,8 @@ namespace Jarvis.Framework.ElasticLogPoller.Importers
             base.Configure();
             SetTtl("log", "30d");
             _log.InfoFormat("Mongo: Starting log polling {0}", Connection);
-            MongoDatabase db = GetDatabase();
-            _collection = db.GetCollection(Collection);
+            IMongoDatabase db = GetDatabase();
+            _collection = db.GetCollection<BsonDocument>(Collection);
             _checkpointCollection = db.GetCollection<ImportCheckpoint>("importer.checkpoints");
             _checkpoint = _checkpointCollection.AsQueryable()
                 .SingleOrDefault(d => d.CollectionName == Collection);
@@ -72,9 +72,10 @@ namespace Jarvis.Framework.ElasticLogPoller.Importers
                     .Replace(".", "\\.")
                     .Replace("*", "(?<wildcards>.*)");
                 var db = GetDatabase();
-                var collections = db.GetCollectionNames();
-                foreach (var collectionName in collections)
+                var collections = db.ListCollections().ToList();
+                foreach (var c in collections)
                 {
+                    var collectionName = c["name"].AsString;
                     var match = Regex.Match(collectionName, regex);
                     if (match.Success)
                     {
@@ -98,12 +99,12 @@ namespace Jarvis.Framework.ElasticLogPoller.Importers
             }
         }
 
-        private MongoDatabase GetDatabase()
+        private IMongoDatabase GetDatabase()
         {
             var url = new MongoUrl(Connection);
             var client = new MongoClient(url);
 
-            var db = client.GetServer().GetDatabase(url.DatabaseName);
+            var db = client.GetDatabase(url.DatabaseName);
             return db;
         }
 
@@ -112,12 +113,13 @@ namespace Jarvis.Framework.ElasticLogPoller.Importers
             List<BsonDocument> resultList;
 
             DateTime limitDate = DateTime.Now.AddSeconds(-30);
+            FieldDefinition<BsonDocument> ts = "ts";
             resultList = _collection
-                .Find(Query.And(
-                        Query.GTE("ts", _checkpoint.LastCheckpoint),
-                        Query.LT("ts", limitDate)))
-                    .SetSortOrder(SortBy.Ascending("ts"))
-                    .Take(1000)
+                .Find(Builders<BsonDocument>.Filter.And(
+                        Builders<BsonDocument>.Filter.Gte("ts", _checkpoint.LastCheckpoint),
+                        Builders<BsonDocument>.Filter.Lt("ts", limitDate)))
+                    .Sort(Builders<BsonDocument>.Sort.Ascending(ts))
+                    .Limit(1000)
                     .ToList();
            
              if (resultList.Count == 0) return PollResult.Empty;
@@ -180,6 +182,7 @@ namespace Jarvis.Framework.ElasticLogPoller.Importers
             {
                 var requestString = String.Format("{{ \"index\" : {{ \"_type\" : \"log\", \"_id\" : \"{0}\"  }} }}", result["_id"].ToString());
                 request.AppendLine(requestString);
+                result.Remove("_id"); //ES 2.0 does not want id in the definition of the doc.
                 request.AppendLine(result.ToString(Formatting.None));
             }
             var response = new PollResult();
@@ -193,7 +196,10 @@ namespace Jarvis.Framework.ElasticLogPoller.Importers
         public override void SaveCheckpoint(Object checkpoint)
         {
             _checkpoint.LastCheckpoint = (DateTime) checkpoint;
-            _checkpointCollection.Save(_checkpoint);
+            _checkpointCollection.ReplaceOneAsync(
+                x => x.CollectionName == _checkpoint.CollectionName,
+                _checkpoint, 
+                new UpdateOptions { IsUpsert = true });
         }
     }
 }

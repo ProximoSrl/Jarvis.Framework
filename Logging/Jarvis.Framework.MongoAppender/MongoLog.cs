@@ -7,8 +7,11 @@ using log4net.Core;
 using log4net.Util;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using MongoDB.Driver.Builders;
+
 using System.Reflection;
+using System.Threading.Tasks;
+using MongoDB.Driver.Core.Clusters;
+using System.Threading;
 
 namespace Jarvis.Framework.MongoAppender
 {
@@ -73,63 +76,64 @@ namespace Jarvis.Framework.MongoAppender
 
         public Boolean LooseFix { get; set; }
 
-        public void SetupCollection()
+        public Boolean SetupCollection()
         {
             var uri = new MongoUrl(ConnectionString);
             var client = new MongoClient(uri);
-            MongoDatabase db = client.GetServer().GetDatabase(uri.DatabaseName);
+            IMongoDatabase db = client.GetDatabase(uri.DatabaseName);
+
+            Task.Factory.StartNew(() =>
+            {
+                var result = client.ListDatabases();
+                Console.Write(result.ToList());
+            }); //forces a database connection
+            Int32 spinCount = 0;
+            ClusterState clusterState;
+
+            while ((clusterState = client.Cluster.Description.State) != ClusterState.Connected &&
+                spinCount++ < 100)
+            {
+                Thread.Sleep(20);
+            }
+            //database is not operational;
+            if (clusterState != ClusterState.Connected)
+                return false;
+
+            var createCollectionOptions = new CreateCollectionOptions();
             Int64 cappedSize;
-            if (!Int64.TryParse(CappedSizeInMb, out cappedSize))
+            if (Int64.TryParse(CappedSizeInMb, out cappedSize))
             {
-                cappedSize = 5 * 1024L;
+                createCollectionOptions.Capped = true;
+                createCollectionOptions.MaxSize = 1024L * 1024L * cappedSize;
             }
-            if (!db.CollectionExists(CollectionName))
-            {
-                CollectionOptionsBuilder options = CollectionOptions
-                    .SetCapped(true)
-                    .SetMaxSize(1024L * 1024L * cappedSize); //5 gb.
-                db.CreateCollection(CollectionName, options);
-            }
-            LogCollection = db.GetCollection(CollectionName);
-            var builder = new IndexOptionsBuilder();
+            var collections = db.ListCollections()
+                .ToList()
+                .Select(d => d["name"].AsString)
+                .ToList();
 
-            const string ttlIndex = FieldNames.Timestamp + "_-1";
-            var index = LogCollection.GetIndexes().SingleOrDefault(x => x.Name == ttlIndex);
-            if (index != null)
+            if (!collections.Contains(CollectionName))
             {
-                if (ExpireAfter != null)
+                db.CreateCollection(CollectionName, createCollectionOptions);
+            }
+            LogCollection = db.GetCollection<BsonDocument>(CollectionName);
+            CreateIndexOptions options = new CreateIndexOptions();
+
+            if (ExpireAfter != null)
+            {
+                if (createCollectionOptions.Capped == true)
                 {
-                    if (index.TimeToLive != ExpireAfter.ToTimeSpan())
-                    {
-                        var d = new CommandDocument()
-                    {
-                        {   "collMod", CollectionName   },
-                        {
-                            "index", new BsonDocument
-                            {
-                                {"keyPattern", new BsonDocument {{FieldNames.Timestamp, -1}}},
-                                {"expireAfterSeconds", (int)(ExpireAfter.ToTimeSpan().TotalSeconds)}
-                            }
-                        }
-                    };
-
-                        db.RunCommand(d);
-                    }
+                    LogLog.Error("Cannot use Capped and TTL at the same time, only capped collection setting will be used");
+                }
+                else
+                {
+                    options.ExpireAfter = ExpireAfter.ToTimeSpan();
                 }
             }
-            else
-            {
-                if (ExpireAfter != null)
-                {
-                    builder.SetTimeToLive(ExpireAfter.ToTimeSpan());
-                }
 
-                LogCollection.CreateIndex(IndexKeys.Descending(FieldNames.Timestamp), builder);
-            }
-
-            LogCollection.CreateIndex(IndexKeys
-                .Ascending(FieldNames.Level, FieldNames.Thread, FieldNames.Loggername)
-            );
+            LogCollection.Indexes.CreateOne(Builders<BsonDocument>.IndexKeys.Descending(FieldNames.Timestamp), options);
+            LogCollection.Indexes.CreateOne(Builders<BsonDocument>.IndexKeys
+                .Ascending(FieldNames.Level).Ascending(FieldNames.Thread).Ascending(FieldNames.Loggername));
+            return true;
         }
 
         public BsonDocument LoggingEventToBSON(LoggingEvent loggingEvent)
@@ -227,7 +231,7 @@ namespace Jarvis.Framework.MongoAppender
             return toReturn;
         }
 
-        public MongoCollection<BsonDocument> LogCollection { get; private set; }
+        public IMongoCollection<BsonDocument> LogCollection { get; private set; }
 
         /// <summary>
         /// Used to programmatically override the name of the program with code.
@@ -255,7 +259,7 @@ namespace Jarvis.Framework.MongoAppender
             if (LogCollection != null)
             {
                 var docs = events.Select(LoggingEventToBSON).Where(x => x != null).ToArray();
-                LogCollection.InsertBatch(docs);
+                LogCollection.InsertMany(docs);
             }
         }
 
@@ -266,7 +270,7 @@ namespace Jarvis.Framework.MongoAppender
                 BsonDocument doc = LoggingEventToBSON(loggingEvent);
                 if (doc != null)
                 {
-                    LogCollection.Insert(doc);
+                    LogCollection.InsertOne(doc);
                 }
             }
         }
@@ -274,7 +278,7 @@ namespace Jarvis.Framework.MongoAppender
         public void Insert(BsonDocument doc)
         {
 
-                    LogCollection.Insert(doc);
+            LogCollection.InsertOne(doc);
 
         }
     }

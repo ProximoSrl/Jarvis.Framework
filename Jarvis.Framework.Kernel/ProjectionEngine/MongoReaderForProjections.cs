@@ -29,18 +29,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             return _storage.FindOneById(id);
         }
 
-        public IEnumerable<BsonDocument> Aggregate(IEnumerable<BsonDocument> operations)
-        {
-            return _storage.Aggregate(operations);
-        }
 
-        public IEnumerable<BsonDocument> Aggregate(AggregateArgs aggregateArgs)
-        {
-            return _storage.Aggregate(aggregateArgs);
-
-        }
-
-        public MongoCollection<TModel> Collection {
+        public IMongoCollection<TModel> Collection {
             get { return _storage.Collection;  }
         }
     }

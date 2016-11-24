@@ -7,7 +7,7 @@ using Jarvis.Framework.MongoAppender;
 using log4net;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using MongoDB.Driver.Builders;
+
 
 namespace Jarvis.Framework.LogViewer.Host.Controllers
 {
@@ -41,9 +41,9 @@ namespace Jarvis.Framework.LogViewer.Host.Controllers
 
     public class LogController : ApiController
     {
-        private MongoCollection Logs { get; set; }
+        private IMongoCollection<BsonDocument> Logs { get; set; }
 
-        public LogController(MongoCollection logCollection)
+        public LogController(IMongoCollection<BsonDocument> logCollection)
         {
             Logs = logCollection;
         }
@@ -54,47 +54,46 @@ namespace Jarvis.Framework.LogViewer.Host.Controllers
         public LogSearchResponse Get(LogSearchRequest request)
         {
             request = request ?? new LogSearchRequest();
+            return null;
 
-            MongoCursor<BsonDocument> cursor;
+            //if (!request.IsEmpty)
+            //{
+            //    var and = new List<IMongoQuery>();
 
-            if (!request.IsEmpty)
-            {
-                var and = new List<IMongoQuery>();
+            //    if (!String.IsNullOrWhiteSpace(request.Query))
+            //    {
+            //        var queryExpr = new BsonRegularExpression(new Regex(request.Query, RegexOptions.IgnoreCase));
+            //        and.Add(Query.Or(
+            //            Query.Matches(FieldNames.Message, queryExpr),
+            //            Query.Matches(FieldNames.Loggername, queryExpr)
+            //        ));
+            //    }
 
-                if (!String.IsNullOrWhiteSpace(request.Query))
-                {
-                    var queryExpr = new BsonRegularExpression(new Regex(request.Query, RegexOptions.IgnoreCase));
-                    and.Add(Query.Or(
-                        Query.Matches(FieldNames.Message, queryExpr),
-                        Query.Matches(FieldNames.Loggername, queryExpr)
-                    ));
-                }
+            //    if (!String.IsNullOrWhiteSpace(request.Level))
+            //    {
+            //        var levels = request.Level.Split(',').Select(x => x.Trim()).ToArray();
+            //        and.Add(Query.In(FieldNames.Level, levels.Select(BsonValue.Create)));
+            //    }
 
-                if (!String.IsNullOrWhiteSpace(request.Level))
-                {
-                    var levels = request.Level.Split(',').Select(x => x.Trim()).ToArray();
-                    and.Add(Query.In(FieldNames.Level, levels.Select(BsonValue.Create)));
-                }
+            //    cursor = Logs.FindAs<BsonDocument>(Query.And(and));
 
-                cursor = Logs.FindAs<BsonDocument>(Query.And(and));
+            //}
+            //else
+            //{
+            //    cursor = Logs.FindAllAs<BsonDocument>();
+            //}
 
-            }
-            else
-            {
-                cursor = Logs.FindAllAs<BsonDocument>();
-            }
+            //var response = new LogSearchResponse
+            //{
+            //    Items = cursor
+            //        .SetSortOrder(SortBy.Descending(FieldNames.Timestamp))
+            //        .SetSkip(request.LogsPerPage*(request.Page - 1))
+            //        .SetLimit(request.LogsPerPage)
+            //        .Select(x => x.ToDictionary()),
+            //    Count = cursor.Count()
+            //};
 
-            var response = new LogSearchResponse
-            {
-                Items = cursor
-                    .SetSortOrder(SortBy.Descending(FieldNames.Timestamp))
-                    .SetSkip(request.LogsPerPage*(request.Page - 1))
-                    .SetLimit(request.LogsPerPage)
-                    .Select(x => x.ToDictionary()),
-                Count = cursor.Count()
-            };
-
-            return response;
+            //return response;
         }
     }
 }

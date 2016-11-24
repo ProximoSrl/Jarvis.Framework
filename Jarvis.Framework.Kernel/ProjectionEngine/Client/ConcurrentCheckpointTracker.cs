@@ -9,16 +9,18 @@ using Castle.Core.Logging;
 using Jarvis.Framework.Kernel.Events;
 using Jarvis.Framework.Kernel.Support;
 using MongoDB.Driver;
-using MongoDB.Driver.Builders;
 using NEventStore;
+using Jarvis.Framework.Shared.Helpers;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 {
     public class ConcurrentCheckpointTracker : IConcurrentCheckpointTracker
     {
-        readonly MongoCollection<Checkpoint> _checkpoints;
-        private ConcurrentDictionary<string, string> _checkpointTracker;
-        private ConcurrentDictionary<string, string> _currentCheckpointTracker;
+        readonly IMongoCollection<Checkpoint> _checkpoints;
+
+        private ConcurrentDictionary<string, Int64> _checkpointTracker;
+
+        private ConcurrentDictionary<string, Int64> _currentCheckpointTracker;
 
         /// <summary>
         /// Used for Metrics.NET.
@@ -42,42 +44,66 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         public ILogger Logger { get; set; }
 
-        public ConcurrentCheckpointTracker(MongoDatabase db)
+        private List<string> _checkpointErrors;
+
+        public ConcurrentCheckpointTracker(IMongoDatabase db)
         {
             _checkpoints = db.GetCollection<Checkpoint>("checkpoints");
-            _checkpoints.CreateIndex(IndexKeys<Checkpoint>.Ascending(x => x.Slot));
-            _checkpointTracker = new ConcurrentDictionary<string, string>();
+            _checkpoints.Indexes.CreateOne(Builders<Checkpoint>.IndexKeys.Ascending(x => x.Slot));
+            Logger = NullLogger.Instance;
+            Clear();
+        }
+
+        public void Clear()
+        {
+            _checkpointTracker = new ConcurrentDictionary<string, Int64>();
             _checkpointSlotTracker = new ConcurrentDictionary<string, Int64>();
             _projectionToSlot = new ConcurrentDictionary<String, String>();
             _slotRebuildTracker = new ConcurrentDictionary<string, bool>();
-            _currentCheckpointTracker = new ConcurrentDictionary<string, string>();
-            Logger = NullLogger.Instance;
+            _currentCheckpointTracker = new ConcurrentDictionary<string, Int64>();
+            _checkpointErrors = new List<string>();
+            _higherCheckpointToDispatchInRebuild = 0;
         }
 
-        void Add(IProjection projection, string defaultValue)
+        void Add(IProjection projection, Int64 defaultValue)
         {
             var id = projection.GetCommonName();
-            var checkPoint = _checkpoints.FindOneById(id) ?? new Checkpoint(id, defaultValue);
+            var projectionSignature = projection.GetSignature();
+            var projectionSlotName = projection.GetSlotName();
 
-            checkPoint.Signature = projection.GetSignature();
-            checkPoint.Slot = projection.GetSlotName();
+            var checkPoint = _checkpoints.FindOneById(id) ?? 
+                new Checkpoint(id, defaultValue, projectionSignature);
+
+            //Check if some projection is changed and rebuild is not active
+            if (
+                checkPoint.Signature != projectionSignature && 
+                !RebuildSettings.ShouldRebuild)
+            {
+                _checkpointErrors.Add(String.Format("Projection {0} [slot {1}] has signature {2} but checkpoint on database has signature {3}.\n REBUILD NEEDED",
+                    id, projectionSlotName, projectionSignature, checkPoint.Signature));
+            }
+            else
+            {
+                checkPoint.Signature = projectionSignature;
+            }
+            checkPoint.Slot = projectionSlotName;
             checkPoint.Active = true;
-            _checkpoints.Save(checkPoint);
+            _checkpoints.Save(checkPoint, checkPoint.Id);
             _checkpointTracker[id] = checkPoint.Value;
             _projectionToSlot[id] = checkPoint.Slot;
         }
 
-        public void SetUp(IProjection[] projections, int version)
+        public void SetUp(IProjection[] projections, int version, Boolean setupMetrics)
         {
             var versionInfo = _checkpoints.FindOneById("VERSION");
             if (versionInfo == null)
             {
-                versionInfo = new Checkpoint("VERSION", "0");
+                versionInfo = new Checkpoint("VERSION", 0, null);
             }
 
-            int currentVersion = int.Parse(versionInfo.Value);
+            int currentVersion = (Int32) versionInfo.Value;
 
-            string projectionStartFormCheckpointValue = new LongCheckpoint(0).Value;
+            Int64 projectionStartFormCheckpointValue = 0L;
             if (currentVersion == 0)
             {
                 var eventsVersion = _checkpoints.FindOneById("events");
@@ -86,10 +112,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             }
 
             //set all projection to active = false
-            _checkpoints.Update(
-                Query<Checkpoint>.NE(c => c.Slot, null),
-                Update<Checkpoint>.Set(c => c.Active, false),
-                UpdateFlags.Multi
+            _checkpoints.UpdateMany(
+                Builders<Checkpoint>.Filter.Ne(c => c.Slot, null),
+                Builders<Checkpoint>.Update.Set(c => c.Active, false)
             );
 
             foreach (var projection in projections)
@@ -100,19 +125,19 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             // mark db
             if (version > currentVersion)
             {
-                versionInfo.Value = new LongCheckpoint(version).Value;
-                _checkpoints.Save(versionInfo);
+                versionInfo.Value = version;
+                _checkpoints.Save(versionInfo, versionInfo.Id);
             }
 
             foreach (var slot in projections.Select(p => p.GetSlotName()).Distinct())
             {
                 var slotName = slot;
-                MetricsHelper.SetCheckpointCountToDispatch(slot, () => GetCheckpointCount(slotName));
+                if (setupMetrics) MetricsHelper.SetCheckpointCountToDispatch(slot, () => GetCheckpointCount(slotName));
                 _checkpointSlotTracker[slot] = 0;
                 _slotRebuildTracker[slot] = false;
             }
 
-            MetricsHelper.SetCheckpointCountToDispatch("", GetCheckpointMaxCount);
+            if (setupMetrics) MetricsHelper.SetCheckpointCountToDispatch("", GetCheckpointMaxCount);
         }
 
         private double GetCheckpointMaxCount()
@@ -127,7 +152,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         public Int64 GetMinCheckpoint()
         {
-            return _currentCheckpointTracker.Values.Select(Int64.Parse).Min();
+            return _currentCheckpointTracker.Values.Min();
+        }
+
+     
+        public Int64 GetMaxDispatchedCheckpoint()
+        {
+            return _checkpoints.FindAll()
+                .ToList()
+                .Where(c => c.Id != "VERSION")
+                .Max(c => c.Value);
         }
 
         public bool NeedsRebuild(IProjection projection)
@@ -144,12 +178,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             //return current.LongValue < last.LongValue;
         }
 
-        public void RebuildStarted(IProjection projection, String lastCommitId)
+        public void RebuildStarted(IProjection projection, Int64 lastCommitId)
         {
             var projectionName = projection.GetCommonName();
-            _checkpoints.Update(
-                Query.EQ("_id", projectionName),
-                Update<Checkpoint>.Set(x => x.RebuildStart, DateTime.UtcNow)
+            _checkpoints.UpdateOne(
+                Builders<Checkpoint>.Filter.Eq("_id", projectionName),
+                Builders<Checkpoint>.Update.Set(x => x.RebuildStart, DateTime.UtcNow)
                                     .Set(x => x.RebuildStop, null)
                                     .Set(x => x.RebuildTotalSeconds, 0)
                                     .Set(x => x.RebuildActualSeconds, 0)
@@ -159,8 +193,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             );
             //Check if some commit was deleted and lastCommitId in Eventstore 
             //is lower than the latest dispatched commit.
-            var trackerLastValue = LongCheckpoint.Parse(_checkpointTracker[projection.GetCommonName()]).LongValue;
-            var lastCommitIdLong = LongCheckpoint.Parse(lastCommitId).LongValue;
+            var trackerLastValue = _checkpointTracker[projection.GetCommonName()];
+            var lastCommitIdLong = lastCommitId;
             if (trackerLastValue > 0)
             {
                 //new projection, it has no dispatched checkpoint.
@@ -169,16 +203,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             if (lastCommitIdLong < trackerLastValue)
             {
                 _checkpointTracker[projection.GetCommonName()] = lastCommitId;
-                _checkpoints.Update(
-                  Query.EQ("_id", projectionName),
-                  Update<Checkpoint>.Set(x => x.Value, lastCommitId));
+                _checkpoints.UpdateOne(
+                   Builders<Checkpoint>.Filter.Eq("_id", projectionName),
+                   Builders<Checkpoint>.Update.Set(x => x.Value, lastCommitId));
             }
             _higherCheckpointToDispatchInRebuild = Math.Max(
                 _higherCheckpointToDispatchInRebuild,
                 Math.Min(trackerLastValue, lastCommitIdLong));
         }
-
-
 
         public void RebuildEnded(IProjection projection, ProjectionMetrics.Meter meter)
         {
@@ -186,21 +218,25 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             _slotRebuildTracker[_projectionToSlot[projectionName]] = false;
             var checkpoint = _checkpoints.FindOneById(projectionName);
             checkpoint.RebuildStop = DateTime.UtcNow;
-            checkpoint.RebuildTotalSeconds = (long)(checkpoint.RebuildStop - checkpoint.RebuildStart).Value.TotalSeconds;
+            if (checkpoint != null && checkpoint.RebuildStop.HasValue && checkpoint.RebuildStart.HasValue)
+            {
+                checkpoint.RebuildTotalSeconds = (long)(checkpoint.RebuildStop - checkpoint.RebuildStart).Value.TotalSeconds;
+            }
+
             checkpoint.Events = meter.TotalEvents;
             checkpoint.RebuildActualSeconds = (double)meter.TotalElapsed / TimeSpan.TicksPerSecond;
             checkpoint.Details = meter;
-            _checkpoints.Save(checkpoint);
+            checkpoint.Signature = projection.GetSignature();
+            _checkpoints.Save(checkpoint, checkpoint.Id);
         }
 
-        public void UpdateSlot(string slotName, string checkpointToken)
+        public void UpdateSlot(string slotName, Int64 checkpointToken)
         {
             if (_slotRebuildTracker[slotName] == false)
             {
-                _checkpoints.Update(
-                    Query.EQ("Slot", slotName),
-                    Update.Set("Current", checkpointToken),
-                    UpdateFlags.Multi
+                _checkpoints.UpdateMany(
+                     Builders<Checkpoint>.Filter.Eq("Slot", slotName),
+                     Builders<Checkpoint>.Update.Set("Current", checkpointToken)
                 );
             }
             _currentCheckpointTracker.AddOrUpdate(slotName, checkpointToken, (key, value) => checkpointToken);
@@ -209,53 +245,47 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         public void UpdateSlotAndSetCheckpoint(
             string slotName, 
             IEnumerable<String> projectionIdList, 
-            string checkpointToken)
+            Int64 valueCheckpointToken,
+            Int64? currentCheckpointToken = null)
         {
-            _checkpoints.Update(
-                  Query.EQ("Slot", slotName),
-                  Update
-                    .Set("Current", checkpointToken)
-                    .Set("Value", checkpointToken),
-                  UpdateFlags.Multi
+            _checkpoints.UpdateMany(
+                   Builders<Checkpoint>.Filter.Eq("Slot", slotName),
+                   Builders<Checkpoint>.Update
+                    .Set("Current", currentCheckpointToken ?? valueCheckpointToken)
+                    .Set("Value", valueCheckpointToken )
               );
-            _currentCheckpointTracker.AddOrUpdate(slotName, checkpointToken, (key, value) => checkpointToken);
+            _currentCheckpointTracker.AddOrUpdate(slotName, currentCheckpointToken ?? 0, (key, value) => currentCheckpointToken ?? 0);
             foreach (var projectionId in projectionIdList)
             {
-                _checkpointTracker.AddOrUpdate(projectionId, key => checkpointToken, (key, currentValue) => checkpointToken);
+                _checkpointTracker.AddOrUpdate(projectionId, key => currentCheckpointToken ?? 0, (key, currentValue) => currentCheckpointToken ?? 0);
             }
         }
 
-        public string GetCurrent(IProjection projection)
+        public Int64 GetCurrent(IProjection projection)
         {
             var checkpoint = _checkpoints.FindOneById(projection.GetCommonName());
             if (checkpoint == null)
-                return null;
+                return 0;
 
-            return checkpoint.Current;
+            return checkpoint.Current ?? 0;
         }
 
-        public void SetCheckpoint(string id, string value)
+        public void SetCheckpoint(string id, Int64 value)
         {
-            _checkpoints.Update(
-                Query.EQ("_id", id),
-                Update.Set("Value", value)
+            _checkpoints.UpdateOne(
+                 Builders<Checkpoint>.Filter.Eq("_id", id),
+                 Builders<Checkpoint>.Update.Set("Value", value)
             );
 
             _checkpointTracker.AddOrUpdate(id, key => value, (key, currentValue) => value);
         }
 
-        public void LoadAll()
+        public CheckPointReplayStatus GetCheckpointStatus(string id, Int64 checkpoint)
         {
-            var allChecks = _checkpoints.FindAll().OrderBy(x => x.Id);
-            _checkpointTracker = new ConcurrentDictionary<string, string>(allChecks.ToDictionary(k => k.Id, v => v.Value));
-        }
+            Int64 lastDispatched = _checkpointTracker[id];
 
-        public CheckPointReplayStatus GetCheckpointStatus(string id, string checkpoint)
-        {
-            string lastDispatched = _checkpointTracker[id];
-
-            var currentCheckpointValue = LongCheckpoint.Parse(checkpoint).LongValue;
-            long lastDispatchedValue = LongCheckpoint.Parse(lastDispatched).LongValue;
+            var currentCheckpointValue = checkpoint;
+            long lastDispatchedValue = lastDispatched;
 
             bool isLast = currentCheckpointValue == lastDispatchedValue;
             bool isReplay = currentCheckpointValue <= lastDispatchedValue;
@@ -263,22 +293,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             return new CheckPointReplayStatus(isLast, isReplay);
         }
 
-        public string GetCheckpoint(IProjection projection)
+        public Int64 GetCheckpoint(IProjection projection)
         {
             var id = projection.GetCommonName();
             if (_checkpointTracker.ContainsKey(id))
                 return _checkpointTracker[id];
-            return null;
-        }
-
-        public void Clear()
-        {
-            _checkpointTracker.Clear();
+            return 0;
         }
 
         public List<string> GetCheckpointErrors()
         {
-            List<string> errors = new List<string>();
             if (RebuildSettings.ShouldRebuild == false)
             {
                 //need to check every slot for new projection 
@@ -296,22 +320,58 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                         String error;
                         //error, ve have not all projection at the same checkpoint 
                         if (allCheckpoints
-                            .Where(k => k.Value != "0")
+                            .Where(k => k.Value != 0)
                             .Select(k => k.Value)
                             .Distinct().Count() == 1)
                         {
                             //We have one or more new projection in slot
-                            error = String.Format("Error in slot {0}: we have new projections at checkpoint 0, rebuild needed!", slot.Key);
+                            error = String.Format("Error in slot {0}: we have new projections at checkpoint 0.\n REBUILD NEEDED!", slot.Key);
                         }
                         else
                         {
                             error = String.Format("Error in slot {0}, not all projection at the same checkpoint value. Please check reamodel db!", slot.Key);
                         }
-                        errors.Add(error);
+                        _checkpointErrors.Add(error);
                     }
                 }
             }
-            return errors;
+            return _checkpointErrors;
+        }
+
+        public CheckpointSlotStatus GetSlotsStatus(IProjection[] projections)
+        {
+            CheckpointSlotStatus returnValue = new CheckpointSlotStatus();
+            //we need to group projection per slot
+            var allCheckpoint = _checkpoints.FindAll().ToEnumerable().ToDictionary(c => c.Id, c => c);
+            var slots = projections.GroupBy(
+                p => p.GetSlotName(),
+                p => new {
+                    Projection = p,
+                    Checkpoint = allCheckpoint.ContainsKey(p.GetCommonName()) ? allCheckpoint[p.GetCommonName()] : null, 
+                });
+            Int64 maxCheckpoint = 0;
+            if (allCheckpoint.Any())
+                maxCheckpoint = allCheckpoint.Select(c => c.Value.Value).Max();
+            if (maxCheckpoint > 0) //if we have no dispatched commit, we have no need to rebuild or do anything
+            {
+                foreach (var slot in slots)
+                {
+                    if (slot.All(s => s.Checkpoint == null || s.Checkpoint.Value == 0))
+                    {
+                        returnValue.NewSlots.Add(slot.Key);
+                    }
+                    else if (slot.Where(s => s.Checkpoint != null)
+                        .Select(s => s.Checkpoint.Value).Distinct().Count() > 1)
+                    {
+                        returnValue.SlotsThatNeedsRebuild.Add(slot.Key);
+                    }
+                    else if (slot.Any(s => s.Checkpoint == null || s.Checkpoint.Signature != s.Projection.GetSignature()))
+                    {
+                        returnValue.SlotsThatNeedsRebuild.Add(slot.Key);
+                    }
+                }
+            }
+            return returnValue;
         }
     }
 }

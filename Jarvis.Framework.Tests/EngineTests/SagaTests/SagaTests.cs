@@ -20,7 +20,6 @@ namespace Jarvis.Framework.Tests.EngineTests.SagaTests
     [TestFixture]
     public class SagaTests
     {
-        private MongoServer _server;
         private EventStoreFactory _factory;
         string _connectionString;
 
@@ -154,7 +153,6 @@ namespace Jarvis.Framework.Tests.EngineTests.SagaTests
     [TestFixture]
     public class SagaTestsBase
     {
-        private MongoServer _server;
         private EventStoreFactory _factory;
         string _connectionString;
         protected IStoreEvents _eventStore;

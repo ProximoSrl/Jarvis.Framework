@@ -1,9 +1,10 @@
 using Jarvis.Framework.Shared.Domain;
 using Jarvis.Framework.Shared.Domain.Serialization;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace Jarvis.Framework.Tests.DomainTests
 {
-    [MongoDB.Bson.Serialization.Attributes.BsonSerializer(typeof(StringValueBsonSerializer))]
+    [BsonSerializer(typeof(TypedStringValueBsonSerializer<TypedStringValueLowerCase>))]
     public class TypedStringValueLowerCase : LowercaseStringValue
     {
         public TypedStringValueLowerCase(string value) : base(value)
@@ -11,7 +12,7 @@ namespace Jarvis.Framework.Tests.DomainTests
         }
     }
 
-    [MongoDB.Bson.Serialization.Attributes.BsonSerializer(typeof(StringValueBsonSerializer))]
+    [BsonSerializer(typeof(TypedStringValueBsonSerializer<TypedStringValue>))]
     public class TypedStringValue : StringValue
     {
         public TypedStringValue(string value) : base(value)

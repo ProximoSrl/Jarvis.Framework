@@ -47,7 +47,9 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Core
 		public IIdentity Id { get; protected set; }
 		public int Version { get; protected set; }
 
-		void IAggregateEx.ApplyEvent(object @event)
+        public int SnapshotRestoreVersion { get; protected set; }
+
+        void IAggregateEx.ApplyEvent(object @event)
 		{
 			this.RegisteredRoutes.Dispatch(@event);
 			this.Version++;

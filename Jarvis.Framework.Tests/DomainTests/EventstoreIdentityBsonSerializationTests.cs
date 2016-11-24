@@ -8,13 +8,18 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
 using NUnit.Framework;
+using Jarvis.NEventStoreEx.CommonDomainEx;
+using Jarvis.Framework.Kernel.Engine;
+using System.Collections.Generic;
+
 
 namespace Jarvis.Framework.Tests.DomainTests
 {
     [TestFixture]
+    [Category("mongo_serialization")]
     public class DomainEventIdentityBsonSerializationTests
     {
-        [BsonSerializer(typeof(EventStoreIdentityBsonSerializer))]
+        [BsonSerializer(typeof(TypedEventStoreIdentityBsonSerializer<SampleId>))]
         public class SampleId : EventStoreIdentity
         {
             public SampleId(long id)
@@ -43,13 +48,13 @@ namespace Jarvis.Framework.Tests.DomainTests
         public void SetUp()
         {
             var identityConverter = new IdentityManager(new InMemoryCounterService());
-            EventStoreIdentityBsonSerializer.IdentityConverter = identityConverter;
+            MongoFlatIdSerializerHelper.IdentityConverter = identityConverter;
             identityConverter.RegisterIdentitiesFromAssembly(typeof(SampleId).Assembly);
 
             BsonClassMap.RegisterClassMap<DomainEvent>(map =>
             {
                 map.AutoMap();
-                map.MapProperty(x => x.AggregateId).SetSerializer(new EventStoreIdentityBsonSerializer());
+                map.MapProperty(x => x.AggregateId).SetSerializer(new TypedEventStoreIdentityBsonSerializer<EventStoreIdentity>());
             });
         }
 
@@ -59,7 +64,7 @@ namespace Jarvis.Framework.Tests.DomainTests
             BsonClassMapHelper.Unregister<DomainEvent>();
 
             // class map cleanup???
-            EventStoreIdentityBsonSerializer.IdentityConverter = null;
+            MongoFlatIdSerializerHelper.IdentityConverter = null;
         }
 
         [Test]
@@ -70,7 +75,7 @@ namespace Jarvis.Framework.Tests.DomainTests
             Debug.WriteLine(json);
 
             Assert.AreEqual(
-                "{ \"MessageId\" : CSUUID(\"cfbb68da-b598-417c-84c7-e951e8a36b8e\"), \"AggregateId\" : \"Sample_1\", \"Value\" : \"this is a test\" }",
+                "{ \"MessageId\" : \"cfbb68da-b598-417c-84c7-e951e8a36b8e\", \"AggregateId\" : \"Sample_1\", \"Value\" : \"this is a test\" }",
                 json
             );
         }
@@ -78,7 +83,7 @@ namespace Jarvis.Framework.Tests.DomainTests
         [Test]
         public void should_deserialize_event()
         {
-            var json = "{ \"MessageId\" : CSUUID(\"cfbb68da-b598-417c-84c7-e951e8a36b8e\"), \"AggregateId\" : \"Sample_1\", \"Value\" : \"this is a test\" }";
+            var json = "{ \"MessageId\" : \"cfbb68da-b598-417c-84c7-e951e8a36b8e\", \"AggregateId\" : \"Sample_1\", \"Value\" : \"this is a test\" }";
             var e = BsonSerializer.Deserialize<SampleEvent>(json);
 
             Assert.AreEqual("Sample_1", e.AggregateId.FullyQualifiedId);
@@ -86,9 +91,10 @@ namespace Jarvis.Framework.Tests.DomainTests
     }
 
     [TestFixture]
-    public class EventstoreIdentityBsonSerializationTests 
+    [Category("mongo_serialization")]
+    public class EventstoreIdentityBsonSerializationTests
     {
-        [BsonSerializer(typeof(EventStoreIdentityBsonSerializer))]
+        [BsonSerializer(typeof(TypedEventStoreIdentityBsonSerializer<SampleId>))]
         public class SampleId : EventStoreIdentity
         {
             public SampleId(long id)
@@ -102,23 +108,75 @@ namespace Jarvis.Framework.Tests.DomainTests
             }
         }
 
+        public class SampleNoAttributeId : EventStoreIdentity
+        {
+            public SampleNoAttributeId(long id)
+                : base(id)
+            {
+            }
+
+            public SampleNoAttributeId(string id)
+                : base(id)
+            {
+            }
+        }
+
         public class ClassWithSampleIdentity
         {
             public SampleId Value { get; set; }
         }
 
+        public class ClassWithIdentityBaseClass
+        {
+            public IIdentity Value { get; set; }
+        }
+
+        public class ClassWithIdentityBaseClassAndAttribute
+        {
+            [BsonSerializer(typeof(GenericIdentityBsonSerializer))]
+            public IIdentity Value { get; set; }
+        }
+
+        public class ClassWithEventStoreIdentityBaseClassAndAttribute
+        {
+            [BsonSerializer(typeof(TypedEventStoreIdentityBsonSerializer<EventStoreIdentity>))]
+            public EventStoreIdentity Value { get; set; }
+        }
+
+        public class StateWithIdentity : AggregateState
+        {
+            public SampleId Value { get; set; }
+        }
+
+        public class ClassWithArrayIdentity
+        {
+            [BsonSerializer(typeof(IdentityArrayBsonSerializer<SampleId>))]
+            public SampleId[] Value { get; set; }
+        }
+
+        public class ClassWithDictionaryOfObject
+        {
+            [BsonSerializer(typeof(Shared.IdentitySupport.Serialization.DictionaryAsObjectJarvisSerializer<Dictionary<String, Object>, String, Object>))]
+            public Dictionary<String, Object> Value { get; set; }
+        }
+
+
         [TestFixtureSetUp]
         public void SetUp()
         {
             var identityConverter = new IdentityManager(new InMemoryCounterService());
-            EventStoreIdentityBsonSerializer.IdentityConverter = identityConverter;
+            MongoFlatIdSerializerHelper.IdentityConverter = identityConverter;
+
             identityConverter.RegisterIdentitiesFromAssembly(typeof(SampleId).Assembly);
+
+            BsonSerializer.RegisterSerializationProvider(new EventStoreIdentitySerializationProvider());
+            BsonSerializer.RegisterSerializationProvider(new StringValueSerializationProvider());
         }
 
         [TestFixtureTearDown]
         public void TestFixtureTearDown()
         {
-            EventStoreIdentityBsonSerializer.IdentityConverter = null;
+            MongoFlatIdSerializerHelper.IdentityConverter = null;
         }
 
         [Test]
@@ -131,10 +189,63 @@ namespace Jarvis.Framework.Tests.DomainTests
         }
 
         [Test]
+        public void should_serialize_with_base_class()
+        {
+            var instance = new ClassWithIdentityBaseClass { Value = new SampleId("Sample_1") };
+            var json = instance.ToJson();
+
+            Assert.AreEqual("{ \"Value\" : \"Sample_1\" }", json);
+        }
+
+        [Test]
+        public void should_serialize_with_base_class_and_attribute()
+        {
+            var instance = new ClassWithIdentityBaseClassAndAttribute { Value = new SampleId("Sample_1") };
+            var json = instance.ToJson();
+
+            Assert.AreEqual("{ \"Value\" : \"Sample_1\" }", json);
+        }
+
+        [Test]
+        public void should_serialize_with_event_store_base_class_and_attribute()
+        {
+            var instance = new ClassWithEventStoreIdentityBaseClassAndAttribute { Value = new SampleId("Sample_1") };
+            var json = instance.ToJson();
+
+            Assert.AreEqual("{ \"Value\" : \"Sample_1\" }", json);
+        }
+
+
+        [Test]
+        public void should_serialize_array()
+        {
+            var instance = new ClassWithArrayIdentity
+            {
+                Value = new SampleId[] {
+                    new SampleId("Sample_1"),
+                    new SampleId("Sample_2"),
+                }
+            };
+            var json = instance.ToJson();
+
+            Assert.AreEqual("{ \"Value\" : [\"Sample_1\", \"Sample_2\"] }", json);
+        }
+
+        [Test]
         public void should_deserialize()
         {
             var instance = BsonSerializer.Deserialize<ClassWithSampleIdentity>("{ Value:\"Sample_1\"}");
             Assert.AreEqual("Sample_1", (string)instance.Value);
+        }
+
+        [Test]
+        public void should_deserialize_array()
+        {
+            var instance = BsonSerializer.Deserialize<ClassWithArrayIdentity>("{ \"Value\" : [\"Sample_1\", \"Sample_2\"] }");
+            Assert.That(instance.Value, Is.EquivalentTo(new SampleId[] {
+                    new SampleId("Sample_1"),
+                    new SampleId("Sample_2"),
+                }));
         }
 
         [Test]
@@ -143,6 +254,19 @@ namespace Jarvis.Framework.Tests.DomainTests
             var instance = new ClassWithSampleIdentity();
             var json = instance.ToJson();
             Assert.AreEqual("{ \"Value\" : null }", json);
+        }
+
+        [Test]
+        public void should_serialize_flat_with_aggregateSnapshot()
+        {
+            var instance = new AggregateSnapshot<StateWithIdentity>()
+            {
+                Id = new SampleId(1),
+                Version = 1,
+                State = new StateWithIdentity() { Value = new SampleId(2) }
+            };
+            var json = instance.ToJson();
+            Assert.That(json.Contains("\"_t\""), Is.False);
         }
 
         [Test]
@@ -158,6 +282,24 @@ namespace Jarvis.Framework.Tests.DomainTests
             EventStoreIdentityCustomBsonTypeMapper.Register<SampleId>();
             var val = BsonValue.Create(new SampleId(1));
             Assert.IsInstanceOf<BsonString>(val);
+        }
+
+        [Test]
+        public void should_serialize_flat_in_dictionary()
+        {
+            var instance = new ClassWithDictionaryOfObject();
+            instance.Value = new Dictionary<string, object>() { { "test", new SampleId(1) } };
+            var json = instance.ToJson();
+            Assert.AreEqual("{ \"Value\" : { \"test\" : \"Sample_1\" } }", json);
+        }
+
+        [Test]
+        public void base_smoke_dictionary()
+        {
+            var instance = new ClassWithDictionaryOfObject();
+            instance.Value = new Dictionary<string, object>() { { "test", "blabla" } };
+            var json = instance.ToJson();
+            Assert.AreEqual("{ \"Value\" : { \"test\" : \"blabla\" } }", json);
         }
     }
 }

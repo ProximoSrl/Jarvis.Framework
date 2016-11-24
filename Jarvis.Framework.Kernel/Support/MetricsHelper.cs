@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
+using Jarvis.Framework.Shared;
 
 namespace Jarvis.Framework.Kernel.Support
 {
@@ -23,19 +24,19 @@ namespace Jarvis.Framework.Kernel.Support
         /// </summary>
         private const String _projectionEngineCurrentDispatchCount = "N° actual concurrent commit dispatch";
 
-        public static void SetProjectionEngineCurrentDispatchCount(Func<Double> valueProvider)
+        public static void SetProjectionEngineCurrentDispatchCount(Func<double> valueProvider)
         {
             Metric.Gauge(_projectionEngineCurrentDispatchCount, valueProvider, Unit.Custom("Commits"));
         }
 
-        public static void SetCheckpointCountToDispatch(String slotName, Func<Double> valueProvider)
+        public static void SetCheckpointCountToDispatch(String slotName, Func<double> valueProvider)
         {
             //These stats are valid only during a rebuild and not during standard working.
             if (!RebuildSettings.ShouldRebuild)
                 return;
 
             String gaugeName;
-            if (!string.IsNullOrEmpty(slotName))
+            if (!String.IsNullOrEmpty(slotName))
             {
                 gaugeName = _checkpointToDispatchRebuildGaugeName + "-" + slotName;
             }
@@ -50,10 +51,10 @@ namespace Jarvis.Framework.Kernel.Support
             Metric.Gauge(gaugeName, valueProvider, Unit.Items);
         }
 
-        public static void SetCommitPollingClientBufferSize(String pollerName, Func<Double> valueProvider)
+        public static void SetCommitPollingClientBufferSize(String pollerName, Func<double> valueProvider)
         {
             String gaugeName;
-            if (!string.IsNullOrEmpty(pollerName))
+            if (!String.IsNullOrEmpty(pollerName))
             {
                 gaugeName = _commitPollingClientBufferSizeGaugeName + "-" + pollerName;
             }
@@ -68,7 +69,7 @@ namespace Jarvis.Framework.Kernel.Support
             Metric.Gauge(gaugeName, valueProvider, Unit.Items);
         }
 
-        private static readonly Dictionary<String, Meter> CommitDispatchIndex = new Dictionary<string, Meter>();
+        private static readonly Dictionary<string, Meter> CommitDispatchIndex = new Dictionary<string, Meter>();
 
         public static void CreateMeterForDispatcherCountSlot(String slotName)
         {
@@ -89,6 +90,9 @@ namespace Jarvis.Framework.Kernel.Support
         private static readonly Counter projectionSlotCounter = Metric.Counter("prj-slot-time", Unit.Custom("ticks"));
         private static readonly Counter projectionEventCounter = Metric.Counter("prj-event-time", Unit.Custom("ticks"));
 
+        private static readonly Counter projectionCounterRebuild = Metric.Counter("prj-time-rebuild", Unit.Custom("ticks"));
+        private static readonly Counter projectionSlotCounterRebuild = Metric.Counter("prj-slot-time-rebuild", Unit.Custom("ticks"));
+        private static readonly Counter projectionEventCounterRebuild = Metric.Counter("prj-event-time-rebuild", Unit.Custom("ticks"));
 
         public static void IncrementProjectionCounter(String projectionName, String slotName, String eventName, Int64 milliseconds)
         {
@@ -97,5 +101,24 @@ namespace Jarvis.Framework.Kernel.Support
             projectionEventCounter.Increment(eventName, milliseconds);
         }
 
+        public static void IncrementProjectionCounterRebuild(String projectionName, String slotName, String eventName, Int64 milliseconds)
+        {
+            projectionCounterRebuild.Increment(projectionName, milliseconds);
+            projectionSlotCounterRebuild.Increment(slotName, milliseconds);
+            projectionEventCounterRebuild.Increment(eventName, milliseconds);
+        }
+
+        private static readonly Counter ConcurrencyExceptions = Metric.Counter("Concurrency Exceptions", Unit.Events);
+        private static readonly Counter DomainExceptions = Metric.Counter("Domain Exceptions", Unit.Events);
+
+        public static void MarkConcurrencyException()
+        {
+            ConcurrencyExceptions.Increment();
+        }
+
+        public static void MarkDomainException()
+        {
+            DomainExceptions.Increment();
+        }
     }
 }

@@ -27,8 +27,15 @@ namespace Jarvis.Framework.Tests.EngineTests
         {
             public Boolean ShouldBeFalse { get; private set; }
 
+            public Int32 TouchCount { get; set; }
+
             protected void When(SampleAggregateCreated evt)
             {
+            }
+
+            protected void When(SampleAggregateTouched evt)
+            {
+                TouchCount++;
             }
 
             protected void When(SampleAggregateInvalidated evt)
@@ -42,10 +49,16 @@ namespace Jarvis.Framework.Tests.EngineTests
 
                 return InvariantCheckResult.Success;
             }
+
+            protected override object DeepCloneMe()
+            {
+                return new State() { TouchCount = this.TouchCount };
+            }
         }
 
         public SampleAggregate()
         {
+            
         }
 
 		public void Create()
@@ -63,10 +76,25 @@ namespace Jarvis.Framework.Tests.EngineTests
             RaiseEvent(new SampleAggregateTouched());
         }
 
+        public void TouchWithThrow()
+        {
+            RaiseEvent(new SampleAggregateTouched());
+            throw new ApplicationException("This method is supposed to throw exception");
+        }
+
+
+        public void DoubleTouch()
+        {
+            RaiseEvent(new SampleAggregateTouched());
+            RaiseEvent(new SampleAggregateTouched());
+        }
+
         public IDictionary<string, object> ExposeContext
         {
             get { return Context;}
         }
+
+        public new State InternalState { get { return base.InternalState; } }
     }
 
     public class SampleAggregateForInspection : SampleAggregate
@@ -87,6 +115,12 @@ namespace Jarvis.Framework.Tests.EngineTests
     public class SampleAggregateTouched : DomainEvent
     {
     }
+
+    public class SampleAggregateBaseEvent : DomainEvent { }
+
+    public class SampleAggregateDerived1 : SampleAggregateBaseEvent { }
+
+    public class SampleAggregateDerived2 : SampleAggregateBaseEvent { }
 
     public class SampleAggregateInvalidated : DomainEvent
     {

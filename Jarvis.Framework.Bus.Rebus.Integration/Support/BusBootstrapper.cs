@@ -9,6 +9,7 @@ using System.Text;
 using Castle.MicroKernel.Registration;
 using Castle.Windsor;
 using Jarvis.Framework.Bus.Rebus.Integration.Logging;
+using Jarvis.Framework.Bus.Rebus.Integration.MongoDb;
 using Jarvis.Framework.Bus.Rebus.Integration.Serializers;
 using Jarvis.Framework.Shared.Commands;
 using Jarvis.Framework.Shared.Messages;
@@ -19,17 +20,22 @@ using Rebus.Bus;
 using Rebus.Castle.Windsor;
 using Rebus.Configuration;
 using Rebus.Messages;
-using Rebus.MongoDb;
 using Rebus.Shared;
 using Rebus.Transports.Msmq;
+using Castle.Core;
+using Castle.Facilities.Startable;
+using Jarvis.Framework.Shared.Helpers;
+using Castle.Core.Logging;
 
 namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 {
-    public class BusBootstrapper
+    public class BusBootstrapper : IStartable
     {
         private readonly IWindsorContainer _container;
         private readonly string _connectionString;
         public string Prefix { get; private set; }
+
+        public ILogger Logger { get; set; }
 
         private readonly JsonSerializerSettings _jsonSerializerSettings = new JsonSerializerSettings
         {
@@ -44,9 +50,11 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 
         public CustomJsonSerializer CustomSerializer { get; private set; }
 
+        public Boolean UseCustomSerializer { get; private set; }
+
         private IStartableBus _bus;
 
-        private Boolean _busStarted = false;
+        private Boolean _busConfigured = false;
 
         public BusBootstrapper(
             IWindsorContainer container,
@@ -59,50 +67,22 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
             CustomSerializer = new CustomJsonSerializer();
             Prefix = prefix;
             MessagesTracker = messagesTracker;
-        }
-
-        public void StartWithAppConfigWithImmediateStart()
-        {
-            StartWithAppConfig(true);
-        }
-
-        public void StartWithAppConfigWithoutImmediateStart()
-        {
-            StartWithAppConfig(false);
-        }
-
-        public void StartWithAppConfig(Boolean immediateStart)
-        {
-            if (Configuration == null)
-            {
-                throw new ConfigurationErrorsException(
-@"Configuration property is null!
-You probably forgot to register JarvisRebusConfiguration instance in Castle 
-or manually set the Configuration property of this instance.");
-            }
-
-            var busConfiguration = CreateDefaultBusConfiguration();
-
-            _bus = busConfiguration
-                .Transport(t => t.UseMsmqAndGetInputQueueNameFromAppConfig())
-                .MessageOwnership(d => d.FromRebusConfigurationSection())
-                .CreateBus();
-
-            FixTimeoutHack();
-
-            if (immediateStart) Start(Configuration.NumOfWorkers);
+            Logger = NullLogger.Instance;
         }
 
         RebusConfigurer CreateDefaultBusConfiguration()
         {
-            var busConfiguration = Configure.With(new WindsorContainerAdapter(_container))
+           
+            var busConfiguration = global::Rebus.Configuration.Configure.With(new WindsorContainerAdapter(_container))
                 .Logging(l => l.Log4Net())
                 .Serialization(c => c.Use(CustomSerializer))
-                .Timeouts(t => t.StoreInMongoDb(_connectionString, Prefix + "-timeouts"))
-                .Subscriptions(s => s.StoreInMongoDb(_connectionString, Prefix + "-subscriptions"))
+                .Timeouts(t => t.StoreInMongoDb(_connectionString, Prefix + "-timeouts", Logger))
+                .Subscriptions(s => s.StoreInMongoDb(_connectionString, Prefix + "-subscriptions", Logger))
                 .Events(e => e.MessageSent += OnMessageSent)
                 .Events(e => e.PoisonMessage += OnPoisonMessage)
                 .SpecifyOrderOfHandlers(pipeline => pipeline.Use(new RemoveDefaultTimeoutReplyHandlerFilter()));
+
+            UseCustomSerializer = true; //TODO: Make this parametric if needed
             return busConfiguration;
         }
 
@@ -114,17 +94,7 @@ or manually set the Configuration property of this instance.");
                 );
         }
 
-        public void StartWithConfigurationPropertyWithImmediateStart()
-        {
-            StartWithConfigurationProperty(true);
-        }
-
-        public void StartWithConfigurationPropertyWithoutImmediateStart()
-        {
-            StartWithConfigurationProperty(false);
-        }
-
-        public void StartWithConfigurationProperty(Boolean immediateStart)
+        private void Configure()
         {
             if (Configuration == null)
             {
@@ -149,21 +119,19 @@ or manually set the Configuration property of this instance.");
                 .MessageOwnership(mo => mo.Use(new JarvisDetermineMessageOwnershipFromConfigurationManager(endpointsMap)))
                 .Behavior(b => b.SetMaxRetriesFor<Exception>(Configuration.MaxRetry))
                 .CreateBus();
-
+            _container.Register(Component.For<IStartableBus>().Instance(_bus));
             FixTimeoutHack();
-
-            if (immediateStart) Start(workersNumber);
         }
 
-        public void Start(Int32 numberOfWorkers)
+        /// <summary>
+        /// This is the method that starts the bus.
+        /// </summary>
+        public void Start()
         {
-            if (_bus == null)
-                throw new ApplicationException("Unable to start, bus still not created.");
-            if (_busStarted)
+            if (_busConfigured)
                 return;
 
-            _bus.Start(numberOfWorkers);
-            _busStarted = true;
+            Configure();
         }
 
         void OnPoisonMessage(IBus bus, ReceivedTransportMessage message, PoisonMessageInfo poisonmessageinfo)
@@ -243,6 +211,16 @@ or manually set the Configuration property of this instance.");
 
         private ICommand GetCommandFromMessage(ReceivedTransportMessage message)
         {
+            if (UseCustomSerializer)
+            {
+                var deserializedMessage = CustomSerializer.Deserialize(message);
+                if (deserializedMessage != null && deserializedMessage.Messages.Length > 0)
+                {
+                    var command = deserializedMessage.Messages[0] as ICommand;
+                    if (command != null) return command;
+                }
+            }
+
             string body;
             switch (message.Headers["rebus-encoding"].ToString().ToLowerInvariant())
             {
@@ -273,6 +251,50 @@ or manually set the Configuration property of this instance.");
             }
 
             return null;
+        }
+
+        public void Stop()
+        {
+            
+        }
+    }
+
+    public class BusStarter : IStartable
+    {
+        IStartableBus _startableBus;
+        IBus _bus;
+        JarvisRebusConfiguration _configuration;
+        Boolean _busStarted = false;
+
+        public BusStarter(
+            IStartableBus startableBus, 
+            JarvisRebusConfiguration configuration,
+            IBus bus)
+        {
+            _startableBus = startableBus;
+            _configuration = configuration;
+            _bus = bus;
+        }
+
+        public void Start()
+        {
+            if (_busStarted) return;
+
+            _startableBus.Start(_configuration.NumOfWorkers);
+            _busStarted = true;
+
+            //now register explicit subscriptions.
+            foreach (var subscription in _configuration.ExplicitSubscriptions)
+            {
+                var type = Type.GetType(subscription.MessageType);
+                _bus.Advanced.Routing.Subscribe(type, subscription.Endpoint);
+            }
+            _busStarted = true;
+        }
+
+        public void Stop()
+        {
+          
         }
     }
 

@@ -3,7 +3,7 @@ using Castle.Core.Logging;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
-using MongoDB.Driver.Builders;
+using Jarvis.Framework.Shared.Helpers;
 using MongoDB.Bson.Serialization;
 using Jarvis.Framework.Shared.IdentitySupport.Serialization;
 
@@ -16,7 +16,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
     public abstract class AbstractIdentityTranslator<TKey> : IIdentityTranslator where TKey : EventStoreIdentity
     {
         private ILogger _logger;
-        private readonly MongoCollection<MappedIdentity> _collection;
+        private readonly IMongoCollection<MappedIdentity> _collection;
         private IIdentityGenerator IdentityGenerator { get; set; }
 
         public ILogger Logger
@@ -44,16 +44,17 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                 ExternalKey = newKey;
             }
         }
-        internal Boolean IsFlatMapping { get; private set; }
-        protected AbstractIdentityTranslator(MongoDatabase systemDB, IIdentityGenerator identityGenerator)
+
+        //internal Boolean IsFlatMapping { get; private set; }
+        protected AbstractIdentityTranslator(IMongoDatabase systemDB, IIdentityGenerator identityGenerator)
         {
             IdentityGenerator = identityGenerator;
             _collection = systemDB.GetCollection<MappedIdentity>("map_" + typeof(TKey).Name.ToLower());
-            var serializer = BsonSerializer.LookupSerializer(typeof(TKey));
-            if (serializer is EventStoreIdentityBsonSerializer)
-            {
-                IsFlatMapping = true;
-            }
+            //var serializer = BsonSerializer.LookupSerializer(typeof(TKey));
+            //if (serializer is EventStoreIdentityBsonSerializer)
+            //{
+            //    IsFlatMapping = true;
+            //}
         }
 
         protected void AddAlias(TKey key, string alias)
@@ -77,8 +78,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         {
             if (alias == null) throw new ArgumentNullException();
             alias = alias.ToLowerInvariant();
-            String query = IsFlatMapping == false ? "AggregateId._id" : "AggregateId";
-            _collection.Remove(Query.EQ(query, BsonValue.Create(key.FullyQualifiedId)));
+            DeleteAliases(key);
             MapIdentity(alias, key);
         }
 
@@ -123,21 +123,22 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             try
             {
                 var mapped = new MappedIdentity(externalKey, key);
-                _collection.Insert(mapped);
+                _collection.InsertOne(mapped);
                 return mapped;
             }
-            catch (WriteConcernException ex)
+            catch (Exception ex)
             {
-                if (ex.Message.Contains("E11000 duplicate key"))
+                if (ex is MongoWriteException || ex is MongoWriteConcernException)
                 {
-                    var mapped = _collection.FindOneById(externalKey);
-                    if (mapped != null)
-                        return mapped;
+                    if (ex.Message.Contains("E11000 duplicate key"))
+                    {
+                        var mapped = _collection.FindOneById(externalKey);
+                        if (mapped != null)
+                            return mapped;
+                    }
                 }
-                else
-                {
-                    throw;
-                }
+
+                throw;
             }
 
             throw new Exception("Something went damn wrong...");
@@ -145,8 +146,8 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
         public void DeleteAliases(TKey key)
         {
-            String query = IsFlatMapping == false ? "AggregateId._id" : "AggregateId";
-            _collection.Remove(Query.EQ(query, BsonValue.Create(key.FullyQualifiedId)));
+            var id = key;
+            _collection.DeleteMany(Builders<MappedIdentity>.Filter.Eq("AggregateId", id));
         }
     }
 }

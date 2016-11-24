@@ -13,9 +13,16 @@ using NUnit.Framework;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
-    [TestFixture]
-    public class ProjectionEngineTestsPoller : AbstractV2ProjectionEngineTests
+
+    //[TestFixture("1")]
+    [TestFixture("2")]
+    public class ProjectionEngineTestsPoller : ProjectionEngineBasicTestBase
     {
+        public ProjectionEngineTestsPoller(String pollingClientVersion) : base(pollingClientVersion)
+        {
+
+        }
+
         [TestFixtureSetUp]
         public override void TestFixtureSetUp()
         {
@@ -34,7 +41,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 
         protected override IEnumerable<IProjection> BuildProjections()
         {
-            var writer = new CollectionWrapper<SampleReadModel, string>(StorageFactory,new NotifyToNobody());
+            var writer = new CollectionWrapper<SampleReadModel, string>(StorageFactory, new NotifyToNobody());
             yield return new Projection(writer);
         }
 

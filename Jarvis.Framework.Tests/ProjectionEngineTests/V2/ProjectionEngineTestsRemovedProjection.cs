@@ -10,20 +10,27 @@ using Jarvis.Framework.Shared.Messages;
 using Jarvis.Framework.Shared.ReadModel;
 using Jarvis.Framework.TestHelpers;
 using Jarvis.Framework.Tests.EngineTests;
-using MongoDB.Driver.Builders;
+
 using NUnit.Framework;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
-    [TestFixture]
-    public class ProjectionEngineTestsRemovedProjection : AbstractV2ProjectionEngineTests
+
+    //[TestFixture("1")]
+    [TestFixture("2")]
+    public class ProjectionEngineTestsRemovedProjection : ProjectionEngineBasicTestBase
     {
+        public ProjectionEngineTestsRemovedProjection(String pollingClientVersion) : base(pollingClientVersion)
+        {
+
+        }
+
         [TestFixtureSetUp]
         public override void TestFixtureSetUp()
         {
             base.TestFixtureSetUp();
         }
-          
+
         protected override void RegisterIdentities(IdentityManager identityConverter)
         {
             identityConverter.RegisterIdentitiesFromAssembly(typeof(SampleAggregateId).Assembly);
@@ -36,7 +43,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 
         protected override IEnumerable<IProjection> BuildProjections()
         {
-            var writer = new CollectionWrapper<SampleReadModel, string>(StorageFactory,new NotifyToNobody());
+            var writer = new CollectionWrapper<SampleReadModel, string>(StorageFactory, new NotifyToNobody());
             yield return new Projection(writer);
             var writer3 = new CollectionWrapper<SampleReadModel3, string>(StorageFactory, new NotifyToNobody());
             if (returnProjection3) yield return new Projection3(writer3);
@@ -49,12 +56,12 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregateId(1));
             aggregate.Create();
             Repository.Save(aggregate, Guid.NewGuid(), h => { });
-              
+
             aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregateId(2));
             aggregate.Create();
             Repository.Save(aggregate, Guid.NewGuid(), h => { });
 
-            var stream = _eventStore.Advanced.GetFrom("0");
+            var stream = _eventStore.Advanced.GetFrom(0);
             var lastCommit = stream.Last();
             await Engine.UpdateAndWait();
             Assert.That(_statusChecker.IsCheckpointProjectedByAllProjection(lastCommit.CheckpointToken), Is.True);
@@ -63,12 +70,12 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             returnProjection3 = false;
             ConfigureEventStore();
             ConfigureProjectionEngine();
-             
+
             aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregateId(3));
             aggregate.Create();
             Repository.Save(aggregate, Guid.NewGuid(), h => { });
 
-            stream = _eventStore.Advanced.GetFrom("0");
+            stream = _eventStore.Advanced.GetFrom(0);
             lastCommit = stream.Last();
             await Engine.UpdateAndWait();
             Assert.That(_statusChecker.IsCheckpointProjectedByAllProjection(lastCommit.CheckpointToken), Is.True);

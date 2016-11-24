@@ -12,7 +12,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using MongoDB.Driver.Linq;
-using MongoDB.Driver.Builders;
 
 namespace Jarvis.MonitoringAgent.Client.Jobs
 {
@@ -33,15 +32,15 @@ namespace Jarvis.MonitoringAgent.Client.Jobs
 
         public String Collection { get; set; }
 
-        private MongoCollection<BsonDocument> _collection;
-        private MongoCollection<UploadCheckpoint> _checkpointCollection;
+        private IMongoCollection<BsonDocument> _collection;
+        private IMongoCollection<UploadCheckpoint> _checkpointCollection;
         private UploadCheckpoint _checkpoint;
         private MonitoringAgentConfiguration _configuration;
 
         private class LogCollectionInfo
         {
-            private MongoCollection<BsonDocument> _collection;
-            private MongoCollection<UploadCheckpoint> _checkpointCollection;
+            private IMongoCollection<BsonDocument> _collection;
+            private IMongoCollection<UploadCheckpoint> _checkpointCollection;
             private UploadCheckpoint _checkpoint;
             private String _collectionName;
             private String _connection;
@@ -56,8 +55,8 @@ namespace Jarvis.MonitoringAgent.Client.Jobs
 
                 var url = new MongoUrl(connection);
                 var client = new MongoClient(url);
-                var db = client.GetServer().GetDatabase(url.DatabaseName);
-                _collection = db.GetCollection(collectionName);
+                var db = client.GetDatabase(url.DatabaseName);
+                _collection = db.GetCollection<BsonDocument>(collectionName);
 
                 _checkpointCollection = db.GetCollection<UploadCheckpoint>("logUploader.checkpoints");
                 _checkpoint = _checkpointCollection.AsQueryable()
@@ -72,23 +71,26 @@ namespace Jarvis.MonitoringAgent.Client.Jobs
             {
                 DateTime limit = DateTime.Now.AddSeconds(-60); //we tolerate 1 minute time skew
                 var logs = _collection.Find(
-                    Query.And(
-                        Query.GT("ts", _checkpoint.LastCheckpoint),
-                        Query.LTE("ts", limit),
-                        Query.Or(
-                            Query.EQ("le", "ERROR"),
-                            Query.EQ("le", "WARN")
+                    Builders<BsonDocument>.Filter.And(
+                        Builders<BsonDocument>.Filter.Gt("ts", _checkpoint.LastCheckpoint),
+                        Builders<BsonDocument>.Filter.Lte("ts", limit),
+                        Builders<BsonDocument>.Filter.Or(
+                            Builders<BsonDocument>.Filter.Eq("le", "ERROR"),
+                            Builders<BsonDocument>.Filter.Eq("le", "WARN")
                         )
                     )
                 )
-                .SetSortOrder(SortBy.Ascending("ts"))
-                .SetLimit(1000)
+                .Sort(Builders<BsonDocument>.Sort.Ascending("ts"))
+                .Limit(1000)
                 .ToList();
 
                 if (logs.Count > 0)
                 {
                     _checkpoint.LastCheckpoint = logs.Last()["ts"].ToUniversalTime();
-                    _checkpointCollection.Save(_checkpoint);
+                    _checkpointCollection.ReplaceOneAsync(
+                       x => x.CollectionName == _checkpoint.CollectionName,
+                       _checkpoint,
+                       new UpdateOptions { IsUpsert = true });
 
                     foreach (var log in logs)
                     {

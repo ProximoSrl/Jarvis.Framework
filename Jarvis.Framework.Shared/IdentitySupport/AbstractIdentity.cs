@@ -1,5 +1,5 @@
 using System;
-using CommonDomain;
+using NEventStore.Domain;
 using Jarvis.NEventStoreEx.CommonDomainEx;
 using MongoDB.Bson.Serialization.Attributes;
 using Newtonsoft.Json;

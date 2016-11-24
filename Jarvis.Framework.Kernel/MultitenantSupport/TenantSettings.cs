@@ -36,11 +36,11 @@ namespace Jarvis.Framework.Kernel.MultitenantSupport
             return connectionString;
         }
 
-        protected MongoDatabase GetDatabase(string connectionStringName)
+        protected IMongoDatabase GetDatabase(string connectionStringName)
         {
             var url = new MongoUrl(GetConnectionString(connectionStringName));
             var client = new MongoClient(url);
-            return client.GetServer().GetDatabase(url.DatabaseName);
+            return client.GetDatabase(url.DatabaseName);
         }
 
         public void Set(string key, object value)

@@ -1,16 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.IO;
+using System.Security.Cryptography;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace Jarvis.MonitoringAgent.Common
 {
-    using System;
-    using System.IO;
-    using System.Security.Cryptography;
-    using System.Text;
-
     namespace Jarvis.MonitoringAgent.Common
     {
         public class EncryptionKey

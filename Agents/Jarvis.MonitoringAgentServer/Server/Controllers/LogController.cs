@@ -1,5 +1,4 @@
 ﻿using Castle.Core.Logging;
-using Jarvis.MonitoringAgent.Common.Jarvis.MonitoringAgent.Common;
 using Jarvis.MonitoringAgentServer.Server.Data;
 using Jarvis.MonitoringAgentServer.Support;
 using MongoDB.Bson;
@@ -16,6 +15,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web.Http;
+using Jarvis.MonitoringAgent.Common.Jarvis.MonitoringAgent.Common;
 
 namespace Jarvis.MonitoringAgentServer.Server.Controllers
 {
@@ -25,14 +25,14 @@ namespace Jarvis.MonitoringAgentServer.Server.Controllers
 
         MonitoringAgentServerConfiguration _configuration;
 
-        public MongoCollection<Customer> _customers { get; set; }
+        public IMongoCollection<Customer> _customers { get; set; }
 
-        public MongoDatabase _mongoDatabase { get; set; }
+        public IMongoDatabase _mongoDatabase { get; set; }
 
         public LogController(
             MonitoringAgentServerConfiguration configuration, 
-            MongoCollection<Customer> customers,
-            MongoDatabase mongoDatabase)
+            IMongoCollection<Customer> customers,
+            IMongoDatabase mongoDatabase)
         {
             _configuration = configuration;
             _customers = customers;
@@ -99,7 +99,7 @@ namespace Jarvis.MonitoringAgentServer.Server.Controllers
                    );
                 }
 
-                var customer = _customers.FindOneById(BsonValue.Create(customerId));
+                var customer = _customers.Find(Builders<Customer>.Filter.Eq(c => c.Name, customerId)).SingleOrDefault();
                 if (customer == null)
                 {
                     Logger.ErrorFormat("Customer {0} Missing", customerId);
@@ -151,7 +151,11 @@ namespace Jarvis.MonitoringAgentServer.Server.Controllers
                 foreach (var log in File.ReadLines(logDumpFile))
                 {
                     BsonDocument doc = BsonSerializer.Deserialize<BsonDocument>(log);
-                    collection.Save(doc);
+
+                    collection.ReplaceOneAsync(
+                       Builders<BsonDocument>.Filter.Eq("_id", doc["_id"]),
+                       doc,
+                       new UpdateOptions { IsUpsert = true });
                 }
             }
         }

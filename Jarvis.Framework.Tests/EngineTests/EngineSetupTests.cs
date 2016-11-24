@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Configuration;
 using Castle.Core.Logging;
-using CommonDomain.Core;
+using NEventStore.Domain.Core;
 using Jarvis.Framework.Kernel.Engine;
 using Jarvis.Framework.Shared.IdentitySupport;
 using Jarvis.Framework.TestHelpers;
@@ -10,8 +10,9 @@ using Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore;
 using MongoDB.Driver;
 using NSubstitute;
 using NUnit.Framework;
-
+using Jarvis.Framework.Shared.Helpers;
 // ReSharper disable InconsistentNaming
+using System.Linq;
 
 namespace Jarvis.Framework.Tests.EngineTests
 {
@@ -20,7 +21,7 @@ namespace Jarvis.Framework.Tests.EngineTests
     {
         private EventStoreFactory _factory;
         string _connectionString;
-        private MongoDatabase _db;
+        private IMongoDatabase _db;
 
         [SetUp]
         public void SetUp()
@@ -31,6 +32,8 @@ namespace Jarvis.Framework.Tests.EngineTests
             var loggerFactory = Substitute.For<ILoggerFactory>();
             loggerFactory.Create(Arg.Any<Type>()).Returns(NullLogger.Instance);
             _factory = new EventStoreFactory(loggerFactory);
+
+            TestHelper.RegisterSerializerForFlatId<SampleAggregateId>();
         }
 
         [Test]
@@ -38,9 +41,9 @@ namespace Jarvis.Framework.Tests.EngineTests
         {
             _factory.BuildEventStore(_connectionString);
 
-            Assert.IsTrue(_db.Server.DatabaseExists(_db.Name));
-            Assert.IsTrue(_db.CollectionExists("Commits"));
-            Assert.IsTrue(_db.CollectionExists("Streams"));
+            Assert.IsTrue(_db.Client.ListDatabases().ToList().Any(n => n["name"].AsString == _db.DatabaseNamespace.DatabaseName));
+            Assert.IsTrue(_db.ListCollections().ToList().Any(c => c["name"].AsString == "Commits"));
+            Assert.IsTrue(_db.ListCollections().ToList().Any(c => c["name"].AsString == "Streams"));
         }
 
         [Test]
@@ -51,7 +54,8 @@ namespace Jarvis.Framework.Tests.EngineTests
                 eventStore,
                 new AggregateFactory(),
                 new ConflictDetector(),
-                new IdentityManager(new InMemoryCounterService())
+                new IdentityManager(new InMemoryCounterService()),
+                NSubstitute.Substitute.For<NEventStore.Logging.ILog>()
             );
 
             var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregate.State(), new SampleAggregateId(1));

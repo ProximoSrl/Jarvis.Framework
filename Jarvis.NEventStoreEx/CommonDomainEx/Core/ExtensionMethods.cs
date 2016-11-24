@@ -1,5 +1,6 @@
-﻿using System.Globalization;
-using CommonDomain.Core;
+﻿using NEventStore.Domain.Core;
+using System.Globalization;
+
 
 namespace Jarvis.NEventStoreEx.CommonDomainEx.Core
 {

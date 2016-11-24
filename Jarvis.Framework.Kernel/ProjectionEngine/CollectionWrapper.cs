@@ -17,7 +17,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         private const string ConcurrencyException = "E1100";
         private readonly INotifyToSubscribers _notifyToSubscribers;
         private Action<TModel, DomainEvent> _onSave = (model, e) => { };
-        private Func<TModel, TModel> _prepareForNotification = (model) => model;
+        private Func<TModel, Object> _transformForNotification = (model) => model;
         private readonly IMongoStorage<TModel, TKey> _storage;
 
         public CollectionWrapper(
@@ -37,6 +37,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                     this.Projection = projection;
                 }
         */
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="projection"></param>
+        /// <param name="bEnableNotifications"></param>
         public void Attach(IProjection projection, bool bEnableNotifications = true)
         {
             if (this.Projection != null)
@@ -44,7 +50,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
             this.Projection = projection;
             this.NotifySubscribers = bEnableNotifications;
-
             projection.Observe(this);
         }
 
@@ -71,14 +76,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         #region ICollectionWrapper members
 
-        public void CreateIndex(IMongoIndexKeys keys, IMongoIndexOptions options = null)
+        public void CreateIndex(String name, IndexKeysDefinition<TModel> keys, CreateIndexOptions options = null)
         {
-            _storage.CreateIndex(keys, options);
+            _storage.CreateIndex(name, keys, options);
         }
 
-        public bool IndexExists(IMongoIndexKeys keys)
+        public bool IndexExists(String name)
         {
-            return _storage.IndexExists(keys);
+            return _storage.IndexExists(name);
         }
 
         public void InsertBatch(IEnumerable<TModel> values)
@@ -129,7 +134,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             }
 
             if (!IsReplay && (notify || NotifySubscribers))
-                _notifyToSubscribers.Send(ReadModelUpdatedMessage.Created<TModel, TKey>(PrepareForNotification(model)));
+            {
+                Object notificationPayload = null;
+                notificationPayload = TransformForNotification(model);
+                _notifyToSubscribers.Send(ReadModelUpdatedMessage.Created<TModel, TKey>(model.Id, notificationPayload));
+            }
+
         }
 
         public TModel Upsert(DomainEvent e, TKey id, Func<TModel> insert, Action<TModel> update, bool notify = false)
@@ -155,7 +165,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         public void Save(DomainEvent e, TModel model, bool notify = false)
         {
-            OnSave(model,e );
+            OnSave(model, e);
             var orignalVersion = model.Version;
             model.Version++;
             model.AddEvent(e.MessageId);
@@ -167,7 +177,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 throw new Exception("Concurency exception");
 
             if (!IsReplay && (notify || NotifySubscribers))
-                _notifyToSubscribers.Send(ReadModelUpdatedMessage.Updated<TModel, TKey>(PrepareForNotification(model)));
+            {
+                Object notificationPayload = null;
+                notificationPayload = TransformForNotification(model);
+                _notifyToSubscribers.Send(ReadModelUpdatedMessage.Updated<TModel, TKey>(model.Id, notificationPayload));
+            }
         }
 
         public void FindAndModify(DomainEvent e, Expression<Func<TModel, bool>> filter, Action<TModel> action, bool notify = false)
@@ -180,6 +194,23 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                     Save(e, model, notify);
                 }
             }
+        }
+
+        public void FindAndModifyByProperty<TProperty>(DomainEvent e, Expression<Func<TModel, TProperty>> propertySelector, TProperty propertyValue, Action<TModel> action, bool notify = false)
+        {
+            foreach (var model in _storage.FindManyByProperty(propertySelector, propertyValue))
+            {
+                if (!model.BuiltFromEvent(e.MessageId))
+                {
+                    action(model);
+                    Save(e, model, notify);
+                }
+            }
+        }
+
+        public IEnumerable<TModel> FindByProperty<TProperty>(Expression<Func<TModel, TProperty>> propertySelector, TProperty propertyValue)
+        {
+            return _storage.FindManyByProperty(propertySelector, propertyValue);
         }
 
         public void FindAndModify(DomainEvent e, TKey id, Action<TModel> action, bool notify = false)
@@ -239,10 +270,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             }
         }
 
-        public Func<TModel, TModel> PrepareForNotification
+        public Func<TModel, Object> TransformForNotification
         {
-            get { return _prepareForNotification; }
-            set { _prepareForNotification = value; }
+            get { return _transformForNotification; }
+            set { _transformForNotification = value; }
         }
 
         public void RebuildStarted()

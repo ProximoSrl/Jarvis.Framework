@@ -14,9 +14,9 @@ namespace Jarvis.MonitoringAgent.Common.Jobs
     {
         public String Name { get { return "JobStatusListener"; } }
 
-        private MongoCollection<JobStatus> _collection;
+        private IMongoCollection<JobStatus> _collection;
 
-        public JobStatusListener(MongoDatabase db)
+        public JobStatusListener(IMongoDatabase db)
         {
             _collection = db.GetCollection<JobStatus>("jobStatus");
         }
@@ -44,7 +44,8 @@ namespace Jarvis.MonitoringAgent.Common.Jobs
             try
             {
                 var jobId = context.JobDetail.JobType.Name;
-                var data = _collection.FindOneById(BsonValue.Create(jobId));
+                var data = _collection.FindSync(Builders<JobStatus>.Filter.Eq(j => j.JobId, jobId))
+                    .Single();
 
                 if (data == null)
                 {
@@ -54,7 +55,10 @@ namespace Jarvis.MonitoringAgent.Common.Jobs
 
                 data.LastExecution = DateTime.UtcNow;
                 data.AddExecutionList(context, exception);
-                _collection.Save(data);
+                _collection.ReplaceOneAsync(
+                       x => x.JobId == data.JobId,
+                       data,
+                       new UpdateOptions { IsUpsert = true }); 
             }
             catch (Exception ex)
             {

@@ -13,7 +13,6 @@ using Jarvis.Framework.Shared.Logging;
 using Jarvis.Framework.Shared.MultitenantSupport;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using MongoDB.Driver.Builders;
 using MongoDB.Driver.Linq;
 using NEventStore;
 using NEventStore.Client;
@@ -22,15 +21,16 @@ using NEventStore.Persistence;
 using Jarvis.Framework.Kernel.Support;
 using System.Collections.Concurrent;
 using System.Text;
+using Jarvis.Framework.Shared.Helpers;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
 {
     public class ProjectionEngine : ITriggerProjectionsUpdate
     {
-        readonly Func<IPersistStreams, CommitPollingClient> _pollingClientFactory;
+        readonly ICommitPollingClientFactory _pollingClientFactory;
 
-        private List<CommitPollingClient> _clients;
-        private Dictionary<BucketInfo, CommitPollingClient> _bucketToClient;
+        private List<ICommitPollingClient> _clients;
+        private Dictionary<BucketInfo, ICommitPollingClient> _bucketToClient;
 
         readonly IConcurrentCheckpointTracker _checkpointTracker;
 
@@ -63,7 +63,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         private readonly IRebuildContext _rebuildContext;
 
         public ProjectionEngine(
-            Func<IPersistStreams, CommitPollingClient> pollingClientFactory,
+			ICommitPollingClientFactory pollingClientFactory,
             IConcurrentCheckpointTracker checkpointTracker,
             IProjection[] projections,
             IHousekeeper housekeeper,
@@ -91,8 +91,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 .ToDictionary(x => x.Key, x => x.OrderByDescending(p => p.Priority).ToArray());
 
             _metrics = new ProjectionMetrics(_allProjections);
-            _clients = new List<CommitPollingClient>();
-            _bucketToClient = new Dictionary<BucketInfo, CommitPollingClient>();
+            _clients = new List<ICommitPollingClient>();
+            _bucketToClient = new Dictionary<BucketInfo, ICommitPollingClient>();
         }
 
         private void DumpProjections()
@@ -114,7 +114,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         public void Start()
         {
             if (Logger.IsDebugEnabled) Logger.DebugFormat("Starting projection engine on tenant {0}", _config.TenantId);
-            
+
             StartPolling();
             if (Logger.IsDebugEnabled) Logger.Debug("Projection engine started");
         }
@@ -155,7 +155,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             Init();
             foreach (var client in _clients)
             {
-                client.StartManualPolling(GetStartGlobalCheckpoint());
+                client.StartManualPolling(GetStartGlobalCheckpoint(), _config.PollingMsInterval, 4000, "CommitPollingClient");
             }
             if (immediatePoll) Poll();
         }
@@ -168,6 +168,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 bucket.Value.StartAutomaticPolling(
                     GetStartGlobalCheckpoint(),
                     _config.PollingMsInterval,
+                    maxCheckpointRebuilded,
                     bucket.Key.BufferSize,
                     "CommitPollingClient-" + bucket.Key.Slots.Aggregate((s1, s2) => s1 + ',' + s2));
             }
@@ -199,7 +200,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             //recreate all polling clients.
             foreach (var bucket in _config.BucketInfo)
             {
-                var client = _pollingClientFactory(_eventstore.Advanced);
+                var client = _pollingClientFactory.Create(_eventstore.Advanced, "bucket: " + String.Join(",", bucket.Slots));
                 _clients.Add(client);
                 _bucketToClient.Add(bucket, client);
             }
@@ -216,57 +217,52 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                     b.Slots.Any(s => s.Equals(slotName, StringComparison.OrdinalIgnoreCase))) ??
                     _config.BucketInfo.Single(b => b.Slots[0] == "*");
                 var client = _bucketToClient[slotBucket];
-                client.AddConsumer(commit => DispatchCommit(commit, name, LongCheckpoint.Parse(startCheckpoint)));
+                client.AddConsumer(commit => DispatchCommit(commit, name, startCheckpoint));
             }
 
             MetricsHelper.SetProjectionEngineCurrentDispatchCount(() => _countOfConcurrentDispatchingCommit);
         }
 
-        string GetStartGlobalCheckpoint()
+        Int64 GetStartGlobalCheckpoint()
         {
             var checkpoints = _projectionsBySlot.Keys.Select(GetStartCheckpointForSlot).Distinct().ToArray();
-            var min = checkpoints.Any() ? checkpoints.Min(x => LongCheckpoint.Parse(x).LongValue) : 0;
+            var min = checkpoints.Any() ? checkpoints.Min() : 0;
 
-            return new LongCheckpoint(min).Value;
+            return min;
         }
 
-        string GetStartCheckpointForSlot(string slotName)
+        Int64 GetStartCheckpointForSlot(string slotName)
         {
-            LongCheckpoint min = null;
+            Int64 min = Int64.MaxValue;
 
             var projections = _projectionsBySlot[slotName];
             foreach (var projection in projections)
             {
                 if (_checkpointTracker.NeedsRebuild(projection))
-                    return null;
+                    return 0;
 
                 var currentValue = _checkpointTracker.GetCurrent(projection);
-                if (currentValue == null)
-                    return null;
-
-                var currentCheckpoint = LongCheckpoint.Parse(currentValue);
-
-                if (min == null || currentCheckpoint.LongValue < min.LongValue)
+                if (currentValue < min)
                 {
-                    min = currentCheckpoint;
+                    min = currentValue;
                 }
             }
 
-            return min.Value;
+            return min;
         }
+
+        private Int64 maxCheckpointRebuilded = 0;
 
         void ConfigureProjections()
         {
-            _checkpointTracker.SetUp(_allProjections, 1);
+            _checkpointTracker.SetUp(_allProjections, 1, true);
             var lastCommit = GetLastCommitId();
             foreach (var slot in _projectionsBySlot)
             {
                 var maxCheckpointDispatchedInSlot = slot.Value
                     .Select(projection =>
                     {
-                        var checkpoint = _checkpointTracker.GetCheckpoint(projection);
-                        var longCheckpoint = LongCheckpoint.Parse(checkpoint);
-                        return longCheckpoint.LongValue;
+                        return _checkpointTracker.GetCheckpoint(projection);
                     })
                     .Max();
 
@@ -278,7 +274,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                         if (maxCheckpointDispatchedInSlot > 0)
                         {
                             _checkpointTracker.SetCheckpoint(projection.GetCommonName(),
-                                maxCheckpointDispatchedInSlot.ToString());
+                                maxCheckpointDispatchedInSlot);
                             projection.Drop();
                             projection.StartRebuild(_rebuildContext);
                             _checkpointTracker.RebuildStarted(projection, lastCommit);
@@ -290,6 +286,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                             //so we need to immediately stop rebuilding.
                             projection.StopRebuild();
                         }
+                        maxCheckpointRebuilded = Math.Max(maxCheckpointRebuilded,_checkpointTracker.GetCheckpoint(projection));
                     }
 
                     projection.SetUp();
@@ -308,17 +305,18 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             }
         }
 
-        private String GetLastCommitId()
+        private Int64 GetLastCommitId()
         {
             var collection = GetMongoCommitsCollection();
-            var lastCommit = collection.Find(Query.GT("_id", BsonValue.Create(0)))
-                .SetSortOrder(SortBy.Descending("_id"))
-                .SetLimit(1)
+            var lastCommit = collection
+                .Find(Builders<BsonDocument>.Filter.Gte("_id", 0))
+                .Sort(Builders<BsonDocument>.Sort.Descending("_id"))
+                .Limit(1)
                 .FirstOrDefault();
 
-            if (lastCommit == null) return null;
+            if (lastCommit == null) return 0;
 
-            return lastCommit["_id"].ToString();
+            return lastCommit["_id"].AsInt64;
         }
 
         void HandleError(Exception exception)
@@ -330,17 +328,20 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         {
             foreach (var client in _clients)
             {
-                client.StopPolling();
+                client.StopPolling(false);
             }
             _clients.Clear();
             _bucketToClient.Clear();
-            _eventstore.Dispose();
+            if (_eventstore != null)
+            {
+                _eventstore.Dispose();
+            }
         }
 
         private ConcurrentDictionary<String, Int64> lastCheckpointDispatched =
             new ConcurrentDictionary<string, long>();
 
-        void DispatchCommit(ICommit commit, string slotName, LongCheckpoint startCheckpoint)
+        void DispatchCommit(ICommit commit, string slotName, Int64 startCheckpoint)
         {
             Interlocked.Increment(ref _countOfConcurrentDispatchingCommit);
             //Console.WriteLine("[{0:00}] - Slot {1}", Thread.CurrentThread.ManagedThreadId, slotName);
@@ -348,32 +349,32 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
             if (Logger.IsDebugEnabled) Logger.DebugFormat("Dispatching checkpoit {0} on tenant {1}", commit.CheckpointToken, _config.TenantId);
             TenantContext.Enter(_config.TenantId);
-            var chkpoint = LongCheckpoint.Parse(commit.CheckpointToken);
+            var chkpoint = commit.CheckpointToken;
 
             if (!lastCheckpointDispatched.ContainsKey(slotName))
             {
                 lastCheckpointDispatched[slotName] = 0;
             }
-            if (!(lastCheckpointDispatched[slotName] < chkpoint.LongValue) )
+            if (!(lastCheckpointDispatched[slotName] < chkpoint))
             {
                 var error = String.Format("Sequence broken, last checkpoint for slot {0} was {1} and now we dispatched {2}",
-                        slotName, lastCheckpointDispatched[slotName], chkpoint.LongValue);
+                        slotName, lastCheckpointDispatched[slotName], chkpoint);
                 Logger.Error(error);
                 throw new Exception(error);
             }
-              
-            if (lastCheckpointDispatched[slotName] + 1 != chkpoint.LongValue)
+
+            if (lastCheckpointDispatched[slotName] + 1 != chkpoint)
             {
                 if (lastCheckpointDispatched[slotName] > 0)
                 {
-                    Logger.WarnFormat("Sequence of commit non consecutive, last dispatched {0} receiving {1}",
-                      lastCheckpointDispatched[slotName], chkpoint.LongValue);
+                    Logger.DebugFormat("Sequence of commit non consecutive, last dispatched {0} receiving {1}",
+                      lastCheckpointDispatched[slotName], chkpoint);
                 }
             }
-            lastCheckpointDispatched[slotName] = chkpoint.LongValue;
+            lastCheckpointDispatched[slotName] = chkpoint;
 
 
-            if (chkpoint.LongValue <= startCheckpoint.LongValue)
+            if (chkpoint <= startCheckpoint)
             {
                 //Already dispatched, skip it.
                 Interlocked.Decrement(ref _countOfConcurrentDispatchingCommit);
@@ -470,7 +471,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 }
                 catch (Exception ex)
                 {
-                    Logger.ErrorFormat(ex, "Error dispathing commit id: {0}\nMessage: {1}\nError: {2}", 
+                    Logger.ErrorFormat(ex, "Error dispathing commit id: {0}\nMessage: {1}\nError: {2}",
                         commit.CheckpointToken, eventMessage.Body, ex.Message);
                     ClearLoggerThreadPropertiesForEventDispatchLoop();
                     throw;
@@ -493,16 +494,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 _notifyCommitHandled.SetDispatched(commit);
 
             // ok in multithread wihout locks!
-            if (_maxDispatchedCheckpoint < chkpoint.LongValue)
+            if (_maxDispatchedCheckpoint < chkpoint)
             {
                 if (Logger.IsDebugEnabled)
                 {
                     Logger.DebugFormat("Updating last dispatched checkpoint from {0} to {1}",
                         _maxDispatchedCheckpoint,
-                        chkpoint.LongValue
+                        chkpoint
                     );
                 }
-                _maxDispatchedCheckpoint = chkpoint.LongValue;
+                _maxDispatchedCheckpoint = chkpoint;
             }
 
             if (Logger.IsDebugEnabled) Logger.ThreadProperties["commit"] = null;
@@ -532,7 +533,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
             while (true)
             {
-                var last = collection.FindAll().SetSortOrder(SortBy.Descending("_id")).SetLimit(1).SetFields("_id").FirstOrDefault();
+                var last = collection  
+                    .FindAll()            
+                    .Sort(Builders<BsonDocument>.Sort.Descending("_id"))
+                    .Limit(1)
+                    .Project(Builders<BsonDocument>.Projection.Include("_id"))
+                    .FirstOrDefault();
+
                 if (last != null)
                 {
                     var checkpointId = last["_id"].AsInt64;
@@ -551,12 +558,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                     }
                     if (checkpointId == dispatched)
                     {
-                        last =
-                            collection.FindAll()
-                                .SetSortOrder(SortBy.Descending("_id"))
-                                .SetLimit(1)
-                                .SetFields("_id")
-                                .FirstOrDefault();
+                        last =  collection
+                            .FindAll()
+                            .Sort(Builders<BsonDocument>.Sort.Descending("_id"))
+                            .Limit(1)
+                            .Project(Builders<BsonDocument>.Projection.Include("_id"))
+                            .FirstOrDefault();
+
                         checkpointId = last["_id"].AsInt64;
                         if (checkpointId == dispatched)
                         {
@@ -588,12 +596,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             }
         }
 
-        private MongoCollection<BsonDocument> GetMongoCommitsCollection()
+        private IMongoCollection<BsonDocument> GetMongoCommitsCollection()
         {
             var url = new MongoUrl(_config.EventStoreConnectionString);
             var client = new MongoClient(url);
-            var db = client.GetServer().GetDatabase(url.DatabaseName);
-            var collection = db.GetCollection("Commits");
+            var db = client.GetDatabase(url.DatabaseName);
+            var collection = db.GetCollection<BsonDocument>("Commits");
             return collection;
         }
     }
