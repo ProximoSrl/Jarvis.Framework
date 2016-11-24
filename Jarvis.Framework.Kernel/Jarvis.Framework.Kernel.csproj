@@ -110,6 +110,7 @@
     <Compile Include="Engine\DomainAggregateDeletedException.cs" />
     <Compile Include="Engine\ISnapshotPersister.cs" />
     <Compile Include="ProjectionEngine\Client\ICommitPollingClient.cs" />
+    <Compile Include="ProjectionEngine\ICommitPollingClientFactory.cs" />
     <Compile Include="ProjectionEngine\Unfolder\Projector.cs" />
     <Compile Include="Engine\InvalidAggregateOperationException.cs" />
     <Compile Include="Engine\SagaMessage.cs" />

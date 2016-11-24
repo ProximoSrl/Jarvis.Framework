@@ -27,7 +27,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 {
     public class ProjectionEngine : ITriggerProjectionsUpdate
     {
-        readonly Func<IPersistStreams, ICommitPollingClient> _pollingClientFactory;
+        readonly ICommitPollingClientFactory _pollingClientFactory;
 
         private List<ICommitPollingClient> _clients;
         private Dictionary<BucketInfo, ICommitPollingClient> _bucketToClient;
@@ -63,7 +63,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         private readonly IRebuildContext _rebuildContext;
 
         public ProjectionEngine(
-            Func<IPersistStreams, ICommitPollingClient> pollingClientFactory,
+			ICommitPollingClientFactory pollingClientFactory,
             IConcurrentCheckpointTracker checkpointTracker,
             IProjection[] projections,
             IHousekeeper housekeeper,
@@ -200,7 +200,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             //recreate all polling clients.
             foreach (var bucket in _config.BucketInfo)
             {
-                var client = _pollingClientFactory(_eventstore.Advanced);
+                var client = _pollingClientFactory.Create(_eventstore.Advanced, "bucket: " + String.Join(",", bucket.Slots));
                 _clients.Add(client);
                 _bucketToClient.Add(bucket, client);
             }
