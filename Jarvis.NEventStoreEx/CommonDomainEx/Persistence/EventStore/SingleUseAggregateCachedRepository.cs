@@ -12,14 +12,16 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
     public class SingleUseAggregateCachedRepository<TAggregate> : IAggregateCachedRepository<TAggregate> where TAggregate : class, IAggregateEx
     {
         readonly IRepositoryEx _wrappedRepository;
-        readonly TAggregate _aggregate;
+		readonly IRepositoryExFactory _repositoryFactory;
+		readonly TAggregate _aggregate;
 
         public SingleUseAggregateCachedRepository(
-            IRepositoryEx wrappedRepository,
+            IRepositoryExFactory repositoryFactory,
             IIdentity id)
         {
-            _wrappedRepository = wrappedRepository;
-            _aggregate = wrappedRepository.GetById<TAggregate>(id);
+			_repositoryFactory = repositoryFactory;
+			_wrappedRepository = _repositoryFactory.Create();
+            _aggregate = _wrappedRepository.GetById<TAggregate>(id);
         }
 
         public TAggregate Aggregate
@@ -36,7 +38,7 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
         /// </summary>
         public void Dispose()
         {
-            _wrappedRepository.Dispose();
+			_repositoryFactory.Release(_wrappedRepository);
         }
 
         /// <summary>

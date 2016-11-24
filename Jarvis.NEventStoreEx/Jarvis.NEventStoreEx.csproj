@@ -80,6 +80,7 @@
     <Compile Include="CommonDomainEx\Persistence\EventStore\RepositoryEx.cs" />
     <Compile Include="CommonDomainEx\Persistence\EventStore\SingleUseAggregateCachedRepository.cs" />
     <Compile Include="CommonDomainEx\Persistence\IAggregateCachedRepository.cs" />
+    <Compile Include="CommonDomainEx\Persistence\IRepositoryExFactory.cs" />
     <Compile Include="CommonDomainEx\Persistence\ISagaFactory.cs" />
     <Compile Include="CommonDomainEx\Persistence\ISagaRepositoryEx.cs" />
     <Compile Include="CommonDomainEx\Persistence\IRepositoryEx.cs" />

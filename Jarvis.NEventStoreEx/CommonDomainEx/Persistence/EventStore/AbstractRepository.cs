@@ -28,6 +28,7 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
         private readonly IIdentityConverter _identityConverter;
 
         private Boolean _disposed;
+		public Boolean Disposed { get { return _disposed; } }
 
         /// <summary>
         /// When a stream is opened it is stored in dictionary 

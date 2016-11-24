@@ -26,6 +26,9 @@ using Jarvis.Framework.Shared.IdentitySupport.Serialization;
 using Jarvis.NEventStoreEx.Support;
 using Jarvis.Framework.Tests.EngineTests;
 using Jarvis.NEventStoreEx;
+using Castle.Windsor;
+using Castle.Facilities.TypedFactory;
+using Castle.MicroKernel.Registration;
 
 namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
 {
@@ -39,6 +42,7 @@ namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
         private AggregateFactory _aggregateFactory = new AggregateFactory(null);
         private const Int32 NumberOfCommitsBeforeSnapshot = 50;
         private IAggregateCachedRepositoryFactory _aggregateCachedRepositoryFactory;
+		private WindsorContainer _container;
 
         [SetUp]
         public void SetUp()
@@ -59,8 +63,16 @@ namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
             _eventStore = new EventStoreFactory(loggerFactory).BuildEventStore(connectionString);
             _sut = CreateRepository();
 
-            _aggregateCachedRepositoryFactory = new AggregateCachedRepositoryFactory(
-                () => CreateRepository(),
+			_container = new WindsorContainer();
+			_container.AddFacility<TypedFactoryFacility>();
+			_container.Register(Component.For<IRepositoryExFactory>().AsFactory());
+			_container.Register(Component
+				.For<IRepositoryEx>()
+				.UsingFactoryMethod(() => CreateRepository())
+				.LifestyleTransient());
+
+			_aggregateCachedRepositoryFactory = new AggregateCachedRepositoryFactory(
+				_container.Resolve <IRepositoryExFactory>(),
                 false);
         }
 
@@ -229,11 +241,13 @@ namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
         {
             var cmd = new TouchSampleAggregate(new SampleAggregateId(1));
             cmd.SetContextData("key", "value");
-            var handler = new TouchSampleAggregateHandler
+			IRepositoryExFactory factory = NSubstitute.Substitute.For<IRepositoryExFactory>();
+			factory.Create().Returns(_sut);
+			var handler = new TouchSampleAggregateHandler
             {
                 Repository = _sut,
                 AggregateFactory = _aggregateFactory,
-                AggregateCachedRepositoryFactory = new AggregateCachedRepositoryFactory(() => _sut)
+                AggregateCachedRepositoryFactory = new AggregateCachedRepositoryFactory(factory)
             };
 
             handler.Handle(cmd);
@@ -324,7 +338,19 @@ namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
             Assert.That(reloaded.SnapshotRestoreVersion, Is.EqualTo(51));
         }
 
-        [Test]
+		[Test]
+		public void verify_typed_factory_dispose()
+		{
+			var factory = _container.Resolve<IRepositoryExFactory>();
+			var repo = factory.Create();
+			Assert.That(repo, Is.Not.Null);
+			factory.Release(repo);
+			var realRepo = (RepositoryEx)repo;
+			Assert.That(realRepo.Disposed, Is.True);
+		}
+
+
+		[Test]
         public void verify_single_cached_aggregate_repository_tolerance_to_domain_exception()
         {
             var id = new SampleAggregateId(1);
@@ -332,6 +358,7 @@ namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
             //First call, everything is ok.
             Int32 stateCount;
             SampleAggregate aggregate;
+
             using (var repo = _aggregateCachedRepositoryFactory.Create<SampleAggregate>(id))
             {
                 aggregate = repo.Aggregate;
