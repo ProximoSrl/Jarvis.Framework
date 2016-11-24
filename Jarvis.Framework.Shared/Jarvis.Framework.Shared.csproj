@@ -110,6 +110,7 @@
     <Compile Include="Factories\IFactory.cs" />
     <Compile Include="Helpers\ExpressionExtension.cs" />
     <Compile Include="Helpers\JarvisStartableFacility.cs" />
+    <Compile Include="Helpers\JarvisTypedFactoryFacility.cs" />
     <Compile Include="Helpers\MongoDriverHelper.cs" />
     <Compile Include="Helpers\Reflect.cs" />
     <Compile Include="Helpers\FastReflectionHelper.cs" />
