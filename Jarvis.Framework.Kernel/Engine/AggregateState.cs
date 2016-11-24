@@ -9,10 +9,11 @@ using System.IO;
 
 namespace Jarvis.Framework.Kernel.Engine
 {
-    /// <summary>
-    /// Stato interno dell'aggregato
-    /// Deve implementare ICloneable se usa strutture o referenze ad oggetti
-    /// </summary>
+	/// <summary>
+	/// Stato interno dell'aggregato
+	/// Deve implementare ICloneable se usa strutture o referenze ad oggetti
+	/// </summary>
+	[Serializable]
 	public abstract class AggregateState : ICloneable, IInvariantsChecker
     {
         /// <summary>
