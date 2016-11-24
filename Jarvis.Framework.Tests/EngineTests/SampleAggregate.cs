@@ -76,6 +76,13 @@ namespace Jarvis.Framework.Tests.EngineTests
             RaiseEvent(new SampleAggregateTouched());
         }
 
+        public void TouchWithThrow()
+        {
+            RaiseEvent(new SampleAggregateTouched());
+            throw new ApplicationException("This method is supposed to throw exception");
+        }
+
+
         public void DoubleTouch()
         {
             RaiseEvent(new SampleAggregateTouched());

@@ -7,7 +7,6 @@ using Jarvis.Framework.Kernel.Store;
 using Jarvis.Framework.Shared.Events;
 using Jarvis.NEventStoreEx.CommonDomainEx;
 using Machine.Specifications;
-using Fasterflect;
 
 namespace Jarvis.Framework.TestHelpers
 {

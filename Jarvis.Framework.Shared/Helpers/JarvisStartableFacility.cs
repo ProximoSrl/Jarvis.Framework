@@ -65,6 +65,7 @@ namespace Jarvis.Framework.Shared.Helpers
         /// <summary>
         /// Constructor for startable facility
         /// </summary>
+        /// <param name="logger"></param>
         /// <param name="timeoutInSecondsBeforeRetryRestartFailedServices">If an handler failed to start because
         /// it throws exception in start method, this facility can retry to restart it after a certain amout of seconds.
         /// This will guarantee that if a service is not able to start due to some reason (db momentarly down) the entire

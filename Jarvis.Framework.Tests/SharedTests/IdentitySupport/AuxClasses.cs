@@ -35,7 +35,7 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
 
         }
 
-        public void ReplaceAlias(TestFlatId id, String value)
+        public new void ReplaceAlias(TestFlatId id, String value)
         {
             base.ReplaceAlias(id, value);
         }

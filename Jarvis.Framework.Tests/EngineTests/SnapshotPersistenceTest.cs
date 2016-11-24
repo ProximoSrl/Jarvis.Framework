@@ -1,4 +1,5 @@
-﻿using Jarvis.Framework.Kernel.Engine;
+﻿using Castle.Core.Logging;
+using Jarvis.Framework.Kernel.Engine;
 using Jarvis.Framework.Tests.EngineTests.Unfolder;
 using Jarvis.NEventStoreEx.CommonDomainEx;
 using MongoDB.Driver;
@@ -39,7 +40,7 @@ namespace Jarvis.Framework.Tests.EngineTests
         public void SetUp()
         {
             _client.DropDatabase(_url.DatabaseName);
-            sut = new MongoSnapshotPersisterProvider(_db);
+            sut = new MongoSnapshotPersisterProvider(_db, NullLogger.Instance);
         }
 
 

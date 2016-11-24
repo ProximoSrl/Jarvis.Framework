@@ -23,7 +23,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
     public class CommitPollingClient2 : ICommitPollingClient
     {
         private int _bufferSize = 4000;
-        private readonly int _interval;
+
         readonly ICommitEnhancer _enhancer;
         private String _id;
 
@@ -262,11 +262,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         private BufferBlock<ICommit> _buffer;
         private ITargetBlock<ICommit> _broadcaster;
-        private Boolean tplChainActive = false;
 
         private void CreateTplChain()
         {
-            tplChainActive = true;
             DataflowBlockOptions bufferOptions = new DataflowBlockOptions();
             bufferOptions.BoundedCapacity = _bufferSize;
             _buffer = new BufferBlock<ICommit>(bufferOptions);
@@ -284,7 +282,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             //signal Tpl to complete buffer.
             _buffer.Complete();
             _broadcaster.Complete();
-            tplChainActive = false;
         }
 
         #endregion

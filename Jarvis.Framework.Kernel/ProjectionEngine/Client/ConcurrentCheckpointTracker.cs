@@ -17,7 +17,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
     public class ConcurrentCheckpointTracker : IConcurrentCheckpointTracker
     {
         readonly IMongoCollection<Checkpoint> _checkpoints;
+
         private ConcurrentDictionary<string, Int64> _checkpointTracker;
+
         private ConcurrentDictionary<string, Int64> _currentCheckpointTracker;
 
         /// <summary>
@@ -210,8 +212,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                 Math.Min(trackerLastValue, lastCommitIdLong));
         }
 
-
-
         public void RebuildEnded(IProjection projection, ProjectionMetrics.Meter meter)
         {
             var projectionName = projection.GetCommonName();
@@ -226,6 +226,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             checkpoint.Events = meter.TotalEvents;
             checkpoint.RebuildActualSeconds = (double)meter.TotalElapsed / TimeSpan.TicksPerSecond;
             checkpoint.Details = meter;
+            checkpoint.Signature = projection.GetSignature();
             _checkpoints.Save(checkpoint, checkpoint.Id);
         }
 
@@ -359,13 +360,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                     {
                         returnValue.NewSlots.Add(slot.Key);
                     }
-                    else if (slot.Where(s => s.Checkpoint != null).Select(s => s.Checkpoint.Value).Distinct().Count() > 1)
+                    else if (slot.Where(s => s.Checkpoint != null)
+                        .Select(s => s.Checkpoint.Value).Distinct().Count() > 1)
                     {
-                        returnValue.SlotsWithErrors.Add(new CheckpointSlotStatus.SlotError()
-                        {
-                            SlotName = slot.Key,
-                            Errors = String.Format("Error in slot {0}, not all projection at the same checkpoint value. Please check reamodel db!", slot.Key),
-                        });
+                        returnValue.SlotsThatNeedsRebuild.Add(slot.Key);
                     }
                     else if (slot.Any(s => s.Checkpoint == null || s.Checkpoint.Signature != s.Projection.GetSignature()))
                     {

@@ -54,9 +54,19 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
             public void RemoveInstance(TModel instance)
             {
-                foreach (var cache in Values)
+                if (instance == null) return;
+                var propertyValue = instance.GetPropertyValue(_propertyName);
+                if (_ownershipMap.ContainsKey(instance.Id))
                 {
-                    cache.Remove(instance);
+                    _ownershipMap[instance.Id].Remove(instance);
+                }
+                else
+                {
+                    //we have no ownership map, remove from all cached instances.
+                    foreach (var cache in Values)
+                    {
+                        cache.Remove(instance);
+                    }
                 }
             }
 

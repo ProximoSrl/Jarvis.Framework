@@ -12,7 +12,8 @@
     <tags>Jarvis,Framework</tags>
 
     <dependencies>
-      <dependency id="NEventStore" version="6.0.0-unstable0091" />
+      <dependency id="NEventStore" version="6.0.0-unstable0097" />
+      <dependency id="NEventStore.Domain" version="6.0.0-unstable0027" />
     </dependencies>
   </metadata>
 

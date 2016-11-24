@@ -26,6 +26,9 @@ using Jarvis.Framework.Shared.IdentitySupport.Serialization;
 using Jarvis.NEventStoreEx.Support;
 using Jarvis.Framework.Tests.EngineTests;
 using Jarvis.NEventStoreEx;
+using Castle.Windsor;
+using Castle.Facilities.TypedFactory;
+using Castle.MicroKernel.Registration;
 
 namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
 {
@@ -38,6 +41,8 @@ namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
         private IdentityManager _identityConverter;
         private AggregateFactory _aggregateFactory = new AggregateFactory(null);
         private const Int32 NumberOfCommitsBeforeSnapshot = 50;
+        private IAggregateCachedRepositoryFactory _aggregateCachedRepositoryFactory;
+		private WindsorContainer _container;
 
         [SetUp]
         public void SetUp()
@@ -57,15 +62,28 @@ namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
             loggerFactory.Create(Arg.Any<Type>()).Returns(NullLogger.Instance);
             _eventStore = new EventStoreFactory(loggerFactory).BuildEventStore(connectionString);
             _sut = CreateRepository();
+
+			_container = new WindsorContainer();
+			_container.AddFacility<TypedFactoryFacility>();
+			_container.Register(Component.For<IRepositoryExFactory>().AsFactory());
+			_container.Register(Component
+				.For<IRepositoryEx>()
+				.UsingFactoryMethod(() => CreateRepository())
+				.LifestyleTransient());
+
+			_aggregateCachedRepositoryFactory = new AggregateCachedRepositoryFactory(
+				_container.Resolve <IRepositoryExFactory>(),
+                false);
         }
 
         private RepositoryEx CreateRepository()
         {
             var repositoryEx = new RepositoryEx(
                 _eventStore,
-                _aggregateFactory, 
-                new ConflictDetector(), 
-                _identityConverter
+                _aggregateFactory,
+                new ConflictDetector(),
+                _identityConverter,
+                NSubstitute.Substitute.For<NEventStore.Logging.ILog>()
             );
             repositoryEx.SnapshotManager = Substitute.For<ISnapshotManager>();
             repositoryEx.SnapshotManager.Load("", 0, typeof(SampleAggregate)).ReturnsForAnyArgs<ISnapshot>((ISnapshot)null);
@@ -110,7 +128,8 @@ namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
                     _eventStore,
                     _aggregateFactory,
                     new ConflictDetector(),
-                    _identityConverter))
+                    _identityConverter,
+                    NSubstitute.Substitute.For<NEventStore.Logging.ILog>()))
                 {
                     var loaded = repo.GetById<SampleAggregate>(sampleAggregateId);
                 }
@@ -136,6 +155,48 @@ namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
 
             Assert.IsNotNull(stream);
             Assert.AreEqual(1, stream.CommittedEvents.Count);
+        }
+
+        [Test]
+        public void can_reuse_repository_with_same_aggregate()
+        {
+            var sampleAggregateId = new SampleAggregateId(1);
+            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(
+                new SampleAggregate.State(),
+                sampleAggregateId
+            );
+            aggregate.Create();
+            _sut.Save(aggregate, Guid.NewGuid(), null);
+
+            aggregate.Touch();
+            _sut.Save(aggregate, Guid.NewGuid(), null);
+
+            var stream = _eventStore.OpenStream("Jarvis", sampleAggregateId, int.MinValue, int.MaxValue);
+
+            Assert.IsNotNull(stream);
+            Assert.AreEqual(2, stream.CommittedEvents.Count);
+        }
+
+        [Test]
+        public void can_reuse_repository_reloading_aggregate()
+        {
+            var sampleAggregateId = new SampleAggregateId(1);
+            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(
+                new SampleAggregate.State(),
+                sampleAggregateId
+            );
+            aggregate.Create();
+            _sut.Save(aggregate, Guid.NewGuid(), null);
+
+            var reloaded = _sut.GetById<SampleAggregate>(sampleAggregateId);
+
+            reloaded.Touch();
+            _sut.Save(reloaded, Guid.NewGuid(), null);
+
+            var stream = _eventStore.OpenStream("Jarvis", sampleAggregateId, int.MinValue, int.MaxValue);
+
+            Assert.IsNotNull(stream);
+            Assert.AreEqual(2, stream.CommittedEvents.Count);
         }
 
         [Test]
@@ -180,11 +241,13 @@ namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
         {
             var cmd = new TouchSampleAggregate(new SampleAggregateId(1));
             cmd.SetContextData("key", "value");
-            var handler = new TouchSampleAggregateHandler
+			IRepositoryExFactory factory = NSubstitute.Substitute.For<IRepositoryExFactory>();
+			factory.Create().Returns(_sut);
+			var handler = new TouchSampleAggregateHandler
             {
                 Repository = _sut,
                 AggregateFactory = _aggregateFactory,
-                AggregateCachedRepositoryFactory = new AggregateCachedRepositoryFactory(() => _sut)
+                AggregateCachedRepositoryFactory = new AggregateCachedRepositoryFactory(factory)
             };
 
             handler.Handle(cmd);
@@ -263,8 +326,8 @@ namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
             {
                 ((IAggregateEx)aggregate).ApplyEvent(new SampleAggregateTouched());
             }
-            _sut.SnapshotManager = new CachedSnapshotManager( 
-                new MongoSnapshotPersisterProvider(_db),
+            _sut.SnapshotManager = new CachedSnapshotManager(
+                new MongoSnapshotPersisterProvider(_db, NullLogger.Instance),
                 new NullSnapshotPersistenceStrategy());
             //this will save the snapshot
             _sut.Save(aggregate, new Guid("135E4E5F-3D65-43AC-9D8D-8A8B0EFF8501"), null);
@@ -275,5 +338,62 @@ namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
             Assert.That(reloaded.SnapshotRestoreVersion, Is.EqualTo(51));
         }
 
+		[Test]
+		public void verify_typed_factory_dispose()
+		{
+			var factory = _container.Resolve<IRepositoryExFactory>();
+			var repo = factory.Create();
+			Assert.That(repo, Is.Not.Null);
+			factory.Release(repo);
+			var realRepo = (RepositoryEx)repo;
+			Assert.That(realRepo.Disposed, Is.True);
+		}
+
+
+		[Test]
+        public void verify_single_cached_aggregate_repository_tolerance_to_domain_exception()
+        {
+            var id = new SampleAggregateId(1);
+
+            //First call, everything is ok.
+            Int32 stateCount;
+            SampleAggregate aggregate;
+
+            using (var repo = _aggregateCachedRepositoryFactory.Create<SampleAggregate>(id))
+            {
+                aggregate = repo.Aggregate;
+                aggregate.Create();
+                aggregate.Touch();
+                repo.Save(Guid.NewGuid(), updateHeaders => { });
+                stateCount = aggregate.InternalState.TouchCount;
+            }
+
+            try
+            {
+                //second call, methdo that throws exception
+                using (var repo = _aggregateCachedRepositoryFactory.Create<SampleAggregate>(id))
+                {
+                    Assert.That(Object.ReferenceEquals(repo.Aggregate, aggregate), "Cache is not working");
+                    aggregate = repo.Aggregate;
+                    aggregate.Create();
+                    aggregate.TouchWithThrow(); //this throws
+                    repo.Save(Guid.NewGuid(), updateHeaders => { });
+                }
+            }
+            catch (Exception)
+            {
+                //Ignore the exception 
+            }
+
+            //now I want the repository to be fresh with new aggregate
+            using (var repo = _aggregateCachedRepositoryFactory.Create<SampleAggregate>(id))
+            {
+                Assert.That(repo.Aggregate.InternalState.TouchCount, Is.EqualTo(stateCount));
+                Assert.That(Object.ReferenceEquals(repo.Aggregate, aggregate), Is.False, "Cache should be invalidated");
+            }
+        }
+
+
     }
+
 }

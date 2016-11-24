@@ -27,7 +27,15 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
         private readonly IConstructAggregatesEx _factory;
         private readonly IIdentityConverter _identityConverter;
 
-        private readonly IDictionary<string, IEventStream> _streams = new Dictionary<string, IEventStream>();
+        private Boolean _disposed;
+		public Boolean Disposed { get { return _disposed; } }
+
+        /// <summary>
+        /// When a stream is opened it is stored in dictionary 
+        /// to avoid re-open on save.
+        /// </summary>
+        private readonly IDictionary<IAggregateEx, IEventStream> _streams =
+            new Dictionary<IAggregateEx, IEventStream>();
 
         /// <summary>
         /// This is used to keep a better track of locking, because each unique instance of repository
@@ -54,19 +62,27 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
         /// </summary>
         private static readonly ConcurrentDictionary<IIdentity, Int64> IdSerializerDictionary;
 
+        public NEventStore.Logging.ILog _logger;
+
         static AbstractRepository()
         {
             IdSerializerDictionary = new ConcurrentDictionary<IIdentity, Int64>();
             _lastAssignedIdentity = 0;
         }
 
-        protected AbstractRepository(IStoreEvents eventStore, IConstructAggregatesEx factory, IDetectConflicts conflictDetector, IIdentityConverter identityConverter)
+        protected AbstractRepository(
+            IStoreEvents eventStore,
+            IConstructAggregatesEx factory,
+            IDetectConflicts conflictDetector,
+            IIdentityConverter identityConverter,
+            NEventStore.Logging.ILog logger)
         {
             this._eventStore = eventStore;
             this._factory = factory;
             this._conflictDetector = conflictDetector;
             this._identityConverter = identityConverter;
             this._identity = Interlocked.Increment(ref _lastAssignedIdentity);
+            _logger = logger;
         }
 
         public void Dispose()
@@ -92,10 +108,13 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 
         public TAggregate GetById<TAggregate>(string bucketId, IIdentity id, int versionToLoad) where TAggregate : class, IAggregateEx
         {
+            if (_disposed)
+                throw new ObjectDisposedException("This instance of repository was already disposed");
+
             Stopwatch sw = null;
             if (NeventStoreExGlobalConfiguration.MetricsEnabled) sw = Stopwatch.StartNew();
 
-            if (NeventStoreExGlobalConfiguration.RepositoryLockOnAggregateId) 
+            if (NeventStoreExGlobalConfiguration.RepositoryLockOnAggregateId)
             {
                 //try to acquire a lock on the identity, to minimize risk of ConcurrencyException
                 //do not sleep more than a certain amount of time (avoid some missing dispose).
@@ -110,6 +129,8 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
             ISnapshot snapshot = this.GetSnapshot<TAggregate>(bucketId, id, versionToLoad);
             IEventStream stream = this.OpenStream(bucketId, id, versionToLoad, snapshot);
             IAggregateEx aggregate = this.GetAggregate<TAggregate>(snapshot, stream);
+            //cache loaded stream to avoid reload during save.
+            _streams[aggregate] = stream;
 
             ApplyEventsToAggregate(versionToLoad, stream, aggregate);
             if (NeventStoreExGlobalConfiguration.MetricsEnabled)
@@ -159,11 +180,14 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
         /// <returns></returns>
         public Int32 Save(string bucketId, IAggregateEx aggregate, Guid commitId, Action<IDictionary<string, object>> updateHeaders)
         {
+            if (_disposed)
+                throw new ObjectDisposedException("This instance of repository was already disposed");
+
             Dictionary<string, object> headers = PrepareHeaders(aggregate, updateHeaders);
             Int32 uncommittedEvents = aggregate.GetUncommittedEvents().Count;
             while (true)
             {
-  
+
                 IEventStream stream = this.PrepareStream(bucketId, aggregate, headers);
                 int commitEventCount = stream.CommittedEvents.Count;
 
@@ -173,13 +197,15 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
                     aggregate.ClearUncommittedEvents();
                     return uncommittedEvents;
                 }
-                catch (DuplicateCommitException)
+                catch (DuplicateCommitException dex)
                 {
                     stream.ClearChanges();
+                    _logger.Debug(String.Format("Duplicate commit exception bucket {0} - id {1} - commitid {2}. \n{3}", bucketId, aggregate.Id, commitId, dex));
                     return 0; //no events commited
                 }
                 catch (ConcurrencyException e)
                 {
+                    _logger.Warn(String.Format("Concurrency Exception bucket {0} - id {1} - commitid {2}. \n{3}", bucketId, aggregate.Id, commitId, e));
                     if (this.ThrowOnConflict(stream, commitEventCount))
                     {
                         //@@FIX -> aggiungere prima del lancio dell'eccezione
@@ -201,6 +227,7 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 
         protected virtual void Dispose(bool disposing)
         {
+            _disposed = true;
             if (!disposing)
             {
                 return;
@@ -213,15 +240,12 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
                     ReleaseAggregateId(id);
                 }
             }
-            lock (this._streams)
+            foreach (var stream in this._streams)
             {
-                foreach (var stream in this._streams)
-                {
-                    stream.Value.Dispose();
-                }
-
-                this._streams.Clear();
+                stream.Value.Dispose();
             }
+
+            this._streams.Clear();
         }
 
         private void ReleaseAggregateId(IIdentity id)
@@ -267,31 +291,20 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
         private IEventStream OpenStream(string bucketId, IIdentity id, int version, ISnapshot snapshot)
         {
             IEventStream stream;
-            var streamsId = GetKeyForStreamDictionary(bucketId, id);
-            if (this._streams.TryGetValue(streamsId, out stream))
-            {
-                return stream;
-            }
 
             stream = snapshot == null ?
                            this._eventStore.OpenStream(bucketId, id.AsString(), 0, version)
                          : this._eventStore.OpenStream(snapshot, version);
 
-            return this._streams[streamsId] = stream;
-        }
-
-        private static string GetKeyForStreamDictionary(string bucketId, IIdentity id)
-        {
-            return bucketId + "@" + id;
+            return stream;
         }
 
         private IEventStream PrepareStream(string bucketId, IAggregateEx aggregate, Dictionary<string, object> headers)
         {
             IEventStream stream;
-            var streamsId = bucketId + "@" + aggregate.Id;
-            if (!this._streams.TryGetValue(streamsId, out stream))
+            if (!this._streams.TryGetValue(aggregate, out stream))
             {
-                this._streams[streamsId] = stream = this._eventStore.CreateStream(bucketId, aggregate.Id.AsString());
+                this._streams[aggregate] = stream = this._eventStore.CreateStream(bucketId, aggregate.Id.AsString());
             }
 
             foreach (var item in headers)

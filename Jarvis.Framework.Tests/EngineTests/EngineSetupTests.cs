@@ -54,7 +54,8 @@ namespace Jarvis.Framework.Tests.EngineTests
                 eventStore,
                 new AggregateFactory(),
                 new ConflictDetector(),
-                new IdentityManager(new InMemoryCounterService())
+                new IdentityManager(new InMemoryCounterService()),
+                NSubstitute.Substitute.For<NEventStore.Logging.ILog>()
             );
 
             var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregate.State(), new SampleAggregateId(1));

@@ -126,7 +126,6 @@ or manually set the Configuration property of this instance.");
         /// <summary>
         /// This is the method that starts the bus.
         /// </summary>
-        /// <param name="numberOfWorkers"></param>
         public void Start()
         {
             if (_busConfigured)

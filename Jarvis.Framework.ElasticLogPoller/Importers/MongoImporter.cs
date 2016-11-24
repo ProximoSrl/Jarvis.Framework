@@ -182,6 +182,7 @@ namespace Jarvis.Framework.ElasticLogPoller.Importers
             {
                 var requestString = String.Format("{{ \"index\" : {{ \"_type\" : \"log\", \"_id\" : \"{0}\"  }} }}", result["_id"].ToString());
                 request.AppendLine(requestString);
+                result.Remove("_id"); //ES 2.0 does not want id in the definition of the doc.
                 request.AppendLine(result.ToString(Formatting.None));
             }
             var response = new PollResult();

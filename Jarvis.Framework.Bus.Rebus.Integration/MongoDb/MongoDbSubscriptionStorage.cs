@@ -90,8 +90,6 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.MongoDb
                                {
                                    IsUpsert = true,
                                });
-            EnsureResultIsGood(safeModeResult, "Removing {0} from {1} where _id is {2}",
-                       subscriberInputQueue, collectionName, eventType.FullName);
         }
 
         /// <summary>
@@ -111,9 +109,6 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.MongoDb
              {
                  IsUpsert = true,
              });
-
-            EnsureResultIsGood(safeModeResult, "Removing {0} from {1} where _id is {2}",
-                               subscriberInputQueue, collectionName, eventType.FullName);
         }
 
         /// <summary>
@@ -131,17 +126,6 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.MongoDb
 
             var endpoints = bsonDocument["endpoints"].AsBsonArray;
             return endpoints.Values.Select(v => v.ToString()).ToArray();
-        }
-
-        void EnsureResultIsGood(UpdateResult writeConcernResult, string message, params object[] objs)
-        {
-            if (writeConcernResult.ModifiedCount > 0)
-            {
-                throw new ApplicationException(
-                    string.Format("The following operation didn't suceed: {0} - the result was: {1}",
-                                  string.Format(message, objs),
-                                  "ERROR"));
-            }
         }
     }
 }

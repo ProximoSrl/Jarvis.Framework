@@ -14,17 +14,15 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
         private static readonly Counter CacheHitCounter = Metric.Counter("RepositorySingleEntityCacheHits", Unit.Calls);
         private static readonly Counter CacheMissCounter = Metric.Counter("RepositorySingleEntityCacheMisses", Unit.Calls);
 
-        static readonly CacheItemPolicy CachePolicy = new CacheItemPolicy()
-        {
-            SlidingExpiration = TimeSpan.FromMinutes(10),
-            RemovedCallback = RemovedCallback
-        };
+		readonly CacheItemPolicy _cachePolicy;
 
         private class CacheEntry
         {
             public IRepositoryEx RepositoryEx { get; private set; }
 
             public IAggregateEx Aggregate { get; private set; }
+
+            public Boolean InUse { get; set; }
 
             public CacheEntry(IRepositoryEx repositoryEx, IAggregateEx aggregate)
             {
@@ -33,19 +31,16 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
             }
         }
 
-        private static void RemovedCallback(CacheEntryRemovedArguments arguments)
+        private void RemovedCallback(CacheEntryRemovedArguments arguments)
         {
             var cacheEntry = arguments.CacheItem.Value as CacheEntry;
-            if (cacheEntry != null && cacheEntry.RepositoryEx != null)
-                cacheEntry.RepositoryEx.Dispose();
+			if (cacheEntry != null && cacheEntry.RepositoryEx != null && !cacheEntry.InUse)
+			{
+				_repositoryFactory.Release(cacheEntry.RepositoryEx);
+			}
         }
 
-        static AggregateCachedRepositoryFactory()
-        {
-
-        }
-
-        readonly Func<IRepositoryEx> _repositoryFactory;
+        readonly IRepositoryExFactory _repositoryFactory;
         private readonly bool _cacheDisabled;
 
         /// <summary>
@@ -60,12 +55,19 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
         /// it does not prevent two thread to execute at the same moment on the same aggregateId.
         /// </param>
         public AggregateCachedRepositoryFactory(
-            Func<IRepositoryEx> repositoryFactory,
+			IRepositoryExFactory repositoryFactory,
             Boolean cacheDisabled = false)
         {
             _repositoryFactory = repositoryFactory;
             _cacheDisabled = cacheDisabled;
-        }
+			_cachePolicy = new CacheItemPolicy()
+			{
+				SlidingExpiration = TimeSpan.FromMinutes(10),
+				RemovedCallback = RemovedCallback
+			};
+		}
+
+        Int32 _isGettingCache = 0;
 
         IAggregateCachedRepository<TAggregate> IAggregateCachedRepositoryFactory.Create<TAggregate>(IIdentity id)
         {
@@ -73,7 +75,8 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
             {
                 //lock is necessary because only if a lock is aquired we can be 100% sure that a single thread is accessing
                 //cached repository and entity.
-                var cached = Cache.Get(id.AsString()) as CacheEntry;
+                CacheEntry cached = GetCache(id);
+
                 IRepositoryEx innerRepository;
                 TAggregate aggregate = null;
                 if (cached != null)
@@ -87,7 +90,7 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
                     //I have nothing in cache, I'll create a new repository and since aggregate is 
                     //null it will load the entity for the first time.
                     CacheMissCounter.Increment();
-                    innerRepository = _repositoryFactory();
+                    innerRepository = _repositoryFactory.Create();
                 }
 
                 var repoSingleEntity = new CachableAggregateCachedRepository<TAggregate>(
@@ -101,7 +104,30 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
                 return repoSingleEntity;
 
             }
-            return new SingleUseAggregateCachedRepository<TAggregate>(_repositoryFactory(), id);
+            return new SingleUseAggregateCachedRepository<TAggregate>(_repositoryFactory, id);
+        }
+
+        private CacheEntry GetCache(IIdentity id)
+        {
+            CacheEntry cached = null;
+            try
+            {
+                if (Interlocked.CompareExchange(ref _isGettingCache, 1, 0) == 0)
+                {
+                    cached = Cache.Get(id.AsString()) as CacheEntry;
+                    if (cached == null || cached.InUse) return null;
+
+                    cached.InUse = true;
+                    //remover after is in use
+                    Cache.Remove(id.AsString()); //does not call dispose because in use.
+                }
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _isGettingCache, 0);
+            }
+
+            return cached;
         }
 
         private void DisposeRepository(IIdentity id, IRepositoryEx repositoryEx)
@@ -115,12 +141,13 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
             //store the repository on the cache, actually we are keeping the very
             //same entity that was disposed by the caller.
             var cacheEntry = new CacheEntry(repositoryEx, aggregate);
-            Cache.Add(id.AsString(), cacheEntry, CachePolicy);
+            Cache.Add(id.AsString(), cacheEntry, _cachePolicy);
         }
 
         private void OnException(IIdentity id, IRepositoryEx repositoryEx)
         {
-            //remove the repository from cache, this will really dispose wrapped repository
+			//remove the repository from cache, this will really dispose wrapped repository
+			_repositoryFactory.Release(repositoryEx);
             Cache.Remove(id.AsString());
         }
 

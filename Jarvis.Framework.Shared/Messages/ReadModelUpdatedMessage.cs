@@ -3,7 +3,10 @@ using Jarvis.Framework.Shared.ReadModel;
 
 namespace Jarvis.Framework.Shared.Messages
 {
-    // se il messaggio non viene scodato entro x secondi viene ignorato
+    /// <summary>
+    /// This attribute states that if message is not received in 30
+    /// seconds it should be ignored, because it is not necessary anymore.
+    /// </summary>
     [TimeToBeReceived("00:00:30")]
     public class ReadModelUpdatedMessage
     {
@@ -47,21 +50,31 @@ namespace Jarvis.Framework.Shared.Messages
 
         public static ReadModelUpdatedMessage Created<T, TKey>(T document) where T:IReadModelEx<TKey>
         {
-            return Enhance(new ReadModelUpdatedMessage()
-                {
-                    Action = UpdateAction.Created,
-                    Id = document.Id,
-                    ReadModel = document,
-                    ModelName = GetModelName<T, TKey>()
-                });
+            return ReadModelUpdatedMessage.Created<T, TKey>(document.Id, document);
         }
 
         public static ReadModelUpdatedMessage Updated<T, TKey>(T document) where T : IReadModelEx<TKey>
         {
+            return ReadModelUpdatedMessage.Updated<T, TKey>(document.Id, document);
+        }
+
+        public static ReadModelUpdatedMessage Created<T, TKey>(TKey id, object document) where T : IReadModelEx<TKey>
+        {
+            return Enhance(new ReadModelUpdatedMessage()
+            {
+                Action = UpdateAction.Created,
+                Id = id,
+                ReadModel = document,
+                ModelName = GetModelName<T, TKey>()
+            });
+        }
+
+        public static ReadModelUpdatedMessage Updated<T, TKey>(TKey id, object document) where T : IReadModelEx<TKey>
+        {
             return Enhance(new ReadModelUpdatedMessage()
             {
                 Action = UpdateAction.Updated,
-                Id = document.Id,
+                Id = id,
                 ReadModel = document,
                 ModelName = GetModelName<T, TKey>()
             });

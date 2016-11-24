@@ -80,20 +80,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         /// </summary>
         public List<String> NewSlots { get; private set; }
 
-        public List<SlotError> SlotsWithErrors { get; private set; }
-
-        public class SlotError
-        {
-            public String SlotName { get; set; }
-
-            public String Errors { get; set; }
-        }
-
         public CheckpointSlotStatus()
         {
             SlotsThatNeedsRebuild = new List<string>();
             NewSlots = new List<string>();
-            SlotsWithErrors = new List<SlotError>();
         }
     }
 

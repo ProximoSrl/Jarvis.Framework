@@ -17,6 +17,11 @@ using NEventStore.Persistence;
 using NSubstitute;
 using NUnit.Framework;
 using Jarvis.Framework.Shared.Helpers;
+using Castle.Windsor;
+using Castle.Facilities.TypedFactory;
+using Castle.MicroKernel.Registration;
+using Jarvis.Framework.Tests.Support;
+using Jarvis.Framework.Tests.EngineTests;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
@@ -34,11 +39,30 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
         protected IMongoCollection<Checkpoint> _checkpoints;
         protected ConcurrentCheckpointTracker _tracker;
         protected ConcurrentCheckpointStatusChecker _statusChecker;
-        protected Func<IPersistStreams, ICommitPollingClient> pollingClientFactory;
+		protected WindsorContainer _container;
 
-        public AbstractV2ProjectionEngineTests(String pollingClientVersion = "1")
+		protected ICommitPollingClientFactory _pollingClientFactory;
+		public AbstractV2ProjectionEngineTests(String pollingClientVersion = "1")
         {
-            switch (pollingClientVersion)
+			TestHelper.RegisterSerializerForFlatId<SampleAggregateId>();
+			_container = new WindsorContainer();
+			_container.AddFacility<TypedFactoryFacility>();
+			_container.Register(
+				Component
+					.For<ICommitPollingClient>()
+					.ImplementedBy<CommitPollingClient2>()
+					.LifestyleTransient(),
+				Component
+					.For<ICommitPollingClientFactory>()
+					.AsFactory(),
+				Component
+					.For<ICommitEnhancer>()
+					.UsingFactoryMethod(() => new CommitEnhancer(_identityConverter)),
+				Component
+					.For<ILogger>()
+					.Instance(NullLogger.Instance));
+
+			switch (pollingClientVersion)
             {
                 case "1":
                     throw new NotSupportedException("Version 1 of projection engine was removed due to migration to NES6");
@@ -50,17 +74,14 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
                     //break;
 
                 case "2":
-                    pollingClientFactory = ps => new CommitPollingClient2(
-                        ps,
-                        new CommitEnhancer(_identityConverter),
-                        OnGetPollingClientId(),
-                        NullLogger.Instance);
+					_pollingClientFactory = _container.Resolve<ICommitPollingClientFactory>();
                     break;
 
                 default:
                     throw new NotSupportedException("Version not supported");
             }
         }
+
         [TestFixtureSetUp]
         public virtual void TestFixtureSetUp()
         {
@@ -107,7 +128,8 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
                 _eventStore,
                 new AggregateFactory(),
                 new ConflictDetector(),
-                _identityConverter
+                _identityConverter,
+                NSubstitute.Substitute.For<NEventStore.Logging.ILog>()
                 );
         }
 
@@ -141,7 +163,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             StorageFactory = new MongoStorageFactory(Database, _rebuildContext);
           
             Engine = new ProjectionEngine(
-                pollingClientFactory,
+				_pollingClientFactory,
                 _tracker,
                 BuildProjections().ToArray(),
                 new NullHouseKeeper(),

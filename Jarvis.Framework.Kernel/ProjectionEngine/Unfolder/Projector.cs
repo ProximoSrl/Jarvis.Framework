@@ -112,9 +112,15 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Unfolder
             _snapshotVersion = Version = memento.Version;
         }
 
-        internal virtual Boolean ShouldSnapshot()
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="numOfEventsLoaded">Number of events that were loaded by the 
+        /// projector to recreate the in-memory projection.</param>
+        /// <returns></returns>
+        public virtual Boolean ShouldSnapshot(Int32 numOfEventsLoaded)
         {
-            return false;
+            return numOfEventsLoaded > 50; //more than 50 events should snapshot.
         }
 
         private String InnerValidateMemento(IMementoEx memento)

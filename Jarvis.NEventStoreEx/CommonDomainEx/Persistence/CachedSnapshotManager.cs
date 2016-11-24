@@ -12,6 +12,8 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence
 
         private readonly MemoryCache _cache;
 
+        private readonly Boolean _cacheEnabled;
+
         private readonly CacheItemPolicy _standardCachePolicy;
 
         private readonly ISnapshotPersistenceStrategy _snapshotPersistenceStrategy;
@@ -22,6 +24,7 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence
         public CachedSnapshotManager(
             ISnapshotPersister persister, 
             ISnapshotPersistenceStrategy snapshotPersistenceStrategy, 
+            Boolean cacheEnabled = true,
             CacheItemPolicy cacheItemPolicy = null)
         {
             _cache = new MemoryCache("CachedSnapshotManager");
@@ -31,6 +34,7 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence
             {
                 SlidingExpiration = TimeSpan.FromMinutes(10)
             };
+            _cacheEnabled = cacheEnabled;
         }
 
         public ISnapshot Load(string streamId, int upToVersion, Type aggregateType)
@@ -38,7 +42,7 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence
             //Verify in cache without bothering persistence layer.
             var snapshot = _cache.Get(streamId) as ISnapshot;
             //if is in cache and version is not greater than version requested you can return
-            if (snapshot != null && snapshot.StreamRevision <= upToVersion)
+            if (_cacheEnabled && snapshot != null && snapshot.StreamRevision <= upToVersion)
             {
                 CacheHitCounter.Increment();
                 return snapshot;
@@ -47,7 +51,7 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence
 
             //Try load from persistence medium
             var persistedSnapshot = _persister.Load(streamId, upToVersion, aggregateType.FullName);
-            if (persistedSnapshot != null && upToVersion == Int32.MaxValue)
+            if (_cacheEnabled && persistedSnapshot != null && upToVersion == Int32.MaxValue)
             {
                 _cache.Set(streamId, persistedSnapshot, _standardCachePolicy);
             }
@@ -61,8 +65,12 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence
 
             var memento = aggregate.GetSnapshot();
             var snapshot = new Snapshot(bucket, aggregate.Id.AsString(), aggregate.Version, memento);
-            _cache.Set(aggregate.Id.AsString(), snapshot, _standardCachePolicy);
 
+            if (_cacheEnabled)
+            {
+                _cache.Set(aggregate.Id.AsString(), snapshot, _standardCachePolicy);
+            }
+            
             if (_snapshotPersistenceStrategy.ShouldSnapshot(aggregate, numberOfEventsSaved))
             {
                 _persister.Persist(snapshot, aggregate.GetType().FullName);

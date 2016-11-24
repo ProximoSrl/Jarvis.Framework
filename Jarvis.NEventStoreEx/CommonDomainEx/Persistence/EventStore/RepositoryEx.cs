@@ -42,8 +42,13 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
         /// </summary>
         public ISnapshotManager SnapshotManager { get; set; }
 
-        public RepositoryEx(IStoreEvents eventStore, IConstructAggregatesEx factory, IDetectConflicts conflictDetector, IIdentityConverter identityConverter)
-            : base(eventStore, factory, conflictDetector, identityConverter)
+        public RepositoryEx(
+            IStoreEvents eventStore, 
+            IConstructAggregatesEx factory, 
+            IDetectConflicts conflictDetector, 
+            IIdentityConverter identityConverter,
+            NEventStore.Logging.ILog logger)
+            : base(eventStore, factory, conflictDetector, identityConverter, logger)
         {
             SnapshotManager = NullSnapshotManager.Instance; //Default behavior is avoid snapshot entirely.
         }

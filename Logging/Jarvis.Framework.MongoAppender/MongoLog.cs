@@ -99,30 +99,35 @@ namespace Jarvis.Framework.MongoAppender
             if (clusterState != ClusterState.Connected)
                 return false;
 
+            var createCollectionOptions = new CreateCollectionOptions();
             Int64 cappedSize;
-            if (!Int64.TryParse(CappedSizeInMb, out cappedSize))
+            if (Int64.TryParse(CappedSizeInMb, out cappedSize))
             {
-                cappedSize = 5 * 1024L;
+                createCollectionOptions.Capped = true;
+                createCollectionOptions.MaxSize = 1024L * 1024L * cappedSize;
             }
             var collections = db.ListCollections()
                 .ToList()
                 .Select(d => d["name"].AsString)
                 .ToList();
+
             if (!collections.Contains(CollectionName))
             {
-                var craeteCollectionOptions = new CreateCollectionOptions()
-                {
-                    Capped = true,
-                    MaxSize = 1024L * 1024L * cappedSize
-                };
-                db.CreateCollection(CollectionName, craeteCollectionOptions);
+                db.CreateCollection(CollectionName, createCollectionOptions);
             }
             LogCollection = db.GetCollection<BsonDocument>(CollectionName);
             CreateIndexOptions options = new CreateIndexOptions();
 
             if (ExpireAfter != null)
             {
-                options.ExpireAfter = ExpireAfter.ToTimeSpan();
+                if (createCollectionOptions.Capped == true)
+                {
+                    LogLog.Error("Cannot use Capped and TTL at the same time, only capped collection setting will be used");
+                }
+                else
+                {
+                    options.ExpireAfter = ExpireAfter.ToTimeSpan();
+                }
             }
 
             LogCollection.Indexes.CreateOne(Builders<BsonDocument>.IndexKeys.Descending(FieldNames.Timestamp), options);

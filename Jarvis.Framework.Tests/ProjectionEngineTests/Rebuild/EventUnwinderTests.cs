@@ -21,6 +21,8 @@ using Jarvis.Framework.Kernel.ProjectionEngine.Rebuild;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 using Jarvis.Framework.Shared.IdentitySupport.Serialization;
 using Jarvis.Framework.Kernel.ProjectionEngine;
+using NEventStore.Logging;
+using Jarvis.NEventStoreEx.CommonDomainEx.Core;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 {
@@ -30,6 +32,8 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
       
         string _eventStoreConnectionString;
         IdentityManager _identityConverter;
+        ILog _logger;
+
         protected RepositoryEx Repository;
         protected IStoreEvents _eventStore;
         protected IMongoDatabase _db;
@@ -41,6 +45,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         [TestFixtureSetUp]
         public virtual void TestFixtureSetUp()
         {
+            _logger = NSubstitute.Substitute.For<ILog>();
             _eventStoreConnectionString = ConfigurationManager.ConnectionStrings["eventstore"].ConnectionString; ;
             var url = new MongoUrl(_eventStoreConnectionString);
             var client = new MongoClient(url);
@@ -49,7 +54,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 
             _identityConverter = new IdentityManager(new CounterService(_db));
             _identityConverter.RegisterIdentitiesFromAssembly(typeof(SampleAggregateId).Assembly);
-            ConfigureEventStore();
+            
             ProjectionEngineConfig config = new ProjectionEngineConfig() { EventStoreConnectionString = _eventStoreConnectionString };
             CommitEnhancer commitEnhancer = new CommitEnhancer(_identityConverter);
             sut = new EventUnwinder(config, NullLogger.Instance);
@@ -63,13 +68,20 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         public void SetUp()
         {
             _db.Drop();
+            ConfigureEventStore();
+            Repository = new RepositoryEx(
+               _eventStore,
+               new AggregateFactory(),
+               new AlwaysConflict(),
+               _identityConverter,
+               _logger
+          );
         }
 
         [TestFixtureTearDown]
         public virtual void TestFixtureTearDown()
         {
             _eventStore.Dispose();
-            
         }
 
         protected void ConfigureEventStore()
@@ -78,12 +90,6 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             loggerFactory.Create(Arg.Any<Type>()).Returns(NullLogger.Instance);
             var factory = new EventStoreFactory(loggerFactory);
             _eventStore = factory.BuildEventStore(_eventStoreConnectionString);
-            Repository = new RepositoryEx(
-                _eventStore,
-                new AggregateFactory(),
-                new ConflictDetector(),
-                _identityConverter
-           );
         }
 
         protected SampleAggregateId CreateAggregate(Int64 id = 1)
@@ -95,15 +101,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             return aggregateId;
         }
 
-        protected SampleAggregateId DoubleTouchAggregate(Int64 id = 1)
-        {
-            var aggregateId = new SampleAggregateId(id);
-            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(aggregateId);
-            aggregate.DoubleTouch();
-            Repository.Save(aggregate, Guid.NewGuid(), h => { });
-            return aggregateId;
-        }
-
+       
         [Test]
         public void verify_basic_unwinding()
         {
@@ -153,9 +151,11 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         [Test]
         public void verify_unwinding_not_miss_events()
         {
-            CreateAggregate();
+            var id = CreateAggregate();
             sut.Unwind();
-            DoubleTouchAggregate();
+            var aggregate = Repository.GetById<SampleAggregate>(id);
+            aggregate.DoubleTouch();
+            Repository.Save(aggregate, Guid.NewGuid(), h => { });
             sut.Unwind();
 
             var allEvents = sut.UnwindedCollection.FindAll();
