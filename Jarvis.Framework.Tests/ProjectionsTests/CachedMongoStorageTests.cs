@@ -64,6 +64,24 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
         }
 
         [Test]
+        public void verify_that_null_correctly_updates()
+        {
+            var sut = CreateSut();
+            sut.Insert(new SampleReadModel4() { Id = "1", Name = "A Name" });
+            SampleReadModel4 readModel = new SampleReadModel4() { Id = "2", Name = null };
+            sut.Insert(readModel);
+            sut.FindManyByProperty(e => e.Name, null); //Forces index creation.
+
+            readModel.Name = "Another Name";
+            sut.SaveWithVersion(readModel, readModel.Version);
+            var element = sut.FindManyByProperty(e => e.Name, null);
+            Assert.That(element, Is.Empty);
+
+            element = sut.FindManyByProperty(e => e.Name, "Another Name");
+            Assert.That(element.Single().Id, Is.EqualTo(readModel.Id));
+        }
+
+        [Test]
         public void Insert_Batch_and_retrieve_with_property()
         {
             var sut = CreateSut();
