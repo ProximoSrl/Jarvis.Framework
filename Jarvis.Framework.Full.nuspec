@@ -12,8 +12,8 @@
     <tags>Jarvis,Framework</tags>
 
     <dependencies>		  
-      <dependency id="NEventStore" version="(5.4,7.0.0)" />
-      <dependency id="NEventStore.Persistence.MongoDb" version="(5.4,7.0.0)" />
+      <!--<dependency id="NEventStore" version="(5.4,7.0.0)" />
+      <dependency id="NEventStore.Persistence.MongoDb" version="(5.4,7.0.0)" />-->
       <dependency id="MongoDB.Driver" version="2.3.0" />
       <dependency id="Newtonsoft.Json" version="6.0.8" />
 
