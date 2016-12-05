@@ -186,7 +186,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 _storage.FindOneById(id);
         }
 
-        public IEnumerable<TModel> FindManyByProperty<TValue>(
+        public IEnumerable<TModel> FindByProperty<TValue>(
             Expression<Func<TModel, TValue>> propertySelector,
             TValue value)
         {
@@ -198,7 +198,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             }
             else
             {
-               return _storage.FindManyByProperty(propertySelector, value);
+               return _storage.FindByProperty(propertySelector, value);
             }
         }
 

@@ -61,7 +61,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             return _collection.FindOneById(id);
         }
 
-        public IEnumerable<TModel> FindManyByProperty<TValue>(Expression<Func<TModel, TValue>> propertySelector, TValue value)
+        public IEnumerable<TModel> FindByProperty<TValue>(Expression<Func<TModel, TValue>> propertySelector, TValue value)
         {
             return _collection.Find(
                 Builders<TModel>.Filter.Eq<TValue>(propertySelector, value))

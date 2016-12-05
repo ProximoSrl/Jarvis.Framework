@@ -17,7 +17,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         IQueryable<TModel> All { get; }
         TModel FindOneById(TKey id);
 
-        IEnumerable<TModel> FindManyByProperty<Tvalue>(Expression<Func<TModel, Tvalue>> propertySelector, Tvalue value);
+        /// <summary>
+        /// Find all the element that have a specific property with a value equal to <paramref name="value"/> 
+        /// parameter. This specific property is optimized when inMemoryCollection is active to use in memory
+        /// indexes dictionaries.
+        /// </summary>
+        /// <typeparam name="Tvalue"></typeparam>
+        /// <param name="propertySelector"></param>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        IEnumerable<TModel> FindByProperty<Tvalue>(Expression<Func<TModel, Tvalue>> propertySelector, Tvalue value);
 
         IQueryable<TModel> Where(Expression<Func<TModel, bool>> filter);
         bool Contains(Expression<Func<TModel, bool>> filter);

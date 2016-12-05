@@ -198,7 +198,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         public void FindAndModifyByProperty<TProperty>(DomainEvent e, Expression<Func<TModel, TProperty>> propertySelector, TProperty propertyValue, Action<TModel> action, bool notify = false)
         {
-            foreach (var model in _storage.FindManyByProperty(propertySelector, propertyValue))
+            foreach (var model in _storage.FindByProperty(propertySelector, propertyValue))
             {
                 if (!model.BuiltFromEvent(e.MessageId))
                 {
@@ -210,7 +210,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         public IEnumerable<TModel> FindByProperty<TProperty>(Expression<Func<TModel, TProperty>> propertySelector, TProperty propertyValue)
         {
-            return _storage.FindManyByProperty(propertySelector, propertyValue);
+            return _storage.FindByProperty(propertySelector, propertyValue);
         }
 
         public void FindAndModify(DomainEvent e, TKey id, Action<TModel> action, bool notify = false)
