@@ -5,8 +5,6 @@ using Jarvis.Framework.Shared.Messages;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Metrics;
-using MongoDB.Bson.Serialization;
-using System.Linq;
 using Jarvis.Framework.Shared.Helpers;
 using Castle.Core.Logging;
 
@@ -16,7 +14,8 @@ namespace Jarvis.Framework.Shared.ReadModel
     {
 
         /// <summary>
-        /// A command was sent to the bus, this is the first event that is raised.
+        /// A message (Command, Event, Something else) was sent to the bus,
+        /// this is the first event that is raised.
         /// </summary>
         /// <param name="msg"></param>
         void Started(IMessage msg);
@@ -65,57 +64,121 @@ namespace Jarvis.Framework.Shared.ReadModel
         void Failed(Guid commandId, DateTime failedAt, Exception ex);
     }
 
+    public enum TrackedMessageType
+    {
+        Unknown = 0,
+        Command = 1,
+        Event = 2
+    }
+
     public class TrackedMessageModel
     {
         public ObjectId Id { get; set; }
+
         public string MessageId { get; set; }
+
+        /// <summary>
+        /// Identifies the Type of message (Command, Event, etc... for easier queries)
+        /// 
+        /// It's nullable because this field was added at a later time
+        /// </summary>
+        public TrackedMessageType? Type { get; set; }
+
+        /// <summary>
+        /// the type of the message in string format
+        /// </summary>
+        public String MessageType { get; set; }
 
         /// <summary>
         /// Timestamp when message is "started", with bus it is the time the message is sent to the bus
         /// this is the timestamp the message is generated.
+        /// 
+        /// This information is valid for:
+        /// - Commands
+        /// - Events
         /// </summary>
         public DateTime StartedAt { get; set; }
 
         /// <summary>
-        /// This is an array because the command can have retry, due to conflicts. This property stores
+        /// This is an array because the command can have retries, due to conflicts. This property stores
         /// all the execution start time for the command
+        /// 
+        /// This information is valid for:
+        /// - Commands
         /// </summary>
         public DateTime[] ExecutionStartTimeList { get; set; }
 
         /// <summary>
         /// Last execution start time. 
+        /// 
+        /// This information is valid for:
+        /// - Commands
         /// </summary>
         public DateTime? LastExecutionStartTime { get; set; }
 
         /// <summary>
-        /// In case of retry, this value is greater than 1 
+        /// Set when the elaboration start, a command can then:
+        /// - complete with success (when CompletedAt is set)
+        /// - complete with a failure (when FailedAt is set)
+        /// - pending: if this is set but this is not marked as completed or failed
+        /// 
+        /// In case of retries, this value is greater than 1 
+        /// 
+        /// This information is valid for:
+        /// - Commands
         /// </summary>
         public Int32 ExecutionCount { get; set; }
 
         /// <summary>
-        /// Time of completion of the command
+        /// Time of completion of the command.
+        /// 
+        /// This information is valid for:
+        /// - Commands
         /// </summary>
         public DateTime? CompletedAt { get; set; }
 
         /// <summary>
         /// Time of final dispatch of the command, this is the last message.
+        /// 
+        /// This information is valid for:
+        /// - Commands
         /// </summary>
         public DateTime? DispatchedAt { get; set; }
 
-        /// <summary>
-        /// Timestamp of failure if the command cannot be executed.
-        /// </summary>
-        public DateTime? FailedAt { get; set; }
+        ///// <summary>
+        ///// Timestamp of failure if the command cannot be executed.
+        ///// </summary>
+        //public DateTime? FailedAt { get; set; }
 
         public IMessage Message { get; set; }
+
         public string Description { get; set; }
+
         public string IssuedBy { get; set; }
+
+        /// <summary>
+        /// most recent error
+        /// 
+        /// This information is valid for:
+        /// - Commands
+        /// </summary>
         public string ErrorMessage { get; set; }
 
         /// <summary>
-        /// List of all error messages.
+        /// True when the command is completed.
+        /// 
+        /// This information is valid for:
+        /// - Commands
         /// </summary>
-        public String[] ErrorMessages { get; set; }
+        public Boolean? Completed { get; set; }
+
+        /// <summary>
+        /// True if the command completed successfully.
+        /// 
+        /// This information is valid for:
+        /// - Commands
+        /// </summary>
+        public Boolean? Success { get; set; }
     }
 
     public class MongoDbMessagesTracker : IMessagesTracker
@@ -150,7 +213,6 @@ namespace Jarvis.Framework.Shared.ReadModel
 
         private IMongoCollection<TrackedMessageModel> GetCollection()
         {
-
             var state = _db.Client.Cluster.Description.State;
             //Check if db is operational.
             if (state == MongoDB.Driver.Core.Clusters.ClusterState.Connected)
@@ -169,13 +231,16 @@ namespace Jarvis.Framework.Shared.ReadModel
             {
                 var id = msg.MessageId.ToString();
                 string issuedBy = null;
+                TrackedMessageType type = TrackedMessageType.Unknown;
 
                 if (msg is ICommand)
                 {
+                    type = TrackedMessageType.Command;
                     issuedBy = ((ICommand)msg).GetContextData("user.id");
                 }
                 else if (msg is IDomainEvent)
                 {
+                    type = TrackedMessageType.Event;
                     issuedBy = ((IDomainEvent)msg).IssuedBy;
                 }
 
@@ -185,7 +250,9 @@ namespace Jarvis.Framework.Shared.ReadModel
                         .Set(x => x.Message, msg)
                         .Set(x => x.StartedAt, DateTime.UtcNow)
                         .Set(x => x.IssuedBy, issuedBy)
-                        .Set(x => x.Description, msg.Describe()),
+                        .Set(x => x.Description, msg.Describe())
+                        .Set(x => x.Type, type)
+                        .Set(x => x.MessageType, msg.GetType().Name),
                    new UpdateOptions() { IsUpsert = true }
                 );
             }
@@ -193,7 +260,6 @@ namespace Jarvis.Framework.Shared.ReadModel
             {
                 Logger.ErrorFormat(ex, "Unable to track Started event of Message {0} [{1}] - {2}", msg.Describe(), msg.MessageId, ex.Message);
             }
-
         }
 
         public void ElaborationStarted(Guid commandId, DateTime startAt)
@@ -213,8 +279,6 @@ namespace Jarvis.Framework.Shared.ReadModel
             {
                 Logger.ErrorFormat(ex, "Unable to track ElaborationStarted event of Message {0} - {1}", commandId, ex.Message);
             }
-
-
         }
 
         public void Completed(Guid commandId, DateTime completedAt)
@@ -222,11 +286,18 @@ namespace Jarvis.Framework.Shared.ReadModel
             try
             {
                 var id = commandId.ToString();
+                var mongoUpdate = Builders<TrackedMessageModel>.Update
+                    .Set(x => x.CompletedAt, completedAt)
+                    //.Set(x => x.FailedAt, null)
+                    .Set(x => x.ErrorMessage, null)
+                    .Set(x => x.Completed, true)
+                    .Set(x => x.Success, true);
+                var equalityCheck = Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id);
                 if (JarvisFrameworkGlobalConfiguration.MetricsEnabled)
                 {
                     var trackMessage = Commands.FindOneAndUpdate(
-                        Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
-                        Builders<TrackedMessageModel>.Update.Set(x => x.CompletedAt, completedAt),
+                        equalityCheck,
+                        mongoUpdate,
                         new FindOneAndUpdateOptions<TrackedMessageModel, TrackedMessageModel>()
                         {
                             IsUpsert = true,
@@ -262,11 +333,8 @@ namespace Jarvis.Framework.Shared.ReadModel
                 {
                     //track completed date, delete all error messages.
                     Commands.UpdateOne(
-                         Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
-                         Builders<TrackedMessageModel>.Update
-                            .Set(x => x.CompletedAt, completedAt)
-                            .Set(x => x.FailedAt, null)
-                            .Set(x => x.ErrorMessage, null),
+                         equalityCheck,
+                         mongoUpdate,
                          new UpdateOptions() { IsUpsert = true }
                      );
                 }
@@ -312,9 +380,11 @@ namespace Jarvis.Framework.Shared.ReadModel
                 Commands.UpdateOne(
                     Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
                     Builders<TrackedMessageModel>.Update
-                        .Set(x => x.FailedAt, failedAt)
+                        //.Set(x => x.FailedAt, failedAt)
+                        .Set(x => x.CompletedAt, failedAt)
                         .Set(x => x.ErrorMessage, ex.Message)
-                        .Push(x => x.ErrorMessages, ex.ToString()),
+                        .Set(x => x.Success, false)
+                        .Set(x => x.Completed, true),
                     new UpdateOptions() { IsUpsert = true }
                 );
                 errorMeter.Mark();
@@ -324,8 +394,6 @@ namespace Jarvis.Framework.Shared.ReadModel
                 Logger.ErrorFormat(iex, "Unable to track Failed event of Message {0} - {1}", commandId, ex.Message);
             }
         }
-
-
     }
 
     public class NullMessageTracker : IMessagesTracker

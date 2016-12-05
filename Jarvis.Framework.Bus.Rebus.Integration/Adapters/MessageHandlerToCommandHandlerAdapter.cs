@@ -75,6 +75,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
                         MetricsHelper.MarkConcurrencyException();
                         // retry
                         if (Logger.IsInfoEnabled) Logger.InfoFormat(ex, "Handled {0} {1}, concurrency exception. Retry count: {2}", message.GetType().FullName, message.MessageId, i);
+                        // increment the retries counter and maybe add a delay
                         if (i++ > 5)
                         {
                             Thread.Sleep(new Random(DateTime.Now.Millisecond).Next(i * 10));
@@ -111,6 +112,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
                 if (done == false)
                 {
                     _logger.ErrorFormat("Too many conflict on command {0} [MessageId: {1}]", message.GetType(), message.MessageId);
+                    // todo: check this exception, no throw?!?
                     var exception = new Exception("Command failed. Too many Conflicts");
                     _messagesTracker.Failed(message.MessageId, DateTime.UtcNow, exception);
                 }

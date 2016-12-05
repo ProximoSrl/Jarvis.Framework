@@ -172,6 +172,8 @@ namespace Jarvis.Framework.Tests.BusTests
             Assert.That(track.Description, Is.EqualTo(sampleMessage.Describe()));
             Assert.That(track.StartedAt, Is.Not.Null);
             Assert.That(track.CompletedAt, Is.Not.Null);
+            Assert.That(track.Completed, Is.True);
+            Assert.That(track.Success, Is.True);
         }
 
         /// <summary>
@@ -203,6 +205,8 @@ namespace Jarvis.Framework.Tests.BusTests
             Assert.That(track.Description, Is.EqualTo(sampleMessage.Describe()));
             Assert.That(track.StartedAt, Is.Not.Null);
             Assert.That(track.CompletedAt, Is.Not.Null);
+            Assert.That(track.Completed, Is.True);
+            Assert.That(track.Success, Is.True);
 
             var handledTrack = tracks.Single(t => t.MessageId != sampleMessage.MessageId.ToString());
             CommandHandled commandHandled = (CommandHandled)handledTrack.Message;
@@ -333,16 +337,18 @@ namespace Jarvis.Framework.Tests.BusTests
                 track = tracks.Single();
             }
             while (
-                    track.FailedAt == null &&
+                    track.CompletedAt == null &&
                     DateTime.Now.Subtract(startTime).TotalSeconds < 4
             );
 
             Assert.That(track.MessageId, Is.EqualTo(sampleMessage.MessageId.ToString()));
             Assert.That(track.Description, Is.EqualTo(sampleMessage.Describe()));
             Assert.That(track.StartedAt, Is.Not.Null);
-            Assert.That(track.CompletedAt, Is.Null);
-            Assert.That(track.FailedAt, Is.Not.Null);
+            Assert.That(track.CompletedAt, Is.Not.Null);
             Assert.That(track.DispatchedAt, Is.Null);
+            Assert.That(track.ErrorMessage, Is.Not.Empty);
+            Assert.That(track.Completed, Is.True);
+            Assert.That(track.Success, Is.False);
         }
 
         [Test]
@@ -374,12 +380,49 @@ namespace Jarvis.Framework.Tests.BusTests
             Assert.That(track.Description, Is.EqualTo(sampleMessage.Describe()));
             Assert.That(track.StartedAt, Is.Not.Null);
             Assert.That(track.CompletedAt, Is.Not.Null);
-            Assert.That(track.FailedAt, Is.Null);
             Assert.That(track.DispatchedAt, Is.Null);
+            Assert.That(track.Completed, Is.True);
+            Assert.That(track.Success, Is.True);
 
             Assert.That(track.LastExecutionStartTime, Is.Not.Null);
             Assert.That(track.ExecutionCount, Is.EqualTo(3));
             Assert.That(track.ExecutionStartTimeList.Length, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void verify_exceeding_retry()
+        {
+            AnotherSampleCommandHandler.numOfFailure = Int32.MaxValue;
+            AnotherSampleCommandHandler.exceptionToThrow = new ConflictingCommandException("TEST_1", null);
+            AnotherSampleCommandHandler.setEventOnThrow = false;
+
+            var sampleMessage = new AnotherSampleTestCommand(10);
+            _bus.Send(sampleMessage);
+            var handled = _handler.Reset.WaitOne(10000);
+            //cycle until we found handled message on tracking
+            TrackedMessageModel track = null;
+            DateTime startTime = DateTime.Now;
+            do
+            {
+                Thread.Sleep(50);
+                var tracks = _messages.FindAll().ToList();
+                Assert.That(tracks, Has.Count.EqualTo(1));
+                track = tracks.Single();
+            }
+            while (
+                    track.ExecutionCount < AnotherSampleCommandHandler.numOfFailure &&
+                    DateTime.Now.Subtract(startTime).TotalSeconds < 90 // 4 sec is too short, retries might add some delay
+                                                                       // find a better way to exit this cycle.
+            );
+
+            Assert.That(track.MessageId, Is.EqualTo(sampleMessage.MessageId.ToString()));
+            Assert.That(track.Description, Is.EqualTo(sampleMessage.Describe()));
+            Assert.That(track.StartedAt, Is.Not.Null);
+            Assert.That(track.CompletedAt, Is.Not.Null);
+            Assert.That(track.Completed, Is.True);
+            Assert.That(track.Success, Is.False);
+
+            Assert.That(track.ExecutionCount, Is.EqualTo(100));
         }
     }
 

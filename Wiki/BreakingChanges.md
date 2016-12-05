@@ -34,3 +34,76 @@ ICollectionWrapper interface renamed property PrepareForNotification to Transfor
 
 This is necessary for really big readmodel, where probably the UI is interested only in a very few set of property and not the entire object.
 
+### Message Tracking
+
+The message tracking Schema has been changed:
+
+- the field 'ErrorMessages' has been removed.
+- a 'Type' field has been added, must be set to '1' (Command) if the 'ExecutionCount' field is >= 1, otherwise set it to '2' (Event)
+- a 'MessageType' field has been added, must be set to string type name representation without the namespace (in the previous schema take the value from 'Message._t' stripping the last '_X' part added by mongo), this a good guess, to have the correct value we should deserialize the class.
+- a 'Completed' field has been added, this should be set to 'true' for completed commands (in the previos scheme every command that had a CompletedAt or FailedAt field)
+- a 'Success' field has been added, this should be set to 'true' for successfully completed commands (in the previous scheme every command that had a CompletedAt field)
+- the field 'FailedAt' has been removed, the information should be migrated over 'CompletedAt'
+
+run the following script to convert from the old format to the new one:
+
+	var requests = [];
+	db.messages.find({}).snapshot().forEach(function(document) { 
+		// we compose the $set object dynamically
+        var $set = {};
+
+		// MessageType typeof(Command)
+        var msgType = document.Message._t.split("_")[0];
+        $set.MessageType = msgType;
+
+        // Type: Command (1) or Event (2)
+        var type = null;
+        if (parseInt(document.ExecutionCount) >= NumberInt(1)) {
+        	type = NumberInt(1); // Command
+        } else {
+        	type = NumberInt(2); // Event
+        }
+		set.Type = type;
+		
+        // Completed (only for commands)
+        if (type == 1) {
+            var completed = document.CompletedAt != null || document.FailedAt != null;
+            $set.Completed = completed;
+        }
+        // Success (only for commands)
+        if (type == 1) {
+            var success = document.CompletedAt != undefined;
+            $set.Success = success;
+        }
+        // FailedAt has been removed
+        var completedAt = document.CompletedAt;
+        if (document.FailedAt != null && document.CompletedAt == null) {
+        	completedAt = document.FailedAt;
+        }
+        if (completedAt != null) {
+            $set.CompletedAt = completedAt;
+        }
+                
+		requests.push( { 
+			'updateOne': {
+				'filter': { '_id': document._id },
+				'update': { 
+                    '$unset': { 'ErrorMessages': 1},
+                    '$set': $set
+				}
+			}
+		});
+		if (requests.length === 1000) {
+			//Execute per 1000 operations and re-init
+			db.messages.bulkWrite(requests);
+			requests = [];
+		}
+	});
+	if(requests.length > 0) {
+		db.messages.bulkWrite(requests);
+	}
+	
+
+references:
+
+- to 'copy' the value of one field to another: http://stackoverflow.com/questions/2606657/update-field-with-another-fields-value-in-the-document
