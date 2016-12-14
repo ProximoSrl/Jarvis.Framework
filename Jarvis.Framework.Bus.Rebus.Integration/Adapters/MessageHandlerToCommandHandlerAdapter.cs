@@ -51,7 +51,6 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
                 var notifyTo = message.GetContextData(MessagesConstants.ReplyToHeader);
                 while (!done && i < 100)
                 {
-                    i++;
                     try
                     {
                         _messagesTracker.ElaborationStarted(message.MessageId, DateTime.UtcNow);
