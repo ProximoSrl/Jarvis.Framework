@@ -158,19 +158,12 @@ namespace Jarvis.Framework.Kernel.Commands
                     handler.Handle(command);
                     _messagesTracker.Completed(command.MessageId, DateTime.UtcNow);
                     done = true;
-                    if (Logger.IsDebugEnabled) Logger.DebugFormat("Command {0} executed", command.MessageId);
-                    return;
                 }
                 catch (ConflictingCommandException ex)
                 {
                     MetricsHelper.MarkConcurrencyException();
                     // retry
-                    Logger.InfoFormat(
-                        ex,
-                        "Handled {0} {1}, concurrency exception. Retrying",
-                        command.GetType().FullName,
-                        command.MessageId
-                    );
+                    if (Logger.IsInfoEnabled) Logger.InfoFormat(ex, "Handled {0} {1}, concurrency exception. Retrying", command.GetType().FullName, command.MessageId);
                     if (i++ > 5)
                     {
                         Thread.Sleep(new Random(DateTime.Now.Millisecond).Next(i * 10));
@@ -190,10 +183,16 @@ namespace Jarvis.Framework.Kernel.Commands
                     throw; //rethrow exception.
                 }
             }
-            _logger.ErrorFormat("Too many conflict on command {0} [MessageId: {1}]", command.GetType(), command.MessageId);
-            var exception = new Exception("Command failed. Too many Conflicts");
-            _messagesTracker.Failed(command.MessageId, DateTime.UtcNow, exception);
-            throw exception;
+            if (done == false)
+            {
+                _logger.ErrorFormat("Too many conflict on command {0} [MessageId: {1}]", command.GetType(), command.MessageId);
+                var exception = new Exception("Command failed. Too many Conflicts");
+                _messagesTracker.Failed(command.MessageId, DateTime.UtcNow, exception);
+
+                throw exception;
+            }
+            if (Logger.IsDebugEnabled) Logger.DebugFormat("Command {0} executed", command.MessageId);
+
         }
 
         protected virtual void ReleaseHandlers(ICommandHandler[] handlers)
