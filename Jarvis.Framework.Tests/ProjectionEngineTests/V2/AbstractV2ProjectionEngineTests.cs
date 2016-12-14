@@ -44,7 +44,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 		protected ICommitPollingClientFactory _pollingClientFactory;
 		public AbstractV2ProjectionEngineTests(String pollingClientVersion = "1")
         {
-			TestHelper.RegisterSerializerForFlatId<SampleAggregateId>();
+            TestHelper.RegisterSerializerForFlatId<SampleAggregateId>();
 			_container = new WindsorContainer();
 			_container.AddFacility<TypedFactoryFacility>();
 			_container.Register(
@@ -88,6 +88,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             _eventStoreConnectionString = GetConnectionString();
 
             DropDb();
+            TestHelper.ClearAllQueue("cqrs.rebus.test", "cqrs.rebus.errors");
 
             _identityConverter = new IdentityManager(new CounterService(Database));
             RegisterIdentities(_identityConverter);

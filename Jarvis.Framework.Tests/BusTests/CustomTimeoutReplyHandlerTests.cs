@@ -9,6 +9,7 @@ using Rebus.Castle.Windsor;
 using Rebus.Configuration;
 using Rebus.Messages;
 using Rebus.Transports.Msmq;
+using Jarvis.Framework.Tests.Support;
 
 namespace Jarvis.Framework.Tests.BusTests
 {
@@ -34,6 +35,7 @@ namespace Jarvis.Framework.Tests.BusTests
         [TestFixtureSetUp]
         public void TestFixtureSetUp()
         {
+            TestHelper.ClearAllQueue("cqrs.rebus.test", "cqrs.rebus.errors");
             _container = new WindsorContainer();
             var startableBus = Configure.With(new WindsorContainerAdapter(_container))
                 .Transport(t => t.UseMsmqAndGetInputQueueNameFromAppConfig())

@@ -10,6 +10,7 @@ using Jarvis.Framework.Shared.IdentitySupport;
 using System.Reflection;
 using Jarvis.Framework.Shared.IdentitySupport.Serialization;
 using MongoDB.Bson.Serialization;
+using System.Messaging;
 
 namespace Jarvis.Framework.Tests.Support
 {
@@ -20,7 +21,7 @@ namespace Jarvis.Framework.Tests.Support
             var url = new MongoUrl(connectionString);
             var client = new MongoClient(url);
             var db = client.GetDatabase(url.DatabaseName);
-            
+
             db.Drop();
 
             return db;
@@ -44,7 +45,24 @@ namespace Jarvis.Framework.Tests.Support
                 BsonSerializer.RegisterSerializer(typeof(T), new TypedEventStoreIdentityBsonSerializer<T>());
                 EventStoreIdentityCustomBsonTypeMapper.Register<T>();
             }
-           
+
         }
+
+        public static void ClearAllQueue(params String[] queueList)
+        {
+            foreach (var queueName in queueList)
+            {
+                try
+                {
+                    var queue = new MessageQueue(queueName);
+                    queue.Purge();
+                }
+                catch
+                {
+                    // if the queue does not exists just ignore it
+                }
+            }
+        }
+
     }
 }
