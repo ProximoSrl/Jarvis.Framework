@@ -26,6 +26,8 @@ namespace Jarvis.Framework.Tests.EngineTests.SagaTests
         [SetUp]
         public void SetUp()
         {
+            TestHelper.RegisterSerializerForFlatId<OrderId>();
+
             _connectionString = ConfigurationManager.ConnectionStrings["saga"].ConnectionString;
             var db = TestHelper.CreateNew(_connectionString);
 
