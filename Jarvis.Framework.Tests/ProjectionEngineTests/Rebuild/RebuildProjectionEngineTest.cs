@@ -140,7 +140,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         protected void CreateAggregate(Int64 id = 1)
         {
             var aggregateId = new SampleAggregateId(id);
-            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(aggregateId);
+            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(aggregateId);
             aggregate.Create();
             Repository.Save(aggregate, Guid.NewGuid(), h => { });
         }

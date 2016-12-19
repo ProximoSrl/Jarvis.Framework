@@ -5,6 +5,7 @@ using Jarvis.Framework.Kernel.Store;
 using Jarvis.Framework.Shared.IdentitySupport;
 using Jarvis.NEventStoreEx.CommonDomainEx;
 using Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore;
+using NEventStore;
 
 namespace Jarvis.Framework.Kernel.Engine
 {
@@ -30,7 +31,7 @@ namespace Jarvis.Framework.Kernel.Engine
             _kernel = kernel;
         }
 
-        public IAggregateEx Build(Type type, IIdentity id, IMementoEx snapshot)
+        public IAggregateEx Build(Type type, IIdentity id)
         {
             AggregateRoot aggregate = null;
             if (_kernel != null && _kernel.HasComponent(type))
@@ -48,13 +49,18 @@ namespace Jarvis.Framework.Kernel.Engine
             }
 
             aggregate.AssignAggregateId(id);
-
-            if (snapshot != null && aggregate is ISnapshotable)
-            {
-                ((ISnapshotable)aggregate).Restore(snapshot);
-            }
-
             return aggregate;
         }
-    }
+
+		public Boolean ApplySnapshot(IAggregateEx aggregate, ISnapshot snapshot)
+		{
+			if (snapshot != null && snapshot.Payload is IMementoEx && aggregate is ISnapshotable)
+			{
+				IMementoEx memento = (IMementoEx)snapshot.Payload;
+				ISnapshotable snapshotable = (ISnapshotable)aggregate;
+				return snapshotable.Restore(memento);
+			}
+			return false;
+		}
+	}
 }

@@ -118,9 +118,16 @@ namespace Jarvis.Framework.Kernel.Engine
             InternalState.Apply(evt);
         }
 
-        void ISnapshotable.Restore(IMementoEx snapshot)
+        Boolean ISnapshotable.Restore(IMementoEx snapshot)
         {
             var snap = (AggregateSnapshot<TState>)snapshot;
+
+			if (snap.State.Signature != _internalState.Signature)
+			{
+				//This version of the state is not compatibile.
+				return false;
+			}
+
             //it is important to clone to avoid external code reference internal state
             this._internalState = (TState) snap.State.Clone(); 
             this.SnapshotRestoreVersion = this.Version = snap.Version;
@@ -128,6 +135,8 @@ namespace Jarvis.Framework.Kernel.Engine
             if (!Id.Equals(snap.Id))
                 throw new AggregateException(String.Format("Error restoring snapshot: Id mismatch. Snapshot id: {0} aggregate id: {1} [snapshot version {2}] ", 
                     snap.Id, Id, snap.Version));
+
+			return true;
         }
 
 

@@ -53,7 +53,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
         public async void run_poll_and_wait()
         {
             var reader = new MongoReader<SampleReadModel, string>(Database);
-            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregateId(1));
+            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(new SampleAggregateId(1));
             aggregate.Create();
             Repository.Save(aggregate, Guid.NewGuid(), h => { });
             Thread.Sleep(50);
@@ -81,7 +81,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
         public async void start_with_rebuild_then_stop_rebuild()
         {
             var reader = new MongoReader<SampleReadModel, string>(Database);
-            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregateId(1));
+            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(new SampleAggregateId(1));
             aggregate.Create();
             Repository.Save(aggregate, Guid.NewGuid(), h => { });
             Thread.Sleep(50);

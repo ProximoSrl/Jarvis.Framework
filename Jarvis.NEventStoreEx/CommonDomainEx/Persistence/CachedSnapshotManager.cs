@@ -76,5 +76,12 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence
                 _persister.Persist(snapshot, aggregate.GetType().FullName);
             }
         }
-    }
+
+		public void Clear(string streamId, Type aggregateType)
+		{
+			if (_cacheEnabled)
+				_cache.Remove(streamId);
+			_persister.Clear(streamId, Int32.MaxValue, aggregateType.FullName);
+		}
+	}
 }

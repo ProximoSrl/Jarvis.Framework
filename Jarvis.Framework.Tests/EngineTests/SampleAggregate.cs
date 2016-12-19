@@ -21,9 +21,9 @@ namespace Jarvis.Framework.Tests.EngineTests
 	    }
     }
 
-    public class SampleAggregate : AggregateRoot<SampleAggregate.State>
+    public class SampleAggregate : AggregateRoot<SampleAggregate.SampleAggregateState>
     {
-        public class State : AggregateState
+        public class SampleAggregateState : AggregateState
         {
             public Boolean ShouldBeFalse { get; private set; }
 
@@ -52,7 +52,12 @@ namespace Jarvis.Framework.Tests.EngineTests
 
             protected override object DeepCloneMe()
             {
-                return new State() { TouchCount = this.TouchCount };
+                return new SampleAggregateState() { TouchCount = this.TouchCount };
+            }
+
+            public void SetSignature(String signature)
+            {
+                Signature = signature;
             }
         }
 
@@ -94,7 +99,7 @@ namespace Jarvis.Framework.Tests.EngineTests
             get { return Context;}
         }
 
-        public new State InternalState { get { return base.InternalState; } }
+        public new SampleAggregateState InternalState { get { return base.InternalState; } }
     }
 
     public class SampleAggregateForInspection : SampleAggregate

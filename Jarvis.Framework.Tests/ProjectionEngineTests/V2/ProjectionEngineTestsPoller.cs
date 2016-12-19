@@ -49,14 +49,14 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
         public async void run_poller()
         {
             var reader = new MongoReader<SampleReadModel, string>(Database);
-            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregateId(1));
+            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(new SampleAggregateId(1));
             aggregate.Create();
             Repository.Save(aggregate, Guid.NewGuid(), h => { });
 
             await Engine.UpdateAndWait();
             Assert.AreEqual(1, reader.AllSortedById.Count());
 
-            aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregateId(2));
+            aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(new SampleAggregateId(2));
             aggregate.Create();
             Repository.Save(aggregate, Guid.NewGuid(), h => { });
 

@@ -44,7 +44,7 @@ namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
         public void verify_snapshot_on_new_aggregate_not_call_persistence()
         {
             var sampleAggregateId = new SampleAggregateId(_counter++);
-            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregate.State(), sampleAggregateId);
+            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(new SampleAggregate.SampleAggregateState(), sampleAggregateId);
             aggregate.Create();
             _sut.Snapshot(aggregate, "Jarvis", 1);
             _persister.DidNotReceiveWithAnyArgs().Persist(null, null);
@@ -54,7 +54,7 @@ namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
         public void verify_persistence_called_after_threshold_new_aggregate()
         {
             var sampleAggregateId = new SampleAggregateId(_counter++);
-            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregate.State(), sampleAggregateId);
+            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(new SampleAggregate.SampleAggregateState(), sampleAggregateId);
             aggregate.Create();
             _sut.Snapshot(aggregate, "Jarvis", 1);
             _persister.DidNotReceiveWithAnyArgs().Persist(null, null);
@@ -72,8 +72,8 @@ namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
         public void verify_persistence_honor_database_version_when_threshold_passed()
         {
             var sampleAggregateId = new SampleAggregateId(_counter++);
-            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregate.State(), sampleAggregateId);
-            var memento = new AggregateSnapshot<SampleAggregate.State>() { Id = sampleAggregateId, Version = 30, State = new SampleAggregate.State() };
+            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(new SampleAggregate.SampleAggregateState(), sampleAggregateId);
+            var memento = new AggregateSnapshot<SampleAggregate.SampleAggregateState>() { Id = sampleAggregateId, Version = 30, State = new SampleAggregate.SampleAggregateState() };
             var snapshot = new Snapshot("Jarvis", sampleAggregateId, 30, memento);
 
             _persister.Load(null, 0, null).ReturnsForAnyArgs(snapshot);

@@ -100,7 +100,7 @@ namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
         public void profile_snapshot_opt_out()
         {
             var sampleAggregateId = new SampleAggregateId(1);
-            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregate.State(), sampleAggregateId);
+            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(new SampleAggregate.SampleAggregateState(), sampleAggregateId);
             aggregate.Create();
 
             _sut.Save(aggregate, Guid.NewGuid(), null);
@@ -144,8 +144,8 @@ namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
         public void can_save_with_aggregate_identity()
         {
             var sampleAggregateId = new SampleAggregateId(1);
-            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(
-                new SampleAggregate.State(),
+            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(
+                new SampleAggregate.SampleAggregateState(),
                 sampleAggregateId
             );
             aggregate.Create();
@@ -161,8 +161,8 @@ namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
         public void can_reuse_repository_with_same_aggregate()
         {
             var sampleAggregateId = new SampleAggregateId(1);
-            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(
-                new SampleAggregate.State(),
+            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(
+                new SampleAggregate.SampleAggregateState(),
                 sampleAggregateId
             );
             aggregate.Create();
@@ -181,8 +181,8 @@ namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
         public void can_reuse_repository_reloading_aggregate()
         {
             var sampleAggregateId = new SampleAggregateId(1);
-            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(
-                new SampleAggregate.State(),
+            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(
+                new SampleAggregate.SampleAggregateState(),
                 sampleAggregateId
             );
             aggregate.Create();
@@ -204,7 +204,7 @@ namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
         {
             var sampleAggregateId = new SampleAggregateId(1);
 
-            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregate.State(), sampleAggregateId);
+            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(new SampleAggregate.SampleAggregateState(), sampleAggregateId);
             aggregate.Create();
             _sut.Save(aggregate, new Guid("135E4E5F-3D65-43AC-9D8D-8A8B0EFF8501"), null);
 
@@ -218,7 +218,7 @@ namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
         {
             var sampleAggregateId = new SampleAggregateId(1);
 
-            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregate.State(), sampleAggregateId);
+            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(new SampleAggregate.SampleAggregateState(), sampleAggregateId);
             aggregate.Create();
             aggregate.InvalidateState();
             try
@@ -275,7 +275,7 @@ namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
         {
             //create an aggregate.
             var sampleAggregateId = new SampleAggregateId(1);
-            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregate.State(), sampleAggregateId);
+            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(new SampleAggregate.SampleAggregateState(), sampleAggregateId);
             aggregate.Create();
             _sut.Save(aggregate, new Guid("135E4E5F-3D65-43AC-9D8D-8A8B0EFF8501"), null);
             NeventStoreExGlobalConfiguration.SetLockThreadSleepCount(100);
@@ -305,12 +305,12 @@ namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
         {
             //create an aggregate.
             var sampleAggregateId = new SampleAggregateId(1);
-            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregate.State(), sampleAggregateId);
+            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(new SampleAggregate.SampleAggregateState(), sampleAggregateId);
             aggregate.Create();
             for (int i = 0; i < NumberOfCommitsBeforeSnapshot; i++)
             {
-                ((IAggregateEx)aggregate).ApplyEvent(new SampleAggregateTouched());
-            }
+				aggregate.Touch();
+			}
             var events = _sut.Save(aggregate, new Guid("135E4E5F-3D65-43AC-9D8D-8A8B0EFF8501"), null);
             _sut.SnapshotManager.Received().Snapshot(aggregate, "Jarvis", events);
         }
@@ -320,22 +320,23 @@ namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
         {
             //create an aggregate.
             var sampleAggregateId = new SampleAggregateId(1);
-            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregate.State(), sampleAggregateId);
+            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(new SampleAggregate.SampleAggregateState(), sampleAggregateId);
             aggregate.Create();
             for (int i = 0; i < NumberOfCommitsBeforeSnapshot; i++)
             {
-                ((IAggregateEx)aggregate).ApplyEvent(new SampleAggregateTouched());
+				aggregate.Touch();
             }
-            _sut.SnapshotManager = new CachedSnapshotManager(
+			Assert.That(aggregate.InternalState.TouchCount, Is.EqualTo(50));
+			_sut.SnapshotManager = new CachedSnapshotManager(
                 new MongoSnapshotPersisterProvider(_db, NullLogger.Instance),
                 new NullSnapshotPersistenceStrategy());
             //this will save the snapshot
             _sut.Save(aggregate, new Guid("135E4E5F-3D65-43AC-9D8D-8A8B0EFF8501"), null);
-            var discriminated = BsonSerializer.IsTypeDiscriminated(typeof(AggregateSnapshot<>));
-            Console.WriteLine("Discriminated: {0}", discriminated);
+
             //now reload the aggregate
             var reloaded = _sut.GetById<SampleAggregate>(sampleAggregateId);
             Assert.That(reloaded.SnapshotRestoreVersion, Is.EqualTo(51));
+			Assert.That(reloaded.InternalState.TouchCount, Is.EqualTo(50));
         }
 
 		[Test]

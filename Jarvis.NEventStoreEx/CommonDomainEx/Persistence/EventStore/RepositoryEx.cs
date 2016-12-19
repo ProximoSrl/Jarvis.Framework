@@ -115,5 +115,11 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 
             return SnapshotManager.Load(id.AsString(), version, typeof(TAggregate));
         }
-    }
+
+		protected override void SnapshotDischarded(IAggregateEx aggregate, ISnapshot snapshot)
+		{
+			base.SnapshotDischarded(aggregate, snapshot);
+			SnapshotManager.Clear(aggregate.Id.AsString(), aggregate.GetType());
+		}
+	}
 }

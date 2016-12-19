@@ -27,5 +27,12 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence
         /// <param name="aggregateType">Type of the aggregate to load</param>
         /// <returns></returns>
         ISnapshot Load(String streamId, Int32 upToVersion, Type aggregateType);
-    }
+
+		/// <summary>
+		/// Clear all snapshot cache for a stream
+		/// </summary>
+		/// <param name="streamId"></param>
+		/// <param name="aggregateType"></param>
+		void Clear(String streamId, Type aggregateType);
+	}
 }

@@ -101,7 +101,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Unfolder
             return String.IsNullOrEmpty(validationErrors);
         }
 
-        public virtual void Restore(IMementoEx memento)
+        public virtual Boolean Restore(IMementoEx memento)
         {
             var validationErrors = InnerValidateMemento(memento);
             if (!String.IsNullOrEmpty(validationErrors))
@@ -110,6 +110,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Unfolder
             var eventUnfolderMemento = (EventUnfolderMemento) memento;
             _state = (TQueryModel)((TQueryModel)eventUnfolderMemento.Payload).Clone();
             _snapshotVersion = Version = memento.Version;
+			return true;
         }
 
         /// <summary>

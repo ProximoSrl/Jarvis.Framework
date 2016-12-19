@@ -12,7 +12,12 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence
             Instance = new NullSnapshotManager();
         }
 
-        public ISnapshot Load(string streamId, int upToVersion, Type aggregateType)
+		public void Clear(string streamId, Type aggregateType)
+		{
+			
+		}
+
+		public ISnapshot Load(string streamId, int upToVersion, Type aggregateType)
         {
             return null;
         }

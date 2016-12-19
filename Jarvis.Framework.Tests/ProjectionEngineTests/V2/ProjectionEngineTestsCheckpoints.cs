@@ -67,11 +67,11 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
                 }
             }
             Console.WriteLine("FIRST CHECK DONE");
-            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregateId(1));
+            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(new SampleAggregateId(1));
             aggregate.Create();
             Repository.Save(aggregate, Guid.NewGuid(), h => { });
 
-            aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregateId(2));
+            aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(new SampleAggregateId(2));
             aggregate.Create();
             Repository.Save(aggregate, Guid.NewGuid(), h => { });
 

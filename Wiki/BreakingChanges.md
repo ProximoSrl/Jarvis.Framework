@@ -1,4 +1,14 @@
-##Version 2.0
+#Version 2.0
+
+##Version 2.1
+
+1. Change to iconstruct aggregate
+
+Interface *IConstructAggregatesEx* has now two methods, one to create the Aggregate, and the other to restore snapshot to the Aggregate. All the call to Build() method should be changed as following.
+
+The third parameter (the instance of the snapshot) is removed. If the third parameter is different from null you need to call the ApplySnapshot method passing the instance of the Aggregate returned from call to Build and the instance of the snapshot.
+
+##Version 2.0.0
 
 ###Core
 

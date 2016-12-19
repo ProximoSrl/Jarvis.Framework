@@ -97,7 +97,7 @@ namespace Jarvis.Framework.Kernel.Commands
 
         protected TAggregate CreateNewAggregate(IIdentity identity)
         {
-            var aggregate = (TAggregate)AggregateFactory.Build(typeof(TAggregate), identity, null);
+            var aggregate = (TAggregate)AggregateFactory.Build(typeof(TAggregate), identity);
             SetupContext(aggregate);
             return aggregate;
         }

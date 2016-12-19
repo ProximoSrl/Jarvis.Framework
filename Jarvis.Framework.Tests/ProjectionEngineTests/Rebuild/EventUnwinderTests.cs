@@ -95,7 +95,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         protected SampleAggregateId CreateAggregate(Int64 id = 1)
         {
             var aggregateId = new SampleAggregateId(id);
-            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(aggregateId);
+            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(aggregateId);
             aggregate.Create();
             Repository.Save(aggregate, Guid.NewGuid(), h => { });
             return aggregateId;
@@ -120,7 +120,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         public void verify_basic_unwinding_with_headers()
         {
             var aggregateId = new SampleAggregateId(1);
-            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(aggregateId);
+            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(aggregateId);
             aggregate.Create();
             Repository.Save(aggregate, Guid.NewGuid(), h => { h.Add("test.with.dot", "BLAH"); });
 

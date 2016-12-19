@@ -58,7 +58,7 @@ namespace Jarvis.Framework.Tests.EngineTests
                 NSubstitute.Substitute.For<NEventStore.Logging.ILog>()
             );
 
-            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregate.State(), new SampleAggregateId(1));
+            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(new SampleAggregate.SampleAggregateState(), new SampleAggregateId(1));
             aggregate.Create();
             repo.Save(
                 aggregate,
