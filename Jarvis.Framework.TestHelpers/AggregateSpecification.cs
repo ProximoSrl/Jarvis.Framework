@@ -65,7 +65,13 @@ namespace Jarvis.Framework.TestHelpers
             _aggregate = TestAggregateFactory.Create<TAggregate, TState>(state, id, 99999);
         }
 
-        private Cleanup stuff = () => test_executions_context.Dispose();
+        private Cleanup stuff = () =>
+        {
+            if (test_executions_context != null)
+            {
+                test_executions_context.Dispose();
+            }
+        };
 
         protected static bool EventHasBeenRaised<T>()
         {
