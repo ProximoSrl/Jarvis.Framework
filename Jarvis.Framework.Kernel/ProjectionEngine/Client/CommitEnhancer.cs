@@ -26,6 +26,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         public void Enhance(ICommit commit)
         {
             var esid = (EventStoreIdentity)_converter.ToIdentity(commit.StreamId);
+            Int32 startRevision = commit.StreamRevision - commit.Events.Count + 1;
             foreach (var eventMessage in commit.Events)
             {
                 var evt = (DomainEvent)eventMessage.Body;
@@ -41,7 +42,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                 evt.SetPropertyValue(d => d.CommitStamp, commit.CommitStamp);
                 evt.SetPropertyValue(d => d.CommitId, commit.CommitId);
                 //evt.SetPropertyValue(d => d.AggregateId, esid);
-                evt.SetPropertyValue(d => d.Version, commit.StreamRevision);
+                evt.SetPropertyValue(d => d.Version, startRevision++);
                 evt.SetPropertyValue(d => d.Context, headers);
                 evt.SetPropertyValue(d => d.CheckpointToken, commit.CheckpointToken);
             }
