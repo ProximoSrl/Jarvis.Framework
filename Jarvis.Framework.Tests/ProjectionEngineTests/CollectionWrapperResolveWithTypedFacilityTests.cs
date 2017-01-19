@@ -92,7 +92,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         {
             var c = _container.Resolve<ICollectionWrapper<SampleReadModelTestId, TestId>>();
             Assert.IsNotNull(c);
-            Assert.That(!c.TransformForNotification.Target.ToString().Contains("Castle.Proxies"));
+            Assert.That(c.TransformForNotification == null || !c.TransformForNotification.Target.ToString().Contains("Castle.Proxies"));
             Assert.DoesNotThrow(() =>
             {
                 c.TransformForNotification(null);
