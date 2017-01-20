@@ -72,4 +72,35 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
         {
         }
     }
+
+    public class MyAbstractIdentityId : Shared.IdentitySupport.AbstractIdentity<Int64>
+    {
+        public override string GetTag()
+        {
+            return "MyAbstractIdentity";
+        }
+
+        public MyAbstractIdentityId(Int64 id)
+        {
+            Id = id;
+        }
+    }
+
+    public class TestAbstractId : AbstractIdentity<Int64>
+    {
+        public override string GetTag()
+        {
+            return "TestAbstract";
+        }
+
+        public TestAbstractId(Int64 id)
+        {
+            Id = id;
+        }
+    }
+
+    public class WithAbstractId
+    {
+        public TestAbstractId AbstractId { get; set; }
+    }
 }
