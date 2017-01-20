@@ -7,6 +7,7 @@ using Fasterflect;
 using Jarvis.NEventStoreEx.CommonDomainEx;
 using System.Linq.Expressions;
 using Jarvis.Framework.Shared.Helpers;
+using Castle.Core.Logging;
 
 namespace Jarvis.Framework.Shared.IdentitySupport
 {
@@ -16,9 +17,12 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
         private readonly Dictionary<string, Func<long, IIdentity>> _longBasedFactories = new Dictionary<string, Func<long, IIdentity>>();
 
+        public ILogger Logger { get; set; }
+
         public IdentityManager(ICounterService counterService)
         {
             _counterService = counterService;
+            Logger = NullLogger.Instance;
         }
 
         public string ToString(IIdentity identity)
@@ -59,11 +63,14 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                     var ctor = ic.Constructor(new Type[] { typeof(long) });
                     if (ctor == null)
                     {
-                        sb.AppendFormat("Identity {0} must have the constructor {1}(long id)\n", ic.FullName, ic.Name);
+                        var message = String.Format("Identity {0} must have the constructor {1}(long id)\n", ic.FullName, ic.Name);
+                        Logger.Error(message);
+                        sb.AppendFormat(message);
+                        continue; //move to the next type, or everythign will crash.
                     }
                     var activator = FastReflectionHelper.GetActivator(ctor);
 
-                    _longBasedFactories[tag] = (id) => (EventStoreIdentity)activator(new object[] { id });
+                    _longBasedFactories[tag] = (id) => (IIdentity)activator(new object[] { id });
                 }
             }
 

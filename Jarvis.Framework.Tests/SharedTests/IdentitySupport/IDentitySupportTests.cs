@@ -26,6 +26,7 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
         private TestFlatMapper sutFlat;
         private IMongoCollection<BsonDocument> _mappingCollection;
         private IMongoCollection<BsonDocument> _mappingFlatCollection;
+        private IdentityManager _identityManager;
 
         [TestFixtureSetUp]
         public void TestFixtureSetup()
@@ -40,13 +41,13 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
         [SetUp]
         public void SetUp()
         {
-           var db = TestHelper.CreateNew(ConfigurationManager.ConnectionStrings["system"].ConnectionString);
-            IdentityManager manager = new IdentityManager(new CounterService(db));
-            manager.RegisterIdentitiesFromAssembly(Assembly.GetExecutingAssembly());
+            var db = TestHelper.CreateNew(ConfigurationManager.ConnectionStrings["system"].ConnectionString);
+            _identityManager = new IdentityManager(new CounterService(db));
+            _identityManager.RegisterIdentitiesFromAssembly(Assembly.GetExecutingAssembly());
             _mappingCollection = db.GetCollection<BsonDocument>("map_testid");
             _mappingFlatCollection = db.GetCollection<BsonDocument>("map_testflatid");
-            sut = new TestMapper(db, manager);
-            sutFlat = new TestFlatMapper(db, manager);
+            sut = new TestMapper(db, _identityManager);
+            sutFlat = new TestFlatMapper(db, _identityManager);
         }
 
         [Test]
@@ -99,11 +100,31 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             {
                 Assert.That(ex.Message, Contains.Substring("Alias alias2 already mapped to Test_2"));
             }
-           
+
+        }
+
+        [Test]
+        public void Can_generate_new_abstract_identity()
+        {
+            var id = _identityManager.New<MyAbstractIdentityId>();
+            Assert.That(id.Id, Is.GreaterThan(0L));
+        }
+
+        public class MyAbstractIdentityId : Shared.IdentitySupport.AbstractIdentity<Int64>
+        {
+            public override string GetTag()
+            {
+                return "MyAbstractIdentity";
+            }
+
+            public MyAbstractIdentityId(Int64 id)
+            {
+                Id = id;
+            }
         }
     }
 
- 
+
 
 
 }
