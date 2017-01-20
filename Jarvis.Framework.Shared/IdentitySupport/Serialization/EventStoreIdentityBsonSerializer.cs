@@ -84,6 +84,35 @@ namespace Jarvis.Framework.Shared.IdentitySupport.Serialization
         }
     }
 
+    public class AbstractIdentityBsonSerializer<T, TId> : SerializerBase<T> where T : AbstractIdentity<TId>
+    {
+
+        public override T Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args)
+        {
+            if (context.Reader.CurrentBsonType == BsonType.Null)
+            {
+                context.Reader.ReadNull();
+                return default(T);
+            }
+
+            var id = context.Reader.ReadString();
+
+            return MongoFlatIdSerializerHelper.ToIdentity<T>(id);
+        }
+
+        public override void Serialize(BsonSerializationContext context, BsonSerializationArgs args, T value)
+        {
+            if (value == null)
+            {
+                context.Writer.WriteNull();
+            }
+            else
+            {
+                context.Writer.WriteString(String.Format("{0}_{1}", value.GetTag(), value.Id));
+            }
+        }
+    }
+
     public class IdentityArrayBsonSerializer<T> : SerializerBase<T[]> where T : IIdentity
     {
         public override T[] Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args)
