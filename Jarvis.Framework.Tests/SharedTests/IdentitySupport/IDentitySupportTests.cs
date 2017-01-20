@@ -110,17 +110,29 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             Assert.That(id.Id, Is.GreaterThan(0L));
         }
 
-        public class MyAbstractIdentityId : Shared.IdentitySupport.AbstractIdentity<Int64>
+        [Test]
+        public void should_serialize_abstract_id()
         {
-            public override string GetTag()
-            {
-                return "MyAbstractIdentity";
-            }
+            var instance = new TestAbstractId(1);
+            var json = instance.ToJson();
 
-            public MyAbstractIdentityId(Int64 id)
-            {
-                Id = id;
-            }
+            Assert.AreEqual("\"TestAbstract_1\"", json);
+        }
+
+        [Test]
+        public void should_serialize_class_with_abstract_id()
+        {
+            var instance = new WithAbstractId() { AbstractId = new TestAbstractId(42)};
+            var json = instance.ToJson();
+
+            Assert.AreEqual("{ \"AbstractId\" : \"TestAbstract_42\" }", json);
+        }
+
+        [Test]
+        public void should_deserialize_class_with_abstract_id()
+        {
+            var instance = BsonSerializer.Deserialize<WithAbstractId>("{ \"AbstractId\" : \"TestAbstract_42\" }");
+            Assert.That(instance.AbstractId.Id, Is.EqualTo(42L));
         }
     }
 

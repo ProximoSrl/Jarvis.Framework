@@ -47,10 +47,21 @@ namespace Jarvis.Framework.Shared.IdentitySupport
     {
         public IBsonSerializer GetSerializer(Type type)
         {
+            var typename = type.FullName;
+
             if (typeof(EventStoreIdentity).IsAssignableFrom(type))
             {
                 var serializerGeneric = typeof(TypedEventStoreIdentityBsonSerializer<>);
                 var serializerType = serializerGeneric.MakeGenericType(type);
+                var serializer = (IBsonSerializer)Activator.CreateInstance(serializerType);
+
+                return serializer;
+            }
+            else if (IsSubclassOfRawGeneric(typeof(AbstractIdentity<>), type))
+            {
+                var serializerGeneric = typeof(AbstractIdentityBsonSerializer<,>);
+                var idType = GetGenericIdTypeFromAbstractIdentity(type);
+                var serializerType = serializerGeneric.MakeGenericType(type, idType);
                 var serializer = (IBsonSerializer)Activator.CreateInstance(serializerType);
 
                 return serializer;
@@ -61,6 +72,28 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             }
 
             return null;
+        }
+
+        private Type GetGenericIdTypeFromAbstractIdentity(Type type)
+        {
+            while (type.IsGenericType == false || type.GetGenericTypeDefinition() != typeof(AbstractIdentity<>))
+                type = type.BaseType;
+
+            return type.GetGenericArguments()[0];
+        }
+
+        static bool IsSubclassOfRawGeneric(Type generic, Type toCheck)
+        {
+            while (toCheck != null && toCheck != typeof(object))
+            {
+                var cur = toCheck.IsGenericType ? toCheck.GetGenericTypeDefinition() : toCheck;
+                if (generic == cur)
+                {
+                    return true;
+                }
+                toCheck = toCheck.BaseType;
+            }
+            return false;
         }
     }
 
