@@ -55,9 +55,9 @@ namespace Jarvis.Framework.Tests.EngineTests
                 return new SampleAggregateState() { TouchCount = this.TouchCount };
             }
 
-            public void SetSignature(String signature)
+            public void SetVersionSignature(String signature)
             {
-                Signature = signature;
+                VersionSignature = signature;
             }
         }
 

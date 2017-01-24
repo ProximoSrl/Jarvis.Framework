@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 {
+    [Serializable]
     public class JarvisRebusConfiguration
     {
         public String InputQueue { get; set; }

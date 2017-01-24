@@ -7,6 +7,7 @@ using MongoDB.Driver;
 using Metrics;
 using Jarvis.Framework.Shared.Helpers;
 using Castle.Core.Logging;
+using System.Collections.Generic;
 
 namespace Jarvis.Framework.Shared.ReadModel
 {
@@ -27,16 +28,16 @@ namespace Jarvis.Framework.Shared.ReadModel
         /// It can be called multiple times, if command execution has conflicts and needs
         /// to have a retry.
         /// </summary>
-        /// <param name="commandId"></param>
+        /// <param name="command"></param>
         /// <param name="startAt"></param>
-        void ElaborationStarted(Guid commandId, DateTime startAt);
+        void ElaborationStarted(ICommand command, DateTime startAt);
 
         /// <summary>
         /// Message was elaborated with success
         /// </summary>
-        /// <param name="commandId"></param>
+        /// <param name="command"></param>
         /// <param name="completedAt"></param>
-        void Completed(Guid commandId, DateTime completedAt);
+        void Completed(ICommand command, DateTime completedAt);
 
         /// <summary>
         /// Dispatched is the status when the event related to the command is 
@@ -44,10 +45,10 @@ namespace Jarvis.Framework.Shared.ReadModel
         /// that the command is executed then dispatched to the bus and if there
         /// is a Reply-to a reply command is sent.
         /// </summary>
-        /// <param name="commandId"></param>
+        /// <param name="messageId"></param>
         /// <param name="dispatchedAt"></param>
         /// <returns></returns>
-        bool Dispatched(Guid commandId, DateTime dispatchedAt);
+        bool Dispatched(Guid messageId, DateTime dispatchedAt);
 
         /// <summary>
         /// Drop the entire collection.
@@ -58,10 +59,16 @@ namespace Jarvis.Framework.Shared.ReadModel
         /// Message cannot be elaborated, some error prevents the message to be
         /// handled.
         /// </summary>
-        /// <param name="commandId"></param>
+        /// <param name="command"></param>
         /// <param name="failedAt"></param>
         /// <param name="ex"></param>
-        void Failed(Guid commandId, DateTime failedAt, Exception ex);
+        void Failed(ICommand command, DateTime failedAt, Exception ex);
+    }
+
+    public interface IMessagesTrackerQueryManager
+    {
+        List<TrackedMessageModel> GetByIdList(List<String> idList);
+
     }
 
     public enum TrackedMessageType
@@ -181,7 +188,7 @@ namespace Jarvis.Framework.Shared.ReadModel
         public Boolean? Success { get; set; }
     }
 
-    public class MongoDbMessagesTracker : IMessagesTracker
+    public class MongoDbMessagesTracker : IMessagesTracker, IMessagesTrackerQueryManager
     {
         private IMongoCollection<TrackedMessageModel> _commands;
         IMongoCollection<TrackedMessageModel> Commands
@@ -236,7 +243,7 @@ namespace Jarvis.Framework.Shared.ReadModel
                 if (msg is ICommand)
                 {
                     type = TrackedMessageType.Command;
-                    issuedBy = ((ICommand)msg).GetContextData("user.id");
+                    issuedBy = ((ICommand)msg).GetContextData(MessagesConstants.UserId);
                 }
                 else if (msg is IDomainEvent)
                 {
@@ -262,11 +269,11 @@ namespace Jarvis.Framework.Shared.ReadModel
             }
         }
 
-        public void ElaborationStarted(Guid commandId, DateTime startAt)
+        public void ElaborationStarted(ICommand command, DateTime startAt)
         {
             try
             {
-                var id = commandId.ToString();
+                var id = command.MessageId.ToString();
                 var updated = Commands.UpdateOne(
                     Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
                      Builders<TrackedMessageModel>.Update
@@ -277,15 +284,15 @@ namespace Jarvis.Framework.Shared.ReadModel
             }
             catch (Exception ex)
             {
-                Logger.ErrorFormat(ex, "Unable to track ElaborationStarted event of Message {0} - {1}", commandId, ex.Message);
+                Logger.ErrorFormat(ex, "Unable to track ElaborationStarted event of Message {0} - {1}", command.MessageId, ex.Message);
             }
         }
 
-        public void Completed(Guid commandId, DateTime completedAt)
+        public void Completed(ICommand command, DateTime completedAt)
         {
             try
             {
-                var id = commandId.ToString();
+                var id = command.MessageId.ToString();
                 var mongoUpdate = Builders<TrackedMessageModel>.Update
                     .Set(x => x.CompletedAt, completedAt)
                     //.Set(x => x.FailedAt, null)
@@ -324,7 +331,7 @@ namespace Jarvis.Framework.Shared.ReadModel
                             }
                             else
                             {
-                                Logger.WarnFormat("Command id {0} received completed event but ExecutionStartTimeList is empty", commandId);
+                                Logger.WarnFormat("Command id {0} received completed event but ExecutionStartTimeList is empty", command.MessageId);
                             }
                         }
                     }
@@ -341,15 +348,15 @@ namespace Jarvis.Framework.Shared.ReadModel
             }
             catch (Exception ex)
             {
-                Logger.ErrorFormat(ex, "Unable to track Completed event of Message {0} - {1}", commandId, ex.Message);
+                Logger.ErrorFormat(ex, "Unable to track Completed event of Message {0} - {1}", command.MessageId, ex.Message);
             }
         }
 
-        public bool Dispatched(Guid commandId, DateTime dispatchedAt)
+        public bool Dispatched(Guid messageId, DateTime dispatchedAt)
         {
             try
             {
-                var id = commandId.ToString();
+                var id = messageId.ToString();
                 var result = Commands.UpdateOne(
                      Builders<TrackedMessageModel>.Filter.And(
                         Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
@@ -362,7 +369,7 @@ namespace Jarvis.Framework.Shared.ReadModel
             }
             catch (Exception ex)
             {
-                Logger.ErrorFormat(ex, "Unable to track Dispatched event of Message {0} - {1}", commandId, ex.Message);
+                Logger.ErrorFormat(ex, "Unable to track Dispatched event of Message {0} - {1}", messageId, ex.Message);
             }
             return false;
         }
@@ -372,11 +379,11 @@ namespace Jarvis.Framework.Shared.ReadModel
             Commands.Drop();
         }
 
-        public void Failed(Guid commandId, DateTime failedAt, Exception ex)
+        public void Failed(ICommand command, DateTime failedAt, Exception ex)
         {
             try
             {
-                var id = commandId.ToString();
+                var id = command.MessageId.ToString();
                 Commands.UpdateOne(
                     Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
                     Builders<TrackedMessageModel>.Update
@@ -391,8 +398,15 @@ namespace Jarvis.Framework.Shared.ReadModel
             }
             catch (Exception iex)
             {
-                Logger.ErrorFormat(iex, "Unable to track Failed event of Message {0} - {1}", commandId, ex.Message);
+                Logger.ErrorFormat(iex, "Unable to track Failed event of Message {0} - {1}", command.MessageId, ex.Message);
             }
+        }
+
+        public List<TrackedMessageModel> GetByIdList(List<string> idList)
+        {
+            return Commands.Find(
+                Builders<TrackedMessageModel>.Filter.In(m => m.MessageId, idList))
+                .ToList();
         }
     }
 
@@ -410,12 +424,12 @@ namespace Jarvis.Framework.Shared.ReadModel
 
         }
 
-        public void Completed(Guid commandId, DateTime completedAt)
+        public void Completed(ICommand command, DateTime completedAt)
         {
 
         }
 
-        public bool Dispatched(Guid commandId, DateTime dispatchedAt)
+        public bool Dispatched(Guid messageId, DateTime dispatchedAt)
         {
             return true;
         }
@@ -425,12 +439,12 @@ namespace Jarvis.Framework.Shared.ReadModel
 
         }
 
-        public void Failed(Guid commandId, DateTime failedAt, Exception ex)
+        public void Failed(ICommand command, DateTime failedAt, Exception ex)
         {
 
         }
 
-        public void ElaborationStarted(Guid commandId, DateTime startAt)
+        public void ElaborationStarted(ICommand command, DateTime startAt)
         {
 
         }

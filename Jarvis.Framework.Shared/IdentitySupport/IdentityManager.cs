@@ -82,16 +82,23 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         public TIdentity New<TIdentity>()
         {
             var tag = EventStoreIdentity.GetTagForIdentityClass(typeof(TIdentity));
+            Func<long, IIdentity> factory = GetFactoryForTag(tag);
 
+            return (TIdentity)factory(_counterService.GetNext(tag));
+        }
+
+        private Func<long, IIdentity> GetFactoryForTag(string tag)
+        {
             Func<long, IIdentity> factory;
             if (!_longBasedFactories.TryGetValue(tag, out factory))
             {
                 throw new Exception(string.Format("{0} not registered in IdentityManager", tag));
             }
-            return (TIdentity)factory(_counterService.GetNext(tag));
+
+            return factory;
         }
 
-	    public bool TryParse<T>(string id, out T typedIdentity) where T: class, IIdentity
+        public bool TryParse<T>(string id, out T typedIdentity) where T: class, IIdentity
 	    {
 		    try
 		    {

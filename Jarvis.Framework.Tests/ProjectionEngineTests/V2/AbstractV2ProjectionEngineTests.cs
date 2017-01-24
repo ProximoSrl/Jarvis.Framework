@@ -38,7 +38,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
         protected MongoStorageFactory StorageFactory;
         protected IMongoCollection<Checkpoint> _checkpoints;
         protected ConcurrentCheckpointTracker _tracker;
-        protected ConcurrentCheckpointStatusChecker _statusChecker;
+        protected MongoDirectConcurrentCheckpointStatusChecker _statusChecker;
 		protected WindsorContainer _container;
 
 		protected ICommitPollingClientFactory _pollingClientFactory;
@@ -137,7 +137,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             }
             if (dropCheckpoints) _checkpoints.Drop();
             _tracker = new ConcurrentCheckpointTracker(Database);
-            _statusChecker = new ConcurrentCheckpointStatusChecker(Database);
+            _statusChecker = new MongoDirectConcurrentCheckpointStatusChecker(Database);
 
             var tenantId = new TenantId("engine");
 

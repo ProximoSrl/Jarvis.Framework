@@ -35,6 +35,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         void UpdateSlot(string slotName, Int64 checkpointToken);
         Int64 GetCurrent(IProjection projection);
 
+        /// <summary>
+        /// Update a whole slot and set both the Current and the Value.
+        /// </summary>
+        /// <param name="slotName"></param>
+        /// <param name="projectionIdList"></param>
+        /// <param name="valueCheckpointToken"></param>
+        /// <param name="currentCheckpointToken"></param>
         void UpdateSlotAndSetCheckpoint(
             string slotName, 
             IEnumerable<String> projectionIdList,

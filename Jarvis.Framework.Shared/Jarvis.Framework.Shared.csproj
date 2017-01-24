@@ -61,16 +61,14 @@
       <HintPath>..\packages\MongoDB.Driver.Core.2.4.0\lib\net45\MongoDB.Driver.Core.dll</HintPath>
     </Reference>
     <Reference Include="NEventStore, Version=6.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NEventStore.6.0.0-beta0041\lib\net40\NEventStore.dll</HintPath>
-      <Private>True</Private>
+      <HintPath>..\packages\NEventStore.6.0.0-beta0042\lib\net40\NEventStore.dll</HintPath>
     </Reference>
     <Reference Include="NEventStore.Domain, Version=6.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\NEventStore.Domain.6.0.0-beta0016\lib\net40\NEventStore.Domain.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="NEventStore.Persistence.MongoDB, Version=6.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NEventStore.Persistence.MongoDB.6.0.0-beta0090\lib\net40\NEventStore.Persistence.MongoDB.dll</HintPath>
-      <Private>True</Private>
+      <HintPath>..\packages\NEventStore.Persistence.MongoDB.6.0.0-beta0092\lib\net40\NEventStore.Persistence.MongoDB.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -115,13 +113,16 @@
     <Compile Include="Helpers\Reflect.cs" />
     <Compile Include="Helpers\FastReflectionHelper.cs" />
     <Compile Include="IdentitySupport\AbstractIdentity.cs" />
+    <Compile Include="IdentitySupport\IIdentityManager.cs" />
+    <Compile Include="IdentitySupport\OfflineCounterService.cs" />
+    <Compile Include="IdentitySupport\ReservationSlot.cs" />
     <Compile Include="IdentitySupport\StringToIdentityAssociator.cs" />
     <Compile Include="IdentitySupport\AbstractIdentityTranslator.cs" />
     <Compile Include="IdentitySupport\CounterService.cs" />
     <Compile Include="IdentitySupport\EventStoreIdentity.cs" />
     <Compile Include="IdentitySupport\ICounterService.cs" />
     <Compile Include="IdentitySupport\IdentityManager.cs" />
-    <Compile Include="IdentitySupport\IIdentityConverter.cs" />
+    <Compile Include="IdentitySupport\IIdentityGenerator.cs" />
     <Compile Include="IdentitySupport\MongoFlatMapper.cs" />
     <Compile Include="IdentitySupport\Serialization\EventStoreIdentityBsonSerializer.cs" />
     <Compile Include="IdentitySupport\Serialization\EventStoreIdentityCustomBsonTypeMapper.cs" />
@@ -131,7 +132,7 @@
     <Compile Include="Logging\LoggingHelper.cs" />
     <Compile Include="Logging\NEventStoreLog4NetLogger.cs" />
     <Compile Include="Messages\CommandHandled.cs" />
-    <Compile Include="Messages\Constants.cs" />
+    <Compile Include="Messages\MessagesConstants.cs" />
     <Compile Include="Messages\IMessage.cs" />
     <Compile Include="Messages\INotifyToSubscribers.cs" />
     <Compile Include="Messages\MessagesContractResolver.cs" />
@@ -143,6 +144,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ReadModel\AbstractReadModel.cs" />
     <Compile Include="ReadModel\CollectionNames.cs" />
+    <Compile Include="ReadModel\OfflineCommandMessageTracker.cs" />
     <Compile Include="ReadModel\TrackedMessageModel.cs" />
     <Compile Include="ReadModel\IMongoDbReader.cs" />
     <Compile Include="ReadModel\IReader.cs" />

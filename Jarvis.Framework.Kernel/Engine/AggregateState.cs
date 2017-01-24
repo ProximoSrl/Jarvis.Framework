@@ -18,7 +18,7 @@ namespace Jarvis.Framework.Kernel.Engine
     {
         public AggregateState()
         {
-            Signature = "default";
+            VersionSignature = "default";
         }
 
         /// <summary>
@@ -42,7 +42,13 @@ namespace Jarvis.Framework.Kernel.Engine
             return InvariantCheckResult.Success;
         }
 
-        public String Signature { get; protected set; }
+        /// <summary>
+        /// A string property that allows for change in state. If an object needs to
+        /// change state, all the snapshot should be deleted because they are obsolete. With
+        /// this property the object can declare when state change format and all 
+        /// snapshot should be invalidated.
+        /// </summary>
+        public String VersionSignature { get; protected set; }
 
 		/// <summary>
 		/// Create a deep clone with Serialization. It can be overriden in derived

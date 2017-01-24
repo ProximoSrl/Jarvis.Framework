@@ -32,12 +32,18 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
         private readonly ICommandHandler<T> _commandHandler;
         readonly IMessagesTracker _messagesTracker;
         readonly IBus _bus;
+        private readonly Int32 _numberOfConcurrencyExceptionBeforeRandomSleeping;
 
-        public MessageHandlerToCommandHandlerAdapter(ICommandHandler<T> commandHandler, IMessagesTracker messagesTracker, IBus bus)
+        public MessageHandlerToCommandHandlerAdapter(
+            ICommandHandler<T> commandHandler, 
+            IMessagesTracker messagesTracker, 
+            IBus bus,
+            Int32 numberOfConcurrencyExceptionBeforeRandomSleeping = 5)
         {
             _commandHandler = commandHandler;
             _messagesTracker = messagesTracker;
             _bus = bus;
+            _numberOfConcurrencyExceptionBeforeRandomSleeping = numberOfConcurrencyExceptionBeforeRandomSleeping;
         }
 
         public void Handle(T message)
@@ -53,9 +59,9 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
                 {
                     try
                     {
-                        _messagesTracker.ElaborationStarted(message.MessageId, DateTime.UtcNow);
+                        _messagesTracker.ElaborationStarted(message, DateTime.UtcNow);
                         _commandHandler.Handle(message);
-                        _messagesTracker.Completed(message.MessageId, DateTime.UtcNow);
+                        _messagesTracker.Completed(message, DateTime.UtcNow);
                         done = true;
 
                         if (notifyTo != null && message.GetContextData("disable-success-reply", "false") != "true")
@@ -76,7 +82,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
                         // retry
                         if (Logger.IsInfoEnabled) Logger.InfoFormat(ex, "Handled {0} {1} [{2}], concurrency exception. Retry count: {3}", message.GetType().FullName, message.MessageId, message.Describe(), i);
                         // increment the retries counter and maybe add a delay
-                        if (i++ > 5)
+                        if (i++ > _numberOfConcurrencyExceptionBeforeRandomSleeping)
                         {
                             Thread.Sleep(new Random(DateTime.Now.Millisecond).Next(i * 10));
                         }
@@ -85,7 +91,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
                     {
                         MetricsHelper.MarkDomainException();
                         done = true;
-                        _messagesTracker.Failed(message.MessageId, DateTime.UtcNow, ex);
+                        _messagesTracker.Failed(message, DateTime.UtcNow, ex);
 
                         if (notifyTo != null)
                         {
@@ -105,7 +111,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
                     catch (Exception ex)
                     {
                         _logger.ErrorFormat(ex, "Generic Exception on command {0} [MessageId: {1}] : {2} : {3}", message.GetType(), message.MessageId, message.Describe(), ex.Message);
-                        _messagesTracker.Failed(message.MessageId, DateTime.UtcNow, ex);
+                        _messagesTracker.Failed(message, DateTime.UtcNow, ex);
                         throw; //rethrow exception.
                     }
                 }
@@ -113,7 +119,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
                 {
                     _logger.ErrorFormat("Too many conflict on command {0} [MessageId: {1}] : {2}", message.GetType(), message.MessageId, message.Describe());
                     var exception = new Exception("Command failed. Too many Conflicts");
-                    _messagesTracker.Failed(message.MessageId, DateTime.UtcNow, exception);
+                    _messagesTracker.Failed(message, DateTime.UtcNow, exception);
                 }
                 if (Logger.IsDebugEnabled) Logger.DebugFormat("Handled {0} {1} {3}", message.GetType().FullName, message.MessageId, message.Describe());
             }

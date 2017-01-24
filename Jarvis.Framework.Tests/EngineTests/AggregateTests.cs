@@ -63,7 +63,7 @@ namespace Jarvis.Framework.Tests.EngineTests
             Assert.That(sut2.InternalState.TouchCount, Is.EqualTo(1));
 
             sut2 = CreateAggregate(new SampleAggregateId(1));
-            sut2.InternalState.SetSignature("Modified");
+            sut2.InternalState.SetVersionSignature("Modified");
             Assert.That(((ISnapshotable)sut2).Restore(memento), Is.False);
 
         }

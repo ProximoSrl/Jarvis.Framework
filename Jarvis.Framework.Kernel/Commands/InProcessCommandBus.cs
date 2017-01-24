@@ -117,12 +117,12 @@ namespace Jarvis.Framework.Kernel.Commands
 
         protected virtual void PrepareCommand(ICommand command, string impersonatingUser = null)
         {
-            var userId = command.GetContextData("user.id");
+            var userId = command.GetContextData(MessagesConstants.UserId);
 
             if (userId == null)
             {
                 userId = ImpersonateUser(command, impersonatingUser);
-                command.SetContextData("user.id", userId);
+                command.SetContextData(MessagesConstants.UserId, userId);
             }
 
             if (!UserIsAllowedToSendCommand(command, userId))
@@ -154,9 +154,9 @@ namespace Jarvis.Framework.Kernel.Commands
             {
                 try
                 {
-                    _messagesTracker.ElaborationStarted(command.MessageId, DateTime.UtcNow);
+                    _messagesTracker.ElaborationStarted(command, DateTime.UtcNow);
                     handler.Handle(command);
-                    _messagesTracker.Completed(command.MessageId, DateTime.UtcNow);
+                    _messagesTracker.Completed(command, DateTime.UtcNow);
                     done = true;
                 }
                 catch (ConflictingCommandException ex)
@@ -173,13 +173,13 @@ namespace Jarvis.Framework.Kernel.Commands
                 {
                     _logger.ErrorFormat(ex, "DomainException on command {0} [MessageId: {1}] : {2} : {3}", command.GetType(), command.MessageId, command.Describe(), ex.Message);
                     MetricsHelper.MarkDomainException();
-                    _messagesTracker.Failed(command.MessageId, DateTime.UtcNow, ex);
+                    _messagesTracker.Failed(command, DateTime.UtcNow, ex);
                     throw; //rethrow domain exception.
                 }
                 catch (Exception ex)
                 {
                     _logger.ErrorFormat(ex, "Generic Exception on command {0} [MessageId: {1}] : {2} : {3}", command.GetType(), command.MessageId, command.Describe(), ex.Message);
-                    _messagesTracker.Failed(command.MessageId, DateTime.UtcNow, ex);
+                    _messagesTracker.Failed(command, DateTime.UtcNow, ex);
                     throw; //rethrow exception.
                 }
             }
@@ -187,7 +187,7 @@ namespace Jarvis.Framework.Kernel.Commands
             {
                 _logger.ErrorFormat("Too many conflict on command {0} [MessageId: {1}] : {2}", command.GetType(), command.MessageId, command.Describe());
                 var exception = new Exception("Command failed. Too many Conflicts");
-                _messagesTracker.Failed(command.MessageId, DateTime.UtcNow, exception);
+                _messagesTracker.Failed(command, DateTime.UtcNow, exception);
 
                 throw exception;
             }

@@ -70,16 +70,14 @@
       <HintPath>..\packages\MongoDB.Driver.Core.2.4.0\lib\net45\MongoDB.Driver.Core.dll</HintPath>
     </Reference>
     <Reference Include="NEventStore, Version=6.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NEventStore.6.0.0-beta0041\lib\net40\NEventStore.dll</HintPath>
-      <Private>True</Private>
+      <HintPath>..\packages\NEventStore.6.0.0-beta0042\lib\net40\NEventStore.dll</HintPath>
     </Reference>
     <Reference Include="NEventStore.Domain, Version=6.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\NEventStore.Domain.6.0.0-beta0016\lib\net40\NEventStore.Domain.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="NEventStore.Persistence.MongoDB, Version=6.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NEventStore.Persistence.MongoDB.6.0.0-beta0090\lib\net40\NEventStore.Persistence.MongoDB.dll</HintPath>
-      <Private>True</Private>
+      <HintPath>..\packages\NEventStore.Persistence.MongoDB.6.0.0-beta0092\lib\net40\NEventStore.Persistence.MongoDB.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -154,6 +152,7 @@
     <Compile Include="EngineTests\SnapshotPersistenceTest.cs" />
     <Compile Include="EngineTests\Unfolder\EventUnfolderTests.cs" />
     <Compile Include="EngineTests\IdentityConverterTests.cs" />
+    <Compile Include="Kernel\Commands\RepositoryCommandHandlerTests.cs" />
     <Compile Include="Kernel\Support\MetricsHealthCheckExplicitTests.cs" />
     <Compile Include="NeventStoreExTests\Persistence\RepositoryTests.cs" />
     <Compile Include="EngineTests\SagaTests\BillPrinted.cs" />
@@ -226,9 +225,11 @@
     <Compile Include="ProjectionsTests\UpdateEvent.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ServicesTests\CounterServiceTests.cs" />
+    <Compile Include="ServicesTests\OfflineCounterServiceTest.cs" />
     <Compile Include="SharedTests\Helpers\CastleUtilsTests.cs" />
     <Compile Include="SharedTests\Helpers\MongoDriverHelperTests.cs" />
     <Compile Include="SharedTests\IdentitySupport\AuxClasses.cs" />
+    <Compile Include="SharedTests\IdentitySupport\IdentityManagerTests.cs" />
     <Compile Include="SharedTests\IdentitySupport\IDentitySupportTests.cs" />
     <Compile Include="SharedTests\IdentitySupport\StringToIdentityAssociatorTests.cs" />
     <Compile Include="SharedTests\MapperTests.cs" />

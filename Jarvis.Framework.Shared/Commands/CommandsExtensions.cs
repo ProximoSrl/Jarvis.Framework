@@ -43,7 +43,7 @@ namespace Jarvis.Framework.Shared.Commands
 
         public static string ExtractUserId(this ICommand command)
         {
-            return command.GetContextData("user.id");
+            return command.GetContextData(MessagesConstants.UserId);
         }
     }
 }

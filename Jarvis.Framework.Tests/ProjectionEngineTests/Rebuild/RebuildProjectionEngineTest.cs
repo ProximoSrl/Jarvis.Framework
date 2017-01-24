@@ -35,8 +35,8 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
     [TestFixture]
     public abstract class RebuildProjectionEngineBaseTests
     {
-        string _eventStoreConnectionString;
-        IdentityManager _identityConverter;
+        private string _eventStoreConnectionString;
+        private IdentityManager _identityConverter;
         protected RepositoryEx Repository;
         protected IStoreEvents _eventStore;
         protected IMongoDatabase _db;
@@ -75,7 +75,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             _identityConverter = new IdentityManager(new CounterService(_db));
             _identityConverter.RegisterIdentitiesFromAssembly(typeof(SampleAggregateId).Assembly);
             ConfigureEventStore();
-            CommitEnhancer commitEnhancer = new CommitEnhancer(_identityConverter);
+
             _eventUnwinder = new EventUnwinder(config, new TestLogger(LoggerLevel.Info));
 
             _unwindedEventCollection = _db.GetCollection<UnwindedDomainEvent>("UnwindedEvents");
@@ -92,7 +92,6 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             //now configure RebuildProjectionEngine
             _tracker = new ConcurrentCheckpointTracker(_db);
 
-          
             var projections = BuildProjections().ToArray();
 
             _tracker.SetUp(projections, 1, false);
@@ -142,14 +141,14 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             var aggregateId = new SampleAggregateId(id);
             var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(aggregateId);
             aggregate.Create();
-            Repository.Save(aggregate, Guid.NewGuid(), h => { });
+            Repository.Save(aggregate, Guid.NewGuid(), h => {});
         }
 
         protected virtual Boolean NitroEnabled { get { return false; } }
     }
 
     [TestFixture]
-    public class basic_functionality_tests : RebuildProjectionEngineBaseTests
+    public class Basic_functionality_tests : RebuildProjectionEngineBaseTests
     {
         CollectionWrapper<SampleReadModel, string> _writer;
 
@@ -180,9 +179,8 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         }
     }
 
-
     [TestFixture]
-    public class basic_dispatching_tests : RebuildProjectionEngineBaseTests
+    public class Basic_dispatching_tests : RebuildProjectionEngineBaseTests
     {
         CollectionWrapper<SampleReadModel, string> _writer;
         IProjection _projection;
@@ -224,11 +222,12 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
     }
 
     [TestFixture]
-    public class basic_dispatching_tests_with_multiple_projection : RebuildProjectionEngineBaseTests
+    public class Basic_dispatching_tests_with_multiple_projection : RebuildProjectionEngineBaseTests
     {
         CollectionWrapper<SampleReadModel, string> _writer1;
         CollectionWrapper<SampleReadModel3, string> _writer3;
         IProjection _projection1, _projection3;
+
         protected override IEnumerable<IProjection> BuildProjections()
         {
             _writer1 = new CollectionWrapper<SampleReadModel, string>(_storageFactory, new NotifyToNobody());
@@ -284,7 +283,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
     }
 
     [TestFixture]
-    public class correct_handling_of_signature : RebuildProjectionEngineBaseTests
+    public class Correct_handling_of_signature : RebuildProjectionEngineBaseTests
     {
         CollectionWrapper<SampleReadModel, string> _writer1;
         CollectionWrapper<SampleReadModel3, string> _writer3;
@@ -298,7 +297,6 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             _writer3 = new CollectionWrapper<SampleReadModel3, string>(_storageFactory, new NotifyToNobody());
             yield return _projection3 = new Projection3(_writer3); //projection3 has a different slot
         }
-
 
         [Test]
         public void signature_is_honored()
@@ -322,9 +320,8 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
     }
 
     [TestFixture]
-    public class rebuild_test_with_nitro : RebuildProjectionEngineBaseTests
+    public class Rebuild_test_with_nitro : RebuildProjectionEngineBaseTests
     {
-
         protected override bool NitroEnabled
         {
             get
@@ -336,6 +333,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         CollectionWrapper<SampleReadModel, string> _writer1;
         CollectionWrapper<SampleReadModel3, string> _writer3;
         IProjection _projection1, _projection3;
+
         protected override IEnumerable<IProjection> BuildProjections()
         {
             _writer1 = new CollectionWrapper<SampleReadModel, string>(_storageFactory, new NotifyToNobody());
@@ -343,7 +341,6 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             _writer3 = new CollectionWrapper<SampleReadModel3, string>(_storageFactory, new NotifyToNobody());
             yield return _projection3 = new Projection3(_writer3); //projection3 has a different slot
         }
-
 
         [Test]
         public void event_is_dispatched()
@@ -361,8 +358,6 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             var allRecord = coll.FindAll().ToList();
             Assert.That(allRecord, Has.Count.EqualTo(1));
         }
-
-       
     }
 }
 

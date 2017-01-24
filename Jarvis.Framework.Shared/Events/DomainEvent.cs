@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Jarvis.Framework.Shared.IdentitySupport;
 using MongoDB.Bson.Serialization.Attributes;
 using Newtonsoft.Json;
+using Jarvis.Framework.Shared.Messages;
 
 namespace Jarvis.Framework.Shared.Events
 {
@@ -26,8 +27,8 @@ namespace Jarvis.Framework.Shared.Events
         public string IssuedBy {
             get
             {
-                if (this.Context != null && this.Context.ContainsKey("user.id"))
-                    return (string)this.Context["user.id"];
+                if (this.Context != null && this.Context.ContainsKey(MessagesConstants.UserId))
+                    return (string)this.Context[MessagesConstants.UserId];
 
                 return null;
             } 

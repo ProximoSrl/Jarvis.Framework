@@ -91,8 +91,10 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         public void ResolveCollectionWrapper_using_JarvisTypedFactoryFacility_Success()
         {
             var c = _container.Resolve<ICollectionWrapper<SampleReadModelTestId, TestId>>();
-            Assert.IsNotNull(c);
-            Assert.That(c.TransformForNotification == null || !c.TransformForNotification.Target.ToString().Contains("Castle.Proxies"));
+            Assert.IsNotNull(c, "Resolved collection should not be null");
+            Assert.IsNotNull(c.TransformForNotification, "TransformForNotification should not be null.");
+
+            Assert.That(c.TransformForNotification.Target == null || !c.TransformForNotification.Target.ToString().Contains("Castle.Proxies"));
             Assert.DoesNotThrow(() =>
             {
                 c.TransformForNotification(null);

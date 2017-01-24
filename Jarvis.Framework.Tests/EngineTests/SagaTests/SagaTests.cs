@@ -23,13 +23,11 @@ namespace Jarvis.Framework.Tests.EngineTests.SagaTests
         private EventStoreFactory _factory;
         string _connectionString;
 
-        [SetUp]
-        public void SetUp()
+        [TestFixtureSetUp]
+        public void TestFixtureSetUp()
         {
             TestHelper.RegisterSerializerForFlatId<OrderId>();
-
             _connectionString = ConfigurationManager.ConnectionStrings["saga"].ConnectionString;
-            var db = TestHelper.CreateNew(_connectionString);
 
             var loggerFactory = Substitute.For<ILoggerFactory>();
             loggerFactory.Create(Arg.Any<Type>()).Returns(NullLogger.Instance);
@@ -56,13 +54,13 @@ namespace Jarvis.Framework.Tests.EngineTests.SagaTests
 
             repo.Save(saga, Guid.NewGuid(), null);
 
-            Assert.AreEqual(4, events.Count());
+            Assert.AreEqual(4, events.Length);
         }
 
         [Test]
         public void Verify_that_saga_can_be_reloaded_and_have_no_uncommitted_events()
         {
-            var orderId = new OrderId(1);
+            var orderId = new OrderId(2);
             var sagaId = orderId;
 
             var eventStore = _factory.BuildEventStore(_connectionString);
@@ -81,13 +79,13 @@ namespace Jarvis.Framework.Tests.EngineTests.SagaTests
 
             Assert.That(sagaReloaded, Is.Not.Null);
             var uncommittedevents = ((ISagaEx)saga).GetUncommittedEvents().ToArray();
-            Assert.AreEqual(0, uncommittedevents.Count());
+            Assert.AreEqual(0, uncommittedevents.Length);
         }
 
         [Test]
         public void repository_can_serialize_access_to_the_same_entity()
         {
-            var orderId = new OrderId(1);
+            var orderId = new OrderId(3);
             var sagaId = orderId;
 
             var eventStore = _factory.BuildEventStore(_connectionString);
@@ -113,12 +111,11 @@ namespace Jarvis.Framework.Tests.EngineTests.SagaTests
             }
         }
 
-
         [Test]
         public void listener_tests()
         {
             var listener = new DeliverPizzaSagaListener();
-            var orderId = new OrderId(1);
+            var orderId = new OrderId(4);
 
             var placed = new OrderPlaced(orderId);
             var printed = new BillPrinted(orderId);
@@ -131,12 +128,11 @@ namespace Jarvis.Framework.Tests.EngineTests.SagaTests
             Assert.AreEqual(prefix + (string)orderId, listener.GetCorrelationId(delivered));
         }
 
-
         [Test]
         public void listener_tests_when_id_has_prefix()
         {
             var listener = new DeliverPizzaSagaListener2();
-            var orderId = new OrderId(1);
+            var orderId = new OrderId(5);
 
             var placed = new OrderPlaced(orderId);
             var printed = new BillPrinted(orderId);
@@ -148,8 +144,6 @@ namespace Jarvis.Framework.Tests.EngineTests.SagaTests
             Assert.AreEqual("DeliverPizzaSaga2_" + (string)orderId, listener.GetCorrelationId(received));
             Assert.AreEqual("DeliverPizzaSaga2_" + (string)orderId, listener.GetCorrelationId(delivered));
         }
-
-        
     }
 
     [TestFixture]
@@ -161,11 +155,11 @@ namespace Jarvis.Framework.Tests.EngineTests.SagaTests
         SagaEventStoreRepositoryEx _repo;
         DeliverPizzaSagaListener2 _listener;
 
-        [SetUp]
-        public void SetUp()
+        [TestFixtureSetUp]
+        public void TestFixtureSetUp()
         {
             _connectionString = ConfigurationManager.ConnectionStrings["saga"].ConnectionString;
-            var db = TestHelper.CreateNew(_connectionString);
+            TestHelper.CreateNew(_connectionString);
 
             var loggerFactory = Substitute.For<ILoggerFactory>();
             loggerFactory.Create(Arg.Any<Type>()).Returns(NullLogger.Instance);
@@ -175,7 +169,6 @@ namespace Jarvis.Framework.Tests.EngineTests.SagaTests
             _repo = new SagaEventStoreRepositoryEx(_eventStore, new SagaFactory());
             _listener =  new DeliverPizzaSagaListener2(); 
         }
-
 
         protected void ApplyEventOnSaga(DomainEvent evt)
         {
@@ -188,7 +181,7 @@ namespace Jarvis.Framework.Tests.EngineTests.SagaTests
         [Test]
         public void Verify_saga_reloaded_status()
         {
-            var orderId = new OrderId(42);
+            var orderId = new OrderId(100);
             var evt = new OrderPlaced(orderId);
 
             ApplyEventOnSaga(evt);
@@ -196,20 +189,20 @@ namespace Jarvis.Framework.Tests.EngineTests.SagaTests
             var sagaId = _listener.GetCorrelationId(evt);
             var sagaReloaded = _repo.GetById<DeliverPizzaSaga2>(sagaId);
             Assert.That(sagaReloaded.PizzaActualStatus, Is.EqualTo("Order Placed"));
-            Assert.That(sagaReloaded.Id, Is.EqualTo("DeliverPizzaSaga2_Order_42"));
+            Assert.That(sagaReloaded.Id, Is.EqualTo("DeliverPizzaSaga2_Order_100"));
         }
 
         [Test]
         public void Verify_saga_reloaded_status_after_two_events()
         {
-            var orderId = new OrderId(42);
+            var orderId = new OrderId(101);
             var evt = new OrderPlaced(orderId);
 
             ApplyEventOnSaga(evt);
 
             var evt2 = new BillPrinted(orderId);
             ApplyEventOnSaga(evt2);
-            
+
             var sagaId = _listener.GetCorrelationId(evt);
             var sagaReloaded = _repo.GetById<DeliverPizzaSaga2>(sagaId);
             Assert.That(sagaReloaded.PizzaActualStatus, Is.EqualTo("Bill printed"));
@@ -218,12 +211,12 @@ namespace Jarvis.Framework.Tests.EngineTests.SagaTests
         [Test]
         public void Verify_saga_does_not_mix_events()
         {
-            var orderId = new OrderId(42);
+            var orderId = new OrderId(102);
             var evt = new OrderPlaced(orderId);
 
             ApplyEventOnSaga(evt);
 
-            var orderId2 = new OrderId(41);
+            var orderId2 = new OrderId(103);
             var evt2 = new BillPrinted(orderId2);
             ApplyEventOnSaga(evt2);
 
@@ -232,6 +225,4 @@ namespace Jarvis.Framework.Tests.EngineTests.SagaTests
             Assert.That(sagaReloaded.PizzaActualStatus, Is.EqualTo("Order Placed"));
         }
     }
-
-    
 }

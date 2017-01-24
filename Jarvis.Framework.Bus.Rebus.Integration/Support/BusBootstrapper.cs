@@ -155,9 +155,8 @@ or manually set the Configuration property of this instance.");
                     exMessage = exception.Message;
                 }
 
-                this.MessagesTracker.Failed(commandId, ex.Time, exception);
-
                 var command = GetCommandFromMessage(message);
+                this.MessagesTracker.Failed(command, ex.Time, exception);
 
                 if (command != null)
                 {

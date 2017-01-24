@@ -253,9 +253,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                 if (commit.StreamId.StartsWith("system.empty"))
                 {
                     _logger.DebugFormat("Found empty commit - {0}", commit.CheckpointToken);
-                    return PollingClient2.HandlingResult.MoveToNext;
                 }
-                _enhancer.Enhance(commit);
+                else
+                {
+                    _enhancer.Enhance(commit);
+                }
+
                 var task = _buffer.SendAsync(commit);
                 //wait till the commit is stored in tpl queue
                 while (!task.Wait(2000))

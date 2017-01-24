@@ -122,7 +122,7 @@ namespace Jarvis.Framework.Kernel.Engine
         {
             var snap = (AggregateSnapshot<TState>)snapshot;
 
-			if (snap.State.Signature != _internalState.Signature)
+			if (snap.State.VersionSignature != _internalState.VersionSignature)
 			{
 				//This version of the state is not compatibile.
 				return false;

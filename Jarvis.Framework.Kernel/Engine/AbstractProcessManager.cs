@@ -144,7 +144,7 @@ namespace Jarvis.Framework.Kernel.Engine
 
         protected void Dispatch(ICommand message, String issuedBy)
         {
-            message.SetContextData("user.id", issuedBy);
+            message.SetContextData(MessagesConstants.UserId, issuedBy);
             Dispatch(message);
         }
 

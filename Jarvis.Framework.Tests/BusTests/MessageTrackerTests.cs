@@ -276,7 +276,7 @@ namespace Jarvis.Framework.Tests.BusTests
             {
                 Thread.Sleep(50);
                 var tracks = _messages.FindAll().ToList();
-                Assert.That(tracks, Has.Count.EqualTo(1));
+                //Assert.That(tracks, Has.Count.EqualTo(1));
                 track = tracks.Single();
             }
             while (
@@ -334,7 +334,7 @@ namespace Jarvis.Framework.Tests.BusTests
             _bus = _container.Resolve<IBus>();
             _handler = new AnotherSampleCommandHandler();
             _handlerAdapter = new MessageHandlerToCommandHandlerAdapter<AnotherSampleTestCommand>(
-                _handler, tracker, _bus);
+                _handler, tracker, _bus, 200);
 
             _container.Register(
                 Component
@@ -532,8 +532,8 @@ namespace Jarvis.Framework.Tests.BusTests
             sut.Started(cmd);
             DateTime startDate1 = new DateTime(2000, 01, 01, 1, 1, 42, DateTimeKind.Utc);
             DateTime startDate2 = startDate1.AddSeconds(1);
-            sut.ElaborationStarted(cmd.MessageId, startDate1);
-            sut.ElaborationStarted(cmd.MessageId, startDate2);
+            sut.ElaborationStarted(cmd, startDate1);
+            sut.ElaborationStarted(cmd, startDate2);
 
             var handledTrack = _messages.AsQueryable().Single(t => t.MessageId == cmd.MessageId.ToString());
             Assert.That(handledTrack.LastExecutionStartTime, Is.EqualTo(startDate2));

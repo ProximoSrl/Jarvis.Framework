@@ -120,13 +120,19 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
             Int32 ordinal = 1;
             foreach (var evt in commit.Events)
             {
+                var domainEvent = evt.Body as DomainEvent;
+                //Remember that in commits we could have some messages that are
+                //not domain events.
+                if (domainEvent == null)
+                    continue;
+
                 var id = commit.CheckpointToken + "_" + ordinal;
                 UnwindedDomainEvent unwinded = new UnwindedDomainEvent();
                 unwinded.Id = id;
                 unwinded.CheckpointToken = commit.CheckpointToken;
                 unwinded.EventSequence = ordinal;
                 unwinded.EventType = evt.Body.GetType().Name;
-                unwinded.Event = (DomainEvent)evt.Body;
+                unwinded.Event = domainEvent;
 
                 //save all data from commit to the event unwinded to do enhance after load.
                 var headers = commit.Headers;

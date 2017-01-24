@@ -167,15 +167,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         public bool NeedsRebuild(IProjection projection)
         {
             return RebuildSettings.ShouldRebuild;
-
-            //var checkpoint = _checkpoints.FindOneById(projection.GetCommonName());
-            //if (checkpoint == null)
-            //    return true;
-
-            //var last  = LongCheckpoint.Parse(checkpoint.Value);
-            //var current = LongCheckpoint.Parse(checkpoint.Current);
-
-            //return current.LongValue < last.LongValue;
         }
 
         public void RebuildStarted(IProjection projection, Int64 lastCommitId)
@@ -287,8 +278,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             var currentCheckpointValue = checkpoint;
             long lastDispatchedValue = lastDispatched;
 
-            bool isLast = currentCheckpointValue == lastDispatchedValue;
-            bool isReplay = currentCheckpointValue <= lastDispatchedValue;
+            //This is the last checkpoint in rebuild only if the continuous rebuild is not set.
+            bool isLast = currentCheckpointValue == lastDispatchedValue && RebuildSettings.ContinuousRebuild == false; 
+            //is replay is always true if we are in Continuous rebuild.
+            bool isReplay = currentCheckpointValue <= lastDispatchedValue || RebuildSettings.ContinuousRebuild;
             _checkpointSlotTracker[_projectionToSlot[id]] = _higherCheckpointToDispatchInRebuild - currentCheckpointValue;
             return new CheckPointReplayStatus(isLast, isReplay);
         }

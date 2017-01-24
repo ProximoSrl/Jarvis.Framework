@@ -404,7 +404,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 var eventMessage = commit.Events.ElementAt(index);
                 try
                 {
-                    var evt = (DomainEvent)eventMessage.Body;
+                    var evt = eventMessage.Body as DomainEvent;
+                    //Remember that eventstore can contain simple event stream that does not
+                    //inherits from DomainEvents
+                    if (evt == null)
+                        continue;
+
                     if (Logger.IsDebugEnabled) Logger.ThreadProperties["evType"] = evt.GetType().Name;
                     if (Logger.IsDebugEnabled) Logger.ThreadProperties["evMsId"] = evt.MessageId;
                     if (Logger.IsDebugEnabled) Logger.ThreadProperties["evCheckpointToken"] = commit.CheckpointToken;
@@ -490,14 +495,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 }
             }
 
-            if (projectionToUpdate.Count == 0)
+            if (projectionToUpdate.Count == 0 && RebuildSettings.ContinuousRebuild == false)
             {
                 //I'm in rebuilding or no projection had run any events, only update slot
                 _checkpointTracker.UpdateSlot(slotName, commit.CheckpointToken);
             }
             else
             {
-                //I'm not on rebuilding, we have projection to update, update everything with one call.
+                //I'm not on rebuilding or we are in continuous rebuild., we have projection to update, update everything with one call.
                 _checkpointTracker.UpdateSlotAndSetCheckpoint(slotName, projectionToUpdate, commit.CheckpointToken);
             }
             MetricsHelper.MarkCommitDispatchedCount(slotName, 1);

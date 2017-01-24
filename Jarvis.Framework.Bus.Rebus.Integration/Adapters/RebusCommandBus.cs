@@ -4,6 +4,7 @@ using Jarvis.Framework.Kernel.Commands;
 using Jarvis.Framework.Shared.Commands;
 using Rebus;
 using Castle.Core.Logging;
+using Jarvis.Framework.Shared.Messages;
 
 namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
 {
@@ -66,12 +67,12 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
 
         protected virtual void PrepareCommand(ICommand command, string impersonatingUser)
         {
-            var userId = command.GetContextData("user.id");
+            var userId = command.GetContextData(MessagesConstants.UserId);
 
             if (userId == null)
             {
                 userId = ImpersonateUser(command, impersonatingUser);
-                command.SetContextData("user.id", userId);
+                command.SetContextData(MessagesConstants.UserId, userId);
             }
 
             if (!UserIsAllowedToSendCommand(command, userId))
