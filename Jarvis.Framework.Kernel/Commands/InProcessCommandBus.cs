@@ -171,27 +171,27 @@ namespace Jarvis.Framework.Kernel.Commands
                 }
                 catch (DomainException ex)
                 {
-                    _logger.ErrorFormat(ex, "DomainException on command {0} [MessageId: {1}]: {2}", command.GetType(), command.MessageId, ex.Message);
+                    _logger.ErrorFormat(ex, "DomainException on command {0} [MessageId: {1}] : {2} : {3}", command.GetType(), command.MessageId, command.Describe(), ex.Message);
                     MetricsHelper.MarkDomainException();
                     _messagesTracker.Failed(command.MessageId, DateTime.UtcNow, ex);
                     throw; //rethrow domain exception.
                 }
                 catch (Exception ex)
                 {
-                    _logger.ErrorFormat(ex, "Generic Exception on command {0} [MessageId: {1}]: {2}", command.GetType(), command.MessageId, ex.Message);
+                    _logger.ErrorFormat(ex, "Generic Exception on command {0} [MessageId: {1}] : {2} : {3}", command.GetType(), command.MessageId, command.Describe(), ex.Message);
                     _messagesTracker.Failed(command.MessageId, DateTime.UtcNow, ex);
                     throw; //rethrow exception.
                 }
             }
             if (done == false)
             {
-                _logger.ErrorFormat("Too many conflict on command {0} [MessageId: {1}]", command.GetType(), command.MessageId);
+                _logger.ErrorFormat("Too many conflict on command {0} [MessageId: {1}] : {2}", command.GetType(), command.MessageId, command.Describe());
                 var exception = new Exception("Command failed. Too many Conflicts");
                 _messagesTracker.Failed(command.MessageId, DateTime.UtcNow, exception);
 
                 throw exception;
             }
-            if (Logger.IsDebugEnabled) Logger.DebugFormat("Command {0} executed", command.MessageId);
+            if (Logger.IsDebugEnabled) Logger.DebugFormat("Command {0} executed: {1}", command.MessageId, command.Describe());
 
         }
 

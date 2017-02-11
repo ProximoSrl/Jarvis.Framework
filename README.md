@@ -3,6 +3,7 @@ J.A.R.V.I.S. Framework - Proximo srl (c)
 
 ##Docs:
 
+- [Release Notes](Wiki/ReleaseNotes.md)
 - General Usage
 	- [Mongo Custom Serializers](Wiki/Usage/mongoserializers.md)
 - [Metrics](Wiki/Metrics/metrics.md)

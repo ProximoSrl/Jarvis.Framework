@@ -10,5 +10,6 @@ namespace Jarvis.Framework.Shared.Logging
     {
         public const string CommandId = "commandId";
         public const string CommandDescription = "commandDesc";
+        public const string UserId = "commandUser";
     }
 }
