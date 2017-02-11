@@ -74,7 +74,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
                     {
                         MetricsHelper.MarkConcurrencyException();
                         // retry
-                        if (Logger.IsInfoEnabled) Logger.InfoFormat(ex, "Handled {0} {1}, concurrency exception. Retry count: {2}", message.GetType().FullName, message.MessageId, i);
+                        if (Logger.IsInfoEnabled) Logger.InfoFormat(ex, "Handled {0} {1} [{2}], concurrency exception. Retry count: {3}", message.GetType().FullName, message.MessageId, message.Describe(), i);
                         // increment the retries counter and maybe add a delay
                         if (i++ > 5)
                         {
@@ -100,23 +100,22 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
                             replyCommand.CopyHeaders(message);
                             _bus.Reply(replyCommand);
                         }
-                        _logger.ErrorFormat(ex, "DomainException on command {0} [MessageId: {1}]: {2}", message.GetType(), message.MessageId, ex.Message);
+                        _logger.ErrorFormat(ex, "DomainException on command {0} [MessageId: {1}] : {2} : {3}", message.GetType(), message.MessageId, message.Describe(), ex.Message);
                     }
                     catch (Exception ex)
                     {
-                        _logger.ErrorFormat(ex, "Generic Exception on command {0} [MessageId: {1}]: {2}", message.GetType(), message.MessageId, ex.Message);
+                        _logger.ErrorFormat(ex, "Generic Exception on command {0} [MessageId: {1}] : {2} : {3}", message.GetType(), message.MessageId, message.Describe(), ex.Message);
                         _messagesTracker.Failed(message.MessageId, DateTime.UtcNow, ex);
                         throw; //rethrow exception.
                     }
                 }
                 if (done == false)
                 {
-                    _logger.ErrorFormat("Too many conflict on command {0} [MessageId: {1}]", message.GetType(), message.MessageId);
-                    // todo: check this exception, no throw?!?
+                    _logger.ErrorFormat("Too many conflict on command {0} [MessageId: {1}] : {2}", message.GetType(), message.MessageId, message.Describe());
                     var exception = new Exception("Command failed. Too many Conflicts");
                     _messagesTracker.Failed(message.MessageId, DateTime.UtcNow, exception);
                 }
-                if (Logger.IsDebugEnabled) Logger.DebugFormat("Handled {0} {1}", message.GetType().FullName, message.MessageId);
+                if (Logger.IsDebugEnabled) Logger.DebugFormat("Handled {0} {1} {3}", message.GetType().FullName, message.MessageId, message.Describe());
             }
             finally
             {
