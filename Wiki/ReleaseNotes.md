@@ -3,6 +3,16 @@ J.A.R.V.I.S. Framework - Proximo srl (c)
 
 ##Version 2:
 
+###2.0.8
+
+- Some code cleanup.
+- Reference to NEventStore now point to -beta packages, updated NES core to latest beta that improve logging in PollingClient2.
+- Added health check on NES polling error. [Issue 23](https://github.com/ProximoSrl/Jarvis.Framework/issues/23)
+
+###2.0.7
+
+- Minor fixes on logging
+
 ###2.0.6
 
 - Added better logging info on command execution (describe on error and userid).

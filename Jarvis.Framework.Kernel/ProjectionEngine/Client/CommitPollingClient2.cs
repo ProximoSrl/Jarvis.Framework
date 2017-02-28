@@ -165,6 +165,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
                 return HealthCheckResult.Healthy("Poller alive");
             });
+            //Now register health check for the internal NES poller, to diagnose errors in polling.
+            HealthChecks.RegisterHealthCheck("Polling internal errors: ", () => {
+                if (_innerClient != null && !String.IsNullOrEmpty(_innerClient.LastPollingError))
+                {
+                    return HealthCheckResult.Unhealthy($"Inner NES poller has error: {_innerClient.LastPollingError}");
+                }
+                return HealthCheckResult.Healthy("Inner NES Poller Ok");
+            });
         }
 
 
