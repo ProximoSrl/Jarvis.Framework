@@ -29,8 +29,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
     {
         readonly ICommitPollingClientFactory _pollingClientFactory;
 
-        private List<ICommitPollingClient> _clients;
-        private Dictionary<BucketInfo, ICommitPollingClient> _bucketToClient;
+        private readonly List<ICommitPollingClient> _clients;
+        private readonly Dictionary<BucketInfo, ICommitPollingClient> _bucketToClient;
 
         readonly IConcurrentCheckpointTracker _checkpointTracker;
 
@@ -41,19 +41,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         private long _maxDispatchedCheckpoint = 0;
         private Int32 _countOfConcurrentDispatchingCommit = 0;
 
-        public IExtendedLogger Logger
-        {
-            get { return _logger; }
-            set { _logger = value; }
-        }
-        IExtendedLogger _logger = NullLogger.Instance;
+        public IExtendedLogger Logger { get; set; } 
 
-        public ILoggerFactory LoggerFactory
-        {
-            get { return _loggerFactory; }
-            set { _loggerFactory = value; }
-        }
-        private ILoggerFactory _loggerFactory;
+        public ILoggerFactory LoggerFactory { get; set; }
 
         IStoreEvents _eventstore;
         readonly ProjectionEngineConfig _config;
@@ -71,6 +61,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             INotifyCommitHandled notifyCommitHandled,
             ProjectionEngineConfig config)
         {
+            Logger = NullLogger.Instance; 
+
             _pollingClientFactory = pollingClientFactory;
             _checkpointTracker = checkpointTracker;
             _housekeeper = housekeeper;
@@ -301,7 +293,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                     Logger.ErrorFormat("CheckpointError: {0}", error);
                     fullError.AppendLine(error);
                 }
-                throw new Exception(String.Format("Found {0} errors in checkpoint status: {1}", errors.Count, fullError.ToString()));
+                throw new ApplicationException(String.Format("Found {0} errors in checkpoint status: {1}", errors.Count, fullError.ToString()));
             }
         }
 
@@ -338,13 +330,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             }
         }
 
-        private ConcurrentDictionary<String, Int64> lastCheckpointDispatched =
+        private readonly ConcurrentDictionary<String, Int64> lastCheckpointDispatched =
             new ConcurrentDictionary<string, long>();
 
         void DispatchCommit(ICommit commit, string slotName, Int64 startCheckpoint)
         {
             Interlocked.Increment(ref _countOfConcurrentDispatchingCommit);
-            //Console.WriteLine("[{0:00}] - Slot {1}", Thread.CurrentThread.ManagedThreadId, slotName);
+
             if (Logger.IsDebugEnabled) Logger.ThreadProperties["commit"] = commit.CommitId;
 
             if (Logger.IsDebugEnabled) Logger.DebugFormat("Dispatching checkpoit {0} on tenant {1}", commit.CheckpointToken, _config.TenantId);
@@ -355,12 +347,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             {
                 lastCheckpointDispatched[slotName] = 0;
             }
-            if (!(lastCheckpointDispatched[slotName] < chkpoint))
+            if (lastCheckpointDispatched[slotName] >= chkpoint)
             {
                 var error = String.Format("Sequence broken, last checkpoint for slot {0} was {1} and now we dispatched {2}",
                         slotName, lastCheckpointDispatched[slotName], chkpoint);
                 Logger.Error(error);
-                throw new Exception(error);
+                throw new ApplicationException(error);
             }
 
             if (lastCheckpointDispatched[slotName] + 1 != chkpoint)
@@ -384,7 +376,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             var projections = _projectionsBySlot[slotName];
 
             bool dispatchCommit = false;
-            var eventCount = commit.Events.Count();
+            var eventCount = commit.Events.Count;
 
             var projectionToUpdate = new List<string>();
 
@@ -583,7 +575,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                         {
                             if (retryCount++ > 10)
                             {
-                                throw new Exception("Polling failed, engine freezed at checkpoint " + dispatched);
+                                throw new ApplicationException("Polling failed, engine freezed at checkpoint " + dispatched);
                             }
                         }
                     }

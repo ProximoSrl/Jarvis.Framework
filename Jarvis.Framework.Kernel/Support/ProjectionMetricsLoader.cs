@@ -12,16 +12,16 @@ namespace Jarvis.Framework.Kernel.Support
     public class ProjectionStatusLoader : IProjectionStatusLoader
     {
         private readonly int _pollingIntervalInSeconds;
-        private IMongoCollection<BsonDocument> _commitsCollection;
-        private IMongoCollection<BsonDocument> _checkpointCollection;
+        private readonly IMongoCollection<BsonDocument> _commitsCollection;
+        private readonly IMongoCollection<BsonDocument> _checkpointCollection;
+
+        private readonly Dictionary<String, SlotStatus> _lastMetrics;
+        private readonly IMongoDatabase _eventStoreDatabase;
+        private readonly IMongoDatabase _readModelDatabase;
 
         private DateTime lastPoll = DateTime.MinValue;
-
-        private Dictionary<String, SlotStatus> _lastMetrics;
-        private Int64 _lastDelay;
-        private IMongoDatabase _eventStoreDatabase;
-        private IMongoDatabase _readModelDatabase;
         private Int32 _isRetrievingData = 0;
+        private Int64 _lastDelay;
 
         public ProjectionStatusLoader(
             IMongoDatabase eventStoreDatabase,
@@ -83,21 +83,13 @@ namespace Jarvis.Framework.Kernel.Support
 
                         var lastCommit = lastCommitDoc["_id"].AsInt64;
 
-                        //db.checkpoints.aggregate(
-                        //[
-                        //    {$match : {"Active": true}}
-                        //    ,{$project : {"Slot" : 1, "Current" : 1}}
-                        //    ,{$group : {"_id" : "$Slot", "Current" : {$min : "$Current"}}}
-                        //])
                         BsonDocument[] pipeline =
                         {
                             BsonDocument.Parse(@"{""Active"": true}"),
                             BsonDocument.Parse(@"{""Slot"" : 1, ""Current"" : 1}"),
                             BsonDocument.Parse(@"{""_id"" : ""$Slot"", ""Current"" : {$min : ""$Current""}}")
                         };
-                        //AggregateArgs args = new AggregateArgs();
-                        //args.Pipeline = pipeline;
-                        //args.AllowDiskUse = true; //important for large file systems
+
                         var options = new AggregateOptions();
                         options.AllowDiskUse = true;
                         options.UseCursor = true;
