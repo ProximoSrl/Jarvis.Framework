@@ -22,6 +22,7 @@ using Jarvis.Framework.Kernel.Support;
 using System.Collections.Concurrent;
 using System.Text;
 using Jarvis.Framework.Shared.Helpers;
+using Metrics;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
 {
@@ -52,6 +53,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         private readonly IRebuildContext _rebuildContext;
 
+        /// <summary>
+        /// this is a list of all FATAL error occurred in projection engine. A fatal
+        /// error means that some slot is stopped and so there should be an health
+        /// check that fails.
+        /// </summary>
+        private readonly ConcurrentBag<String> _engineFatalErrors;
+
         public ProjectionEngine(
 			ICommitPollingClientFactory pollingClientFactory,
             IConcurrentCheckpointTracker checkpointTracker,
@@ -61,7 +69,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             INotifyCommitHandled notifyCommitHandled,
             ProjectionEngineConfig config)
         {
-            Logger = NullLogger.Instance; 
+            Logger = NullLogger.Instance;
+            _engineFatalErrors = new ConcurrentBag<string>();
 
             _pollingClientFactory = pollingClientFactory;
             _checkpointTracker = checkpointTracker;
@@ -85,6 +94,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             _metrics = new ProjectionMetrics(_allProjections);
             _clients = new List<ICommitPollingClient>();
             _bucketToClient = new Dictionary<BucketInfo, ICommitPollingClient>();
+
+            RegisterHealthCheck();
         }
 
         private void DumpProjections()
@@ -411,13 +422,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                         }
                         catch (Exception ex)
                         {
-                            Logger.FatalFormat(ex, "[Slot: {3} Projection: {4}] Failed checkpoint: {0} StreamId: {1} Event Name: {2}",
+                            var error = String.Format("[Slot: {3} Projection: {4}] Failed checkpoint: {0} StreamId: {1} Event Name: {2}",
                                 commit.CheckpointToken,
                                 commit.StreamId,
                                 eventName,
                                 slotName,
-                                cname
-                            );
+                                cname);
+                            Logger.Fatal(error, ex);
+                            _engineFatalErrors.Add(error);
                             throw;
                         }
 
@@ -596,6 +608,22 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             var collection = db.GetCollection<BsonDocument>("Commits");
             return collection;
         }
+
+        #region Healt Checks
+
+        private void RegisterHealthCheck()
+        {
+            HealthChecks.RegisterHealthCheck("Projection Engine Errors", () =>
+            {
+                if (_engineFatalErrors.Count == 0)
+                    return HealthCheckResult.Healthy("No error in projection engine");
+
+                return HealthCheckResult.Unhealthy("Error occurred in projection engine: " + String.Join("\n\n", _engineFatalErrors));
+            });
+        }
+
+
+        #endregion
     }
 
     public class BucketInfo
