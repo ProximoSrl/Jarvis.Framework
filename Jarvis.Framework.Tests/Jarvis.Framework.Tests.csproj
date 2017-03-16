@@ -175,6 +175,7 @@
     <Compile Include="ProjectionEngineTests\Rebuild\ProjectionEventInspectorTests.cs" />
     <Compile Include="ProjectionEngineTests\Rebuild\RebuildProjectionEngineTest.cs" />
     <Compile Include="ProjectionEngineTests\Rebuild\RebuildProjectionSlotDispatcherTests.cs" />
+    <Compile Include="ProjectionEngineTests\V2\ProjectionEnginePollWithNotInitializedEngine.cs" />
     <Compile Include="ProjectionsTests\CachedMongoStorageTests.cs" />
     <Compile Include="ProjectionEngineTests\ConcurrentCheckpointTrackerTests.cs" />
     <Compile Include="ProjectionEngineTests\Concurrent\AbstractConcurrentProjectionEngineTests.cs">

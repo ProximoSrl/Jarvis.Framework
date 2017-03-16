@@ -3,6 +3,11 @@ J.A.R.V.I.S. Framework - Proximo srl (c)
 
 ##Version 2:
 
+###2.0.9
+
+- Health check on FATAL error in Projection Engine. [Issue 22](https://github.com/ProximoSrl/Jarvis.Framework/issues/21)
+- When a projection throws an error, only the corresponding slot is stopped. [Issue 21](https://github.com/ProximoSrl/Jarvis.Framework/issues/22) 
+
 ###2.0.8
 
 - Some code cleanup.

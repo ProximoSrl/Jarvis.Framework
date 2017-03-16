@@ -25,7 +25,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         private int _bufferSize = 4000;
 
         readonly ICommitEnhancer _enhancer;
-        private String _id;
+        private readonly String _id;
 
         readonly ILogger _logger;
 
@@ -36,8 +36,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         PollingClient2 _innerClient;
 
         CommitSequencer _sequencer;
-
-        IPersistStreams _persistStream;
+        readonly IPersistStreams _persistStream;
 
         public CommitPollingClient2(
             IPersistStreams persistStreams,
@@ -61,28 +60,53 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         {
             ExecutionDataflowBlockOptions consumerOptions = new ExecutionDataflowBlockOptions();
             consumerOptions.BoundedCapacity = _bufferSize;
-            Action<ICommit> wrapperAction = commit =>
-            {
-                try
-                {
-                    consumerAction(commit);
-                }
-                catch (Exception ex)
-                {
-                    _logger.ErrorFormat(ex, "CommitPollingClient {0}: Error during Commit consumer {1} ", _id, ex.Message);
-                    StopPolling(true); //Stop and close everything on this poller.
-                    LastException = ex;
-                    throw;
-                }
-            };
-            var actionBlock = new ActionBlock<ICommit>(wrapperAction, consumerOptions);
+            ConsumerActionWrapper wrapper = new ConsumerActionWrapper(consumerAction, this);
+            var actionBlock = new ActionBlock<ICommit>((Action<ICommit>) wrapper.Consume, consumerOptions);
 
             _consumers.Add(actionBlock);
         }
 
         #region Dispatching
 
-        private List<ITargetBlock<ICommit>> _consumers;
+        private readonly List<ITargetBlock<ICommit>> _consumers;
+
+        private class ConsumerActionWrapper
+        {
+            private readonly Action<ICommit> _consumerAction;
+            private Boolean _active;
+            private String _error;
+
+  
+            private readonly CommitPollingClient2 _owner;
+
+            public ConsumerActionWrapper(Action<ICommit> consumerAction, CommitPollingClient2 owner)
+            {
+                _consumerAction = consumerAction;
+                _active = true;
+                _owner = owner;
+            }
+
+            public string Error { get { return _error; } }
+            public Boolean Active { get { return _active; } }
+
+            public void Consume(ICommit commit)
+            {
+                if (Active == false) return; //consumer failed.
+                try
+                {
+                    _consumerAction(commit);
+                }
+                catch (Exception ex)
+                {
+                    _owner._logger.ErrorFormat(ex, "CommitPollingClient {0}: Error during Commit consumer {1} ", _owner._id, ex.Message);
+                    _active = false; //no more dispatch to this consumer.
+                    _error = ex.ToString();
+                    _owner.LastException = ex;
+                    _owner.Status = CommitPollingClientStatus.Faulted;
+                    //it does not throw, simply stops dispatching commit to this consumer that will be blocked
+                }
+            }
+        }
 
         #endregion
 
@@ -90,10 +114,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         private Int64 _checkpointTokenCurrent;
 
-        private CancellationTokenSource _stopRequested = new CancellationTokenSource();
+        private readonly CancellationTokenSource _stopRequested = new CancellationTokenSource();
 
         /// <summary>
-        /// 
+        /// Start automatic polling.
         /// </summary>
         /// <param name="checkpointTokenFrom"></param>
         /// <param name="intervalInMilliseconds"></param>
@@ -106,15 +130,15 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
           Int64 checkpointTokenFrom,
           Int32 intervalInMilliseconds,
           Int64 checkpointTokenSequenced,
-          Int32 bufferSize = 4000,
-          String pollerName = "CommitPollingClient")
+          Int32 bufferSize,
+          String pollerName)
         {
             Init(checkpointTokenFrom, intervalInMilliseconds,checkpointTokenSequenced, bufferSize, pollerName);
             _innerClient.StartFrom(checkpointTokenFrom);
             Status = CommitPollingClientStatus.Polling;
         }
 
-        public void StartManualPolling(Int64 checkpointTokenFrom, Int32 intervalInMilliseconds, Int32 bufferSize = 4000, String pollerName = "CommitPollingClient")
+        public void StartManualPolling(Int64 checkpointTokenFrom, Int32 intervalInMilliseconds, Int32 bufferSize, String pollerName)
         {
             Init(checkpointTokenFrom, intervalInMilliseconds, 0,bufferSize, pollerName);
             _innerClient.ConfigurePollingFunction();
@@ -140,6 +164,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                 },
                 intervalInMilliseconds);
 
+            RegisterHealthChecks(pollerName);
+        }
+
+        private void RegisterHealthChecks(string pollerName)
+        {
             MetricsHelper.SetCommitPollingClientBufferSize(pollerName, () => GetClientBufferSize());
             //Set health check for polling
             HealthChecks.RegisterHealthCheck("Polling-" + pollerName, () =>
@@ -149,12 +178,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                     //poller is stopped, system healty
                     return HealthCheckResult.Healthy("Automatic polling stopped");
                 }
-                else if (Status == CommitPollingClientStatus.Faulted)
+                else if (Status == CommitPollingClientStatus.Faulted || LastException != null)
                 {
                     //poller is stopped, system healty
-                    var exception = (LastException != null ? LastException.ToString() : "");
-                    exception = exception.Replace("{", "{{").Replace("}", "}}");
-                    return HealthCheckResult.Unhealthy("Faulted (exception in consumer): " + exception);
+                    var exceptionText = (LastException != null ? LastException.ToString() : "");
+                    exceptionText = exceptionText.Replace("{", "{{").Replace("}", "}}");
+                    return HealthCheckResult.Unhealthy("Faulted (exception in consumer): " + exceptionText);
                 }
                 var elapsed = DateTime.UtcNow - _innerClient.LastActivityTimestamp;
                 if (elapsed.TotalMilliseconds > 5000)
@@ -166,7 +195,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                 return HealthCheckResult.Healthy("Poller alive");
             });
             //Now register health check for the internal NES poller, to diagnose errors in polling.
-            HealthChecks.RegisterHealthCheck("Polling internal errors: ", () => {
+            HealthChecks.RegisterHealthCheck("Polling internal errors: ", () =>
+            {
                 if (_innerClient != null && !String.IsNullOrEmpty(_innerClient.LastPollingError))
                 {
                     return HealthCheckResult.Unhealthy($"Inner NES poller has error: {_innerClient.LastPollingError}");
@@ -175,8 +205,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             });
         }
 
-
-        public void StopPolling(Boolean setToFaulted = false)
+        public void StopPolling(Boolean setToFaulted)
         {
             _innerClient.Stop();
             CloseEverything();
