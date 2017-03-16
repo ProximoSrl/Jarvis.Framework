@@ -30,7 +30,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
     {
         readonly ICommitPollingClientFactory _pollingClientFactory;
 
-        private readonly List<ICommitPollingClient> _clients;
+        private ICommitPollingClient[] _clients;
         private readonly Dictionary<BucketInfo, ICommitPollingClient> _bucketToClient;
 
         readonly IConcurrentCheckpointTracker _checkpointTracker;
@@ -92,7 +92,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 .ToDictionary(x => x.Key, x => x.OrderByDescending(p => p.Priority).ToArray());
 
             _metrics = new ProjectionMetrics(_allProjections);
-            _clients = new List<ICommitPollingClient>();
             _bucketToClient = new Dictionary<BucketInfo, ICommitPollingClient>();
 
             RegisterHealthCheck();
@@ -124,6 +123,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         public void Poll()
         {
+            if (_clients == null)
+                return; //Poller still not initialized.
+
             foreach (var client in _clients)
             {
                 client.Poll();
@@ -200,13 +202,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
             var allSlots = _projectionsBySlot.Keys.ToArray();
 
+            var allClients = new List<ICommitPollingClient> ();
             //recreate all polling clients.
             foreach (var bucket in _config.BucketInfo)
             {
                 var client = _pollingClientFactory.Create(_eventstore.Advanced, "bucket: " + String.Join(",", bucket.Slots));
-                _clients.Add(client);
+                allClients.Add(client);
                 _bucketToClient.Add(bucket, client);
             }
+
+            _clients = allClients.ToArray();
 
             foreach (var slotName in allSlots)
             {
@@ -329,11 +334,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         void StopPolling()
         {
-            foreach (var client in _clients)
+            if (_clients != null)
             {
-                client.StopPolling(false);
+                foreach (var client in _clients)
+                {
+                    client.StopPolling(false);
+                }
+                _clients = null;
             }
-            _clients.Clear();
             _bucketToClient.Clear();
             if (_eventstore != null)
             {

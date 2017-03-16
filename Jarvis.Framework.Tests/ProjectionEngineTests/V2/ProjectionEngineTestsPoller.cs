@@ -14,7 +14,6 @@ using NUnit.Framework;
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
 
-    //[TestFixture("1")]
     [TestFixture("2")]
     public class ProjectionEngineTestsPoller : ProjectionEngineBasicTestBase
     {
