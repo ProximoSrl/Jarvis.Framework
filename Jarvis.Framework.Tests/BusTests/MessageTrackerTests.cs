@@ -24,6 +24,7 @@ using Jarvis.NEventStoreEx.CommonDomainEx.Core;
 
 using MongoDB.Driver.Linq;
 using NEventStore.Domain.Persistence;
+using MongoDB.Bson;
 
 namespace Jarvis.Framework.Tests.BusTests
 {
@@ -47,27 +48,38 @@ namespace Jarvis.Framework.Tests.BusTests
 
     public class AnotherSampleCommandHandler : ICommandHandler<AnotherSampleTestCommand>
     {
-        public readonly ManualResetEvent Reset = new ManualResetEvent(false);
+        /// <summary>
+        /// This is used to simply test, you can decide how to handle a command.
+        /// </summary>
+        /// <param name="messageId"></param>
+        /// <param name="numOfFailure"></param>
+        /// <param name="exceptionToThrow"></param>
+        /// <param name="setEventOnThrow"></param>
+        public static void SetFixtureData(Guid messageId, Int32 numOfFailure, Exception exceptionToThrow, Boolean setEventOnThrow)
+        {
+            commandRunDatas[messageId] = new RunData(numOfFailure, setEventOnThrow, exceptionToThrow);
+        }
 
-        public static Int32 failCount = 0;
-
-        public static Int32 numOfFailure = 2; //Fail two times before success
-
-        public static Exception exceptionToThrow;
-
-        public static Boolean setEventOnThrow = false;
+        private static Dictionary<Guid, RunData> commandRunDatas = new Dictionary<Guid, RunData>();
 
         public AnotherSampleCommandHandler()
         {
 
         }
+
+        public readonly ManualResetEvent Reset = new ManualResetEvent(false);
+
         public void Handle(AnotherSampleTestCommand command)
         {
-            if (numOfFailure > 0 && numOfFailure > failCount)
+            RunData runData;
+            if (!commandRunDatas.TryGetValue(command.MessageId, out runData))
             {
-                failCount++;
-                if (setEventOnThrow) Reset.Set();
-                throw exceptionToThrow;
+                Assert.Fail($"TEST FIXTURE WRONG: No run data for command id {command.MessageId}");
+            }
+
+            if (runData.ShouldFail())
+            {
+                runData.Fail(Reset);
             }
             this.ReceivedCommand = command;
             Reset.Set();
@@ -79,6 +91,37 @@ namespace Jarvis.Framework.Tests.BusTests
         }
 
         public AnotherSampleTestCommand ReceivedCommand { get; private set; }
+
+        private class RunData
+        {
+            public RunData(int numOfFailures, bool setEvent, Exception ex)
+            {
+                NumOfFailures = numOfFailures;
+                SetEvent = setEvent;
+                Ex = ex;
+                _failCount = 0;
+            }
+
+            public Int32 NumOfFailures { get; private set; }
+
+            public Boolean SetEvent { get; private set; }
+
+            public Exception Ex { get; private set; }
+
+            private Int32 _failCount;
+
+            internal void Fail(ManualResetEvent reset)
+            {
+                _failCount++;
+                if (SetEvent) reset.Set();
+                throw Ex;
+            }
+
+            internal bool ShouldFail()
+            {
+                return _failCount < NumOfFailures;
+            }
+        }
     }
 
     [TestFixture]
@@ -311,35 +354,54 @@ namespace Jarvis.Framework.Tests.BusTests
         public void SetUp()
         {
             _messages.Drop();
-            AnotherSampleCommandHandler.failCount = 0;
-            AnotherSampleCommandHandler.numOfFailure = 0;
-            AnotherSampleCommandHandler.exceptionToThrow = null;
         }
 
+        /// <summary>
+        /// When a domain exception is raised, we expect only one failure
+        /// </summary>
         [Test]
-        public void verify_failure_tracking()
+        public void verify_failure_tracking_for_domain_exception()
         {
-            AnotherSampleCommandHandler.numOfFailure = 1;
-            AnotherSampleCommandHandler.exceptionToThrow = new DomainException("TEST_1", "Test Exception", null);
-            AnotherSampleCommandHandler.setEventOnThrow = true;
-
-            var sampleMessage = new AnotherSampleTestCommand(10);
+            //We decide to fail only one time
+            var sampleMessage = new AnotherSampleTestCommand(1, "verify_failure_tracking_for_domain_exception");
+            AnotherSampleCommandHandler.SetFixtureData(sampleMessage.MessageId, 1, new DomainException("TEST_1", "Test Exception for verify_failure_tracking_for_domain_exception test", null), true);
             _bus.Send(sampleMessage);
-            var handled = _handler.Reset.WaitOne(10000);
-            //cycle until we found handled message on tracking
-            TrackedMessageModel track = null;
+            _handler.Reset.WaitOne(10000);
+
+            //cycle until we found handled message on tracking with specified condition
+            TrackedMessageModel track;
             DateTime startTime = DateTime.Now;
             do
             {
-                Thread.Sleep(50);
-                var tracks = _messages.FindAll().ToList();
-                Assert.That(tracks, Has.Count.EqualTo(1));
-                track = tracks.Single();
+                Thread.Sleep(200);
+                track = _messages.AsQueryable().SingleOrDefault(t => t.MessageId == sampleMessage.MessageId.ToString() &&
+                    t.ExecutionCount == 1 &&
+                    t.Completed == true &&
+                    t.Success == false);
             }
             while (
-                    track.CompletedAt == null &&
+                    track == null &&
                     DateTime.Now.Subtract(startTime).TotalSeconds < 4
             );
+
+            if (track == null)
+            {
+                //failure, try to recover the message id to verify what was wrong
+                track = _messages.AsQueryable().SingleOrDefault(t => t.MessageId == sampleMessage.MessageId.ToString());   
+            }
+            //do normal assertion
+            if (track == null)
+                Assert.Fail($"Message {sampleMessage.MessageId} did not generate tracking info");
+
+            var allTracking = _messages.FindAll().ToList();
+            if (allTracking.Count != 1)
+            {
+                Console.WriteLine($"Too many tracking elements: {allTracking.Count}");
+                foreach (var t in allTracking)
+                {
+                    Console.WriteLine(t.ToBsonDocument());
+                }
+            }
 
             Assert.That(track.MessageId, Is.EqualTo(sampleMessage.MessageId.ToString()));
             Assert.That(track.Description, Is.EqualTo(sampleMessage.Describe()));
@@ -349,32 +411,37 @@ namespace Jarvis.Framework.Tests.BusTests
             Assert.That(track.ErrorMessage, Is.Not.Empty);
             Assert.That(track.Completed, Is.True);
             Assert.That(track.Success, Is.False);
+            Assert.That(track.ExecutionCount, Is.EqualTo(1));
         }
 
         [Test]
         public void verify_retry_start_execution_tracking()
         {
-            AnotherSampleCommandHandler.numOfFailure = 2;
-            AnotherSampleCommandHandler.exceptionToThrow = new ConflictingCommandException("TEST_1", null);
-            AnotherSampleCommandHandler.setEventOnThrow = false;
+            var tracks = _messages.FindAll().ToList();
+            Assert.That(tracks, Has.Count.EqualTo(0), "messages collection is not empty");
 
-            var sampleMessage = new AnotherSampleTestCommand(10);
+            var sampleMessage = new AnotherSampleTestCommand(2, "verify_retry_start_execution_tracking");
+            AnotherSampleCommandHandler.SetFixtureData(sampleMessage.MessageId, 2, new ConflictingCommandException("TEST_1", null), true);
+
             _bus.Send(sampleMessage);
-            var handled = _handler.Reset.WaitOne(10000);
+            _handler.Reset.WaitOne(10000);
             //cycle until we found handled message on tracking
-            TrackedMessageModel track = null;
+            TrackedMessageModel track;
             DateTime startTime = DateTime.Now;
-            do
             {
-                Thread.Sleep(50);
-                var tracks = _messages.FindAll().ToList();
-                Assert.That(tracks, Has.Count.EqualTo(1));
-                track = tracks.Single();
+                Thread.Sleep(200);
+                track = _messages.AsQueryable().SingleOrDefault(t => t.MessageId == sampleMessage.MessageId.ToString() &&
+                    t.Completed == true);
             }
             while (
-                    track.ExecutionCount < AnotherSampleCommandHandler.numOfFailure &&
-                    DateTime.Now.Subtract(startTime).TotalSeconds < 4
-            );
+                    track == null && DateTime.Now.Subtract(startTime).TotalSeconds < 5 
+            ) ;
+
+            if (track == null)
+            {
+                //failure, try to recover the message id to verify what was wrong
+                track = _messages.AsQueryable().SingleOrDefault(t => t.MessageId == sampleMessage.MessageId.ToString());
+            }
 
             Assert.That(track.MessageId, Is.EqualTo(sampleMessage.MessageId.ToString()));
             Assert.That(track.Description, Is.EqualTo(sampleMessage.Describe()));
@@ -389,31 +456,39 @@ namespace Jarvis.Framework.Tests.BusTests
             Assert.That(track.ExecutionStartTimeList.Length, Is.EqualTo(3));
         }
 
+        /// <summary>
+        /// This should be refactored to be quicker, to wait for all execution we need to wait
+        /// all the Thread random sleep.
+        /// </summary>
         [Test]
         public void verify_exceeding_retry()
         {
-            AnotherSampleCommandHandler.numOfFailure = Int32.MaxValue;
-            AnotherSampleCommandHandler.exceptionToThrow = new ConflictingCommandException("TEST_1", null);
-            AnotherSampleCommandHandler.setEventOnThrow = false;
-
-            var sampleMessage = new AnotherSampleTestCommand(10);
+            var sampleMessage = new AnotherSampleTestCommand(3, "verify_exceeding_retry");
+            AnotherSampleCommandHandler.SetFixtureData(sampleMessage.MessageId, Int32.MaxValue, new ConflictingCommandException("TEST_1", null), false);
             _bus.Send(sampleMessage);
-            var handled = _handler.Reset.WaitOne(10000);
+            _handler.Reset.WaitOne(10000);
             //cycle until we found handled message on tracking
-            TrackedMessageModel track = null;
+            TrackedMessageModel track;
             DateTime startTime = DateTime.Now;
             do
             {
-                Thread.Sleep(50);
-                var tracks = _messages.FindAll().ToList();
-                Assert.That(tracks, Has.Count.EqualTo(1));
-                track = tracks.Single();
+                Thread.Sleep(200);
+                track = _messages.AsQueryable().SingleOrDefault(t => t.MessageId == sampleMessage.MessageId.ToString() &&
+                    t.ExecutionCount == 100 &&
+                    t.Completed == true);
             }
             while (
-                    track.ExecutionCount < AnotherSampleCommandHandler.numOfFailure &&
-                    DateTime.Now.Subtract(startTime).TotalSeconds < 90 // 4 sec is too short, retries might add some delay
-                                                                       // find a better way to exit this cycle.
+                    track == null &&  DateTime.Now.Subtract(startTime).TotalSeconds < 60 //TODO: find a better way to handle this test.
             );
+
+            if (track == null)
+            {
+                //failure, try to recover the message id to verify what was wrong
+                track = _messages.AsQueryable().SingleOrDefault(t => t.MessageId == sampleMessage.MessageId.ToString());
+            }
+
+            if (track == null)
+                Assert.Fail($"Message {sampleMessage.MessageId} did not generate tracking info");
 
             Assert.That(track.MessageId, Is.EqualTo(sampleMessage.MessageId.ToString()));
             Assert.That(track.Description, Is.EqualTo(sampleMessage.Describe()));
