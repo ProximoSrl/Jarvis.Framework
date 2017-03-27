@@ -12,6 +12,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using MongoDB.Driver.Core.Clusters;
 using System.Threading;
+using System.Configuration;
 
 namespace Jarvis.Framework.MongoAppender
 {
@@ -60,9 +61,6 @@ namespace Jarvis.Framework.MongoAppender
         {
             get
             {
-                if (_cappedSizeInMb == null)
-                    _cappedSizeInMb = (5 * 1024).ToString();
-
                 return _cappedSizeInMb;
             }
             private set { _cappedSizeInMb = value; }
@@ -122,7 +120,7 @@ namespace Jarvis.Framework.MongoAppender
             {
                 if (createCollectionOptions.Capped == true)
                 {
-                    LogLog.Error("Cannot use Capped and TTL at the same time, only capped collection setting will be used");
+                    LogLog.Error("Cannot use Capped and TTL at the same time, only capped collection setting will be used! Please configure the appender specifying only CappedSizeInMb or ExpireAfter, but not both.");
                 }
                 else
                 {
