@@ -3,6 +3,11 @@ J.A.R.V.I.S. Framework - Proximo srl (c)
 
 ##Version 2:
 
+###2.1.0
+
+- Support for offline
+- Attribute for IProjection Properties [breaking change](BreakingChanges/2.1.0_ProjectionAttribute.md)
+
 ###2.0.9
 
 - Health check on FATAL error in Projection Engine. [Issue 22](https://github.com/ProximoSrl/Jarvis.Framework/issues/21)

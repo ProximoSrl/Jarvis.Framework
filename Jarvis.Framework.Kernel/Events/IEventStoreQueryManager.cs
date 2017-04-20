@@ -29,12 +29,11 @@ namespace Jarvis.Framework.Kernel.Events
         List<CommitShortInfo> GetCommitsAfterCheckpointToken(
             Int64 checkpointTokenFrom, 
             List<String> streamIds);
-
     }
 
     public class DirectMongoEventStoreQueryManager : IEventStoreQueryManager
     {
-        private IMongoCollection<BsonDocument> _collection;
+        private readonly IMongoCollection<BsonDocument> _collection;
 
         public DirectMongoEventStoreQueryManager(IMongoDatabase eventsDb)
         {
@@ -66,7 +65,6 @@ namespace Jarvis.Framework.Kernel.Events
 
     public class CommitShortInfo
     {
-       
         public Int64 Id { get; private set; }
 
         public Int64 CheckpointToken { get { return Id; } }
@@ -80,5 +78,4 @@ namespace Jarvis.Framework.Kernel.Events
         [BsonDictionaryOptions(Representation = DictionaryRepresentation.ArrayOfArrays)]
         public IDictionary<string, string> Headers { get; set; }
     }
-
 }

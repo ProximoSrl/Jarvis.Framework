@@ -88,7 +88,6 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
             Assert.IsNull(loaded);
         }
 
-
         [Test]
         public void delete_does_not_generates_multiple_notifications()
         {

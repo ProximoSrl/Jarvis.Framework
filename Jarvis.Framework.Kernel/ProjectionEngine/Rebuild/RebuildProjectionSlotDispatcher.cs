@@ -97,7 +97,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                 string eventName = evt.GetType().Name;
                 foreach (var projection in _projections)
                 {
-                    var cname = projection.GetCommonName();
+                    var cname = projection.Info.CommonName;
                     if (_logger.IsDebugEnabled) _logger.ThreadProperties["prj"] = cname;
 
                     bool handled;

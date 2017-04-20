@@ -6,60 +6,23 @@ using Fasterflect;
 using Jarvis.Framework.Kernel.ProjectionEngine;
 using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.MultitenantSupport;
+using System.Reflection;
 
 namespace Jarvis.Framework.Kernel.Events
 {
-    public interface IObserveProjection
-    {
-        void RebuildStarted();
-        void RebuildEnded();
-    }
-
-    public interface IProjection 
-    {
-        TenantId TenantId { get; }
-        void Drop();
-        void SetUp();
-        bool Handle(IDomainEvent e, bool isReplay);
-        string GetSlotName();
-        string GetCommonName();
-        string GetSignature();
-        void StartRebuild(IRebuildContext context);
-        void StopRebuild();
-        void Observe(IObserveProjection observer);
-        bool IsRebuilding { get; }
-
-        /// <summary>
-        /// Gives me the priority of the Projection. at Higher numbers correspond
-        /// higher priority
-        /// </summary>
-        Int32 Priority { get;  }
-    }
-
-    public class TenantProjections : IEnumerable<IProjection>
-    {
-        readonly TenantId _tenantId;
-        readonly IProjection[] _allProjections;
-
-        public TenantProjections(TenantId tenantId, IProjection[] allProjections)
-        {
-            _tenantId = tenantId;
-            _allProjections = allProjections;
-        }
-
-        public IEnumerator<IProjection> GetEnumerator()
-        {
-            return _allProjections.Where(x => x.TenantId == _tenantId).GetEnumerator();
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
-        }
-    }
-
+    /// <summary>
+    /// Abstract class that should implement a projection
+    /// </summary>
     public abstract class AbstractProjection : IProjection
     {
+        protected ProjectionInfoAttribute _projectionInfoAttribute;
+
+        public AbstractProjection()
+        {
+            _projectionInfoAttribute = GetType().GetCustomAttribute<ProjectionInfoAttribute>();
+            if (_projectionInfoAttribute == null)
+                throw new Exception($"Projection {GetType().FullName} does not contain ProjectionInfoAttribute");
+        }
 
         /// <summary>
         /// Single thread projection
@@ -75,20 +38,8 @@ namespace Jarvis.Framework.Kernel.Events
 
         public abstract void Drop();
         public abstract void SetUp();
-        public virtual string GetSlotName()
-        {
-            return "default";
-        }
 
-        public virtual string GetCommonName()
-        {
-            return this.GetType().Name;
-        }
-
-        public virtual string GetSignature()
-        {
-            return "signature";
-        }
+        public ProjectionInfoAttribute Info { get { return _projectionInfoAttribute; } }
 
         public virtual void StartRebuild(IRebuildContext context)
         {
@@ -134,7 +85,7 @@ namespace Jarvis.Framework.Kernel.Events
             }
 
             if(invoker != null)
-            { 
+            {
                 invoker.Invoke(this, e);
                 return true;
             }

@@ -5,6 +5,7 @@ using MongoDB.Driver;
 
 namespace Jarvis.Framework.Tests.ProjectionsTests
 {
+    [ProjectionInfo("MyProjection")]
     public class MyProjection :
         AbstractProjection,
         IEventHandler<InsertEvent>,

@@ -74,13 +74,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
             if (_config.Slots[0] != "*")
             {
                 projections = projections
-                    .Where(x => _config.Slots.Any(y => y == x.GetSlotName()))
+                    .Where(x => _config.Slots.Any(y => y == x.Info.SlotName))
                     .ToArray();
             }
 
             _allProjections = projections;
             _projectionsBySlot = projections
-                .GroupBy(x => x.GetSlotName())
+                .GroupBy(x => x.Info.SlotName)
                 .ToDictionary(x => x.Key, x => x.OrderByDescending(p => p.Priority).ToArray());
 
             _metrics = new ProjectionMetrics(_allProjections);
@@ -288,11 +288,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                                 }
                                 catch (Exception ex)
                                 {
-                                    _logger.ErrorFormat(ex, "Error in StopRebuild for projection {0}", projection.GetCommonName());
+                                    _logger.ErrorFormat(ex, "Error in StopRebuild for projection {0}", projection.Info.CommonName);
                                     throw;
                                 }
 
-                                var meter = _metrics.GetMeter(projection.GetCommonName());
+                                var meter = _metrics.GetMeter(projection.Info.CommonName);
                                 _checkpointTracker.RebuildEnded(projection, meter);
 
                                 Logger.InfoFormat("Rebuild done for projection {0} @ {1}",
@@ -302,7 +302,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                             }
                             _checkpointTracker.UpdateSlotAndSetCheckpoint(
                                 dispatcher.SlotName,
-                                dispatcher.Projections.Select(p => p.GetCommonName()),
+                                dispatcher.Projections.Select(p => p.Info.CommonName),
                                 dispatcher.LastCheckpointDispatched);
 
                             dispatcherWaitingToFinish.Remove(dispatcher);
@@ -373,7 +373,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                     //Check if this slot has ever dispatched at least one commit
                     if (maxCheckpointDispatchedInSlot > 0)
                     {
-                        _checkpointTracker.SetCheckpoint(projection.GetCommonName(),
+                        _checkpointTracker.SetCheckpoint(projection.Info.CommonName,
                             maxCheckpointDispatchedInSlot);
                         projection.Drop();
                         projection.StartRebuild(_rebuildContext);

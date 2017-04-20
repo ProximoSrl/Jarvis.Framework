@@ -8,6 +8,7 @@ using Jarvis.Framework.Tests.SharedTests.IdentitySupport;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests
 {
+    [ProjectionInfo("Projection")]
     public class Projection : AbstractProjection,
         IEventHandler<SampleAggregateCreated>
     {
@@ -39,7 +40,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         }
     }
 
-
+    [ProjectionInfo("Projection2", Signature = "V2")]
     public class Projection2 : AbstractProjection,
        IEventHandler<SampleAggregateCreated>
     {
@@ -49,11 +50,6 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         {
             _collection = collection;
             _collection.Attach(this, false);
-        }
-
-        public override string GetSignature()
-        {
-            return "V2";
         }
 
         public override int Priority
@@ -82,6 +78,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         }
     }
 
+    [ProjectionInfo("OtherSlotName", "v1", "Projection3")]
     public class Projection3 : AbstractProjection,
      IEventHandler<SampleAggregateCreated>
     {
@@ -91,7 +88,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         {
             _collection = collection;
             _collection.Attach(this, false);
-            Signature = base.GetSignature();
+            Signature = base.Info.Signature;
         }
 
         public override int Priority
@@ -104,16 +101,9 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             _collection.Drop();
         }
 
-        public String Signature { get; set; }
-
-        public override string GetSignature()
-        {
-            return Signature;
-        }
-
-        public override string GetSlotName()
-        {
-            return "OtherSlotName";
+        public String Signature {
+            get { return _projectionInfoAttribute.Signature; }
+            set { _projectionInfoAttribute = new ProjectionInfoAttribute(_projectionInfoAttribute.SlotName, value, _projectionInfoAttribute.CommonName); }
         }
 
         public override void SetUp()
@@ -135,6 +125,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         }
     }
 
+    [ProjectionInfo("ProjectionTypedId")]
     public class ProjectionTypedId : AbstractProjection
     {
         readonly ICollectionWrapper<SampleReadModelTestId, TestId> _collection;

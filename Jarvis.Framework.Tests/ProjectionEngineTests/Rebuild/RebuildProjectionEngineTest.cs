@@ -141,7 +141,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             var aggregateId = new SampleAggregateId(id);
             var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(aggregateId);
             aggregate.Create();
-            Repository.Save(aggregate, Guid.NewGuid(), h => {});
+            Repository.Save(aggregate, Guid.NewGuid(), h => { });
         }
 
         protected virtual Boolean NitroEnabled { get { return false; } }
@@ -196,7 +196,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             CreateAggregate();
 
             //prepare the tracker
-            _tracker.SetCheckpoint(_projection.GetCommonName(), 1); //Set the projection as dispatched
+            _tracker.SetCheckpoint(_projection.Info.CommonName, 1); //Set the projection as dispatched
 
             var status = sut.Rebuild();
             WaitForFinish(status);
@@ -213,7 +213,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             //prepare the tracker
             ConcurrentCheckpointTracker thisTracker = new ConcurrentCheckpointTracker(_db);
             thisTracker.SetUp(new[] { _projection }, 1, false);
-            thisTracker.UpdateSlotAndSetCheckpoint(_projection.GetSlotName(), new[] { _projection.GetCommonName() }, 2); //Set the projection as dispatched
+            thisTracker.UpdateSlotAndSetCheckpoint(_projection.Info.SlotName, new[] { _projection.Info.CommonName }, 2); //Set the projection as dispatched
 
             var status = sut.Rebuild();
             WaitForFinish(status);
@@ -244,8 +244,8 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 
             ConcurrentCheckpointTracker thisTracker = new ConcurrentCheckpointTracker(_db);
             thisTracker.SetUp(new[] { _projection1, _projection3 }, 1, false);
-            thisTracker.UpdateSlotAndSetCheckpoint(_projection1.GetSlotName(), new[] { _projection1.GetCommonName() }, 1);
-            thisTracker.UpdateSlotAndSetCheckpoint(_projection3.GetSlotName(), new[] { _projection3.GetCommonName() }, 1);
+            thisTracker.UpdateSlotAndSetCheckpoint(_projection1.Info.SlotName, new[] { _projection1.Info.CommonName }, 1);
+            thisTracker.UpdateSlotAndSetCheckpoint(_projection3.Info.SlotName, new[] { _projection3.Info.CommonName }, 1);
 
             var status = sut.Rebuild();
             WaitForFinish(status);
@@ -263,8 +263,8 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             //prepare the tracker
             ConcurrentCheckpointTracker thisTracker = new ConcurrentCheckpointTracker(_db);
             thisTracker.SetUp(new[] { _projection1, _projection3 }, 1, false);
-            thisTracker.UpdateSlotAndSetCheckpoint(_projection1.GetSlotName(), new[] { _projection1.GetCommonName() }, 2); 
-            thisTracker.UpdateSlotAndSetCheckpoint(_projection3.GetSlotName(), new[] { _projection3.GetCommonName() }, 1); 
+            thisTracker.UpdateSlotAndSetCheckpoint(_projection1.Info.SlotName, new[] { _projection1.Info.CommonName }, 2);
+            thisTracker.UpdateSlotAndSetCheckpoint(_projection3.Info.SlotName, new[] { _projection3.Info.CommonName }, 1);
 
             var status = sut.Rebuild();
             WaitForFinish(status);
@@ -272,11 +272,11 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             Assert.That(_writer3.All.Count(), Is.EqualTo(1));
 
             var allCheckpoints = _checkpointCollection.FindAll().ToList();
-            var projection1 = allCheckpoints.Single(c => c.Id == _projection1.GetCommonName());
+            var projection1 = allCheckpoints.Single(c => c.Id == _projection1.Info.CommonName);
             Assert.That(projection1.Current, Is.EqualTo(2));
             Assert.That(projection1.Value, Is.EqualTo(2));
 
-            var projection2 = allCheckpoints.Single(c => c.Id == _projection3.GetCommonName());
+            var projection2 = allCheckpoints.Single(c => c.Id == _projection3.Info.CommonName);
             Assert.That(projection2.Current, Is.EqualTo(1));
             Assert.That(projection2.Value, Is.EqualTo(1));
         }
@@ -307,14 +307,14 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 
             ConcurrentCheckpointTracker thisTracker = new ConcurrentCheckpointTracker(_db);
             thisTracker.SetUp(new IProjection[] { _projection1, _projection3 }, 1, false);
-            thisTracker.UpdateSlotAndSetCheckpoint(_projection1.GetSlotName(), new[] { _projection1.GetCommonName() }, 1);
-            thisTracker.UpdateSlotAndSetCheckpoint(_projection3.GetSlotName(), new[] { _projection3.GetCommonName() }, 1);
+            thisTracker.UpdateSlotAndSetCheckpoint(((IProjection)_projection1).Info.SlotName, new[] { ((IProjection)_projection1).Info.CommonName }, 1);
+            thisTracker.UpdateSlotAndSetCheckpoint(((IProjection)_projection3).Info.SlotName, new[] { ((IProjection)_projection3).Info.CommonName }, 1);
 
             //now change signature.
             _projection3.Signature = "Modified";
             var status = sut.Rebuild();
             WaitForFinish(status);
-            var checkpoint = _checkpointCollection.AsQueryable().Single(c => c.Id == _projection3.GetCommonName());
+            var checkpoint = _checkpointCollection.AsQueryable().Single(c => c.Id == ((IProjection)_projection3).Info.CommonName);
             Assert.That(checkpoint.Signature, Is.EqualTo(_projection3.Signature));
         }
     }
@@ -349,8 +349,8 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 
             ConcurrentCheckpointTracker thisTracker = new ConcurrentCheckpointTracker(_db);
             thisTracker.SetUp(new[] { _projection1, _projection3 }, 1, false);
-            thisTracker.UpdateSlotAndSetCheckpoint(_projection1.GetSlotName(), new[] { _projection1.GetCommonName() }, 1);
-            thisTracker.UpdateSlotAndSetCheckpoint(_projection3.GetSlotName(), new[] { _projection3.GetCommonName() }, 1);
+            thisTracker.UpdateSlotAndSetCheckpoint(_projection1.Info.SlotName, new[] { _projection1.Info.CommonName }, 1);
+            thisTracker.UpdateSlotAndSetCheckpoint(_projection3.Info.SlotName, new[] { _projection3.Info.CommonName }, 1);
 
             var status = sut.Rebuild();
             WaitForFinish(status);

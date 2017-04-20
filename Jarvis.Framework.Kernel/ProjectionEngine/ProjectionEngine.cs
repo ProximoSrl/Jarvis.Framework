@@ -82,13 +82,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             if (_config.Slots[0] != "*")
             {
                 projections = projections
-                    .Where(x => _config.Slots.Any(y => y == x.GetSlotName()))
+                    .Where(x => _config.Slots.Any(y => y == x.Info.SlotName))
                     .ToArray();
             }
 
             _allProjections = projections;
             _projectionsBySlot = projections
-                .GroupBy(x => x.GetSlotName())
+                .GroupBy(x => x.Info.SlotName)
                 .ToDictionary(x => x.Key, x => x.OrderByDescending(p => p.Priority).ToArray());
 
             _metrics = new ProjectionMetrics(_allProjections);
@@ -281,7 +281,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                         //Check if this slot has ever dispatched at least one commit
                         if (maxCheckpointDispatchedInSlot > 0)
                         {
-                            _checkpointTracker.SetCheckpoint(projection.GetCommonName(),
+                            _checkpointTracker.SetCheckpoint(projection.Info.CommonName,
                                 maxCheckpointDispatchedInSlot);
                             projection.Drop();
                             projection.StartRebuild(_rebuildContext);
@@ -299,17 +299,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
                     projection.SetUp();
                 }
-            }
-            var errors = _checkpointTracker.GetCheckpointErrors();
-            if (errors.Any())
-            {
-                StringBuilder fullError = new StringBuilder();
-                foreach (var error in errors)
-                {
-                    Logger.ErrorFormat("CheckpointError: {0}", error);
-                    fullError.AppendLine(error);
-                }
-                throw new ApplicationException(String.Format("Found {0} errors in checkpoint status: {1}", errors.Count, fullError.ToString()));
             }
         }
 
@@ -416,7 +405,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                     string eventName = evt.GetType().Name;
                     foreach (var projection in projections)
                     {
-                        var cname = projection.GetCommonName();
+                        var cname = projection.Info.CommonName;
                         if (Logger.IsDebugEnabled) Logger.ThreadProperties["prj"] = cname;
                         var checkpointStatus = _checkpointTracker.GetCheckpointStatus(cname, commit.CheckpointToken);
 

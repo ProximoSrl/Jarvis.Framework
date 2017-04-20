@@ -7,6 +7,7 @@ namespace Jarvis.Framework.Kernel.Events
     public sealed class NullEventBus : IEventBus
     {
 	    private ILogger _logger = NullLogger.Instance;
+
 	    public ILogger Logger
 	    {
 		    get { return _logger; }

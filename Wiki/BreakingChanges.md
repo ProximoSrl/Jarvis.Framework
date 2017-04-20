@@ -1,18 +1,22 @@
-#Version 2.0
+# Version 2.0
 
-##Version 2.1
+## Version 2.1
 
-1. Change to iconstruct aggregate
+### Change to iconstruct aggregate
 
 Interface *IConstructAggregatesEx* has now two methods, one to create the Aggregate, and the other to restore snapshot to the Aggregate. All the call to Build() method should be changed as following.
 
 The third parameter (the instance of the snapshot) is removed. If the third parameter is different from null you need to call the ApplySnapshot method passing the instance of the Aggregate returned from call to Build and the instance of the snapshot.
 
-##Version 2.0.0
+### Introduction of attribute for specifying projection information
 
-###Core
+Now you need to use an attribute to specify Signature, Slot and common Name of projection. [Read how to migrate code here](BreakingChanges/2.1.0_ProjectionAttribute.md).
 
-####Complete refactor of BusBootstrapper
+## Version 2.0.0
+
+### Core
+
+#### Complete refactor of BusBootstrapper
 
 BusBoostrapper has only the duty of registering IBus but now implements IStartable, then you should register BusStarter if you want to automatically start the bus with the IStartable interface.
 
@@ -28,7 +32,7 @@ The typical usage pattern is to register both classes with this code. BusBootstr
 	Component
 	    .For<BusStarter>(),
 
-####Notification transformer for ICollectionWrapper
+#### Notification transformer for ICollectionWrapper
 
 ICollectionWrapper interface renamed property PrepareForNotification to TransformForNotification to reflect the fact that now the projection is able to change the notification object that is sent when a readamodel is updated.
 
