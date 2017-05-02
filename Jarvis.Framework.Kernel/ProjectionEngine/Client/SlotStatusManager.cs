@@ -160,15 +160,23 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         public Int64 GetMaxDispatchedCheckpoint()
         {
-            return _checkpoints.FindAll()
-                .ToList()
+            //Mongodb linq driver throws calling Max when no record is present.
+            var allValues = _checkpoints
+                .AsQueryable()
                 .Where(c => c.Id != "VERSION")
-                .Max(c => c.Value);
+                .Select(c => c.Value)
+                .ToList();
+
+            if (allValues.Count == 0)
+                return 0L;
+
+            return allValues.Max();
         }
 
         private List<Checkpoint> GetAllCheckpoint()
         {
-            return _checkpoints.AsQueryable()
+            return _checkpoints
+                .AsQueryable()
                 .Where(q => q.Id != "VERSION")
                 .ToList();
         }
