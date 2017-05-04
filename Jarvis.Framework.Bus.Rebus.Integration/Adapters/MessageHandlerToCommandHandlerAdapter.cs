@@ -121,7 +121,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
                     var exception = new Exception("Command failed. Too many Conflicts");
                     _messagesTracker.Failed(message, DateTime.UtcNow, exception);
                 }
-                if (Logger.IsDebugEnabled) Logger.DebugFormat("Handled {0} {1} {3}", message.GetType().FullName, message.MessageId, message.Describe());
+                if (Logger.IsDebugEnabled) Logger.DebugFormat("Handled {0} {1} {2}", message.GetType().FullName, message.MessageId, message.Describe());
             }
             finally
             {
