@@ -145,6 +145,7 @@
     <Compile Include="ReadModel\AbstractReadModel.cs" />
     <Compile Include="ReadModel\CollectionNames.cs" />
     <Compile Include="ReadModel\OfflineCommandMessageTracker.cs" />
+    <Compile Include="ReadModel\PollableReadModel.cs" />
     <Compile Include="ReadModel\TrackedMessageModel.cs" />
     <Compile Include="ReadModel\IMongoDbReader.cs" />
     <Compile Include="ReadModel\IReader.cs" />

@@ -170,6 +170,7 @@
     <Compile Include="MultitenantSupportTests\TenantManagerTests.cs" />
     <Compile Include="NeventStoreExTests\Persistence\ShapshotPersistenceStrategiesTests.cs" />
     <Compile Include="NeventStoreExTests\Persistence\SnapshotManagerTests.cs" />
+    <Compile Include="ProjectionEngineTests\CollectionWrapperForPollableEntitiesTests.cs" />
     <Compile Include="ProjectionEngineTests\CollectionWrapperResolveWithTypedFacilityTests.cs" />
     <Compile Include="ProjectionEngineTests\CollectionWrapperTests.cs" />
     <Compile Include="ProjectionEngineTests\Rebuild\EventUnwinderTests.cs" />

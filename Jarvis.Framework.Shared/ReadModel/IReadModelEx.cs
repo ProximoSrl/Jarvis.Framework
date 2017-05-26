@@ -14,6 +14,28 @@ namespace Jarvis.Framework.Shared.ReadModel
         void ThrowIfInvalidId();
     }
 
+    public interface IPollableReadModel
+    {
+        /// <summary>
+        /// This is useful when you index this object in ES, so you can
+        /// undersand the commit used to generate this value.
+        /// </summary>
+        Int64 CheckpointToken { get; set; }
+
+        /// <summary>
+        /// This is populated with DateTime.UtcNow.Ticks" and is
+        /// used from ES poller to understand modified objects.
+        /// </summary>
+        Int64 LastUpdatedTicks { get; set; }
+
+        /// <summary>
+        /// When a readmodel used for polling is deleted, it should
+        /// be marked as deleted and the record should not really
+        /// be deleted from the storage.
+        /// </summary>
+        Boolean Deleted { get; set; }
+    }
+
     public interface ITopicsProvider
     {
         IEnumerable<string> GetTopics();

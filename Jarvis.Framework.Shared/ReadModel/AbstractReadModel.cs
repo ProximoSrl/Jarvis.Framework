@@ -4,8 +4,8 @@ using Newtonsoft.Json;
 
 namespace Jarvis.Framework.Shared.ReadModel
 {
-    public abstract class AbstractReadModel<TKey> : 
-        IReadModelEx<TKey>, 
+    public abstract class AbstractReadModel<TKey> :
+        IReadModelEx<TKey>,
         IComparable<AbstractReadModel<TKey>>
     {
         public TKey Id { get; set; }

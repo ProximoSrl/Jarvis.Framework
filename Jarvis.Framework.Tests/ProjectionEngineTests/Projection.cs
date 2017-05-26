@@ -128,9 +128,31 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
     [ProjectionInfo("ProjectionTypedId")]
     public class ProjectionTypedId : AbstractProjection
     {
-        readonly ICollectionWrapper<SampleReadModelTestId, TestId> _collection;
+        readonly ICollectionWrapper<SampleReadModelTest, TestId> _collection;
 
-        public ProjectionTypedId(ICollectionWrapper<SampleReadModelTestId, TestId> collection)
+        public ProjectionTypedId(ICollectionWrapper<SampleReadModelTest, TestId> collection)
+        {
+            _collection = collection;
+            _collection.Attach(this, false);
+        }
+
+        public override void Drop()
+        {
+            _collection.Drop();
+        }
+
+        public override void SetUp()
+        {
+        }
+    }
+
+
+    [ProjectionInfo("ProjectionPollableReadmodel")]
+    public class ProjectionPollableReadmodel : AbstractProjection
+    {
+        readonly ICollectionWrapper<SampleReadModelPollableTest, TestId> _collection;
+
+        public ProjectionPollableReadmodel(ICollectionWrapper<SampleReadModelPollableTest, TestId> collection)
         {
             _collection = collection;
             _collection.Attach(this, false);

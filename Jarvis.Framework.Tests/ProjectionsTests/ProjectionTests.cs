@@ -33,7 +33,6 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
             SpyNotifier.Counter = 0;
             _projection.Drop();
             _projection.SetUp();
-
         }
 
         [Test]

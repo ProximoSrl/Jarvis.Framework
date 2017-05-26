@@ -28,18 +28,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             _notifyToSubscribers = notifyToSubscribers;
             _storage = factory.GetCollection<TModel, TKey>();
         }
-        /*
-                public void Attach(IProjection projection)
-                {
-                    if(this.Projection != null)
-                        throw new Exception("Collection wrapper already attached to projection");
-            
-                    this.Projection = projection;
-                }
-        */
 
         /// <summary>
-        /// 
+        /// Attach a projection to the collection wrapper.
         /// </summary>
         /// <param name="projection"></param>
         /// <param name="bEnableNotifications"></param>
@@ -91,7 +82,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             _storage.InsertBatch(values);
         }
 
-
         public IQueryable<TModel> All
         {
             get { return _storage.All; }
@@ -111,7 +101,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             model.Version = 1;
             model.AddEvent(e.MessageId);
             model.LastModified = e.CommitStamp;
-
+            HandlePollableReadModel(e, model);
             try
             {
                 var result = _storage.Insert(model);
@@ -170,7 +160,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             model.Version++;
             model.AddEvent(e.MessageId);
             model.LastModified = e.CommitStamp;
-
+            HandlePollableReadModel(e, model);
             var result = _storage.SaveWithVersion(model, orignalVersion);
 
             if (!result.Ok)
@@ -259,6 +249,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             _storage.Drop();
         }
 
+        private static void HandlePollableReadModel(DomainEvent e, TModel model)
+        {
+            if (model is IPollableReadModel)
+            {
+                var pollableReadModel = (IPollableReadModel)model;
+                pollableReadModel.CheckpointToken = e.CheckpointToken;
+                pollableReadModel.LastUpdatedTicks = DateTime.UtcNow.Ticks;
+            }
+        }
+
         #endregion
 
         bool IsReplay
@@ -291,5 +291,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         {
             _storage.Flush();
         }
+
+        
     }
 }
