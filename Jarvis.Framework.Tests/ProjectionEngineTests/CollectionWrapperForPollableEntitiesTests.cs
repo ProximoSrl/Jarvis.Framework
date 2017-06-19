@@ -54,7 +54,6 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             var reloaded = sut.FindOneById(rm.Id);
 
             Assert.That(reloaded.CheckpointToken, Is.EqualTo(1L));
-            Assert.That(reloaded.LastUpdatedTicks, Is.GreaterThanOrEqualTo(tick));
             Assert.That(reloaded.SecondaryToken, Is.GreaterThan(0));
         }
 
@@ -65,7 +64,6 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             var evt = HandleEvent(new SampleAggregateCreated());
             sut.Insert(evt, rm);
             var reloaded = sut.FindOneById(rm.Id);
-            WaitForTimeToPass(reloaded);
 
             rm.Value = "MODIFIED";
             var evt2 = HandleEvent(new SampleAggregateTouched(), 2L);
@@ -74,8 +72,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             var reloaded2 = sut.FindOneById(rm.Id);
 
             Assert.That(reloaded2.CheckpointToken, Is.EqualTo(2L));
-            Assert.That(reloaded2.LastUpdatedTicks, Is.GreaterThan(reloaded.LastUpdatedTicks));
-            Assert.That(reloaded.SecondaryToken, Is.GreaterThan(0));
+            Assert.That(reloaded2.SecondaryToken, Is.GreaterThan(reloaded.SecondaryToken));
         }
 
         [Test]
@@ -88,7 +85,6 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             var reloaded = sut.FindOneById(rm.Id);
 
             Assert.That(reloaded.CheckpointToken, Is.EqualTo(1L));
-            Assert.That(reloaded.LastUpdatedTicks, Is.GreaterThanOrEqualTo(tick));
             Assert.That(reloaded.SecondaryToken, Is.GreaterThan(0));
         }
 
@@ -99,7 +95,6 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             var evt = HandleEvent(new SampleAggregateCreated());
             sut.Insert(evt, rm);
             var reloaded = sut.FindOneById(rm.Id);
-            WaitForTimeToPass(reloaded);
 
             rm.Value = "MODIFIED";
             var evt2 = HandleEvent(new SampleAggregateTouched(), 2L);
@@ -108,8 +103,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             var reloaded2 = sut.FindOneById(rm.Id);
 
             Assert.That(reloaded2.CheckpointToken, Is.EqualTo(2L));
-            Assert.That(reloaded2.LastUpdatedTicks, Is.GreaterThan(reloaded.LastUpdatedTicks));
-            Assert.That(reloaded.SecondaryToken, Is.GreaterThan(0));
+            Assert.That(reloaded2.SecondaryToken, Is.GreaterThan(reloaded.SecondaryToken));
         }
 
         [Test]
@@ -119,7 +113,6 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             var evt = HandleEvent(new SampleAggregateCreated());
             sut.Insert(evt, rm);
             var reloaded = sut.FindOneById(rm.Id);
-            WaitForTimeToPass(reloaded);
 
             var evt2 = HandleEvent(new SampleAggregateTouched(), 2L);
             sut.FindAndModify(evt2, rm.Id, r => r.Value += "MODIFIED", false);
@@ -127,8 +120,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             var reloaded2 = sut.FindOneById(rm.Id);
 
             Assert.That(reloaded2.CheckpointToken, Is.EqualTo(2L));
-            Assert.That(reloaded2.LastUpdatedTicks, Is.GreaterThan(reloaded.LastUpdatedTicks));
-            Assert.That(reloaded.SecondaryToken, Is.GreaterThan(0));
+            Assert.That(reloaded2.SecondaryToken, Is.GreaterThan(reloaded.SecondaryToken));
         }
 
         [Test]
@@ -138,7 +130,6 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             var evt = HandleEvent(new SampleAggregateCreated());
             sut.Insert(evt, rm);
             var reloaded = sut.FindOneById(rm.Id);
-            WaitForTimeToPass(reloaded);
 
             var evt2 = HandleEvent(new SampleAggregateInvalidated(), 2L);
             sut.Delete(evt2, rm.Id);
@@ -161,14 +152,6 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             evt.MessageId = Guid.NewGuid();
             evt.SetPropertyValue("CheckpointToken", checkpointToken);
             return evt;
-        }
-
-        private static void WaitForTimeToPass(SampleReadModelPollableTest reloaded)
-        {
-            while (DateTime.UtcNow.Ticks == reloaded.LastUpdatedTicks)
-            {
-                //Do something.
-            }
         }
     }
 }

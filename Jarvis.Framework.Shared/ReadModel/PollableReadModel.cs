@@ -19,12 +19,10 @@ namespace Jarvis.Framework.Shared.ReadModel
     {
         public Int64 CheckpointToken { get; set; }
 
-        public Int64 LastUpdatedTicks { get; set; }
-
         /// <summary>
         /// <see cref="LastUpdatedTicks"/> does not works, because we can have multiple
-        /// update on the same timestamp. This secondary token is an unique number 
-        /// always increasing to avoid problem of same lastUpdatedTicks.
+        /// update on the same CheckpointToken. This secondary token is an unique number 
+        /// always increasing to avoid problem of same CheckpointToken
         /// </summary>
         public Int64 SecondaryToken { get; set; }
 

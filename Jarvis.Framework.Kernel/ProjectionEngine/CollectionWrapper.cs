@@ -257,7 +257,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             {
                 var pollableReadModel = (IPollableReadModel)model;
                 pollableReadModel.CheckpointToken = e.CheckpointToken;
-                pollableReadModel.LastUpdatedTicks = DateTime.UtcNow.Ticks;
                 pollableReadModel.SecondaryToken = _pollableSecondaryIndexCounter++;
             }
         }
