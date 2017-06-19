@@ -21,6 +21,13 @@ namespace Jarvis.Framework.Shared.ReadModel
 
         public Int64 LastUpdatedTicks { get; set; }
 
+        /// <summary>
+        /// <see cref="LastUpdatedTicks"/> does not works, because we can have multiple
+        /// update on the same timestamp. This secondary token is an unique number 
+        /// always increasing to avoid problem of same lastUpdatedTicks.
+        /// </summary>
+        public Int64 SecondaryToken { get; set; }
+
         public Boolean Deleted { get; set; }
     }
 }

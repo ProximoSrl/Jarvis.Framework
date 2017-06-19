@@ -23,10 +23,16 @@ namespace Jarvis.Framework.Shared.ReadModel
         Int64 CheckpointToken { get; set; }
 
         /// <summary>
-        /// This is populated with DateTime.UtcNow.Ticks" and is
+        /// This is populated with DateTime.UtcNow.Ticks and is
         /// used from ES poller to understand modified objects.
         /// </summary>
         Int64 LastUpdatedTicks { get; set; }
+
+        /// <summary>
+        /// This is an unique value used to distinguish when 
+        /// <see cref="LastUpdatedTicks"/> is the same for two records.
+        /// </summary>
+        Int64 SecondaryToken { get; set; }
 
         /// <summary>
         /// When a readmodel used for polling is deleted, it should

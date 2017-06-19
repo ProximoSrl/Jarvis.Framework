@@ -55,6 +55,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
 
             Assert.That(reloaded.CheckpointToken, Is.EqualTo(1L));
             Assert.That(reloaded.LastUpdatedTicks, Is.GreaterThanOrEqualTo(tick));
+            Assert.That(reloaded.SecondaryToken, Is.GreaterThan(0));
         }
 
         [Test]
@@ -74,6 +75,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
 
             Assert.That(reloaded2.CheckpointToken, Is.EqualTo(2L));
             Assert.That(reloaded2.LastUpdatedTicks, Is.GreaterThan(reloaded.LastUpdatedTicks));
+            Assert.That(reloaded.SecondaryToken, Is.GreaterThan(0));
         }
 
         [Test]
@@ -87,6 +89,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
 
             Assert.That(reloaded.CheckpointToken, Is.EqualTo(1L));
             Assert.That(reloaded.LastUpdatedTicks, Is.GreaterThanOrEqualTo(tick));
+            Assert.That(reloaded.SecondaryToken, Is.GreaterThan(0));
         }
 
         [Test]
@@ -106,6 +109,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
 
             Assert.That(reloaded2.CheckpointToken, Is.EqualTo(2L));
             Assert.That(reloaded2.LastUpdatedTicks, Is.GreaterThan(reloaded.LastUpdatedTicks));
+            Assert.That(reloaded.SecondaryToken, Is.GreaterThan(0));
         }
 
         [Test]
@@ -124,6 +128,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
 
             Assert.That(reloaded2.CheckpointToken, Is.EqualTo(2L));
             Assert.That(reloaded2.LastUpdatedTicks, Is.GreaterThan(reloaded.LastUpdatedTicks));
+            Assert.That(reloaded.SecondaryToken, Is.GreaterThan(0));
         }
 
         [Test]

@@ -19,6 +19,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         private Action<TModel, DomainEvent> _onSave = (model, e) => { };
         private Func<TModel, Object> _transformForNotification = (model) => model;
         private readonly IMongoStorage<TModel, TKey> _storage;
+        private Int64 _pollableSecondaryIndexCounter;
 
         public CollectionWrapper(
             IMongoStorageFactory factory,
@@ -27,6 +28,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         {
             _notifyToSubscribers = notifyToSubscribers;
             _storage = factory.GetCollection<TModel, TKey>();
+            _pollableSecondaryIndexCounter = DateTime.UtcNow.Ticks;
         }
 
         /// <summary>
@@ -249,13 +251,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             _storage.Drop();
         }
 
-        private static void HandlePollableReadModel(DomainEvent e, TModel model)
+        private void HandlePollableReadModel(DomainEvent e, TModel model)
         {
             if (model is IPollableReadModel)
             {
                 var pollableReadModel = (IPollableReadModel)model;
                 pollableReadModel.CheckpointToken = e.CheckpointToken;
                 pollableReadModel.LastUpdatedTicks = DateTime.UtcNow.Ticks;
+                pollableReadModel.SecondaryToken = _pollableSecondaryIndexCounter++;
             }
         }
 
