@@ -31,11 +31,8 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
         [TestFixtureSetUp]
         public void TestFixtureSetup()
         {
-
             TestHelper.RegisterSerializerForFlatId<TestId>();
-
             TestHelper.RegisterSerializerForFlatId<TestFlatId>();
-
         }
 
         [SetUp]

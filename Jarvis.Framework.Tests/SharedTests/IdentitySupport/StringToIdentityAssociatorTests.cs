@@ -132,6 +132,61 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             Assert.That(result, Is.True);
             var key = sut.GetKeyFromId(id1);
             Assert.That(key, Is.EqualTo(key2));
+            var id = sut.GetIdFromKey(key1);
+            Assert.That(id, Is.Null);
+        }
+
+        [Test]
+        public void verify_associate_or_update_with_existing_key()
+        {
+            sut.Associate(key1, id1);
+            sut.Associate(key2, id2);
+            var result = sut.AssociateOrUpdate(key2, id1);
+
+            //We should not change anything, because key2 was already associated to id1.
+            var key = sut.GetKeyFromId(id1);
+            Assert.That(key, Is.EqualTo(key1));
+            key = sut.GetKeyFromId(id2);
+            Assert.That(key, Is.EqualTo(key2));
+
+            Assert.That(result, Is.False);
+        }
+
+        [Test]
+        public void verify_associate_or_update_with_existing_key_uniqueId()
+        {
+            uniqueIdSut.Associate(key1, id1);
+            uniqueIdSut.Associate(key2, id2);
+            var result = uniqueIdSut.AssociateOrUpdate(key2, id1);
+
+            var key = uniqueIdSut.GetKeyFromId(id1);
+            Assert.That(key, Is.EqualTo(key1));
+            key = uniqueIdSut.GetKeyFromId(id2);
+            Assert.That(key, Is.EqualTo(key2));
+
+            Assert.That(result, Is.False);
+        }
+
+        [Test]
+        public void verify_update_or_associate_id_or_update_first_call()
+        {
+            var result = sut.AssociateOrUpdate(key1, id1);
+            Assert.That(result, Is.True);
+            var key = sut.GetKeyFromId(id1);
+            Assert.That(key, Is.EqualTo(key1));
+        }
+
+        [Test]
+        public void verify_update_or_associate_id_change_association_with_different_key()
+        {
+            sut.Associate(key1, id1);
+            var result = sut.AssociateOrUpdate(key2, id1);
+            Assert.That(result, Is.True);
+            var key = sut.GetKeyFromId(id1);
+            Assert.That(key, Is.EqualTo(key2));
+
+            var id = sut.GetIdFromKey(key1);
+            Assert.That(id, Is.Null);
         }
 
         private class TestIdentityAssociation : MongoStringToIdentityAssociator<TestId>
@@ -141,7 +196,6 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             {
 
             }
-
         }
 
         private class TestIdentityAssociationWithUniqueId : MongoStringToIdentityAssociator<TestId>
@@ -151,7 +205,6 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             {
 
             }
-
         }
     }
 }
