@@ -83,7 +83,7 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
         }
 
         [Test]
-        public void verify_delete_by_id()
+        public void verify_delete_association()
         {
             var result = sut.Associate(key1, id1);
             Assert.That(result, Is.True);
@@ -97,8 +97,9 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
         {
             var result = sut.Associate(key1, id1);
             Assert.That(result, Is.True);
-            sut.DeleteAssociationWithKey(key1);
-            var id = sut.GetKeyFromKey(key1);
+            var count = sut.DeleteAssociationWithKey(key1);
+            Assert.That(count, Is.EqualTo(1));
+            var id = sut.GetIdFromKey(key1);
             Assert.That(id, Is.Null);
         }
 
@@ -133,12 +134,12 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             Assert.That(key, Is.EqualTo(key2));
         }
 
-        private class TestIdentityAssociation : MongoStringToIdentityAssociator<TestId> 
+        private class TestIdentityAssociation : MongoStringToIdentityAssociator<TestId>
         {
             public TestIdentityAssociation(IMongoDatabase database)
-                :base (database, "TestIdentity")
+                : base(database, "TestIdentity")
             {
-                
+
             }
 
         }

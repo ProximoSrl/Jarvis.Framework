@@ -31,6 +31,28 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         /// <param name="id"></param>
         /// <returns></returns>
         Boolean AssociateOrUpdate(String key, TId id);
+
+        /// <summary>
+        /// Delete an association between a key and an id.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns>The number of association that were deleted.</returns>
+        Int32 DeleteAssociationWithKey(String key);
+
+        /// <summary>
+        /// Delete an association of a key with a specific id
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns>The number of association that were deleted.</returns>
+        Int32 DeleteAssociationWithId(TId id);
+
+        /// <summary>
+        /// Given a key returns the id that is associated to that key, it returns
+        /// null if the key has not association.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        TId GetIdFromKey(String key);
     }
 
     /// <summary>
@@ -67,7 +89,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         private readonly Boolean _allowDuplicateId;
 
         /// <summary>
-        /// 
+        /// Construct the associator
         /// </summary>
         /// <param name="systemDB"></param>
         /// <param name="collectionName"></param>
@@ -88,7 +110,6 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         {
             return OnAssociate(key, id, a => _collection.InsertOne(a));
         }
-
 
         public bool AssociateOrUpdate(string key, TId id)
         {
@@ -129,18 +150,18 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             }
         }
 
-
-
-        public void DeleteAssociationWithId(TId id)
+        public Int32 DeleteAssociationWithId(TId id)
         {
             if (Logger.IsDebugEnabled) Logger.DebugFormat("Deleted association of id {0}!", id);
-            _collection.DeleteMany(Builders<Association>.Filter.Eq(a => a.Id, id));
+            var deleteResult = _collection.DeleteMany(Builders<Association>.Filter.Eq(a => a.Id, id));
+            return (Int32)deleteResult.DeletedCount;
         }
 
-        public void DeleteAssociationWithKey(String key)
+        public Int32 DeleteAssociationWithKey(String key)
         {
             if (Logger.IsDebugEnabled) Logger.DebugFormat("Deleted association of key {0}!", key);
-            _collection.DeleteMany(Builders<Association>.Filter.Eq(a => a.Key, key));
+            var deleteResult = _collection.DeleteMany(Builders<Association>.Filter.Eq(a => a.Key, key));
+            return(Int32)  deleteResult.DeletedCount;
         }
 
         public String GetKeyFromId(TId id)
@@ -151,14 +172,12 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             return association.Key;
         }
 
-        public TId GetKeyFromKey(String key)
+        public TId GetIdFromKey(String key)
         {
             var association = _collection.FindOneById(key);
             if (association == null) return null;
 
             return association.Id;
         }
-
-      
     }
 }
