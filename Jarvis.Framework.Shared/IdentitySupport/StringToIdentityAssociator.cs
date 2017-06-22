@@ -33,17 +33,6 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         Boolean AssociateOrUpdate(String key, TId id);
 
         /// <summary>
-        /// Associate the id to the key, but if an association was already present
-        /// for <paramref name="id"/> to a different key, that association was updated
-        /// to the new key. If the association was not present it will associate the 
-        /// id.
-        /// </summary>
-        /// <param name="key"></param>
-        /// <param name="id"></param>
-        /// <returns></returns>
-        Boolean AssociateOrUpdateId(String key, TId id);
-
-        /// <summary>
         /// Delete an association between a key and an id.
         /// </summary>
         /// <param name="key"></param>
@@ -76,7 +65,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
     public abstract class MongoStringToIdentityAssociator<TId> : IStringToIdentityAssociator<TId>
         where TId : EventStoreIdentity
     {
-        public ILogger Logger { get; set; }
+        protected readonly ILogger _logger;
 
         private readonly IMongoCollection<Association> _collection;
 
@@ -84,37 +73,105 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
         protected class Association
         {
+            /// <summary>
+            /// This object is slightly strange, the Key of the mapping is the id used
+            /// on mongo collection so will be translated with the _id value. 
+            /// </summary>
             [BsonId]
-            public string Key { get; private set; }
+            public string Key { get; set; }
+
+            /// <summary>
+            /// This is the original key, useful for case insensitiveness.
+            /// </summary>
+            [BsonElement]
+            public String OriginalKey { get; set; }
 
             [BsonElement]
-            public TId Id { get; private set; }
+            public TId Id { get; set; }
 
-            public Association(string key, TId id)
+            public Association(string key, String originalKey, TId id)
             {
                 Key = key;
+                OriginalKey = originalKey;
                 Id = id;
             }
         }
 
         private readonly Boolean _allowDuplicateId;
+        private readonly Boolean _caseInsensitive;
 
         /// <summary>
         /// Construct the associator
         /// </summary>
         /// <param name="systemDB"></param>
         /// <param name="collectionName"></param>
+        /// <param name="logger"></param>
         /// <param name="allowDuplicateId">If true allow two different key to be mapped to the same Id, if false
-        /// ensure that an id can be associated only to a single key and vice versa</param>
-        protected MongoStringToIdentityAssociator(IMongoDatabase systemDB, String collectionName, Boolean allowDuplicateId = true)
+        /// ensure that an id can be associated only to a single key and vice versa. </param>
+        /// <param name="caseInsensitive">True if we want this association to be case insensitive.</param>
+        protected MongoStringToIdentityAssociator(
+            IMongoDatabase systemDB,
+            String collectionName,
+            ILogger logger,
+            Boolean allowDuplicateId = true,
+            Boolean caseInsensitive = true)
         {
             _collection = systemDB.GetCollection<Association>(collectionName);
             _allowDuplicateId = allowDuplicateId;
-            if (allowDuplicateId == false)
+            _logger = logger;
+
+            if (!allowDuplicateId)
             {
                 _collection.Indexes.CreateOne(Builders<Association>.IndexKeys.Ascending(a => a.Id), new CreateIndexOptions() { Unique = true });
             }
-            Logger = NullLogger.Instance;
+            _collection.Indexes.CreateOne(Builders<Association>.IndexKeys.Ascending(a => a.OriginalKey), new CreateIndexOptions() { Name = "OriginalKey" });
+            _caseInsensitive = caseInsensitive;
+
+            //old version did not support case sensitiveness, and was case sensitive. we need to normalize the data.
+            NormalizeExistingData();
+        }
+
+        /// <summary>
+        /// First version of this component did not store the original key, we need to move from the esisting version
+        /// to the new version
+        /// </summary>
+        private void NormalizeExistingData()
+        {
+            var allElements = _collection.AsQueryable()
+                .Where(e => e.OriginalKey == null)
+                .OrderBy(e => e.Id);
+            foreach (var element in allElements)
+            {
+                try
+                {
+                    element.OriginalKey = element.Key;
+                    //If we are case insensitive, and key is not all lowercase, we need to change the key.
+                    if (_caseInsensitive && element.Key != element.Key.ToLower())
+                    {
+                        //this is where we can have problem, because we need to check if we have a conflicting
+                        //registration, two key that differs only with casing.
+                        var conflicting = _collection.AsQueryable()
+                            .Any(e => e.Key.ToLower() == element.Key.ToLower() && e.Key != element.Key);
+                        if (conflicting == false)
+                        {
+                            var originalKey = element.Key;
+                            element.Key = element.Key.ToLower();
+                            _collection.InsertOne(element);
+                            _collection.RemoveById(originalKey);
+                            continue;
+                        }
+                        _logger.Error($"Unable to normalize StringToIdentityAssociation, collection {_collection.CollectionNamespace.CollectionName} on database {_collection.CollectionNamespace.DatabaseNamespace.DatabaseName}: we have duplication with casing with key {element.Key}, but the mapping should be case insensitive");
+                    }
+
+                    //Simply save the new version, key is not changed.
+                    _collection.Save(element, element.Key);
+                }
+                catch (Exception ex)
+                {
+                    //Probably we already have case sensitiveness duplication, 
+                    _logger.Error($"Unable to normalize StringToIdentityAssociation, collection {_collection.CollectionNamespace.CollectionName} on database {_collection.CollectionNamespace.DatabaseNamespace.DatabaseName} with key {element.Key}: {ex.Message}", ex);
+                }
+            }
         }
 
         public virtual Boolean Associate(String key, TId id)
@@ -143,11 +200,18 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
         protected virtual Boolean OnAssociate(String key, TId id, Action<Association> saveRoutine)
         {
+            if (String.IsNullOrEmpty(key))
+                throw new ArgumentNullException(nameof(key));
+
+            if (id == null)
+                throw new ArgumentNullException(nameof(id));
+
+            string idKey = GetIdKeyFromKey(key);
             try
             {
-                var mapped = new Association(key, id);
+                var mapped = new Association(idKey, key, id);
                 saveRoutine(mapped);
-                if (Logger.IsDebugEnabled) Logger.DebugFormat("Mapping between {0} and {1} was created correctly!", key, id);
+                if (_logger.IsDebugEnabled) _logger.DebugFormat("Mapping between {0} and {1} was created correctly!", key, id);
                 return true;
             }
             catch (Exception ex)
@@ -157,14 +221,14 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                     if (ex.Message.Contains("E11000 duplicate key"))
                     {
                         //grab record by key or id, one of them conflicted
-                        var existing = _collection.FindOneById(key) ??
+                        var existing = _collection.FindOneById(idKey) ??
                             _collection.Find(Builders<Association>.Filter.Eq(a => a.Id, id)).Single();
-                        if (existing.Id == id && existing.Key == key)
+                        if (existing.Id == id && existing.Key == idKey)
                         {
-                            if (Logger.IsDebugEnabled) Logger.DebugFormat("Mapping between {0} and {1} is already existing and is allowed!", key, id);
+                            if (_logger.IsDebugEnabled) _logger.DebugFormat("Mapping between {0} and {1} is already existing and is allowed!", key, id);
                             return true;
                         }
-                        if (Logger.IsDebugEnabled) Logger.DebugFormat("Mapping between {0} and {1} is rejected because of duplication!", key, id);
+                        if (_logger.IsDebugEnabled) _logger.DebugFormat("Mapping between {0} and {1} is rejected because of duplication!", key, id);
                         return false;
                     }
                 }
@@ -172,39 +236,66 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             }
         }
 
+        /// <summary>
+        /// Based on the fact that the collection is or not case insensitive, 
+        /// transform the key to lowercase, to have a mongodb index that
+        /// is not using casing.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        private string GetIdKeyFromKey(string key)
+        {
+            var idKey = key;
+            if (_caseInsensitive)
+            {
+                idKey = key.ToLower();
+            }
+
+            return idKey;
+        }
+
         public Int32 DeleteAssociationWithId(TId id)
         {
-            if (Logger.IsDebugEnabled) Logger.DebugFormat("Deleted association of id {0}!", id);
+            if (id == null)
+                throw new ArgumentNullException(nameof(id));
+
+            if (_logger.IsDebugEnabled) _logger.DebugFormat("Deleted association of id {0}!", id);
             var deleteResult = _collection.DeleteMany(Builders<Association>.Filter.Eq(a => a.Id, id));
             return (Int32)deleteResult.DeletedCount;
         }
 
         public Int32 DeleteAssociationWithKey(String key)
         {
-            if (Logger.IsDebugEnabled) Logger.DebugFormat("Deleted association of key {0}!", key);
-            var deleteResult = _collection.DeleteMany(Builders<Association>.Filter.Eq(a => a.Key, key));
+            if (String.IsNullOrEmpty(key))
+                throw new ArgumentNullException(nameof(key));
+
+            var idKey = GetIdKeyFromKey(key);
+            if (_logger.IsDebugEnabled) _logger.DebugFormat("Deleted association of key {0}!", key);
+            var deleteResult = _collection.DeleteMany(Builders<Association>.Filter.Eq(a => a.Key, idKey));
             return (Int32)deleteResult.DeletedCount;
         }
 
         public String GetKeyFromId(TId id)
         {
+            if (id == null)
+                throw new ArgumentNullException(nameof(id));
+
             var association = _collection.Find(Builders<Association>.Filter.Eq(a => a.Id, id)).SingleOrDefault();
             if (association == null) return null;
 
-            return association.Key;
+            return association.OriginalKey ?? association.Key;
         }
 
         public TId GetIdFromKey(String key)
         {
-            var association = _collection.FindOneById(key);
+            if (String.IsNullOrEmpty(key))
+                throw new ArgumentNullException(nameof(key));
+
+            var idKey = GetIdKeyFromKey(key);
+            var association = _collection.FindOneById(idKey);
             if (association == null) return null;
 
             return association.Id;
-        }
-
-        public bool AssociateOrUpdateId(string key, TId id)
-        {
-            throw new NotImplementedException();
         }
     }
 }
