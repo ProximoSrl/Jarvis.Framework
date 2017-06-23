@@ -6,7 +6,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 {
     public class CounterService : IReservableCounterService
     {
-        readonly IMongoCollection<IdentityCounter> _counters;
+        protected readonly IMongoCollection<IdentityCounter> _counters;
 
         public class IdentityCounter
         {

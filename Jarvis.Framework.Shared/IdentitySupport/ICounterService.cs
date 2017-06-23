@@ -11,7 +11,6 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         /// <param name="serie"></param>
         /// <returns></returns>
         long GetNext(string serie);
-
     }
 
     public interface IReservableCounterService : ICounterService
@@ -30,7 +29,6 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
     public interface IOfflineCounterService : ICounterService
     {
-
         /// <summary>
         /// An offline counter service can generate only counters that 
         /// are reserved. This method allows to add a reservation to a current
