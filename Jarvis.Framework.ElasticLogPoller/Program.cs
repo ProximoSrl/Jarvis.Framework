@@ -2,13 +2,9 @@
 using log4net;
 using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
 using System.Configuration;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using Topshelf;
 
 namespace Jarvis.Framework.ElasticLogPoller
@@ -29,7 +25,7 @@ namespace Jarvis.Framework.ElasticLogPoller
             }
 
             HostFactory.Run(x =>
-            {      
+            {
                 x.UseOldLog4Net("log4net.config");
                 x.Service<Program>(s =>
                 {
@@ -50,6 +46,7 @@ namespace Jarvis.Framework.ElasticLogPoller
             _logger = LogManager.GetLogger(this.GetType());
             _logger.Debug("Starting.....");
         }
+
         private static void Banner()
         {
             Console.WriteLine();

@@ -10,11 +10,11 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
 {
 	public abstract class RebusCommandBus : ICommandBus
     {
-        private IBus _bus;
+        private readonly IBus _bus;
 
         public ILogger Logger { get; set; }
 
-        public RebusCommandBus(IBus bus)
+        protected RebusCommandBus(IBus bus)
         {
             _bus = bus;
             Logger = NullLogger.Instance;
@@ -26,7 +26,6 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
             _bus.Send(command);
             return command;
         }
-
 
         public ICommand SendLocal(ICommand command, string impersonatingUser = null)
         {

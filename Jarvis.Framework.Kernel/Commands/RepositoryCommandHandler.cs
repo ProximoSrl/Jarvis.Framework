@@ -35,7 +35,7 @@ namespace Jarvis.Framework.Kernel.Commands
         private Guid _commitId;
 
         public IConstructAggregatesEx AggregateFactory { get; set; }
-        
+
         TCommand _currentCommand;
 
         /// <summary>
@@ -51,7 +51,7 @@ namespace Jarvis.Framework.Kernel.Commands
 
         public override void Handle(TCommand cmd)
         {
-            if (cmd.MessageId == Guid.Empty) 
+            if (cmd.MessageId == Guid.Empty)
             {
                 Logger.ErrorFormat("Cmd {0} received with empty id.", cmd.GetType().Name);
                 throw new Exception("Invalid command id");
@@ -112,7 +112,6 @@ namespace Jarvis.Framework.Kernel.Commands
                 callback(aggregate);
                 Repository.Save(aggregate, _commitId, StoreCommandHeaders);
             }
-
         }
 
         private void CheckAggregateForOfflinesync(EventStoreIdentity id)
@@ -132,7 +131,7 @@ namespace Jarvis.Framework.Kernel.Commands
                     {
                         throw new AggregateSyncConflictException(
                            String.Format("Command cannot be executed because header required that aggregate {0} does not have commits greater than checkpoint token {1} that does not belong to session {2}. Checkpoint {3} violates this rule", 
-                                id, 
+                                id,
                                 checkpointToken,
                                 sessionId,
                                 commit.CheckpointToken),
@@ -178,12 +177,11 @@ namespace Jarvis.Framework.Kernel.Commands
         {
             var context = _currentCommand.AllContextKeys
                 .ToDictionary<string, string, object>(
-                    key => key, 
+                    key => key,
                     key => _currentCommand.GetContextData(key)
                 );
             context["command.name"] = _currentCommand.GetType().Name;
             aggregate.EnterContext(context);
         }
-
     }
 }

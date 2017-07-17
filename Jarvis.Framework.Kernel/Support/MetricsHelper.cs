@@ -44,7 +44,7 @@ namespace Jarvis.Framework.Kernel.Support
             {
                 gaugeName = _checkpointToDispatchRebuildGaugeName;
             }
-            if (TenantContext.CurrentTenantId != null) 
+            if (TenantContext.CurrentTenantId != null)
             {
                 gaugeName = "t[" + TenantContext.CurrentTenantId + "]" + gaugeName;
             }
@@ -85,7 +85,6 @@ namespace Jarvis.Framework.Kernel.Support
             CommitDispatchIndex[slotName].Mark(count);
         }
 
-
         private static readonly Counter projectionCounter = Metric.Counter("prj-time", Unit.Custom("ticks"));
         private static readonly Counter projectionSlotCounter = Metric.Counter("prj-slot-time", Unit.Custom("ticks"));
         private static readonly Counter projectionEventCounter = Metric.Counter("prj-event-time", Unit.Custom("ticks"));
@@ -120,5 +119,8 @@ namespace Jarvis.Framework.Kernel.Support
         {
             DomainExceptions.Increment();
         }
+
+        public static readonly Timer CommandTimer = Metric.Timer("Commands Execution", Unit.Commands);
+        public static readonly Counter CommandCounter = CommandCounter = Metric.Counter("CommandsDuration", Unit.Custom("ms"));
     }
 }

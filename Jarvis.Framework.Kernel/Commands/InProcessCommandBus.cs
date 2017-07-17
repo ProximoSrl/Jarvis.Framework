@@ -19,10 +19,6 @@ using Jarvis.NEventStoreEx.CommonDomainEx.Core;
 
 namespace Jarvis.Framework.Kernel.Commands
 {
-    public class UserCannotSendCommandException : Exception
-    {
-    }
-
     public interface IInProcessCommandBus : ICommandBus
     {
     }
@@ -30,22 +26,18 @@ namespace Jarvis.Framework.Kernel.Commands
     public abstract class InProcessCommandBus : IInProcessCommandBus
     {
         private readonly IKernel _kernel;
-        private IExtendedLogger _logger = NullLogger.Instance;
 
-        public IExtendedLogger Logger
-        {
-            get { return _logger; }
-            set { _logger = value; }
-        }
+        public IExtendedLogger Logger { get; set; }
 
         private IMessagesTracker _messagesTracker { get; set; }
 
         protected InProcessCommandBus(IMessagesTracker messagesTracker)
         {
             _messagesTracker = messagesTracker;
+             Logger = NullLogger.Instance;
         }
 
-        public InProcessCommandBus(IKernel kernel, IMessagesTracker messagesTracker)
+        protected InProcessCommandBus(IKernel kernel, IMessagesTracker messagesTracker)
             : this(messagesTracker)
         {
             _kernel = kernel;
@@ -171,28 +163,27 @@ namespace Jarvis.Framework.Kernel.Commands
                 }
                 catch (DomainException ex)
                 {
-                    _logger.ErrorFormat(ex, "DomainException on command {0} [MessageId: {1}] : {2} : {3}", command.GetType(), command.MessageId, command.Describe(), ex.Message);
+                    Logger.ErrorFormat(ex, "DomainException on command {0} [MessageId: {1}] : {2} : {3}", command.GetType(), command.MessageId, command.Describe(), ex.Message);
                     MetricsHelper.MarkDomainException();
                     _messagesTracker.Failed(command, DateTime.UtcNow, ex);
                     throw; //rethrow domain exception.
                 }
                 catch (Exception ex)
                 {
-                    _logger.ErrorFormat(ex, "Generic Exception on command {0} [MessageId: {1}] : {2} : {3}", command.GetType(), command.MessageId, command.Describe(), ex.Message);
+                    Logger.ErrorFormat(ex, "Generic Exception on command {0} [MessageId: {1}] : {2} : {3}", command.GetType(), command.MessageId, command.Describe(), ex.Message);
                     _messagesTracker.Failed(command, DateTime.UtcNow, ex);
                     throw; //rethrow exception.
                 }
             }
-            if (done == false)
+            if (!done)
             {
-                _logger.ErrorFormat("Too many conflict on command {0} [MessageId: {1}] : {2}", command.GetType(), command.MessageId, command.Describe());
+                Logger.ErrorFormat("Too many conflict on command {0} [MessageId: {1}] : {2}", command.GetType(), command.MessageId, command.Describe());
                 var exception = new Exception("Command failed. Too many Conflicts");
                 _messagesTracker.Failed(command, DateTime.UtcNow, exception);
 
                 throw exception;
             }
             if (Logger.IsDebugEnabled) Logger.DebugFormat("Command {0} executed: {1}", command.MessageId, command.Describe());
-
         }
 
         protected virtual void ReleaseHandlers(ICommandHandler[] handlers)
@@ -206,16 +197,15 @@ namespace Jarvis.Framework.Kernel.Commands
         protected virtual ICommandHandler[] ResolveHandlers(ICommand command)
         {
             var handlerType = typeof(ICommandHandler<>).MakeGenericType(new[] { command.GetType() });
-            var handlers = _kernel.ResolveAll(handlerType).Cast<ICommandHandler>().ToArray();
-            return handlers;
+            return _kernel.ResolveAll(handlerType).Cast<ICommandHandler>().ToArray();
         }
     }
 
     public abstract class MultiTenantInProcessCommandBus : InProcessCommandBus
     {
-        readonly ITenantAccessor _tenantAccessor;
+        private readonly ITenantAccessor _tenantAccessor;
 
-        public MultiTenantInProcessCommandBus(ITenantAccessor tenantAccessor, IMessagesTracker messagesTracker)
+        protected MultiTenantInProcessCommandBus(ITenantAccessor tenantAccessor, IMessagesTracker messagesTracker)
             : base(messagesTracker)
         {
             _tenantAccessor = tenantAccessor;

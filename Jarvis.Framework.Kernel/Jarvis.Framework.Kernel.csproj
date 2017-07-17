@@ -95,9 +95,13 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Commands\AbstractCommandHandler.cs" />
+    <Compile Include="Commands\CommandsExecutorHelper.cs" />
+    <Compile Include="Commands\ExecuteCommandDto.cs" />
+    <Compile Include="Commands\ExecuteCommandResultDto.cs" />
     <Compile Include="Commands\ICommandHandler.cs" />
     <Compile Include="Commands\InProcessCommandBus.cs" />
     <Compile Include="Commands\RepositoryCommandHandler.cs" />
+    <Compile Include="Commands\UserCannotSendCommandException.cs" />
     <Compile Include="DSL\ScaffoldAttribute.cs" />
     <Compile Include="Engine\AbstractProcessManager.cs" />
     <Compile Include="Engine\AccessControlList.cs" />
