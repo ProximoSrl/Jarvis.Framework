@@ -29,6 +29,13 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Logging
 
         public void Error(Exception exception, string message, params object[] objs)
         {
+            if (objs.Length == 0)
+            {
+                //no formatting, simply log the error
+                log.Error(message, exception);
+                return;
+            }
+
             try
             {
                 log.Error(string.Format(message, objs), exception);
@@ -43,6 +50,26 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Logging
         public void Error(string message, params object[] objs)
         {
             log.ErrorFormat(message, objs);
+        }
+
+        public void Warn(Exception exception, string message, params object[] objs)
+        {
+            if (objs.Length == 0)
+            {
+                //no formatting, simply log the error
+                log.Warn(message, exception);
+                return;
+            }
+
+            try
+            {
+                log.Warn(string.Format(message, objs), exception);
+            }
+            catch
+            {
+                log.WarnFormat("Could not render string with arguments: {0}", message);
+                log.Error(message, exception);
+            }
         }
     }
 }

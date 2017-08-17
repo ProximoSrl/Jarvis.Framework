@@ -70,9 +70,8 @@
     <Reference Include="NEventStore.Persistence.MongoDB, Version=6.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\NEventStore.Persistence.MongoDB.6.0.0-beta0092\lib\net40\NEventStore.Persistence.MongoDB.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Newtonsoft.Json.6.0.8\lib\net45\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
@@ -112,6 +111,7 @@
     <Compile Include="Helpers\MongoDriverHelper.cs" />
     <Compile Include="Helpers\Reflect.cs" />
     <Compile Include="Helpers\FastReflectionHelper.cs" />
+    <Compile Include="Helpers\TaskHelpers.cs" />
     <Compile Include="IdentitySupport\AbstractIdentity.cs" />
     <Compile Include="IdentitySupport\IIdentityManager.cs" />
     <Compile Include="IdentitySupport\OfflineCounterService.cs" />

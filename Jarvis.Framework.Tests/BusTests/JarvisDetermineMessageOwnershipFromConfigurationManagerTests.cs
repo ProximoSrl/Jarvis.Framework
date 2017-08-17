@@ -12,27 +12,24 @@ namespace Jarvis.Framework.Tests.BusTests
     [TestFixture]
     public class JarvisDetermineMessageOwnershipFromConfigurationManagerTests
     {
-        private JarvisDetermineMessageOwnershipFromConfigurationManager _sut;
-        private Dictionary<string, string> _map;
+        private JarvisRebusConfigurationManagerRouter _sut;
 
         [TestFixtureSetUp]
         public void TestFixtureSetup()
         {
-            _map = new Dictionary<string, string>()
+            var map = new Dictionary<string, string>()
             {
-                {"Jarvis.Framework.Tests.BusTests.SampleMessage, Jarvis.Framework.Tests", "test.queue1"},
-                {"Jarvis.Framework.Tests.BusTests", "test.queue2"},
+                {"Jarvis.Framework.Tests.BusTests.MessageFolder.SampleMessage, Jarvis.Framework.Tests", "test.queue1"},
+                {"Jarvis.Framework.Tests.BusTests.MessageFolder", "test.queue2"},
             };
-            _sut = new JarvisDetermineMessageOwnershipFromConfigurationManager(_map);
+            _sut = new JarvisRebusConfigurationManagerRouter(map);
         }
-
 
         [Test]
         public void Verify_exact_name_binding()
         {
             Assert.That(_sut.GetEndpointFor(typeof(SampleMessage)), Is.EqualTo("test.queue1"));
         }
-
 
         [Test]
         public void Verify_namespace_binding()
@@ -45,8 +42,5 @@ namespace Jarvis.Framework.Tests.BusTests
         {
             Assert.That(_sut.GetEndpointFor(typeof(SampleMessageInFolder)), Is.EqualTo("test.queue2"));
         }
-
-
-        
     }
 }

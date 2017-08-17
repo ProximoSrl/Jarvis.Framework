@@ -33,13 +33,31 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
         /// </summary>
         public Int32 StartBusPriority { get; set; }
 
-        public JarvisRebusConfiguration()
+        /// <summary>
+        /// Prefix of the queue, each queue has a prefix in jarvis to differentiate
+        /// between the queues of the various bounded contexts.
+        /// </summary>
+        public String Prefix { get; private set; }
+
+        /// <summary>
+        /// Needed to persist data in mongo (subscriptions, timeout).
+        /// </summary>
+        public String ConnectionString { get; private set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="connectionString"></param>
+        /// <param name="prefix"></param>
+        public JarvisRebusConfiguration(String connectionString, String prefix)
         {
+            ConnectionString = connectionString;
+            Prefix = prefix;
+
             EndpointsMap = new Dictionary<string, string>();
             ExplicitSubscriptions = new List<ExplicitSubscription>();
             StartBusPriority = JarvisStartableFacility.Priorities.Normal;
         }
-
     }
 
     public class ExplicitSubscription

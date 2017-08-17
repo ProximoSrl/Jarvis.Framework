@@ -1,11 +1,16 @@
-using System;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
+namespace Jarvis.Framework.Shared.Helpers
 {
-    internal static class TaskHelpers
+    public static class TaskHelpers
     {
+        public static readonly Task CompletedTask = Task.FromResult(false);
+
         internal static Task Delay(double milliseconds, CancellationToken cancellationToken)
         {
             var tcs = new TaskCompletionSource<bool>();

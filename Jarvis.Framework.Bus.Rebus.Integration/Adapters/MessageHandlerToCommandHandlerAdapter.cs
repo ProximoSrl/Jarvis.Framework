@@ -12,6 +12,9 @@ using Jarvis.NEventStoreEx.CommonDomainEx.Core;
 using Rebus;
 using Jarvis.Framework.Shared.Logging;
 using Metrics;
+using Rebus.Handlers;
+using Rebus.Bus;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
 {
@@ -21,13 +24,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
     /// <typeparam name="T">CommandType</typeparam>
     public class MessageHandlerToCommandHandlerAdapter<T> : IHandleMessages<T> where T : ICommand
     {
-   
-        private IExtendedLogger _logger = NullLogger.Instance;
-        public IExtendedLogger Logger
-        {
-            get { return _logger; }
-            set { _logger = value; }
-        }
+        public IExtendedLogger Logger { get; set; }
 
         private readonly ICommandHandler<T> _commandHandler;
         readonly IMessagesTracker _messagesTracker;
@@ -35,18 +32,19 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
         private readonly Int32 _numberOfConcurrencyExceptionBeforeRandomSleeping;
 
         public MessageHandlerToCommandHandlerAdapter(
-            ICommandHandler<T> commandHandler, 
-            IMessagesTracker messagesTracker, 
+            ICommandHandler<T> commandHandler,
+            IMessagesTracker messagesTracker,
             IBus bus,
             Int32 numberOfConcurrencyExceptionBeforeRandomSleeping = 5)
         {
+            Logger = NullLogger.Instance;
             _commandHandler = commandHandler;
             _messagesTracker = messagesTracker;
             _bus = bus;
             _numberOfConcurrencyExceptionBeforeRandomSleeping = numberOfConcurrencyExceptionBeforeRandomSleeping;
         }
 
-        public void Handle(T message)
+        public async Task Handle(T message)
         {
             try
             {
@@ -73,7 +71,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
                                 message.Describe()
                             );
                             replyCommand.CopyHeaders(message);
-                            _bus.Reply(replyCommand);
+                            await _bus.Reply(replyCommand).ConfigureAwait(false);
                         }
                     }
                     catch (ConflictingCommandException ex)
@@ -104,20 +102,20 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
                                 true
                             );
                             replyCommand.CopyHeaders(message);
-                            _bus.Reply(replyCommand);
+                            await _bus.Reply(replyCommand).ConfigureAwait(false);
                         }
-                        _logger.ErrorFormat(ex, "DomainException on command {0} [MessageId: {1}] : {2} : {3}", message.GetType(), message.MessageId, message.Describe(), ex.Message);
+                        Logger.ErrorFormat(ex, "DomainException on command {0} [MessageId: {1}] : {2} : {3}", message.GetType(), message.MessageId, message.Describe(), ex.Message);
                     }
                     catch (Exception ex)
                     {
-                        _logger.ErrorFormat(ex, "Generic Exception on command {0} [MessageId: {1}] : {2} : {3}", message.GetType(), message.MessageId, message.Describe(), ex.Message);
+                        Logger.ErrorFormat(ex, "Generic Exception on command {0} [MessageId: {1}] : {2} : {3}", message.GetType(), message.MessageId, message.Describe(), ex.Message);
                         _messagesTracker.Failed(message, DateTime.UtcNow, ex);
                         throw; //rethrow exception.
                     }
                 }
-                if (done == false)
+                if (!done)
                 {
-                    _logger.ErrorFormat("Too many conflict on command {0} [MessageId: {1}] : {2}", message.GetType(), message.MessageId, message.Describe());
+                    Logger.ErrorFormat("Too many conflict on command {0} [MessageId: {1}] : {2}", message.GetType(), message.MessageId, message.Describe());
                     var exception = new Exception("Command failed. Too many Conflicts");
                     _messagesTracker.Failed(message, DateTime.UtcNow, exception);
                 }

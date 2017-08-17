@@ -7,6 +7,7 @@ using Jarvis.Framework.Bus.Rebus.Integration.Adapters;
 using Jarvis.Framework.Kernel.Commands;
 using Jarvis.Framework.Kernel.Engine;
 using Rebus;
+using Rebus.Handlers;
 
 namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 {

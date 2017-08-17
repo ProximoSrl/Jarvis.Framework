@@ -3,9 +3,13 @@ using Castle.MicroKernel.Registration;
 using Castle.Windsor;
 using Jarvis.Framework.Bus.Rebus.Integration.Adapters;
 using Jarvis.Framework.Kernel.Engine;
+using Jarvis.Framework.Tests.BusTests.Handlers;
+using Jarvis.Framework.Tests.BusTests.MessageFolder;
 using NSubstitute;
 using NUnit.Framework;
 using Rebus;
+using Rebus.Bus;
+using Rebus.Handlers;
 
 namespace Jarvis.Framework.Tests.BusTests
 {
@@ -27,14 +31,12 @@ namespace Jarvis.Framework.Tests.BusTests
             );
         }
 
-
-
         [Test]
-        public void messages_should_be_subscripted()
+        public void Messages_should_be_subscripted()
         {
             CreateSut();
             _registration.Subscribe();
-            _fakeBus.Received().Subscribe<SampleMessage>();
+            _fakeBus.Received().Subscribe(typeof(SampleMessage));
             _kernel.Received().Register(Arg.Is<IRegistration[]>(x =>
                 x.Length == 1 && 
                 x[0] is ComponentRegistration
@@ -51,7 +53,7 @@ namespace Jarvis.Framework.Tests.BusTests
             CreateSut(container.Kernel, new IProcessManagerListener[0]);
             _registration.Subscribe();
 
-            _fakeBus.Received().Subscribe<SampleMessage>();
+            _fakeBus.Received().Subscribe(typeof(SampleMessage));
         }
     }
 }

@@ -5,6 +5,8 @@ using Jarvis.Framework.Shared.Messages;
 using Jarvis.NEventStoreEx.CommonDomainEx;
 using Jarvis.NEventStoreEx.CommonDomainEx.Persistence;
 using Rebus;
+using Rebus.Handlers;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
 {
@@ -21,7 +23,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
             _logger = logger;
         }
 
-        public void Handle(TMessage message)
+        public async Task Handle(TMessage message)
         {
             TProcessManager pm = null;
             try
@@ -39,7 +41,6 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
                     message.GetType().Name, message.Describe(), pm == null ? "null" : pm.GetType().Name );
                 throw;
             }
-           
         }
     }
 }

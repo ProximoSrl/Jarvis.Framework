@@ -16,6 +16,7 @@ using Jarvis.Framework.Shared.ReadModel;
 using Jarvis.Framework.Shared.Messages;
 using Jarvis.Framework.Shared.Logging;
 using Jarvis.NEventStoreEx.CommonDomainEx.Core;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.Commands
 {
@@ -43,18 +44,18 @@ namespace Jarvis.Framework.Kernel.Commands
             _kernel = kernel;
         }
 
-        public ICommand Send(ICommand command, string impersonatingUser = null)
+        public Task<ICommand> Send(ICommand command, string impersonatingUser = null)
         {
             return SendLocal(command, impersonatingUser);
         }
 
-        public ICommand Defer(TimeSpan delay, ICommand command, string impersonatingUser = null)
+        public Task<ICommand> Defer(TimeSpan delay, ICommand command, string impersonatingUser = null)
         {
             Logger.WarnFormat("Sending command {0} without delay", command.MessageId);
             return SendLocal(command, impersonatingUser);
         }
 
-        public ICommand SendLocal(ICommand command, string impersonatingUser = null)
+        public Task<ICommand> SendLocal(ICommand command, string impersonatingUser = null)
         {
             try
             {
@@ -99,7 +100,7 @@ namespace Jarvis.Framework.Kernel.Commands
 
                 ReleaseHandlers(handlers);
 
-                return command;
+                return Task.FromResult<ICommand>(command);
             }
             finally
             {

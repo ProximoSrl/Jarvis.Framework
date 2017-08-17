@@ -5,13 +5,15 @@ using Castle.MicroKernel.Registration;
 using Jarvis.Framework.Kernel.Engine;
 using Rebus;
 using System.Linq;
+using Rebus.Bus;
+using Rebus.Handlers;
 
 namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
 {
     /// <summary>
     /// Register all listener for Saga an Message Handler.
     /// </summary>
-    public class ListenerRegistration 
+    public class ListenerRegistration
     {
         readonly IProcessManagerListener[] _listeners;
         readonly IBus _bus;
@@ -26,7 +28,6 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
 
         public void Subscribe()
         {
-            var subscriber = _bus.GetType().GetMethod("Subscribe");
             var subscribeToMessages = new HashSet<Type>();
             foreach (var listener in _listeners)
             {
@@ -38,7 +39,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
                     // adapter
                     var handlerType = typeof(IHandleMessages<>).MakeGenericType(message);
                     var handlerImpl = typeof(RebusSagaAdapter<,>).MakeGenericType(processManagerType, message);
-                    
+
                     _kernel.Register(
                         Component
                             .For(handlerType)
@@ -57,14 +58,12 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
                 {
                     subscribeToMessages.Add(handlerType.GenericTypeArguments[0]);
                 }
-                
             }
 
             foreach (var type in subscribeToMessages)
             {
                 // subscription
-                var subscription = subscriber.MakeGenericMethod(new[] { type });
-                subscription.Invoke(_bus, new object[] { });
+                var subscription = _bus.Subscribe(type);
             }
         }
     }
