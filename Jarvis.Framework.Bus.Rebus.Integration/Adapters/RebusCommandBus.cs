@@ -5,6 +5,8 @@ using Jarvis.Framework.Shared.Commands;
 using Rebus;
 using Castle.Core.Logging;
 using Jarvis.Framework.Shared.Messages;
+using Rebus.Bus;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
 {
@@ -20,31 +22,31 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
             Logger = NullLogger.Instance;
         }
 
-        public ICommand Send(ICommand command, string impersonatingUser = null)
+        public async Task<ICommand> Send(ICommand command, string impersonatingUser = null)
         {
             PrepareCommand(command, impersonatingUser);
-            _bus.Send(command);
+            await _bus.Send(command).ConfigureAwait(false);
             return command;
         }
 
-        public ICommand SendLocal(ICommand command, string impersonatingUser = null)
+        public async Task<ICommand> SendLocal(ICommand command, string impersonatingUser = null)
         {
             PrepareCommand(command, impersonatingUser);
-            _bus.SendLocal(command);
+            await _bus.SendLocal(command).ConfigureAwait(false);
             return command;
         }
 
-        public ICommand Defer(TimeSpan delay, ICommand command, string impersonatingUser = null)
+        public async Task<ICommand> Defer(TimeSpan delay, ICommand command, string impersonatingUser = null)
         {
             PrepareCommand(command, impersonatingUser);
 
             if (delay <= TimeSpan.Zero)
             {
-                _bus.Send(command);
+                await _bus.Send(command).ConfigureAwait(false);
             }
             else
             {
-                _bus.Defer(delay, command);
+                await _bus.Defer(delay, command).ConfigureAwait(false);
             }
 
             return command;
@@ -79,13 +81,14 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
 				throw new UserCannotSendCommandException();
 			}
 
-		    foreach (var key in command.AllContextKeys)
-            {
-                _bus.AttachHeader(command,key, command.GetContextData(key));
-            }
+            //TODOREBUS: No more attach header ... 
+		    //foreach (var key in command.AllContextKeys)
+      //      {
+      //          _bus.attach(command,key, command.GetContextData(key));
+      //      }
 
-            _bus.AttachHeader(command, "command.id", command.MessageId.ToString());
-            _bus.AttachHeader(command, "command.description", command.Describe());
+      //      _bus.AttachHeader(command, "command.id", command.MessageId.ToString());
+      //      _bus.AttachHeader(command, "command.description", command.Describe());
         }
     }
 }

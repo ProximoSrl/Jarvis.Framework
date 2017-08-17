@@ -1,6 +1,5 @@
 ﻿using log4net;
-using Rebus.Configuration;
-using Rebus.Shared;
+using Rebus.Config;
 
 namespace Jarvis.Framework.Bus.Rebus.Integration.Logging
 {
@@ -15,39 +14,38 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Logging
         /// Configures Rebus to use Log4net for all of its internal logging. Will automatically add a 'CorrelationId' variable to the Log4Net
         /// thread context when handling messages, allowing log output to include that.
         /// </summary>
-        public static void Log4Net(this LoggingConfigurer configurer)
+        public static void Log4Net(this RebusLoggingConfigurer configurer)
         {
             configurer.Use(new Log4NetLoggerFactory());
-
-            SetUpEventHandler(configurer, DefaultCorrelationIdPropertyKey);
+            //SetUpEventHandler(configurer, DefaultCorrelationIdPropertyKey);
         }
 
-        /// <summary>
-        /// Configures Rebus to use Log4net for all of its internal logging. Will automatically add a correlation ID variable to the Log4Net
-        /// thread context under the key specified by <paramref name="overriddenCorrelationIdPropertyKey"/> when handling messages, 
-        /// allowing log output to include that.
-        /// </summary>
-        public static void Log4Net(this LoggingConfigurer configurer, string overriddenCorrelationIdPropertyKey)
-        {
-            configurer.Use(new Log4NetLoggerFactory());
+        ///// <summary>
+        ///// Configures Rebus to use Log4net for all of its internal logging. Will automatically add a correlation ID variable to the Log4Net
+        ///// thread context under the key specified by <paramref name="overriddenCorrelationIdPropertyKey"/> when handling messages, 
+        ///// allowing log output to include that.
+        ///// </summary>
+        //public static void Log4Net(this RebusLoggingConfigurer configurer, string overriddenCorrelationIdPropertyKey)
+        //{
+        //    configurer.Use(new Log4NetLoggerFactory());
 
-            SetUpEventHandler(configurer, overriddenCorrelationIdPropertyKey);
-        }
+        //    SetUpEventHandler(configurer, overriddenCorrelationIdPropertyKey);
+        //}
 
-        static void SetUpEventHandler(BaseConfigurer configurer, string correlationIdPropertyKey)
-        {
-            configurer.Backbone.ConfigureEvents(e =>
-            {
-                e.BeforeTransportMessage +=
-                    (bus, message) =>
-                    {
-                        var correlationid = message.Headers.ContainsKey(Headers.CorrelationId)
-                                                ? message.Headers[Headers.CorrelationId]
-                                                : null;
+        //static void SetUpEventHandler(RebusConfigurer configurer, string correlationIdPropertyKey)
+        //{
+        //    configurer.Backbone.ConfigureEvents(e =>
+        //    {
+        //        e.BeforeTransportMessage +=
+        //            (bus, message) =>
+        //            {
+        //                var correlationid = message.Headers.ContainsKey(Headers.CorrelationId)
+        //                                        ? message.Headers[Headers.CorrelationId]
+        //                                        : null;
 
-                        ThreadContext.Properties[correlationIdPropertyKey] = correlationid;
-                    };
-            });
-        }
+        //                ThreadContext.Properties[correlationIdPropertyKey] = correlationid;
+        //            };
+        //    });
+        //}
     }
 }
