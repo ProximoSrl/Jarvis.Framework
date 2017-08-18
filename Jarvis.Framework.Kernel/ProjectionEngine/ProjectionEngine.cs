@@ -341,7 +341,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         private readonly ConcurrentDictionary<String, Int64> lastCheckpointDispatched =
             new ConcurrentDictionary<string, long>();
 
-        void DispatchCommit(ICommit commit, string slotName, Int64 startCheckpoint)
+        private Task DispatchCommit(ICommit commit, string slotName, Int64 startCheckpoint)
         {
             Interlocked.Increment(ref _countOfConcurrentDispatchingCommit);
 
@@ -378,7 +378,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             {
                 //Already dispatched, skip it.
                 Interlocked.Decrement(ref _countOfConcurrentDispatchingCommit);
-                return;
+                return TaskHelpers.CompletedTask;
             }
 
             var projections = _projectionsBySlot[slotName];
@@ -526,6 +526,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
             if (Logger.IsDebugEnabled) Logger.ThreadProperties["commit"] = null;
             Interlocked.Decrement(ref _countOfConcurrentDispatchingCommit);
+            return TaskHelpers.CompletedTask;
         }
 
         private void ClearLoggerThreadPropertiesForEventDispatchLoop()
