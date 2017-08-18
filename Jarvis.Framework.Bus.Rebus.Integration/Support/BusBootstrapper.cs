@@ -335,7 +335,13 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 
         public Task<string> GetOwnerAddress(string topic)
         {
-            throw new NotImplementedException("We need to understand if we really need topic");
+            Type type = Type.GetType(topic, false);
+            if (type != null)
+            {
+                return Task.FromResult<String>(GetEndpointFor(type));
+            }
+
+            throw new NotSupportedException($"Unable to determine owner of topic {topic}");
         }
 
         public string GetEndpointFor(Type messageType)

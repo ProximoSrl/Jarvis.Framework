@@ -54,7 +54,6 @@ namespace Jarvis.Framework.Kernel.Support
 
         protected override HealthCheckResult Check()
         {
-
             PeekQueueToActivate();
             var count = GetCount();
             if (count > _messageLimit)
