@@ -1,5 +1,6 @@
 ﻿using System;
 using NEventStore;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 {
@@ -20,7 +21,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             Int32 bufferSize,
             String pollerName);
 
-        void AddConsumer(Action<ICommit> consumerAction);
+        void AddConsumer(Func<ICommit, Task> consumerAction);
 
         void StopPolling(Boolean setToFaulted);
     }

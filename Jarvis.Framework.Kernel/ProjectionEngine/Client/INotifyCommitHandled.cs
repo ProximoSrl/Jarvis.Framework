@@ -1,4 +1,6 @@
+using Jarvis.Framework.Shared.Helpers;
 using NEventStore;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 {
@@ -10,14 +12,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         /// contain at lest slot Name.
         /// </summary>
         /// <param name="commit"></param>
-        void SetDispatched(ICommit commit);
+        Task SetDispatched(ICommit commit);
     }
 
     public class NullNotifyCommitHandled : INotifyCommitHandled
     {
-        public void SetDispatched(ICommit commit)
+        public Task SetDispatched(ICommit commit)
         {
-
+            return TaskHelpers.CompletedTask;
         }
     }
 }

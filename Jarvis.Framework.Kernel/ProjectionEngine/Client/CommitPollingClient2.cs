@@ -56,12 +56,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             Status = CommitPollingClientStatus.Stopped;
         }
 
-        public void AddConsumer(Action<ICommit> consumerAction)
+        public void AddConsumer(Func<ICommit, Task> consumerAction)
         {
             ExecutionDataflowBlockOptions consumerOptions = new ExecutionDataflowBlockOptions();
             consumerOptions.BoundedCapacity = _bufferSize;
             ConsumerActionWrapper wrapper = new ConsumerActionWrapper(consumerAction, this);
-            var actionBlock = new ActionBlock<ICommit>((Action<ICommit>) wrapper.Consume, consumerOptions);
+            var actionBlock = new ActionBlock<ICommit>((Func<ICommit, Task>) wrapper.Consume, consumerOptions);
 
             _consumers.Add(actionBlock);
         }
@@ -72,14 +72,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         private class ConsumerActionWrapper
         {
-            private readonly Action<ICommit> _consumerAction;
+            private readonly Func<ICommit, Task> _consumerAction;
             private Boolean _active;
             private String _error;
-
   
             private readonly CommitPollingClient2 _owner;
 
-            public ConsumerActionWrapper(Action<ICommit> consumerAction, CommitPollingClient2 owner)
+            public ConsumerActionWrapper(Func<ICommit, Task> consumerAction, CommitPollingClient2 owner)
             {
                 _consumerAction = consumerAction;
                 _active = true;
@@ -89,12 +88,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             public string Error { get { return _error; } }
             public Boolean Active { get { return _active; } }
 
-            public void Consume(ICommit commit)
+            public async Task Consume(ICommit commit)
             {
                 if (Active == false) return; //consumer failed.
                 try
                 {
-                    _consumerAction(commit);
+                    await _consumerAction(commit).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {

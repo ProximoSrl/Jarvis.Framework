@@ -44,7 +44,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 
         public ILogger Logger { get; set; }
 
-        static readonly JsonSerializerSettings JsonSerializerSettingsForRebus = new JsonSerializerSettings
+        public static readonly JsonSerializerSettings JsonSerializerSettingsForRebus = new JsonSerializerSettings
         {
             TypeNameHandling = TypeNameHandling.All,
             ContractResolver = new MessagesContractResolver(),
@@ -317,7 +317,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
         }
     }
 
-    internal class JarvisRebusConfigurationManagerRouter : IRouter
+    public class JarvisRebusConfigurationManagerRouter : IRouter
     {
         private readonly Dictionary<String, String> _endpointsMap = new Dictionary<String, String>();
         private readonly ConcurrentDictionary<Type, String> _mapCache = new ConcurrentDictionary<Type, string>();
@@ -374,7 +374,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
             if (!String.IsNullOrEmpty(returnValue)) return returnValue;
             var message = string.Format(@"No endpoint mapping configured for messages of type {0}.
 
-JarvisDetermineMessageOwnershipFromConfigurationManager offers the ability to specify endpoint mappings
+JarvisRebusConfigurationManagerRouter offers the ability to specify endpoint mappings
 in configuration file handled by configuration-manager, you need to configure rebus with endpoints 
 section that offer the ability to specify mapping from type to relative endpoint:
 
