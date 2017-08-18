@@ -139,8 +139,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="BusTests\Handlers\AnotherSampleCommandHandler.cs" />
     <Compile Include="BusTests\CustomTimeoutReplyHandlerTests.cs" />
+    <Compile Include="BusTests\Handlers\AnotherSampleCommandHandler.cs" />
+    <Compile Include="BusTests\Handlers\AnotherSampleMessageHandler.cs" />
     <Compile Include="BusTests\Handlers\SampleMessageHandler.cs" />
     <Compile Include="BusTests\JarvisDetermineMessageOwnershipFromConfigurationManagerTests.cs" />
     <Compile Include="BusTests\ListenerSubscriptionsTests.cs" />
@@ -153,6 +154,7 @@
     <Compile Include="BusTests\MessageTrackerTests.cs" />
     <Compile Include="BusTests\MongoDbMessagesTrackerTests.cs" />
     <Compile Include="BusTests\Handlers\SampleCommandHandler.cs" />
+    <Compile Include="BusTests\RebusBaseAssumptionTests.cs" />
     <Compile Include="BusTests\SampleListener.cs" />
     <Compile Include="BusTests\SampleProcessManager.cs" />
     <Compile Include="ClaimsTests\AclTests.cs" />
