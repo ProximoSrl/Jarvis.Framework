@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.26730.3
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jarvis.Framework.Shared", "Jarvis.Framework.Shared\Jarvis.Framework.Shared.csproj", "{70B179ED-C419-4782-B080-0D1678C90279}"
 EndProject
@@ -23,15 +23,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{9870AC
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Logging", "Logging", "{1478AFD6-4740-4E37-9A4D-61B2151AF663}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jarvis.Framework.MongoAppender", "Logging\Jarvis.Framework.MongoAppender\Jarvis.Framework.MongoAppender.csproj", "{C4ED6087-35D8-408B-A638-0153ADBB2FD7}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jarvis.Framework.UdpAppender", "Logging\Jarvis.Framework.UdpAppender\Jarvis.Framework.UdpAppender.csproj", "{F37284CA-EF9C-4505-9C21-363F15F2E525}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jarvis.Framework.LogViewer.Host", "Logging\Jarvis.Framework.LogViewer.Host\Jarvis.Framework.LogViewer.Host.csproj", "{8D656BB6-54B2-4F50-B2A1-237C7FE3EC8D}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jarvis.NEventStoreEx", "Jarvis.NEventStoreEx\Jarvis.NEventStoreEx.csproj", "{68A4D5D2-C860-48A5-9189-60BB2A9A7ED1}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jarvis.Framework.LoggingTests", "Logging\Jarvis.Framework.LoggingTests\Jarvis.Framework.LoggingTests.csproj", "{071D9E61-A404-4FA2-915A-3A9F01AAEE8C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jarvis.Framework.ElasticLogPoller", "Jarvis.Framework.ElasticLogPoller\Jarvis.Framework.ElasticLogPoller.csproj", "{A3A2F347-F91A-4C31-BE79-4D6132B57812}"
 EndProject
@@ -71,26 +63,10 @@ Global
 		{D5D90909-CFEF-443E-BDDE-318FE638E5C0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D5D90909-CFEF-443E-BDDE-318FE638E5C0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D5D90909-CFEF-443E-BDDE-318FE638E5C0}.Release|Any CPU.Build.0 = Release|Any CPU
-		{C4ED6087-35D8-408B-A638-0153ADBB2FD7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C4ED6087-35D8-408B-A638-0153ADBB2FD7}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C4ED6087-35D8-408B-A638-0153ADBB2FD7}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C4ED6087-35D8-408B-A638-0153ADBB2FD7}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F37284CA-EF9C-4505-9C21-363F15F2E525}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F37284CA-EF9C-4505-9C21-363F15F2E525}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F37284CA-EF9C-4505-9C21-363F15F2E525}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F37284CA-EF9C-4505-9C21-363F15F2E525}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8D656BB6-54B2-4F50-B2A1-237C7FE3EC8D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8D656BB6-54B2-4F50-B2A1-237C7FE3EC8D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8D656BB6-54B2-4F50-B2A1-237C7FE3EC8D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8D656BB6-54B2-4F50-B2A1-237C7FE3EC8D}.Release|Any CPU.Build.0 = Release|Any CPU
 		{68A4D5D2-C860-48A5-9189-60BB2A9A7ED1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{68A4D5D2-C860-48A5-9189-60BB2A9A7ED1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{68A4D5D2-C860-48A5-9189-60BB2A9A7ED1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{68A4D5D2-C860-48A5-9189-60BB2A9A7ED1}.Release|Any CPU.Build.0 = Release|Any CPU
-		{071D9E61-A404-4FA2-915A-3A9F01AAEE8C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{071D9E61-A404-4FA2-915A-3A9F01AAEE8C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{071D9E61-A404-4FA2-915A-3A9F01AAEE8C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{071D9E61-A404-4FA2-915A-3A9F01AAEE8C}.Release|Any CPU.Build.0 = Release|Any CPU
 		{A3A2F347-F91A-4C31-BE79-4D6132B57812}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{A3A2F347-F91A-4C31-BE79-4D6132B57812}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A3A2F347-F91A-4C31-BE79-4D6132B57812}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -116,14 +92,13 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{C4ED6087-35D8-408B-A638-0153ADBB2FD7} = {1478AFD6-4740-4E37-9A4D-61B2151AF663}
-		{F37284CA-EF9C-4505-9C21-363F15F2E525} = {1478AFD6-4740-4E37-9A4D-61B2151AF663}
-		{8D656BB6-54B2-4F50-B2A1-237C7FE3EC8D} = {1478AFD6-4740-4E37-9A4D-61B2151AF663}
-		{071D9E61-A404-4FA2-915A-3A9F01AAEE8C} = {1478AFD6-4740-4E37-9A4D-61B2151AF663}
 		{A3A2F347-F91A-4C31-BE79-4D6132B57812} = {1478AFD6-4740-4E37-9A4D-61B2151AF663}
 		{6839C8C3-A351-48B6-95A3-203234A8FADC} = {BE283BF2-A477-4DBB-8419-37AFB87E69D0}
 		{352BFB74-BD40-4884-8ABE-A0F42F57B4B2} = {BE283BF2-A477-4DBB-8419-37AFB87E69D0}
 		{868856DC-C592-42AF-BB50-485B44B66A22} = {BE283BF2-A477-4DBB-8419-37AFB87E69D0}
 		{B35F9F55-85F4-42E7-B6DC-1D4B0B1EF97E} = {BE283BF2-A477-4DBB-8419-37AFB87E69D0}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {C9ECE16F-FCD2-40D4-9FFA-C471F9FAE9B8}
 	EndGlobalSection
 EndGlobal
