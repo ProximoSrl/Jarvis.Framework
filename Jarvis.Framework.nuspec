@@ -29,7 +29,6 @@
       <dependency id="Castle.Windsor" version="4.0.0" />
 
       <dependency id="Microsoft.Tpl.Dataflow" version="4.5.24" />
-      <dependency id="Fasterflect" version="2.1.3" />
       <dependency id="Metrics.NET" version="0.3.7" />
 
     </dependencies>
