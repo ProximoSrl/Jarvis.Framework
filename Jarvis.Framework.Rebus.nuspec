@@ -12,21 +12,26 @@
     <tags>Jarvis,Framework</tags>
 
     <dependencies>
-	  <dependency id="Jarvis.Framework.NEventStoreEx" version="[$version$]" />
-	  <dependency id="Jarvis.Framework.Shared" version="[$version$]" />
-	  <dependency id="Jarvis.Framework" version="[$version$]" />
+      <dependency id="Jarvis.Framework.NEventStoreEx" version="[$version$]" />
+      <dependency id="Jarvis.Framework.Shared" version="[$version$]" />
+      <dependency id="Jarvis.Framework" version="[$version$]" />
 
-    <!--<dependency id="NEventStore" version="6.0.0-unstable0091" />-->
-    <dependency id="MongoDB.Driver" version="2.4.0" />
-    <dependency id="Rebus" version="0.71.1" />
-    <dependency id="Rebus.Castle.Windsor" version="0.71.1" />
-    <dependency id="Newtonsoft.Json" version="6.0.8" />
+      <!--<dependency id="NEventStore" version="6.0.0-unstable0091" />-->
+      <dependency id="MongoDB.Driver" version="2.4.0" />
+      <dependency id="Rebus" version="4.0.0" />
+      <dependency id="Rebus.Events" version="4.0.0" />
+      <dependency id="Rebus.MongoDb" version="4.0.0" />
+      <dependency id="Rebus.CastleWindsor" version="4.0.0" />
+      <dependency id="Rebus.Msmq" version="4.0.0" />
+      <dependency id="Rebus.Log4net" version="4.0.0" />
+      <dependency id="Newtonsoft.Json" version="9.0.1" />
 
-    <dependency id="Castle.Core" version="3.3.3" />
-    <dependency id="Castle.LoggingFacility" version="3.3.0" />
-    <dependency id="Castle.Core-log4net" version="3.3.3" />
-    <dependency id="Castle.Windsor" version="3.3.0" />
-    <dependency id="Castle.Windsor-log4net" version="3.3.0" /> 
+      <dependency id="Castle.Core" version="4.1.1" />
+      <dependency id="Castle.LoggingFacility" version="4.0.0" />
+      <dependency id="Castle.Core-log4net" version="4.1.1" />
+      <dependency id="Castle.Windsor" version="4.0.0" />
+
+      <dependency id="Metrics.NET" version="0.3.7" />
     </dependencies>
   </metadata>
 
