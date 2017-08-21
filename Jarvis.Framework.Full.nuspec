@@ -14,7 +14,7 @@
     <dependencies>		  
       <!--<dependency id="NEventStore" version="(5.4,7.0.0)" />
       <dependency id="NEventStore.Persistence.MongoDb" version="(5.4,7.0.0)" />-->
-      <dependency id="MongoDB.Driver" version="2.4.0" />
+      <dependency id="MongoDB.Driver" version="2.4.4" />
 
       <dependency id="Castle.Core" version="4.1.1" />
       <dependency id="Castle.LoggingFacility" version="4.0.0" />

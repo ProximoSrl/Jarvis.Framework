@@ -19,7 +19,7 @@
       <!--<dependency id="NEventStore" version="6.0.0-unstable0097" />
       <dependency id="NEventStore.Persistence.MongoDb" version="6.0.0-unstable0090" />
       <dependency id="NEventStore.Domain" version="6.0.0-unstable0027" />-->
-      <dependency id="MongoDB.Driver" version="2.4.0" />
+      <dependency id="MongoDB.Driver" version="2.4.4" />
       <dependency id="Newtonsoft.Json" version="9.0.1" />
 
       <dependency id="Fasterflect" version="2.1.3" />
