@@ -28,7 +28,7 @@
 
       <dependency id="Castle.Core" version="4.1.1" />
       <dependency id="Castle.LoggingFacility" version="4.0.0" />
-      <dependency id="Castle.Core-log4net" version="4.1.1" />
+      <dependency id="Castle.Core-log4net" version="4.0.0" />
       <dependency id="Castle.Windsor" version="4.0.0" />
 
       <dependency id="Metrics.NET" version="0.3.7" />
