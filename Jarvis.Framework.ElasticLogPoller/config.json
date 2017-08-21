@@ -12,7 +12,7 @@
     //    }
 
     {
-      "Connection": "mongodb://localhost/jarvis-log",
+      "Connection": "mongodb://admin:123456##@localhost/jarvis-log?authSource=admin",
       "Collection": "logs",
       "EsIndex": "logs",
       "EsServer": "http://localhost:9200",
