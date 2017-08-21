@@ -34,23 +34,20 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Castle.Core, Version=3.3.0.0, Culture=neutral, PublicKeyToken=407dd0808d44fbdc, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Castle.Core.3.3.3\lib\net45\Castle.Core.dll</HintPath>
+    <Reference Include="Castle.Core, Version=4.1.1.0, Culture=neutral, PublicKeyToken=407dd0808d44fbdc, processorArchitecture=MSIL">
+      <HintPath>..\packages\Castle.Core.4.1.1\lib\net45\Castle.Core.dll</HintPath>
     </Reference>
-    <Reference Include="Castle.Facilities.Logging">
-      <HintPath>..\packages\Castle.LoggingFacility.3.3.0\lib\net45\Castle.Facilities.Logging.dll</HintPath>
+    <Reference Include="Castle.Facilities.Logging, Version=4.0.0.0, Culture=neutral, PublicKeyToken=407dd0808d44fbdc, processorArchitecture=MSIL">
+      <HintPath>..\packages\Castle.LoggingFacility.4.0.0\lib\net45\Castle.Facilities.Logging.dll</HintPath>
     </Reference>
-    <Reference Include="Castle.Services.Logging.Log4netIntegration, Version=3.3.0.0, Culture=neutral, PublicKeyToken=407dd0808d44fbdc, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Castle.Core-log4net.3.3.3\lib\net45\Castle.Services.Logging.Log4netIntegration.dll</HintPath>
+    <Reference Include="Castle.Services.Logging.log4netIntegration, Version=4.1.1.0, Culture=neutral, PublicKeyToken=407dd0808d44fbdc, processorArchitecture=MSIL">
+      <HintPath>..\packages\Castle.Core-log4net.4.1.1\lib\net45\Castle.Services.Logging.log4netIntegration.dll</HintPath>
     </Reference>
-    <Reference Include="Castle.Windsor">
-      <HintPath>..\packages\Castle.Windsor.3.3.0\lib\net45\Castle.Windsor.dll</HintPath>
+    <Reference Include="Castle.Windsor, Version=4.0.0.0, Culture=neutral, PublicKeyToken=407dd0808d44fbdc, processorArchitecture=MSIL">
+      <HintPath>..\packages\Castle.Windsor.4.0.0\lib\net45\Castle.Windsor.dll</HintPath>
     </Reference>
-    <Reference Include="log4net">
-      <HintPath>..\packages\log4net.1.2.10\lib\2.0\log4net.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="log4net, Version=2.0.8.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
+      <HintPath>..\packages\log4net.2.0.8\lib\net45-full\log4net.dll</HintPath>
     </Reference>
     <Reference Include="Metrics, Version=0.3.7.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\Metrics.NET.0.3.7\lib\net45\Metrics.dll</HintPath>
@@ -84,11 +81,14 @@
     <Reference Include="Rebus, Version=4.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\Rebus.4.0.0\lib\net45\Rebus.dll</HintPath>
     </Reference>
-    <Reference Include="Rebus.CastleWindsor, Version=3.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Rebus.Castle.Windsor.3.0.0\lib\NET45\Rebus.CastleWindsor.dll</HintPath>
+    <Reference Include="Rebus.CastleWindsor, Version=4.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Rebus.CastleWindsor.4.0.0\lib\net45\Rebus.CastleWindsor.dll</HintPath>
     </Reference>
     <Reference Include="Rebus.Events, Version=4.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\Rebus.Events.4.0.0\lib\net45\Rebus.Events.dll</HintPath>
+    </Reference>
+    <Reference Include="Rebus.Log4net, Version=4.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Rebus.Log4net.4.0.0\lib\net45\Rebus.Log4net.dll</HintPath>
     </Reference>
     <Reference Include="Rebus.MongoDb, Version=4.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\Rebus.MongoDb.4.0.0\lib\net45\Rebus.MongoDb.dll</HintPath>
@@ -114,16 +114,14 @@
     <Compile Include="Adapters\RebusCommandBus.cs" />
     <Compile Include="Adapters\MessageHandlerToCommandHandlerAdapter.cs" />
     <Compile Include="Adapters\RebusSagaAdapter.cs" />
-    <Compile Include="Logging\Log4NetLogger.cs" />
-    <Compile Include="Logging\Log4NetLoggerFactory.cs" />
-    <Compile Include="Logging\Log4NetLoggingExtension.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Serializers\JsonSerializerWithProtectedPropertiesSupport.cs" />
     <Compile Include="Support\CommandHandlersRegistration.cs" />
     <Compile Include="Support\BusBootstrapper.cs" />
     <Compile Include="Support\CustomTimeoutReplyHandler.cs" />
-    <Compile Include="Support\IStartableBus.cs" />
+    <Compile Include="Support\BusStarter.cs" />
     <Compile Include="Support\JarvisRebusConfiguration.cs" />
+    <Compile Include="Support\JarvisRebusConfigurationManagerRouter.cs" />
     <Compile Include="Support\RemoveDefaultTimeoutReplyHandlerFilter.cs" />
   </ItemGroup>
   <ItemGroup>

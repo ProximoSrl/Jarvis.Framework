@@ -11,23 +11,17 @@ using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 {
-    public interface IStartableBus : IStartable
+    public class BusStarter : IStartable
     {
-    }
-
-    public class StartableBus : IStartableBus
-    {
-        private readonly IWindsorContainer _container;
         private readonly RebusConfigurer _rebusConfigurer;
         private IBus _bus;
 
-        public StartableBus(
-            IWindsorContainer container,
+        public BusStarter(
             RebusConfigurer rebusConfigurer)
         {
-            _container = container;
             _rebusConfigurer = rebusConfigurer;
         }
+
         public void Start()
         {
             if (_bus != null)

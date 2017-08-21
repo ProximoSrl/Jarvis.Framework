@@ -38,7 +38,7 @@ namespace Jarvis.MonitoringAgentServer
         {
             HostFactory.Run(x =>
             {
-                x.UseOldLog4Net("log4net.config");
+                x.UseLog4Net("log4net.config");
                 x.Service<Object>(s =>
                 {
                     s.ConstructUsing(() => new Object());
@@ -85,7 +85,7 @@ namespace Jarvis.MonitoringAgentServer
 
             HostFactory.Run(x =>
             {
-                x.UseOldLog4Net("log4net.config");
+                x.UseLog4Net("log4net.config");
                 x.Service<Bootstrapper>(s =>
                 {
                     s.ConstructUsing(name => _bootstrapper);

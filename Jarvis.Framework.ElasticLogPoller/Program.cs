@@ -26,7 +26,7 @@ namespace Jarvis.Framework.ElasticLogPoller
 
             HostFactory.Run(x =>
             {
-                x.UseOldLog4Net("log4net.config");
+                x.UseLog4Net("log4net.config");
                 x.Service<Program>(s =>
                 {
                     s.ConstructUsing(name => new Program());

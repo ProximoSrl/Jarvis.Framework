@@ -120,7 +120,7 @@ namespace Jarvis.Framework.MongoAppender
             {
                 if (createCollectionOptions.Capped == true)
                 {
-                    LogLog.Error("Cannot use Capped and TTL at the same time, only capped collection setting will be used! Please configure the appender specifying only CappedSizeInMb or ExpireAfter, but not both.");
+                    LogLog.Error(typeof(MongoLog), "Cannot use Capped and TTL at the same time, only capped collection setting will be used! Please configure the appender specifying only CappedSizeInMb or ExpireAfter, but not both.");
                 }
                 else
                 {
