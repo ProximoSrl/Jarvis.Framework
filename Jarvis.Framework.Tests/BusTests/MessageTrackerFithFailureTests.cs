@@ -17,6 +17,7 @@ using Rebus.Bus;
 using Rebus.Handlers;
 using Jarvis.Framework.Tests.BusTests.Handlers;
 using Jarvis.Framework.Shared.Helpers;
+using Rebus.Config;
 
 namespace Jarvis.Framework.Tests.BusTests
 {
@@ -57,8 +58,8 @@ namespace Jarvis.Framework.Tests.BusTests
                 tracker);
 
             bb.Start();
-            var startableBus = _container.Resolve<IStartableBus>();
-            startableBus.Start();
+            var rebusConfigurer = _container.Resolve<RebusConfigurer>();
+            rebusConfigurer.Start();
 
             _bus = _container.Resolve<IBus>();
             _handler = new AnotherSampleCommandHandler();

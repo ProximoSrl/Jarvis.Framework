@@ -1,20 +1,14 @@
 ﻿using System.Linq;
-using System.Linq.Expressions;
-using System.Runtime.InteropServices;
 using Jarvis.Framework.MongoAppender;
 using log4net;
 using log4net.Appender;
 using log4net.Core;
-using log4net.Repository;
 using log4net.Repository.Hierarchy;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using MongoDB.Driver.Linq;
 using NUnit.Framework;
-using System.Diagnostics;
 using System;
 using log4net.Layout;
-using MongoDB.Driver;
 using System.Configuration;
 
 namespace Jarvis.Framework.LoggingTests
@@ -40,8 +34,8 @@ namespace Jarvis.Framework.LoggingTests
             _logCollection = _db.GetCollection<BsonDocument>("logs");
             _db.DropCollection(_logCollection.CollectionNamespace.CollectionName);
 
-            var hierarchy = (Hierarchy)LogManager.GetRepository();
-            _logger = hierarchy.LoggerFactory.CreateLogger("logname");
+            var hierarchy = (Hierarchy)LogManager.CreateRepository("test");
+            _logger = hierarchy.LoggerFactory.CreateLogger(hierarchy, "logname");
             _logger.Hierarchy = hierarchy;
 
             _logger.AddAppender(CreateMongoAppender(false, false));

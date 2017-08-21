@@ -8,6 +8,7 @@ using Jarvis.Framework.Tests.BusTests.MessageFolder;
 using MongoDB.Driver;
 using NUnit.Framework;
 using Rebus.Bus;
+using Rebus.Config;
 using Rebus.Handlers;
 using System;
 using System.Collections.Generic;
@@ -98,7 +99,6 @@ namespace Jarvis.Framework.Tests.BusTests
         {
             private readonly IWindsorContainer _container;
             private readonly IBus _bus;
-            private readonly AnotherSampleMessageHandler _sampleMessageHandler;
             private readonly BusBootstrapper _busBootstrapper;
 
             public IBus Bus => _bus;
@@ -124,8 +124,8 @@ namespace Jarvis.Framework.Tests.BusTests
                     tracker);
 
                 _busBootstrapper.Start();
-                var startableBus = _container.Resolve<IStartableBus>();
-                startableBus.Start();
+                var rebusConfigurer = _container.Resolve<RebusConfigurer>();
+                rebusConfigurer.Start();
                 _bus = _container.Resolve<IBus>();
             }
 
