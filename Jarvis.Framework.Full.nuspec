@@ -15,22 +15,18 @@
       <!--<dependency id="NEventStore" version="(5.4,7.0.0)" />
       <dependency id="NEventStore.Persistence.MongoDb" version="(5.4,7.0.0)" />-->
       <dependency id="MongoDB.Driver" version="2.4.0" />
-      <dependency id="Newtonsoft.Json" version="6.0.8" />
 
-      <dependency id="Castle.Core" version="3.3.3" />
-      <dependency id="Castle.LoggingFacility" version="3.3.0" />
-      <dependency id="Castle.Core-log4net" version="3.3.3" />
-      <dependency id="Castle.Windsor" version="3.3.0" />
-      <dependency id="Castle.Windsor-log4net" version="3.3.0" /> 
+      <dependency id="Castle.Core" version="4.1.1" />
+      <dependency id="Castle.LoggingFacility" version="4.0.0" />
+      <dependency id="Castle.Core-log4net" version="4.1.1" />
+      <dependency id="Castle.Windsor" version="4.1.1" />
       
       <dependency id="Fasterflect" version="2.1.3" />
 	    <dependency id="Metrics.NET" version="0.3.7" />
       <dependency id="Microsoft.Tpl.Dataflow" version="4.5.24" />
-      <dependency id="Fasterflect" version="2.1.3" />
-      <dependency id="Metrics.NET" version="0.3.7" />
       
-      <dependency id="Rebus" version="0.71.1" />
-      <dependency id="Rebus.Castle.Windsor" version="0.71.1" />
+      <dependency id="Rebus" version="4.0.0" />
+      <dependency id="Rebus.CastleWindsor" version="4.0.0" />
       <dependency id="Newtonsoft.Json" version="6.0.8" />
     </dependencies>
   </metadata>
