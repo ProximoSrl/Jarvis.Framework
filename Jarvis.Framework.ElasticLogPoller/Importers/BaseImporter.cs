@@ -1,6 +1,8 @@
 ﻿
+using Elasticsearch.Net;
 using log4net;
 using Nest;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -40,10 +42,11 @@ namespace Jarvis.Framework.ElasticLogPoller.Importers
             _baseUrl = EsServer.TrimEnd('/') + "/";
             var node = new Uri(EsServer);
 
-            var settings = new ConnectionSettings(
-                node,
-                defaultIndex: "logs"
-            );
+            var pool = new StaticConnectionPool(new[] { node });
+            var settings = new ConnectionSettings(pool)
+                .DisableDirectStreaming()
+                .PrettyJson()
+                .DefaultIndex("logs");
 
             Client = new ElasticClient(settings);
         }
@@ -66,60 +69,38 @@ namespace Jarvis.Framework.ElasticLogPoller.Importers
                     var result = wc.UploadString(
                         _baseUrl + EsIndex + "/_bulk",
                         pollResult.FullJsonForElasticBulkEndpoint);
+
+                    var deserialized = (JObject)JsonConvert.DeserializeObject(result);
+                    if (deserialized["errors"].Value<Boolean>() == true)
+                    {
+                        throw new Exception($"Unable to index block of logs: {result}");
+                    }
                 }
                 SaveCheckpoint(pollResult.Checkpoint);
             }
             return pollResult;
-
         }
 
         protected abstract PollResult OnPoll();
 
         protected void SetTtl(String type, String defaultDuration)
         {
-            if (!Client.IndexExists(x => x.Index(EsIndex)).Exists)
+            if (!Client.IndexExists(EsIndex).Exists)
             {
                 _log.Info("Create ES index: " + EsIndex);
-                var response = Client.CreateIndex(EsIndex, id => id.NumberOfShards(2));
+                var response = Client.CreateIndex(EsIndex, id => id
+                    .Settings(s => s.NumberOfShards(2)));
+                if (!response.IsValid)
+                    throw new Exception($"Unable to create index {EsIndex} - {response.DebugInformation}");
+
+                var mapResponse = Client.Map<EsLog>(m => m
+                    .AutoMap()
+                    .TtlField(ttl => ttl.Enable(true))
+                    .AllField(all => all.Enabled(false)));
+
+                if (!mapResponse.IsValid)
+                    throw new Exception($"Unable to map object in index {EsIndex} - {mapResponse.DebugInformation}");
             }
-            var indexDefinition = new RootObjectMapping
-            {
-                Properties = new Dictionary<PropertyNameMarker, IElasticType>(),
-                Name = "log",
-            };
-
-            var ttlDescriptor = new TtlFieldMappingDescriptor();
-            ttlDescriptor.Enable(true);
-            ttlDescriptor.Default(defaultDuration);
-            indexDefinition.TtlFieldMappingDescriptor = ttlDescriptor;
-
-            var notAnalyzedProperty = new StringMapping
-            {
-                Index = FieldIndexOption.NotAnalyzed
-            };
-
-            //property.Fields.Add("le", property);
-            indexDefinition.Properties.Add("le", notAnalyzedProperty);
-            indexDefinition.Properties.Add("us", notAnalyzedProperty);
-            indexDefinition.Properties.Add("lo", notAnalyzedProperty);
-            indexDefinition.Properties.Add("do", notAnalyzedProperty);
-            indexDefinition.Properties.Add("ma", notAnalyzedProperty);
-            indexDefinition.Properties.Add("pn", notAnalyzedProperty);
-            indexDefinition.Properties.Add("ln", notAnalyzedProperty);
-            indexDefinition.Properties.Add("cn", notAnalyzedProperty);
-            indexDefinition.Properties.Add("ts", new DateMapping());
-
-            indexDefinition.Properties.Add("mongo-server", notAnalyzedProperty);
-            indexDefinition.Properties.Add("collection", notAnalyzedProperty);
-            indexDefinition.Properties.Add("source", notAnalyzedProperty);
-            Client.Map<object>(x => x
-                .InitializeUsing(indexDefinition)
-                .Index(EsIndex)
-                .Type("log")
-            );
-            _log.Info("ES Mapping set");
         }
     }
-
-
 }

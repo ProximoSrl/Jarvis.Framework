@@ -10,6 +10,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.ElasticLogPoller
@@ -62,10 +63,10 @@ namespace Jarvis.Framework.ElasticLogPoller
                 catch (Exception ex)
                 {
                     _logger.Error("Error importing logs for poller " + importer.Id, ex);
+                    Thread.Sleep(60 * 1000);
                 }
             }
             return hasMore;
         }
-
     }
 }
