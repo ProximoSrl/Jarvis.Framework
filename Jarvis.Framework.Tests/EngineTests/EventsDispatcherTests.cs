@@ -4,6 +4,8 @@ using Jarvis.Framework.Kernel.Events;
 using Jarvis.Framework.Kernel.MultitenantSupport;
 using Jarvis.Framework.Shared.IdentitySupport;
 using Jarvis.Framework.Shared.MultitenantSupport;
+using Jarvis.Framework.Shared.Helpers;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.EngineTests
 {
@@ -35,21 +37,25 @@ namespace Jarvis.Framework.Tests.EngineTests
     public class SempleAggregteCreatedEventHandler : IEventHandler<SampleAggregateCreated>
     {
         public int CallCounter = 0;
-        public void On(SampleAggregateCreated e)
+
+        public Task On(SampleAggregateCreated e)
         {
             CallCounter++;
+            return TaskHelpers.CompletedTask;
         }
     }
 
     public class UnsafeHandler : IEventHandler<SampleAggregateCreated>
     {
         public static long Counter = 0;
-        public void On(SampleAggregateCreated e)
+
+        public Task On(SampleAggregateCreated e)
         {
             var value = Counter;
             var random = new Random(DateTime.UtcNow.Millisecond);
             Thread.Sleep(random.Next(100));
             Counter = value + 1;
+            return TaskHelpers.CompletedTask;
         }
     }
 }

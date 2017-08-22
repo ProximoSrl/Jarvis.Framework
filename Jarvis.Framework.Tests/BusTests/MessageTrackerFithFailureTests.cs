@@ -18,6 +18,7 @@ using Rebus.Handlers;
 using Jarvis.Framework.Tests.BusTests.Handlers;
 using Jarvis.Framework.Shared.Helpers;
 using Rebus.Config;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.BusTests
 {
@@ -90,12 +91,12 @@ namespace Jarvis.Framework.Tests.BusTests
         /// When a domain exception is raised, we expect only one failure
         /// </summary>
         [Test]
-        public void Verify_failure_tracking_for_domain_exception()
+        public async Task Verify_failure_tracking_for_domain_exception()
         {
             //We decide to fail only one time
             var sampleMessage = new AnotherSampleTestCommand(1, "verify_failure_tracking_for_domain_exception");
             AnotherSampleCommandHandler.SetFixtureData(sampleMessage.MessageId, 1, new DomainException("TEST_1", "Test Exception for verify_failure_tracking_for_domain_exception test", null), true);
-            _bus.Send(sampleMessage);
+            await _bus.Send(sampleMessage);
             _handler.Reset.WaitOne(10000);
 
             //cycle until we found handled message on tracking with specified condition
@@ -147,7 +148,7 @@ namespace Jarvis.Framework.Tests.BusTests
         }
 
         [Test]
-        public void Verify_retry_start_execution_tracking()
+        public async Task Verify_retry_start_execution_tracking()
         {
             var tracks = _messages.FindAll().ToList();
             Assert.That(tracks, Has.Count.EqualTo(0), "messages collection is not empty");
@@ -155,7 +156,7 @@ namespace Jarvis.Framework.Tests.BusTests
             var sampleMessage = new AnotherSampleTestCommand(2, "verify_retry_start_execution_tracking");
             AnotherSampleCommandHandler.SetFixtureData(sampleMessage.MessageId, 2, new ConflictingCommandException("TEST_1", null), true);
 
-            _bus.Send(sampleMessage);
+            await _bus.Send(sampleMessage);
             _handler.Reset.WaitOne(10000);
             //cycle until we found handled message on tracking
             TrackedMessageModel track;
@@ -193,11 +194,11 @@ namespace Jarvis.Framework.Tests.BusTests
         /// all the Thread random sleep.
         /// </summary>
         [Test]
-        public void Verify_exceeding_retry()
+        public async Task Verify_exceeding_retry()
         {
             var sampleMessage = new AnotherSampleTestCommand(3, "verify_exceeding_retry");
             AnotherSampleCommandHandler.SetFixtureData(sampleMessage.MessageId, Int32.MaxValue, new ConflictingCommandException("TEST_1", null), false);
-            _bus.Send(sampleMessage);
+            await _bus.Send(sampleMessage);
             _handler.Reset.WaitOne(10000);
             //cycle until we found handled message on tracking
             TrackedMessageModel track;

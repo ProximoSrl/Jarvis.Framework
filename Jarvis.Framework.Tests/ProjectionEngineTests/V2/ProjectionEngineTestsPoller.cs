@@ -22,12 +22,6 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 
         }
 
-        [TestFixtureSetUp]
-        public override void TestFixtureSetUp()
-        {
-            base.TestFixtureSetUp();
-        }
-
         protected override void RegisterIdentities(IdentityManager identityConverter)
         {
             identityConverter.RegisterIdentitiesFromAssembly(typeof(SampleAggregateId).Assembly);

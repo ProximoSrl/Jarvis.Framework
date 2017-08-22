@@ -10,6 +10,7 @@ using System.Configuration;
 using System.Linq;
 using Fasterflect;
 using Jarvis.Framework.Shared.Events;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests
 {
@@ -37,7 +38,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         }
 
         [TestFixtureTearDown]
-        public void TestFixtureTearDown()
+        public void  TestFixtureTearDown()
         {
             _client.DropDatabase(_db.DatabaseNamespace.DatabaseName);
         }
@@ -45,96 +46,94 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         private Int32 _seed = 0;
 
         [Test]
-        public void Verify_population_of_basic_properties_on_insert()
+        public async Task  Verify_population_of_basic_properties_on_insert()
         {
-            var tick = DateTime.UtcNow.Ticks;
             var rm = CreateNew();
             SampleAggregateCreated evt = HandleEvent(new SampleAggregateCreated());
-            sut.Insert(evt, rm);
-            var reloaded = sut.FindOneById(rm.Id);
+            await sut.InsertAsync(evt, rm);
+            var reloaded = await sut.FindOneByIdAsync(rm.Id);
 
             Assert.That(reloaded.CheckpointToken, Is.EqualTo(1L));
             Assert.That(reloaded.SecondaryToken, Is.GreaterThan(0));
         }
 
         [Test]
-        public void Verify_population_of_basic_properties_on_update()
+        public async Task  Verify_population_of_basic_properties_on_update()
         {
             var rm = CreateNew();
             var evt = HandleEvent(new SampleAggregateCreated());
-            sut.Insert(evt, rm);
-            var reloaded = sut.FindOneById(rm.Id);
+            await sut.InsertAsync(evt, rm);
+            var reloaded = await sut.FindOneByIdAsync(rm.Id);
 
             rm.Value = "MODIFIED";
             var evt2 = HandleEvent(new SampleAggregateTouched(), 2L);
-            sut.Save(evt2, rm);
+            await sut.SaveAsync(evt2, rm);
 
-            var reloaded2 = sut.FindOneById(rm.Id);
+            var reloaded2 = await sut.FindOneByIdAsync(rm.Id);
 
             Assert.That(reloaded2.CheckpointToken, Is.EqualTo(2L));
             Assert.That(reloaded2.SecondaryToken, Is.GreaterThan(reloaded.SecondaryToken));
         }
 
         [Test]
-        public void Verify_population_of_basic_properties_on_upsert_insert()
+        public async Task  Verify_population_of_basic_properties_on_upsert_insert()
         {
-            var tick = DateTime.UtcNow.Ticks;
             var rm = CreateNew();
             var evt = HandleEvent(new SampleAggregateCreated());
-            sut.Upsert(evt, rm.Id, () => rm, r => r.Value += "MODIFIED");
-            var reloaded = sut.FindOneById(rm.Id);
+            await sut.UpsertAsync(evt, rm.Id, () => rm, r => r.Value += "MODIFIED");
+            var reloaded = await sut.FindOneByIdAsync(rm.Id);
 
             Assert.That(reloaded.CheckpointToken, Is.EqualTo(1L));
             Assert.That(reloaded.SecondaryToken, Is.GreaterThan(0));
         }
 
         [Test]
-        public void Verify_population_of_basic_properties_on_upsert_update()
+        public async Task  Verify_population_of_basic_properties_on_upsert_update()
         {
             var rm = CreateNew();
             var evt = HandleEvent(new SampleAggregateCreated());
-            sut.Insert(evt, rm);
-            var reloaded = sut.FindOneById(rm.Id);
+            await sut.InsertAsync(evt, rm);
+            var reloaded = await sut.FindOneByIdAsync(rm.Id);
 
             rm.Value = "MODIFIED";
             var evt2 = HandleEvent(new SampleAggregateTouched(), 2L);
-            sut.Upsert(evt2, rm.Id, () => rm, r => r.Value += "MODIFIED");
+            await sut.UpsertAsync(evt2, rm.Id, () => rm, r => r.Value += "MODIFIED");
 
-            var reloaded2 = sut.FindOneById(rm.Id);
+            var reloaded2 = await sut.FindOneByIdAsync(rm.Id);
 
             Assert.That(reloaded2.CheckpointToken, Is.EqualTo(2L));
             Assert.That(reloaded2.SecondaryToken, Is.GreaterThan(reloaded.SecondaryToken));
         }
 
         [Test]
-        public void Verify_population_of_basic_properties_on_find_and_modify()
+        public async Task  Verify_population_of_basic_properties_on_find_and_modify()
         {
             var rm = CreateNew();
             var evt = HandleEvent(new SampleAggregateCreated());
-            sut.Insert(evt, rm);
-            var reloaded = sut.FindOneById(rm.Id);
+            await sut.InsertAsync(evt, rm);
+            var reloaded = await sut.FindOneByIdAsync(rm.Id);
 
             var evt2 = HandleEvent(new SampleAggregateTouched(), 2L);
-            sut.FindAndModify(evt2, rm.Id, r => r.Value += "MODIFIED", false);
+            await sut.FindAndModifyAsync(evt2, rm.Id, r => r.Value += "MODIFIED", false);
 
-            var reloaded2 = sut.FindOneById(rm.Id);
+            var reloaded2 = await sut.FindOneByIdAsync(rm.Id);
 
             Assert.That(reloaded2.CheckpointToken, Is.EqualTo(2L));
             Assert.That(reloaded2.SecondaryToken, Is.GreaterThan(reloaded.SecondaryToken));
         }
 
         [Test]
-        public void Verify_delete_of_readmodel()
+        public async Task  Verify_delete_of_readmodel()
         {
             var rm = CreateNew();
             var evt = HandleEvent(new SampleAggregateCreated());
-            sut.Insert(evt, rm);
-            var reloaded = sut.FindOneById(rm.Id);
+            await sut.InsertAsync(evt, rm);
+            await sut.FindOneByIdAsync(rm.Id);
 
             var evt2 = HandleEvent(new SampleAggregateInvalidated(), 2L);
-            sut.Delete(evt2, rm.Id);
+            await sut.DeleteAsync(evt2, rm.Id);
 
-            var reloaded2 = sut.FindOneById(rm.Id);
+            var reloaded2 = await sut.FindOneByIdAsync(rm.Id);
 
             Assert.That(reloaded2, Is.Null, "Readmodel should be deleted if asked to do so");
         }

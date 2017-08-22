@@ -13,6 +13,7 @@ using Jarvis.Framework.Tests.EngineTests;
 using NUnit.Framework;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 using Jarvis.Framework.Shared.Helpers;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
@@ -65,9 +66,9 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             return isRebuild;
         }
 
-        protected override void OnStartPolling()
+        protected override Task OnStartPolling()
         {
-            Engine.Start();
+            return Engine.StartAsync();
         }
 
         protected void ReInitAndRebuild(int numberOfTotalCommits)
@@ -86,7 +87,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             }
 
             startWait = DateTime.Now;
-            Checkpoint checkpoint = _checkpoints.FindOneById("Projection");
+            Checkpoint checkpoint;
             do
             {
                 Thread.Sleep(50);
@@ -105,16 +106,14 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
     [TestFixture("2")]
     public class BasicRebuild : ProjectionEngineRebuildBaseTests
     {
-
         public BasicRebuild(String commitPollingVersion) : base(commitPollingVersion)
         {
 
         }
 
         [Test]
-        public async void start_then_rebuild()
+        public async Task Start_then_rebuild()
         {
-
             var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(new SampleAggregateId(1));
             aggregate.Create();
             Repository.Save(aggregate, Guid.NewGuid(), h => { });
@@ -135,8 +134,6 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             Assert.That(checkpoint.Value, Is.EqualTo(2), "Checkpoint Value is not written after rebuild.");
             Assert.That(checkpoint.Current, Is.EqualTo(2), "Checkpoint Current is written after rebuild.");
         }
-
-
     }
 
     //[TestFixture("1")]
@@ -159,13 +156,11 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
                 var writer2 = new CollectionWrapper<SampleReadModel2, string>(StorageFactory, new NotifyToNobody());
                 yield return new Projection2(writer2);
             }
-
         }
 
         [Test]
-        public async void verify_basic_rebuild_with_new_projection_same_slot()
+        public async Task Verify_basic_rebuild_with_new_projection_same_slot()
         {
-
             var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(new SampleAggregateId(1));
             aggregate.Create();
             Repository.Save(aggregate, Guid.NewGuid(), h => { });
@@ -194,22 +189,18 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             checkpoint = _checkpoints.FindOneById("Projection2");
             Assert.That(checkpoint.Value, Is.EqualTo(2), "Checkpoint is written after rebuild.");
             Assert.That(checkpoint.Current, Is.EqualTo(2), "Checkpoint is written after rebuild.");
-
         }
-
-
     }
-
 
     //[TestFixture("1")]
     [TestFixture("2")]
     public class BasicRebuildWithNewProjectionDifferentSlot : ProjectionEngineRebuildBaseTests
     {
-
         public BasicRebuildWithNewProjectionDifferentSlot(String commitPollingVersion) : base(commitPollingVersion)
         {
 
         }
+
         private Boolean returnTwoProjection = false;
 
         protected override IEnumerable<IProjection> BuildProjections()
@@ -221,13 +212,11 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
                 var writer3 = new CollectionWrapper<SampleReadModel3, string>(StorageFactory, new NotifyToNobody());
                 yield return new Projection3(writer3);
             }
-
         }
 
         [Test]
-        public async void verify_basic_rebuild_with_new_projection_different_slot()
+        public async Task Verify_basic_rebuild_with_new_projection_different_slot()
         {
-
             var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(new SampleAggregateId(1));
             aggregate.Create();
             Repository.Save(aggregate, Guid.NewGuid(), h => { });
@@ -256,9 +245,6 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             checkpoint = _checkpoints.FindOneById("Projection3");
             Assert.That(checkpoint.Value, Is.EqualTo(2), "Checkpoint is written after rebuild.");
             Assert.That(checkpoint.Current, Is.EqualTo(2), "Checkpoint is written after rebuild.");
-
         }
-
-
     }
 }

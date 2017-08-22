@@ -4,6 +4,7 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
 using Jarvis.Framework.Shared.Helpers;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.ReadModel
 {
@@ -30,15 +31,14 @@ namespace Jarvis.Framework.Shared.ReadModel
             get { return Collection.AsQueryable().OrderBy(x => x.Id); }
         }
 
-        public virtual TModel FindOneById(TKey id)
+        public virtual Task<TModel> FindOneByIdAsync(TKey id)
         {
-            return Collection.FindOneById(id);
+            return Collection.FindOneByIdAsync(id);
         }
 
-   
         public virtual IMongoCollection<TModel> Collection
         {
             get { return _collection ?? (_collection = _readmodelDb.GetCollection<TModel>(CollectionName)); }
         }
-    }  
+    }
 }

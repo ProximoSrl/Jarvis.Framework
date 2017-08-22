@@ -11,6 +11,7 @@ using Jarvis.Framework.Shared.ReadModel;
 using Jarvis.Framework.TestHelpers;
 using Jarvis.Framework.Tests.EngineTests;
 using NUnit.Framework;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
@@ -18,16 +19,9 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
     [TestFixture("2")]
     public class PollerCanStopAndRestart : AbstractV2ProjectionEngineTests
     {
-
         public PollerCanStopAndRestart(String pollingClientVersion) : base(pollingClientVersion)
         {
 
-        }
-
-        [TestFixtureSetUp]
-        public override void TestFixtureSetUp()
-        {
-            base.TestFixtureSetUp();
         }
 
         protected override void RegisterIdentities(IdentityManager identityConverter)
@@ -46,13 +40,13 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             yield return new Projection(writer);
         }
 
-        protected override void OnStartPolling()
+        protected override Task OnStartPolling()
         {
-            Engine.Start();
+            return Engine.StartAsync();
         }
 
         [Test]
-        public void stop_and_restart_polling_should_work()
+        public async Task stop_and_restart_polling_should_work()
         {
             var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(new SampleAggregateId(1));
             aggregate.Create();
@@ -70,11 +64,10 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             checkpointPassed = WaitForCheckpoint(2);
             Assert.IsFalse(checkpointPassed, "Automatic poller is still working after stop.");
 
-            Engine.Start();
+            await Engine.StartAsync();
 
             checkpointPassed = WaitForCheckpoint(2);
             Assert.IsTrue(checkpointPassed, "Automatic poller is not restarted correctly.");
-
         }
 
         private Boolean WaitForCheckpoint(Int64 checkpointToken)
@@ -82,8 +75,8 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             DateTime startTime = DateTime.Now;
             Boolean passed = false;
             while (
-                !(passed = _statusChecker.IsCheckpointProjectedByAllProjection(checkpointToken)) &&
-                DateTime.Now.Subtract(startTime).TotalMilliseconds < 7000)
+                !(passed = _statusChecker.IsCheckpointProjectedByAllProjection(checkpointToken))
+                && DateTime.Now.Subtract(startTime).TotalMilliseconds < 7000)
 
             {
                 Thread.Sleep(100);

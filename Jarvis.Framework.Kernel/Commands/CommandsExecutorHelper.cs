@@ -37,7 +37,7 @@ namespace Jarvis.Framework.Kernel.Commands
             Logger = NullLogger.Instance;
         }
 
-        public ExecuteCommandResultDto Execute(ExecuteCommandDto dto)
+        public async Task<ExecuteCommandResultDto> Execute(ExecuteCommandDto dto)
         {
             var command = ExecuteCommandDto.Deserialize(dto);
             Logger.InfoFormat("Ask execution of command {0} - {1}", command.MessageId, command.Describe());
@@ -51,7 +51,7 @@ namespace Jarvis.Framework.Kernel.Commands
 
             try
             {
-                _commandBus.Send(command, user);
+                await _commandBus.Send(command, user).ConfigureAwait(false);
                 return new ExecuteCommandResultDto(true, "", null);
             }
             catch (AggregateModifiedException ex)

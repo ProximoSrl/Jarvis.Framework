@@ -6,6 +6,7 @@ using Fasterflect;
 using Jarvis.Framework.Kernel.ProjectionEngine;
 using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.MultitenantSupport;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.Events
 {
@@ -13,15 +14,15 @@ namespace Jarvis.Framework.Kernel.Events
     {
         TenantId TenantId { get; }
 
-        void Drop();
+        Task DropAsync();
 
-        void SetUp();
+        Task SetUpAsync();
 
-        bool Handle(IDomainEvent e, bool isReplay);
+        Task<Boolean> HandleAsync(IDomainEvent e, bool isReplay);
 
-        void StartRebuild(IRebuildContext context);
+        Task StartRebuildAsync(IRebuildContext context);
 
-        void StopRebuild();
+        Task StopRebuildAsync();
 
         void Observe(IObserveProjection observer);
 

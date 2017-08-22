@@ -159,21 +159,21 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         }
 
         [Test]
-        public void no_rebuild_occours()
+        public async Task no_rebuild_occours()
         {
             CreateAggregate();
 
-            var status = sut.Rebuild();
+            var status = await sut.RebuildAsync();
             WaitForFinish(status);
             Assert.That(_writer.All.Count(), Is.EqualTo(0), "No event should be loaded because we did not dispatched anything");
         }
 
         [Test]
-        public void unwind_is_called_to_unwind_events()
+        public async Task unwind_is_called_to_unwind_events()
         {
             CreateAggregate();
 
-            var status = sut.Rebuild();
+            var status = await sut.RebuildAsync();
             WaitForFinish(status);
             Assert.That(_eventUnwinder.UnwindedCollection.AsQueryable().Count(), Is.EqualTo(1), "RebuildProjection should call unwind to ensure all events are unwinded");
         }
@@ -191,20 +191,20 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         }
 
         [Test]
-        public void event_is_dispatched()
+        public async Task event_is_dispatched()
         {
             CreateAggregate();
 
             //prepare the tracker
             _tracker.SetCheckpoint(_projection.Info.CommonName, 1); //Set the projection as dispatched
 
-            var status = sut.Rebuild();
+            var status = await sut.RebuildAsync();
             WaitForFinish(status);
             Assert.That(_writer.All.Count(), Is.EqualTo(1));
         }
 
         [Test]
-        public void dispatch_only_until_maximum_checkpoint_already_dispatched()
+        public async Task dispatch_only_until_maximum_checkpoint_already_dispatched()
         {
             CreateAggregate(1);
             CreateAggregate(2);
@@ -215,7 +215,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             thisTracker.SetUp(new[] { _projection }, 1, false);
             thisTracker.UpdateSlotAndSetCheckpoint(_projection.Info.SlotName, new[] { _projection.Info.CommonName }, 2); //Set the projection as dispatched
 
-            var status = sut.Rebuild();
+            var status = await sut.RebuildAsync();
             WaitForFinish(status);
             Assert.That(_writer.All.Count(), Is.EqualTo(2));
         }
@@ -236,9 +236,8 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             yield return _projection3 = new Projection3(_writer3); //projection3 has a different slot
         }
 
-
         [Test]
-        public void event_is_dispatched()
+        public async Task event_is_dispatched()
         {
             CreateAggregate();
 
@@ -247,14 +246,14 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             thisTracker.UpdateSlotAndSetCheckpoint(_projection1.Info.SlotName, new[] { _projection1.Info.CommonName }, 1);
             thisTracker.UpdateSlotAndSetCheckpoint(_projection3.Info.SlotName, new[] { _projection3.Info.CommonName }, 1);
 
-            var status = sut.Rebuild();
+            var status = await sut.RebuildAsync();
             WaitForFinish(status);
             Assert.That(_writer1.All.Count(), Is.EqualTo(1));
             Assert.That(_writer3.All.Count(), Is.EqualTo(1));
         }
 
         [Test]
-        public void max_dispatched_is_handled_per_distinct_slot()
+        public async Task max_dispatched_is_handled_per_distinct_slot()
         {
             CreateAggregate(1);
             CreateAggregate(2);
@@ -266,7 +265,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             thisTracker.UpdateSlotAndSetCheckpoint(_projection1.Info.SlotName, new[] { _projection1.Info.CommonName }, 2);
             thisTracker.UpdateSlotAndSetCheckpoint(_projection3.Info.SlotName, new[] { _projection3.Info.CommonName }, 1);
 
-            var status = sut.Rebuild();
+            var status = await sut.RebuildAsync();
             WaitForFinish(status);
             Assert.That(_writer1.All.Count(), Is.EqualTo(2));
             Assert.That(_writer3.All.Count(), Is.EqualTo(1));
@@ -299,7 +298,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         }
 
         [Test]
-        public void signature_is_honored()
+        public async Task signature_is_honored()
         {
             CreateAggregate(1);
             CreateAggregate(2);
@@ -312,7 +311,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 
             //now change signature.
             _projection3.Signature = "Modified";
-            var status = sut.Rebuild();
+            var status = await sut.RebuildAsync();
             WaitForFinish(status);
             var checkpoint = _checkpointCollection.AsQueryable().Single(c => c.Id == ((IProjection)_projection3).Info.CommonName);
             Assert.That(checkpoint.Signature, Is.EqualTo(_projection3.Signature));
@@ -343,7 +342,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         }
 
         [Test]
-        public void event_is_dispatched()
+        public async Task event_is_dispatched()
         {
             CreateAggregate();
 
@@ -352,7 +351,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             thisTracker.UpdateSlotAndSetCheckpoint(_projection1.Info.SlotName, new[] { _projection1.Info.CommonName }, 1);
             thisTracker.UpdateSlotAndSetCheckpoint(_projection3.Info.SlotName, new[] { _projection3.Info.CommonName }, 1);
 
-            var status = sut.Rebuild();
+            var status = await sut.RebuildAsync();
             WaitForFinish(status);
             var coll = _db.GetCollection<BsonDocument>("Sample");
             var allRecord = coll.FindAll().ToList();

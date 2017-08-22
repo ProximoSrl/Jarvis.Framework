@@ -34,16 +34,16 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
         }
 
         [Test]
-        public void Verify_create_index_change_fields()
+        public async Task Verify_create_index_change_fields()
         {
-            _sut.CreateIndex(
+            await _sut.CreateIndexAsync(
                 "test",
                 Builders<SampleReadModel>.IndexKeys
                     .Ascending(x => x.Timestamp),
                 new CreateIndexOptions() { Name = "TestIndex" });
 
             //now modify the index, should not throw
-            _sut.CreateIndex(
+            await _sut.CreateIndexAsync(
                  "test",
                  Builders<SampleReadModel>.IndexKeys
                     .Ascending(x => x.Timestamp)
@@ -57,16 +57,16 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
         }
 
         [Test]
-        public void Verify_update_index_with_different_options()
+        public async Task Verify_update_index_with_different_options()
         {
-            _sut.CreateIndex(
+            await _sut.CreateIndexAsync(
                 "test1",
                 Builders<SampleReadModel>.IndexKeys
                     .Ascending(x => x.Timestamp),
                new CreateIndexOptions() { Unique = false });
 
             //now modify the index, should not throw
-            _sut.CreateIndex(
+            await _sut.CreateIndexAsync(
                  "test1",
                  Builders<SampleReadModel>.IndexKeys
                     .Ascending(x => x.Timestamp),
@@ -80,9 +80,9 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
         }
 
         [Test]
-        public void Verify_create_index_different_options_no_name_descending()
+        public async Task Verify_create_index_different_options_no_name_descending()
         {
-            _sut.CreateIndex(
+            await _sut.CreateIndexAsync(
                 "test2",
                 Builders<SampleReadModel>.IndexKeys
                     .Ascending(x => x.Timestamp)
@@ -90,7 +90,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
                 new CreateIndexOptions() { Unique = false });
 
             //now modify the index, should not throw
-            _sut.CreateIndex(
+            await _sut.CreateIndexAsync(
                  "test2",
                 Builders<SampleReadModel>.IndexKeys
                         .Ascending(x => x.Timestamp)
@@ -106,15 +106,15 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
         }
 
         [Test]
-        public void Verify_create_index_multiple_times_without_options()
+        public async Task Verify_create_index_multiple_times_without_options()
         {
-            _sut.CreateIndex(
+            await _sut.CreateIndexAsync(
                  "test1",
                   Builders<SampleReadModel>.IndexKeys
                     .Ascending(x => x.Timestamp));
 
             //now modify the index, should not throw
-            _sut.CreateIndex(
+            await _sut.CreateIndexAsync(
                  "test2",
                   Builders<SampleReadModel>.IndexKeys
                     .Ascending(x => x.Timestamp)

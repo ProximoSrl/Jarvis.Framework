@@ -21,6 +21,11 @@ namespace Jarvis.Framework.Shared.Helpers
             collection.Database.DropCollection(collection.CollectionNamespace.CollectionName);
         }
 
+        public static async Task DropAsync<T>(this IMongoCollection<T> collection)
+        {
+            await collection.Database.DropCollectionAsync(collection.CollectionNamespace.CollectionName).ConfigureAwait(false);
+        }
+
         public static void Drop(this IMongoDatabase database)
         {
             database.Client.DropDatabase(database.DatabaseNamespace.DatabaseName);
@@ -29,6 +34,12 @@ namespace Jarvis.Framework.Shared.Helpers
         public static T FindOneById<T, Tid>(this IMongoCollection<T> collection, Tid idValue)
         {
             return collection.Find(Builders<T>.Filter.Eq("_id", idValue)).SingleOrDefault();
+        }
+
+        public static async Task<T> FindOneByIdAsync<T, Tid>(this IMongoCollection<T> collection, Tid idValue)
+        {
+            var finder = await collection.FindAsync(Builders<T>.Filter.Eq("_id", idValue)).ConfigureAwait(false);
+            return await finder.SingleOrDefaultAsync().ConfigureAwait(false);
         }
 
         public static T FindOneById<T, Tid>(this IMongoCollection<T> collection, BsonValue idValue)
@@ -71,6 +82,11 @@ namespace Jarvis.Framework.Shared.Helpers
         public static DeleteResult RemoveById<T, Tid>(this IMongoCollection<T> collection, Tid idValue)
         {
             return collection.DeleteOne(Builders<T>.Filter.Eq("_id", idValue));
+        }
+
+        public static async Task<DeleteResult> RemoveByIdAsync<T, Tid>(this IMongoCollection<T> collection, Tid idValue)
+        {
+            return await collection.DeleteOneAsync(Builders<T>.Filter.Eq("_id", idValue)).ConfigureAwait(false);
         }
 
         public static Dictionary<Tkey, Tvalue> AsDictionary<Tkey, Tvalue>(this BsonValue bsonValue)

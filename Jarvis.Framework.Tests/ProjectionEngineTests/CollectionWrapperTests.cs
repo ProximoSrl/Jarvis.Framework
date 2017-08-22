@@ -7,6 +7,7 @@ using MongoDB.Driver;
 using NUnit.Framework;
 using System.Configuration;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests
 {
@@ -41,29 +42,29 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         }
 
         [Test]
-        public void Verify_basic_delete()
+        public async Task Verify_basic_delete()
         {
             var rm = new SampleReadModelTest();
             rm.Id = new TestId(1);
             rm.Value = "test";
-            sut.Insert(new SampleAggregateCreated(), rm);
+            await sut.InsertAsync(new SampleAggregateCreated(), rm);
             var all = sut.All.ToList();
             Assert.That(all, Has.Count.EqualTo(1));
 
-            sut.Delete(new SampleAggregateInvalidated(), rm.Id);
+            await sut.DeleteAsync(new SampleAggregateInvalidated(), rm.Id);
             all = sut.All.ToList();
             Assert.That(all, Has.Count.EqualTo(0));
         }
 
         [Test]
-        public void Verify_basic_update()
+        public async Task Verify_basic_update()
         {
             var rm = new SampleReadModelTest();
             rm.Id = new TestId(1);
             rm.Value = "test";
-            sut.Insert(new SampleAggregateCreated(), rm);
+            await sut.InsertAsync(new SampleAggregateCreated(), rm);
             rm.Value = "test2";
-            sut.Save(new SampleAggregateTouched(), rm);
+            await sut.SaveAsync(new SampleAggregateTouched(), rm);
             var all = sut.All.ToList();
             Assert.That(all, Has.Count.EqualTo(1));
             var loaded = all.First();
