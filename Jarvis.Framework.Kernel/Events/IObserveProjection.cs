@@ -1,17 +1,16 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using Fasterflect;
-using Jarvis.Framework.Kernel.ProjectionEngine;
-using Jarvis.Framework.Shared.Events;
-using Jarvis.Framework.Shared.MultitenantSupport;
+﻿using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.Events
 {
     public interface IObserveProjection
     {
-        void RebuildStarted();
-        void RebuildEnded();
+        Task RebuildStartedAsync();
+
+        /// <summary>
+        /// During rebuild ended we can flush or do some database related activities
+        /// that could benefit for being async
+        /// </summary>
+        /// <returns></returns>
+        Task RebuildEndedAsync();
     }
 }

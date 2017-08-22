@@ -17,6 +17,7 @@ using Rebus.Bus;
 using Rebus.Handlers;
 using Jarvis.Framework.Tests.BusTests.Handlers;
 using Rebus.Config;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.BusTests
 {
@@ -94,10 +95,10 @@ namespace Jarvis.Framework.Tests.BusTests
         }
 
         [Test]
-        public void Check_basic_tracking()
+        public async Task Check_basic_tracking()
         {
             var sampleMessage = new SampleTestCommand(10);
-            _bus.Send(sampleMessage);
+            await _bus.Send(sampleMessage);
             _handler.Reset.WaitOne(10000);
 
             //cycle until we found handled message on tracking
@@ -129,11 +130,11 @@ namespace Jarvis.Framework.Tests.BusTests
         /// 
         /// </summary>
         [Test]
-        public void Check_response_handled()
+        public async Task Check_response_handled()
         {
             var sampleMessage = new SampleTestCommand(10);
             sampleMessage.SetContextData(MessagesConstants.ReplyToHeader, "test");
-            _bus.Send(sampleMessage);
+            await _bus.Send(sampleMessage);
             _handler.Reset.WaitOne(10000);
 
             //cycle until we found handled message on tracking
@@ -169,10 +170,10 @@ namespace Jarvis.Framework.Tests.BusTests
         /// 
         /// </summary>
         [Test]
-        public void Verify_elaboration_tracking()
+        public async Task Verify_elaboration_tracking()
         {
             var sampleMessage = new SampleTestCommand(10);
-            _bus.Send(sampleMessage);
+            await _bus.Send(sampleMessage);
             _handler.Reset.WaitOne(10000);
 
             //cycle until we found handled message on tracking

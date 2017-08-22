@@ -5,6 +5,7 @@ using Jarvis.Framework.TestHelpers;
 using MongoDB.Driver;
 using NUnit.Framework;
 using Jarvis.Framework.Shared.Helpers;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.ProjectionsTests
 {
@@ -31,17 +32,17 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
         public void SetUp()
         {
             SpyNotifier.Counter = 0;
-            _projection.Drop();
-            _projection.SetUp();
+            _projection.DropAsync().Wait();
+            _projection.SetUpAsync().Wait();
         }
 
         [Test]
-        public void insert_is_idempotent()
+        public async Task insert_is_idempotent()
         {
             var evt = new InsertEvent() { Text = "one" };
-            _projection.On(evt);
+            await _projection.On(evt);
             evt.Text = "two";
-            _projection.On(evt);
+            await _projection.On(evt);
 
             var loaded = _collection.Where(x => x.Id == evt.AggregateId).Single();
 
@@ -52,16 +53,16 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
         }
 
         [Test]
-        public void save_is_idempotent()
+        public async Task save_is_idempotent()
         {
             var insert = new InsertEvent() { Text = "one" };
             var update = new UpdateEvent() { Text = "update" };
 
-            _projection.On(insert);
-            _projection.On(update);
+            await _projection.On(insert);
+            await _projection.On(update);
 
             update.Text = "skipped update";
-            _projection.On(update);
+            await _projection.On(update);
 
             var loaded = _collection.Where(x => x.Id == update.AggregateId).Single();
 
@@ -73,48 +74,46 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
         }
 
         [Test]
-        public void delete_is_idempotent()
+        public async Task delete_is_idempotent()
         {
             var insert = new InsertEvent() { Text = "one" };
             var delete = new DeleteEvent();
 
-            _projection.On(insert);
-            _projection.On(delete);
-            _projection.On(delete);
+            await _projection.On(insert);
+            await _projection.On(delete);
+            await _projection.On(delete);
 
-            var loaded = _collection.FindOneById(delete.AggregateId);
+            var loaded = await _collection.FindOneByIdAsync(delete.AggregateId);
 
             Assert.IsNull(loaded);
         }
 
         [Test]
-        public void delete_does_not_generates_multiple_notifications()
+        public async Task delete_does_not_generates_multiple_notifications()
         {
             var insert = new InsertEvent() { Text = "one" };
             var delete = new DeleteEvent();
 
-            _projection.On(insert);
-            _projection.On(delete);
-            _projection.On(delete);
-
-            var loaded = _collection.FindOneById(delete.AggregateId);
+            await _projection.On(insert);
+            await _projection.On(delete);
+            await _projection.On(delete);
 
             Assert.AreEqual(2, SpyNotifier.Counter);
         }
 
         [Test]
-        public void upsert_create_new_readmodel()
+        public async Task upsert_create_new_readmodel()
         {
             var insert = new InsertEvent() { Text = "one" };
 
-            _collection.Upsert(
+            await _collection.UpsertAsync(
                 insert,
                 insert.AggregateId,
                 () => new MyReadModel()
-                    {
-                        Id = insert.AggregateId,
-                        Text = "created"
-                    },
+                {
+                    Id = insert.AggregateId,
+                    Text = "created"
+                },
                 r => { r.Text = "updated"; }
             );
 
@@ -125,19 +124,19 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
         }
 
         [Test]
-        public void upsert_update_old_readmodel()
+        public async Task upsert_update_old_readmodel()
         {
             var insert = new InsertEvent() { Text = "one" };
             var update = new InsertEvent() { Text = "one" };
             update.AssignIdForTest(insert.AggregateId);
 
-            _collection.Insert(insert, new MyReadModel()
+           await _collection.InsertAsync(insert, new MyReadModel()
             {
                 Id = insert.AggregateId,
                 Text = "created"
             });
 
-            _collection.Upsert(
+            await _collection.UpsertAsync(
                 update,
                 update.AggregateId,
                 () => new MyReadModel()
@@ -155,12 +154,12 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
         }
 
         [Test]
-        public void collection_has_index()
+        public async Task collection_has_index()
         {
             Assert.IsTrue
-                (
-                    _collection.IndexExists(MyProjection.IndexName)
-                );
+            (
+                await _collection.IndexExistsAsync(MyProjection.IndexName)
+            );
         }
     }
 }

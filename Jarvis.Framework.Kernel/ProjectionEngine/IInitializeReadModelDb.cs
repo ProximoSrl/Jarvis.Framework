@@ -1,7 +1,9 @@
+using System.Threading.Tasks;
+
 namespace Jarvis.Framework.Kernel.ProjectionEngine
 {
     public interface IInitializeReadModelDb
     {
-        void Init(bool drop);
+        Task InitAsync(bool drop);
     }
 }

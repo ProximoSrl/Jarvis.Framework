@@ -113,11 +113,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             }
         }
 
-        public void Start()
+        public async Task StartAsync()
         {
             if (Logger.IsDebugEnabled) Logger.DebugFormat("Starting projection engine on tenant {0}", _config.TenantId);
 
-            StartPolling();
+            await StartPollingAsync().ConfigureAwait(false);
             if (Logger.IsDebugEnabled) Logger.Debug("Projection engine started");
         }
 
@@ -139,25 +139,25 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             if (Logger.IsDebugEnabled) Logger.Debug("Projection engine stopped");
         }
 
-        public void StartWithManualPoll(Boolean immediatePoll = true)
+        public async Task StartWithManualPollAsync(Boolean immediatePoll = true)
         {
             if (_config.DelayedStartInMilliseconds == 0)
             {
-                InnerStartWithManualPoll(immediatePoll);
+                await InnerStartWithManualPollAsync(immediatePoll).ConfigureAwait(false);
             }
             else
             {
-                Task.Factory.StartNew(() =>
+                await Task.Factory.StartNew(async () =>
                 {
                     Thread.Sleep(_config.DelayedStartInMilliseconds);
-                    InnerStartWithManualPoll(immediatePoll);
-                });
+                    await InnerStartWithManualPollAsync(immediatePoll).ConfigureAwait(false);
+                }).ConfigureAwait(false);
             }
         }
 
-        private void InnerStartWithManualPoll(Boolean immediatePoll)
+        private async Task InnerStartWithManualPollAsync(Boolean immediatePoll)
         {
-            Init();
+            await InitAsync().ConfigureAwait(false);
             foreach (var client in _clients)
             {
                 client.StartManualPolling(GetStartGlobalCheckpoint(), _config.PollingMsInterval, 4000, "CommitPollingClient");
@@ -165,9 +165,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             if (immediatePoll) Poll();
         }
 
-        void StartPolling()
+        private async Task StartPollingAsync()
         {
-            Init();
+            await InitAsync().ConfigureAwait(false);
             foreach (var bucket in _bucketToClient)
             {
                 bucket.Value.StartAutomaticPolling(
@@ -179,7 +179,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             }
         }
 
-        private void Init()
+        private async Task InitAsync()
         {
             _maxDispatchedCheckpoint = 0;
             DumpProjections();
@@ -195,7 +195,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 .InitializeStorageEngine()
                 .Build();
 
-            ConfigureProjections();
+            await ConfigureProjectionsAsync();
 
             // cleanup
             _housekeeper.RemoveAll(_eventstore.Advanced);
@@ -225,7 +225,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                     b.Slots.Any(s => s.Equals(slotName, StringComparison.OrdinalIgnoreCase))) ??
                     _config.BucketInfo.Single(b => b.Slots[0] == "*");
                 var client = _bucketToClient[slotBucket];
-                client.AddConsumer(commit => DispatchCommit(commit, name, startCheckpoint));
+                client.AddConsumer(commit => DispatchCommitAsync(commit, name, startCheckpoint));
             }
 
             MetricsHelper.SetProjectionEngineCurrentDispatchCount(() => _countOfConcurrentDispatchingCommit);
@@ -261,7 +261,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         private Int64 maxCheckpointRebuilded = 0;
 
-        void ConfigureProjections()
+        private async Task ConfigureProjectionsAsync()
         {
             _checkpointTracker.SetUp(_allProjections, 1, true);
             var lastCommit = GetLastCommitId();
@@ -283,8 +283,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                         {
                             _checkpointTracker.SetCheckpoint(projection.Info.CommonName,
                                 maxCheckpointDispatchedInSlot);
-                            projection.Drop();
-                            projection.StartRebuild(_rebuildContext);
+                            await projection.DropAsync().ConfigureAwait(false);
+                            await projection.StartRebuildAsync(_rebuildContext).ConfigureAwait(false);
                             _checkpointTracker.RebuildStarted(projection, lastCommit);
                         }
                         else
@@ -292,12 +292,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                             //this is a new slot, all the projection should execute
                             //as if they are not in rebuild, because they are new
                             //so we need to immediately stop rebuilding.
-                            projection.StopRebuild();
+                            await projection.StopRebuildAsync().ConfigureAwait(false);
                         }
                         maxCheckpointRebuilded = Math.Max(maxCheckpointRebuilded,_checkpointTracker.GetCheckpoint(projection));
                     }
 
-                    projection.SetUp();
+                    await projection.SetUpAsync().ConfigureAwait(false);
                 }
             }
         }
@@ -341,7 +341,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         private readonly ConcurrentDictionary<String, Int64> lastCheckpointDispatched =
             new ConcurrentDictionary<string, long>();
 
-        private Task DispatchCommit(ICommit commit, string slotName, Int64 startCheckpoint)
+        private async Task DispatchCommitAsync(ICommit commit, string slotName, Int64 startCheckpoint)
         {
             Interlocked.Increment(ref _countOfConcurrentDispatchingCommit);
 
@@ -373,12 +373,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             }
             lastCheckpointDispatched[slotName] = chkpoint;
 
-
             if (chkpoint <= startCheckpoint)
             {
                 //Already dispatched, skip it.
                 Interlocked.Decrement(ref _countOfConcurrentDispatchingCommit);
-                return TaskHelpers.CompletedTask;
+                return;
             }
 
             var projections = _projectionsBySlot[slotName];
@@ -421,7 +420,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                             //pay attention, stopwatch consumes time.
                             var sw = new Stopwatch();
                             sw.Start();
-                            handled = projection.Handle(evt, checkpointStatus.IsRebuilding);
+                            handled = await projection.HandleAsync(evt, checkpointStatus.IsRebuilding).ConfigureAwait(false);
                             sw.Stop();
                             ticks = sw.ElapsedTicks;
                             MetricsHelper.IncrementProjectionCounter(cname, slotName, eventName, ticks);
@@ -464,7 +463,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                         {
                             if (checkpointStatus.IsLast && (index == eventCount - 1))
                             {
-                                projection.StopRebuild();
+                                await projection.StopRebuildAsync().ConfigureAwait(false);
                                 var meter = _metrics.GetMeter(cname);
                                 _checkpointTracker.RebuildEnded(projection, meter);
 
@@ -509,7 +508,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             MetricsHelper.MarkCommitDispatchedCount(slotName, 1);
 
             if (dispatchCommit)
-                _notifyCommitHandled.SetDispatched(slotName, commit);
+            {
+                await _notifyCommitHandled.SetDispatched(slotName, commit).ConfigureAwait(false);
+            }
 
             // ok in multithread wihout locks!
             if (_maxDispatchedCheckpoint < chkpoint)
@@ -526,7 +527,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
             if (Logger.IsDebugEnabled) Logger.ThreadProperties["commit"] = null;
             Interlocked.Decrement(ref _countOfConcurrentDispatchingCommit);
-            return TaskHelpers.CompletedTask;
         }
 
         private void ClearLoggerThreadPropertiesForEventDispatchLoop()

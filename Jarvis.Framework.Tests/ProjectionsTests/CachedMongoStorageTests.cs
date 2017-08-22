@@ -36,112 +36,112 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
         }
 
         [Test]
-        public void Basic_insert_and_retrieve_in_memory()
+        public async Task Basic_insert_and_retrieve_in_memory()
         {
             var sut = CreateSut();
-            sut.Insert(new SampleReadModel4() { Id = "1", Name = "A Name" });
-            var loaded = sut.FindOneById("1");
+            await sut.InsertAsync(new SampleReadModel4() { Id = "1", Name = "A Name" });
+            var loaded = await sut.FindOneByIdAsync("1");
             Assert.That(loaded.Name, Is.EqualTo("A Name"));
         }
 
         [Test]
-        public void Basic_insert_and_retrieve_unexistent_in_memory()
+        public async Task Basic_insert_and_retrieve_unexistent_in_memory()
         {
             var sut = CreateSut();
-            sut.Insert(new SampleReadModel4() { Id = "1", Name = "A Name" });
-            var loaded = sut.FindOneById("2");
+            await sut.InsertAsync(new SampleReadModel4() { Id = "1", Name = "A Name" });
+            var loaded = await sut.FindOneByIdAsync("2");
             Assert.That(loaded, Is.EqualTo(null));
         }
 
         [Test]
-        public void verify_that_null_is_indexed()
+        public async Task verify_that_null_is_indexed()
         {
             var sut = CreateSut();
-            sut.Insert(new SampleReadModel4() { Id = "1", Name = "A Name" });
-            sut.Insert(new SampleReadModel4() { Id = "2", Name = null });
-            var element = sut.FindByProperty(e => e.Name, null); //This will force index creation
+            await sut.InsertAsync(new SampleReadModel4() { Id = "1", Name = "A Name" });
+            await sut.InsertAsync(new SampleReadModel4() { Id = "2", Name = null });
+            var element = await sut.FindByPropertyAsync(e => e.Name, null); //This will force index creation
             Assert.That(element.Single().Id, Is.EqualTo("2"));
         }
 
         [Test]
-        public void verify_that_null_correctly_updates()
+        public async Task verify_that_null_correctly_updates()
         {
             var sut = CreateSut();
-            sut.Insert(new SampleReadModel4() { Id = "1", Name = "A Name" });
+            await sut.InsertAsync(new SampleReadModel4() { Id = "1", Name = "A Name" });
             SampleReadModel4 readModel = new SampleReadModel4() { Id = "2", Name = null };
-            sut.Insert(readModel);
-            sut.FindByProperty(e => e.Name, null); //Forces index creation.
+            await sut.InsertAsync(readModel);
+            await sut.FindByPropertyAsync(e => e.Name, null); //Forces index creation.
 
             readModel.Name = "Another Name";
-            sut.SaveWithVersion(readModel, readModel.Version);
-            var element = sut.FindByProperty(e => e.Name, null);
+            await sut.SaveWithVersionAsync(readModel, readModel.Version);
+            var element = await sut.FindByPropertyAsync(e => e.Name, null);
             Assert.That(element, Is.Empty);
 
-            element = sut.FindByProperty(e => e.Name, "Another Name");
+            element = await sut.FindByPropertyAsync(e => e.Name, "Another Name");
             Assert.That(element.Single().Id, Is.EqualTo(readModel.Id));
         }
 
         [Test]
-        public void Insert_Batch_and_retrieve_with_property()
+        public async Task Insert_Batch_and_retrieve_with_property()
         {
             var sut = CreateSut();
-            sut.FindByProperty(e => e.Value, 12); //This will force index creation
-            sut.InsertBatch(new[] {
+            await sut.FindByPropertyAsync(e => e.Value, 12); //This will force index creation
+            await sut.InsertBatchAsync(new[] {
                 new SampleReadModel4() { Id = "1", Value = 1 },
                 new SampleReadModel4() { Id = "2", Value = 2 },
                 new SampleReadModel4() { Id = "3", Value = 2 },
                 new SampleReadModel4() { Id = "4", Value = 4 },
             });
-            var loaded = sut.FindByProperty(e => e.Value, 2).ToList();
+            var loaded = (await sut.FindByPropertyAsync(e => e.Value, 2)).ToList();
             Assert.That(loaded.All(e => e.Value == 2));
             Assert.That(loaded, Has.Count.EqualTo(2));
         }
 
         [Test]
-        public void Insert_Batch_and_delete_then_retrieve_with_property()
+        public async Task Insert_Batch_and_delete_then_retrieve_with_property()
         {
             var sut = CreateSut();
-            sut.FindByProperty(e => e.Value, 12); //This will force index creation
-            sut.InsertBatch(new[] {
+            await sut.FindByPropertyAsync(e => e.Value, 12); //This will force index creation
+            await sut.InsertBatchAsync(new[] {
                 new SampleReadModel4() { Id = "1", Value = 1 },
                 new SampleReadModel4() { Id = "2", Value = 2 },
                 new SampleReadModel4() { Id = "3", Value = 2 },
                 new SampleReadModel4() { Id = "4", Value = 4 },
             });
-            sut.Delete("3");
-            var loaded = sut.FindByProperty(e => e.Value, 2).ToList();
+            await sut.DeleteAsync("3");
+            var loaded = (await sut.FindByPropertyAsync(e => e.Value, 2)).ToList();
             Assert.That(loaded.All(e => e.Value == 2));
             Assert.That(loaded, Has.Count.EqualTo(1));
         }
 
         [Test]
-        public void Insert_then_change_property()
+        public async Task Insert_then_change_property()
         {
             var sut = CreateSut();
-            sut.FindByProperty(e => e.Value, 12); //This will force index creation
-            sut.InsertBatch(new[] {
+            await sut.FindByPropertyAsync(e => e.Value, 12); //This will force index creation
+            await sut.InsertBatchAsync(new[] {
                 new SampleReadModel4() { Id = "1", Value = 2 },
                 new SampleReadModel4() { Id = "2", Value = 2 },
             });
 
-            var loaded = sut.FindByProperty(e => e.Value, 2).ToList();
+            var loaded = (await sut.FindByPropertyAsync(e => e.Value, 2)).ToList();
             Assert.That(loaded.All(e => e.Value == 2));
             Assert.That(loaded, Has.Count.EqualTo(2));
             var first = loaded.First();
             first.Value = 3;
-            sut.SaveWithVersion(first, first.Version);
+            await sut.SaveWithVersionAsync(first, first.Version);
 
-            loaded = sut.FindByProperty(e => e.Value, 2).ToList();
+            loaded = (await sut.FindByPropertyAsync(e => e.Value, 2)).ToList();
             Assert.That(loaded, Has.Count.EqualTo(1));
             Assert.That(loaded[0].Id, Is.EqualTo("2"));
 
-            loaded = sut.FindByProperty(e => e.Value, 3).ToList();
+            loaded = (await sut.FindByPropertyAsync(e => e.Value, 3)).ToList();
             Assert.That(loaded, Has.Count.EqualTo(1));
             Assert.That(loaded[0].Id, Is.EqualTo("1"));
         }
 
         [Test]
-        public void insert_many_and_retrieve_with_and_without_index()
+        public async Task insert_many_and_retrieve_with_and_without_index()
         {
             if (_inMemory == false) return; //this test makes sense only in memory
 
@@ -149,7 +149,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
             Int32 iteration = 100000;
             for (int i = 0; i < iteration; i++)
             {
-                sut.Insert(new SampleReadModel4() { Id = i.ToString(), Name = "Element: " + i, Value = i % 100 });
+                await sut.InsertAsync(new SampleReadModel4() { Id = i.ToString(), Name = "Element: " + i, Value = i % 100 });
             }
 
             Int32 count = 0;
@@ -167,7 +167,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
             count = 0;
             sw.Reset();
             sw.Start();
-            foreach (var element in sut.FindByProperty(e => e.Value, 42))
+            foreach (var element in await sut.FindByPropertyAsync(e => e.Value, 42))
             {
                 //do something with element
                 count++;
@@ -179,7 +179,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
             count = 0;
             sw.Reset();
             sw.Start();
-            foreach (var element in sut.FindByProperty(e => e.Value, 42))
+            foreach (var element in await sut.FindByPropertyAsync(e => e.Value, 42))
             {
                 //do something with element
                 count++;
@@ -189,9 +189,8 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
             Assert.That(count, Is.EqualTo(iteration / 100));
         }
 
-
         [Test]
-        public void insert_many_query_with_property_Then_insert_other()
+        public async Task insert_many_query_with_property_Then_insert_other()
         {
             if (_inMemory == false) return; //this test makes sense only in memory
 
@@ -203,13 +202,13 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
             sw.Start();
             for (int i = 0; i < iteration; i++)
             {
-                sut.Insert(new SampleReadModel4() { Id = i.ToString(), Name = "Element: " + i, Value = i % 100 });
+                await sut.InsertAsync(new SampleReadModel4() { Id = i.ToString(), Name = "Element: " + i, Value = i % 100 });
             }
             sw.Stop();
             Console.WriteLine("First Insert: {0}", sw.ElapsedMilliseconds);
 
             sw.Restart();
-            foreach (var element in sut.FindByProperty(e => e.Value, 42))
+            foreach (var element in await sut.FindByPropertyAsync(e => e.Value, 42))
             {
                 //do something with element
                 count++;
@@ -222,13 +221,13 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
             sw.Restart();
             for (int i = iteration; i < iteration * 2; i++)
             {
-                sut.Insert(new SampleReadModel4() { Id = i.ToString(), Name = "Element: " + i, Value = i % 100 });
+                await sut.InsertAsync(new SampleReadModel4() { Id = i.ToString(), Name = "Element: " + i, Value = i % 100 });
             }
             sw.Stop();
             Console.WriteLine("Second Insert: {0}", sw.ElapsedMilliseconds);
 
             sw.Restart();
-            foreach (var element in sut.FindByProperty(e => e.Value, 42))
+            foreach (var element in await sut.FindByPropertyAsync(e => e.Value, 42))
             {
                 //do something with element
                 count++;

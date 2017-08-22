@@ -22,10 +22,10 @@ using Castle.Facilities.TypedFactory;
 using Castle.MicroKernel.Registration;
 using Jarvis.Framework.Tests.Support;
 using Jarvis.Framework.Tests.EngineTests;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
-
     public abstract class AbstractV2ProjectionEngineTests
     {
         protected ProjectionEngine Engine;
@@ -39,36 +39,37 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
         protected IMongoCollection<Checkpoint> _checkpoints;
         protected ConcurrentCheckpointTracker _tracker;
         protected MongoDirectConcurrentCheckpointStatusChecker _statusChecker;
-		protected WindsorContainer _container;
+        protected WindsorContainer _container;
 
-		protected ICommitPollingClientFactory _pollingClientFactory;
-		public AbstractV2ProjectionEngineTests(String pollingClientVersion = "1")
+        protected ICommitPollingClientFactory _pollingClientFactory;
+
+        protected AbstractV2ProjectionEngineTests(String pollingClientVersion = "1")
         {
             TestHelper.RegisterSerializerForFlatId<SampleAggregateId>();
-			_container = new WindsorContainer();
-			_container.AddFacility<TypedFactoryFacility>();
-			_container.Register(
-				Component
-					.For<ICommitPollingClient>()
-					.ImplementedBy<CommitPollingClient2>()
-					.LifestyleTransient(),
-				Component
-					.For<ICommitPollingClientFactory>()
-					.AsFactory(),
-				Component
-					.For<ICommitEnhancer>()
-					.UsingFactoryMethod(() => new CommitEnhancer(_identityConverter)),
-				Component
-					.For<ILogger>()
-					.Instance(NullLogger.Instance));
+            _container = new WindsorContainer();
+            _container.AddFacility<TypedFactoryFacility>();
+            _container.Register(
+                Component
+                    .For<ICommitPollingClient>()
+                    .ImplementedBy<CommitPollingClient2>()
+                    .LifestyleTransient(),
+                Component
+                    .For<ICommitPollingClientFactory>()
+                    .AsFactory(),
+                Component
+                    .For<ICommitEnhancer>()
+                    .UsingFactoryMethod(() => new CommitEnhancer(_identityConverter)),
+                Component
+                    .For<ILogger>()
+                    .Instance(NullLogger.Instance));
 
-			switch (pollingClientVersion)
+            switch (pollingClientVersion)
             {
                 case "1":
                     throw new NotSupportedException("Version 1 of projection engine was removed due to migration to NES6");
 
                 case "2":
-					_pollingClientFactory = _container.Resolve<ICommitPollingClientFactory>();
+                    _pollingClientFactory = _container.Resolve<ICommitPollingClientFactory>();
                     break;
 
                 default:
@@ -89,7 +90,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             CollectionNames.Customize = name => "rm." + name;
 
             ConfigureEventStore();
-            ConfigureProjectionEngine();
+            ConfigureProjectionEngine().Wait();
         }
 
         protected abstract void RegisterIdentities(IdentityManager identityConverter);
@@ -128,7 +129,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
                 );
         }
 
-        protected void ConfigureProjectionEngine(Boolean dropCheckpoints = true)
+        protected async Task ConfigureProjectionEngine(Boolean dropCheckpoints = true)
         {
             if (Engine != null)
             {
@@ -155,9 +156,9 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 
             _rebuildContext = new RebuildContext(RebuildSettings.NitroMode);
             StorageFactory = new MongoStorageFactory(Database, _rebuildContext);
-          
+
             Engine = new ProjectionEngine(
-				_pollingClientFactory,
+                _pollingClientFactory,
                 _tracker,
                 BuildProjections().ToArray(),
                 new NullHouseKeeper(),
@@ -167,7 +168,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
                 );
             Engine.LoggerFactory = Substitute.For<ILoggerFactory>();
             Engine.LoggerFactory.Create(Arg.Any<Type>()).Returns(NullLogger.Instance);
-            OnStartPolling();
+            await OnStartPolling();
         }
 
         protected virtual bool OnShouldUseNitro()
@@ -185,9 +186,9 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             return this.GetType().Name;
         }
 
-        protected virtual void OnStartPolling()
+        protected virtual Task OnStartPolling()
         {
-            Engine.StartWithManualPoll(false);
+            return Engine.StartWithManualPollAsync(false);
         }
 
         protected abstract IEnumerable<IProjection> BuildProjections();

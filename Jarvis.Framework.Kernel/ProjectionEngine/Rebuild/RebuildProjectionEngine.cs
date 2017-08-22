@@ -102,12 +102,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
             }
         }
 
-        private Dictionary<BucketInfo, List<RebuildProjectionSlotDispatcher>> _consumers = new Dictionary<BucketInfo, List<RebuildProjectionSlotDispatcher>>();
-        private List<RebuildProjectionSlotDispatcher> _rebuildDispatchers = new List<RebuildProjectionSlotDispatcher>();
+        private readonly Dictionary<BucketInfo, List<RebuildProjectionSlotDispatcher>> _consumers = new Dictionary<BucketInfo, List<RebuildProjectionSlotDispatcher>>();
+        private readonly List<RebuildProjectionSlotDispatcher> _rebuildDispatchers = new List<RebuildProjectionSlotDispatcher>();
 
         RebuildStatus _status;
 
-        public RebuildStatus Rebuild()
+        public async Task<RebuildStatus> RebuildAsync()
         {
             if (Logger.IsInfoEnabled) Logger.InfoFormat("Starting rebuild projection engine on tenant {0}", _config.TenantId);
             DumpProjections();
@@ -117,7 +117,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
             _status = new RebuildStatus();
             TenantContext.Enter(_config.TenantId);
 
-            ConfigureProjections();
+            await ConfigureProjections().ConfigureAwait(false);
 
             var allSlots = _projectionsBySlot.Keys.ToArray();
 
@@ -127,6 +127,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                 _consumers.Add(bucket, new List<RebuildProjectionSlotDispatcher>());
                 _status.AddBucket();
             }
+
             //Setup the slots
             foreach (var slotName in allSlots)
             {
@@ -167,7 +168,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                 ExecutionDataflowBlockOptions executionOption = new ExecutionDataflowBlockOptions();
                 executionOption.BoundedCapacity = _bufferSize;
 
-
                 var dispatcherList = consumer.Value;
                 _projectionInspector.ResetHandledEvents();
                 List<ActionBlock<DomainEvent>> consumers = new List<ActionBlock<DomainEvent>>();
@@ -175,7 +175,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                 {
                     ExecutionDataflowBlockOptions consumerOptions = new ExecutionDataflowBlockOptions();
                     consumerOptions.BoundedCapacity = _bufferSize;
-                    var actionBlock = new ActionBlock<DomainEvent>((Action<DomainEvent>)dispatcher.DispatchEvent, consumerOptions);
+                    var actionBlock = new ActionBlock<DomainEvent>((Func<DomainEvent, Task>)dispatcher.DispatchEventAsync, consumerOptions);
                     consumers.Add(actionBlock);
                     foreach (var projection in dispatcher.Projections)
                     {
@@ -187,14 +187,15 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                 var _broadcaster = GuaranteedDeliveryBroadcastBlock.Create(consumers, bucketInfo, 3000);
                 _buffer.LinkTo(_broadcaster, new DataflowLinkOptions() { PropagateCompletion = true });
 
-                Task.Factory.StartNew(() => StartPoll(_buffer, _broadcaster, bucketInfo, dispatcherList, allTypeHandledStringList, consumers));
+                //Intentionally not waiting, just start polling in another thread.
+                StartPoll(_buffer, _broadcaster, bucketInfo, dispatcherList, allTypeHandledStringList, consumers);
             }
 
             MetricsHelper.SetProjectionEngineCurrentDispatchCount(() => RebuildProjectionMetrics.CountOfConcurrentDispatchingCommit);
             return _status;
         }
 
-        private void StartPoll(
+        private async Task StartPoll(
             BufferBlock<DomainEvent> buffer,
             ActionBlock<DomainEvent> broadcaster,
             String bucketInfo,
@@ -259,7 +260,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                 }
             }
 
-
             try
             {
                 _logger.InfoFormat("Finished loading events for bucket {0} wait for tpl to finish flush", bucketInfo);
@@ -284,7 +284,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                             {
                                 try
                                 {
-                                    projection.StopRebuild();
+                                    await projection.StopRebuildAsync().ConfigureAwait(false);
                                 }
                                 catch (Exception ex)
                                 {
@@ -352,7 +352,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
             return min;
         }
 
-        void ConfigureProjections()
+        private async Task ConfigureProjections()
         {
             _checkpointTracker.SetUp(_allProjections, 1, false);
             var lastCommit = GetLastCommitId();
@@ -369,14 +369,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 
                 foreach (var projection in slot.Value)
                 {
-
                     //Check if this slot has ever dispatched at least one commit
                     if (maxCheckpointDispatchedInSlot > 0)
                     {
                         _checkpointTracker.SetCheckpoint(projection.Info.CommonName,
                             maxCheckpointDispatchedInSlot);
-                        projection.Drop();
-                        projection.StartRebuild(_rebuildContext);
+                        await projection.DropAsync().ConfigureAwait(false);
+                        await projection.StartRebuildAsync(_rebuildContext).ConfigureAwait(false);
                         _checkpointTracker.RebuildStarted(projection, lastCommit);
                     }
                     else
@@ -384,9 +383,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                         //this is a new slot, all the projection should execute
                         //as if they are not in rebuild, because they are new
                         //so we need to immediately stop rebuilding.
-                        projection.StopRebuild();
+                        await projection.StopRebuildAsync().ConfigureAwait(false);
                     }
-                    projection.SetUp();
+                    await projection.SetUpAsync().ConfigureAwait(false);
                 }
             }
             //Standard projection engine now executes check for GetCheckpointErrors but
@@ -407,23 +406,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
             return lastCommit["_id"].AsInt64;
         }
 
-        void HandleError(Exception exception)
-        {
-            Logger.Fatal("Polling stopped", exception);
-        }
-
-        private ConcurrentDictionary<String, Int64> lastCheckpointDispatched = new ConcurrentDictionary<string, long>();
+        private readonly ConcurrentDictionary<String, Int64> lastCheckpointDispatched = new ConcurrentDictionary<string, long>();
 
         private IMongoCollection<BsonDocument> GetMongoCommitsCollection()
         {
             var url = new MongoUrl(_config.EventStoreConnectionString);
             var client = new MongoClient(url);
             var db = client.GetDatabase(url.DatabaseName);
-            var collection = db.GetCollection<BsonDocument>("Commits");
-            return collection;
+            return db.GetCollection<BsonDocument>("Commits");
         }
     }
-
 
     #region metrics 
 
@@ -433,5 +425,4 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
     }
 
     #endregion
-
 }

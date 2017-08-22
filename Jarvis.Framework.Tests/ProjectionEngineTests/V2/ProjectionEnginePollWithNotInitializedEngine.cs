@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Jarvis.Framework.Kernel.Events;
 using Jarvis.Framework.Shared.IdentitySupport;
+using Jarvis.Framework.Shared.Helpers;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
@@ -17,9 +18,10 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
         {
         }
 
-        protected override void OnStartPolling()
+        protected override Task OnStartPolling()
         {
             //Avoid calling start polling, the projection engine is still not started
+            return TaskHelpers.CompletedTask;
         }
 
         [Test]

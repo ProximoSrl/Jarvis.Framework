@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.ReadModel
 {
@@ -6,10 +7,11 @@ namespace Jarvis.Framework.Shared.ReadModel
     {
     }
 
-    public interface IReader<out TModel, in TKey> : IReader where TModel : AbstractReadModel<TKey>
+    public interface IReader<TModel, in TKey> : IReader where TModel : AbstractReadModel<TKey>
     {
         IQueryable<TModel> AllUnsorted { get; }
         IQueryable<TModel> AllSortedById { get; }
-	    TModel FindOneById(TKey id);
+
+	    Task<TModel> FindOneByIdAsync(TKey id);
     }
 }

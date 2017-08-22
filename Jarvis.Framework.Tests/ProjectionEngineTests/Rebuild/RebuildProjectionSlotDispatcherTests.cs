@@ -37,30 +37,30 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         }
 
         [Test]
-        public void verify_finished_with_consecutive_events()
+        public async Task verify_finished_with_consecutive_events()
         {
             InitSut();
-            DispatchEvent(1);
+            await DispatchEventAsync(1);
             Assert.That(sut.Finished, Is.False);
-            DispatchEvent(2);
+            await DispatchEventAsync(2);
             Assert.That(sut.Finished, Is.False);
-            DispatchEvent(3);
+            await DispatchEventAsync(3);
             Assert.That(sut.Finished, Is.False);
-            DispatchEvent(4);
+            await DispatchEventAsync(4);
             Assert.That(sut.Finished, Is.True);
         }
 
         [Test]
-        public void verify_finished_with_no_consecutive_events()
+        public async Task verify_finished_with_no_consecutive_events()
         {
             InitSut();
-            DispatchEvent(1);
+            await DispatchEventAsync(1);
             Assert.That(sut.Finished, Is.False);
-            DispatchEvent(4);
+            await DispatchEventAsync(4);
             Assert.That(sut.Finished, Is.True);
         }
 
-        private SampleAggregateCreated DispatchEvent(Int64 checkpointToken)
+        private async Task<SampleAggregateCreated> DispatchEventAsync(Int64 checkpointToken)
         {
             var evt = new SampleAggregateCreated()
             {
@@ -69,7 +69,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 
             evt.AssignIdForTest(new SampleAggregateId(1));
             evt.SetPropertyValue(d => d.CheckpointToken, checkpointToken);
-            sut.DispatchEvent(evt);
+            await sut.DispatchEventAsync(evt).ConfigureAwait(false);
             return evt;
         }
     }

@@ -66,7 +66,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
             if (_logger.IsDebugEnabled) _logger.ThreadProperties["prj"] = null;
         }
 
-        internal void DispatchEvent(DomainEvent evt)
+        internal async Task DispatchEventAsync(DomainEvent evt)
         {
             var chkpoint = evt.CheckpointToken;
             if (chkpoint > LastCheckpointDispatched)
@@ -100,7 +100,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                     var cname = projection.Info.CommonName;
                     if (_logger.IsDebugEnabled) _logger.ThreadProperties["prj"] = cname;
 
-                    bool handled;
                     long ticks = 0;
 
                     try
@@ -108,7 +107,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                         //pay attention, stopwatch consumes time.
                         var sw = new Stopwatch();
                         sw.Start();
-                        handled = projection.Handle(evt, true);
+                        await projection.HandleAsync(evt, true).ConfigureAwait(false);
                         sw.Stop();
                         ticks = sw.ElapsedTicks;
                         MetricsHelper.IncrementProjectionCounterRebuild(cname, SlotName, eventName, ticks);

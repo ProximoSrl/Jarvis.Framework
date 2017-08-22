@@ -6,16 +6,21 @@ using Jarvis.Framework.Shared.ReadModel;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Jarvis.Framework.Shared.Helpers;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
 {
     public interface IMongoStorage<TModel, TKey> where TModel : class, IReadModelEx<TKey>
     {
-        bool IndexExists(String name);
-        void CreateIndex(String name, IndexKeysDefinition<TModel> keys,  CreateIndexOptions options = null);
-        void InsertBatch(IEnumerable<TModel> values);
+        Task<Boolean> IndexExistsAsync(String name);
+
+        Task CreateIndexAsync(String name, IndexKeysDefinition<TModel> keys,  CreateIndexOptions options = null);
+
+        Task InsertBatchAsync(IEnumerable<TModel> values);
+
         IQueryable<TModel> All { get; }
-        TModel FindOneById(TKey id);
+
+        Task<TModel> FindOneByIdAsync(TKey id);
 
         /// <summary>
         /// Find all the element that have a specific property with a value equal to <paramref name="value"/> 
@@ -26,16 +31,19 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         /// <param name="propertySelector"></param>
         /// <param name="value"></param>
         /// <returns></returns>
-        IEnumerable<TModel> FindByProperty<Tvalue>(Expression<Func<TModel, Tvalue>> propertySelector, Tvalue value);
+        Task<IEnumerable<TModel>> FindByPropertyAsync<Tvalue>(Expression<Func<TModel, Tvalue>> propertySelector, Tvalue value);
 
         IQueryable<TModel> Where(Expression<Func<TModel, bool>> filter);
-        bool Contains(Expression<Func<TModel, bool>> filter);
-        InsertResult Insert(TModel model);
-        SaveResult SaveWithVersion(TModel model, int orignalVersion);
-        DeleteResult Delete(TKey id);
-        void Drop();
-        IMongoCollection<TModel> Collection { get; }
 
-        void Flush();
+        Task<bool> ContainsAsync(Expression<Func<TModel, bool>> filter);
+
+        Task<InsertResult> InsertAsync(TModel model);
+        Task<SaveResult> SaveWithVersionAsync(TModel model, int orignalVersion);
+        Task<DeleteResult> DeleteAsync(TKey id);
+        Task DropAsync();
+
+        IMongoCollection<TModel>  Collection { get; }
+
+        Task FlushAsync();
     }
 }

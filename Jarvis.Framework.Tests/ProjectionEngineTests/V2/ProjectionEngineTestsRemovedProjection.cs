@@ -25,12 +25,6 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 
         }
 
-        [TestFixtureSetUp]
-        public override void TestFixtureSetUp()
-        {
-            base.TestFixtureSetUp();
-        }
-
         protected override void RegisterIdentities(IdentityManager identityConverter)
         {
             identityConverter.RegisterIdentitiesFromAssembly(typeof(SampleAggregateId).Assembly);
@@ -48,6 +42,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             var writer3 = new CollectionWrapper<SampleReadModel3, string>(StorageFactory, new NotifyToNobody());
             if (returnProjection3) yield return new Projection3(writer3);
         }
+
         private Boolean returnProjection3 = true;
 
         [Test]

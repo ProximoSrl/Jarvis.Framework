@@ -5,6 +5,8 @@ using Jarvis.Framework.Kernel.ProjectionEngine;
 using Jarvis.Framework.Tests.EngineTests;
 using Jarvis.Framework.Tests.SharedTests;
 using Jarvis.Framework.Tests.SharedTests.IdentitySupport;
+using System.Threading.Tasks;
+using Jarvis.Framework.Shared.Helpers;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests
 {
@@ -20,18 +22,19 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             _collection.Attach(this, false);
         }
 
-        public override void Drop()
+        public override Task DropAsync()
         {
-            _collection.Drop();
+            return _collection.DropAsync();
         }
 
-        public override void SetUp()
+        public override Task SetUpAsync()
         {
+            return TaskHelpers.CompletedTask;
         }
 
-        public void On(SampleAggregateCreated e)
+        public Task On(SampleAggregateCreated e)
         {
-            _collection.Insert(e, new SampleReadModel()
+            return _collection.InsertAsync(e, new SampleReadModel()
             {
                 Id = e.AggregateId,
                 IsInRebuild = base.IsRebuilding,
@@ -57,23 +60,24 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             get { return 3; } //higher priority than previous projection
         }
 
-        public override void Drop()
+        public override Task DropAsync()
         {
-            _collection.Drop();
+           return  _collection.DropAsync();
         }
 
-        public override void SetUp()
+        public override Task SetUpAsync()
         {
+            return TaskHelpers.CompletedTask;
         }
 
-        public void On(SampleAggregateCreated e)
+        public async Task On(SampleAggregateCreated e)
         {
-            _collection.Insert(e, new SampleReadModel2()
+            await _collection.InsertAsync(e, new SampleReadModel2()
             {
                 Id = e.AggregateId,
                 IsInRebuild = base.IsRebuilding,
                 Timestamp = DateTime.Now.Ticks
-            });
+            }).ConfigureAwait(false);
             Thread.Sleep(10);
         }
     }
@@ -96,9 +100,14 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             get { return 3; } //higher priority than previous projection
         }
 
-        public override void Drop()
+        public override Task DropAsync()
         {
-            _collection.Drop();
+            return _collection.DropAsync();
+        }
+
+        public override Task SetUpAsync()
+        {
+            return TaskHelpers.CompletedTask;
         }
 
         public String Signature {
@@ -106,22 +115,18 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             set { _projectionInfoAttribute = new ProjectionInfoAttribute(_projectionInfoAttribute.SlotName, value, _projectionInfoAttribute.CommonName); }
         }
 
-        public override void SetUp()
-        {
-        }
-
-        public void On(SampleAggregateCreated e)
+        public async Task On(SampleAggregateCreated e)
         {
             Console.WriteLine("Projected in thread {0} - {1}", 
                 Thread.CurrentThread.ManagedThreadId,
                 Thread.CurrentThread.Name);
             Thread.Sleep(0);
-            _collection.Insert(e, new SampleReadModel3()
+            await _collection.InsertAsync(e, new SampleReadModel3()
             {
                 Id = e.AggregateId,
                 IsInRebuild = base.IsRebuilding,
                 Timestamp = DateTime.Now.Ticks
-            });
+            }).ConfigureAwait(false);
         }
     }
 
@@ -136,16 +141,16 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             _collection.Attach(this, false);
         }
 
-        public override void Drop()
+        public override Task DropAsync()
         {
-            _collection.Drop();
+            return _collection.DropAsync();
         }
 
-        public override void SetUp()
+        public override Task SetUpAsync()
         {
+            return TaskHelpers.CompletedTask;
         }
     }
-
 
     [ProjectionInfo("ProjectionPollableReadmodel")]
     public class ProjectionPollableReadmodel : AbstractProjection
@@ -158,13 +163,14 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             _collection.Attach(this, false);
         }
 
-        public override void Drop()
+        public override Task DropAsync()
         {
-            _collection.Drop();
+            return _collection.DropAsync();
         }
 
-        public override void SetUp()
+        public override Task SetUpAsync()
         {
+            return TaskHelpers.CompletedTask;
         }
     }
 }

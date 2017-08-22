@@ -7,6 +7,7 @@ using Jarvis.Framework.Kernel.ProjectionEngine;
 using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.MultitenantSupport;
 using System.Reflection;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.Events
 {
@@ -36,27 +37,28 @@ namespace Jarvis.Framework.Kernel.Events
 
         public TenantId TenantId { get; set; }
 
-        public abstract void Drop();
-        public abstract void SetUp();
+        public abstract Task DropAsync();
+
+        public abstract Task SetUpAsync();
 
         public ProjectionInfoAttribute Info { get { return _projectionInfoAttribute; } }
 
-        public virtual void StartRebuild(IRebuildContext context)
+        public virtual async Task StartRebuildAsync(IRebuildContext context)
         {
             this.RebuildContext = context;
             foreach (var observer in _observers)
             {
-                observer.RebuildStarted();
+                await observer.RebuildStartedAsync().ConfigureAwait(false);
             }
         }
 
         private IRebuildContext RebuildContext { get; set; }
 
-        public virtual void StopRebuild()
+        public virtual async Task StopRebuildAsync()
         {
             foreach (var observer in _observers)
             {
-                observer.RebuildEnded();
+                await observer.RebuildEndedAsync().ConfigureAwait(false);
             }
             this.RebuildContext = null;
         }
@@ -66,7 +68,7 @@ namespace Jarvis.Framework.Kernel.Events
             this._observers.Add(observer);
         }
 
-        public virtual bool Handle(IDomainEvent e, bool isReplay)
+        public async virtual Task<Boolean> HandleAsync(IDomainEvent e, bool isReplay)
         {
             IsRebuilding = isReplay;
 
@@ -79,6 +81,10 @@ namespace Jarvis.Framework.Kernel.Events
                 var methodInfo = this.GetType().Method("On", new Type[] { eventType }, Flags.InstancePublic);
                 if (methodInfo != null)
                 {
+                    if (methodInfo.ReturnType == null)
+                    {
+                        throw new NotSupportedException($"On function should return Task to support async. Method {methodInfo.Name} of object {this.GetType().FullName} is not compliant");
+                    }
                     invoker = methodInfo.DelegateForCallMethod();
                 }
                 _handlersCache.Add(key, invoker);
@@ -86,7 +92,8 @@ namespace Jarvis.Framework.Kernel.Events
 
             if(invoker != null)
             {
-                invoker.Invoke(this, e);
+                Task retValue = (Task) invoker.Invoke(this, e);
+                await retValue.ConfigureAwait(false);
                 return true;
             }
 
