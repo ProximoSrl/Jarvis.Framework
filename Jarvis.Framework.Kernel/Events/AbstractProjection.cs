@@ -8,6 +8,7 @@ using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.MultitenantSupport;
 using System.Reflection;
 using System.Threading.Tasks;
+using Jarvis.Framework.Shared.Exceptions;
 
 namespace Jarvis.Framework.Kernel.Events
 {
@@ -68,7 +69,7 @@ namespace Jarvis.Framework.Kernel.Events
             this._observers.Add(observer);
         }
 
-        public async virtual Task<Boolean> HandleAsync(IDomainEvent e, bool isReplay)
+        public async virtual Task<Boolean> HandleAsync(Object e, bool isReplay)
         {
             IsRebuilding = isReplay;
 

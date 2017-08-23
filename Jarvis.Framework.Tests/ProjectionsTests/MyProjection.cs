@@ -38,14 +38,14 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
         {
             return _collection.InsertAsync(e, new MyReadModel()
             {
-                Id = e.AggregateId,
+                Id = e.AggregateId.AsString(),
                 Text = e.Text
             });
         }
 
         public Task On(UpdateEvent e)
         {
-            return _collection.FindAndModifyAsync(e, x => x.Id == e.AggregateId, m =>
+            return _collection.FindAndModifyAsync(e, x => x.Id == e.AggregateId.AsString(), m =>
             {
                 m.Text = e.Text;
             });
@@ -53,7 +53,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
 
         public Task On(DeleteEvent delete)
         {
-            return _collection.DeleteAsync(delete, delete.AggregateId);
+            return _collection.DeleteAsync(delete, delete.AggregateId.AsString());
         }
     }
 }

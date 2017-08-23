@@ -11,7 +11,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
         public Task Send(object msg)
         {
             Counter++;
-            return TaskHelpers.CompletedTask;
+            return Task.CompletedTask;
         }
     }
 }

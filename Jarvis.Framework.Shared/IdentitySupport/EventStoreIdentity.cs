@@ -13,6 +13,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         {
             classTags = new ConcurrentDictionary<Type, string>();
         }
+
         public static string GetTagForIdentityClass<T>() where T : EventStoreIdentity
         {
             return GetTagForIdentityClass(typeof(T));
@@ -30,7 +31,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             {
                 var tn = identityType.Name;
                 if (!tn.EndsWith("Id"))
-                    throw new Exception(string.Format("Wrong Identity class name: {0} Class name should end with Id", tn));
+                    throw new JarvisFrameworkIdentityException(string.Format("Wrong Identity class name: {0} Class name should end with Id", tn));
                 tag = tn.Remove(tn.Length - 2);
                 classTags.TryAdd(identityType, tag);
             }
@@ -52,7 +53,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             Assign(id);
         }
 
-        protected virtual void Assign(string identityAsString)
+        protected void Assign(string identityAsString)
         {
             int pos = identityAsString.IndexOf(Separator);
             if (pos == -1)
@@ -64,7 +65,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                     return;
                 }
 
-                throw new Exception(string.Format("invalid identity value {0}", identityAsString));
+                throw new JarvisFrameworkIdentityException(string.Format("invalid identity value {0}", identityAsString));
             }
             var tag = identityAsString.Substring(0, pos);
             var idString = identityAsString.Substring(pos + 1);
@@ -75,7 +76,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         protected virtual void Assign(string tag, Int64 value)
         {
             if (tag != GetTag())
-                throw new Exception(string.Format("Invalid assigment. {0} is not of valid tag for type {1}", value, GetType().FullName));
+                throw new JarvisFrameworkIdentityException(string.Format("Invalid assigment. {0} is not of valid tag for type {1}", value, GetType().FullName));
             this.Id = value;
         }
 
@@ -91,7 +92,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
         public static implicit operator string(EventStoreIdentity id)
         {
-            return id != null ? id.ToString() : null;
+            return id?.ToString();
         }
 
         public override string ToString()

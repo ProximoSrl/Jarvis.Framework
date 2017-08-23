@@ -38,16 +38,16 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
 			}
 		}
 
-		[TestFixtureSetUp]
-		public void TestFixtureSetUp()
-		{
-			TestHelper.RegisterSerializerForFlatId<TestId>();
-			TestHelper.RegisterSerializerForFlatId<TestFlatId>();
-			_db = TestHelper.CreateNew(ConfigurationManager.ConnectionStrings["system"].ConnectionString);
-			var identityManager = new IdentityManager(new CounterService(_db));
-			identityManager.RegisterIdentitiesFromAssembly(Assembly.GetExecutingAssembly());
-		}
-	}
+        [OneTimeSetUp]
+        public void TestFixtureSetUp()
+        {
+            TestHelper.RegisterSerializerForFlatId<TestId>();
+            TestHelper.RegisterSerializerForFlatId<TestFlatId>();
+            _db = TestHelper.CreateNew(ConfigurationManager.ConnectionStrings["system"].ConnectionString);
+            var identityManager = new IdentityManager(new CounterService(_db));
+            identityManager.RegisterIdentitiesFromAssembly(Assembly.GetExecutingAssembly());
+        }
+    }
 
 	[TestFixture]
 	public class VerifyMigrationCaseInsensitive : StringToIdentityAssociatorTestsBase

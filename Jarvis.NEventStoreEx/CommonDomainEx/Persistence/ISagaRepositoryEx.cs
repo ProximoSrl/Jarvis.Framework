@@ -1,5 +1,7 @@
-﻿using System;
+﻿using NStore.Aggregates;
+using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence
 {
@@ -9,4 +11,6 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence
 
         void Save(ISagaEx saga, Guid commitId, Action<IDictionary<string, object>> updateHeaders);
     }
+
+   
 }

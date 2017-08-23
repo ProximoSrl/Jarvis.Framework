@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NStore.Aggregates;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,10 +7,10 @@ using System.Threading.Tasks;
 
 namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence
 {
-	public interface IRepositoryExFactory
+	public interface IRepositoryFactory
 	{
-		IRepositoryEx Create();
+		IRepository Create();
 
-		void Release(IRepositoryEx repository);
+		void Release(IRepository repository);
 	}
 }

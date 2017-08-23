@@ -12,7 +12,7 @@ namespace Jarvis.Framework.Shared.Messages
     {
         public Task Send(object msg)
         {
-            return TaskHelpers.CompletedTask;
+            return Task.CompletedTask;
         }
     }
 }

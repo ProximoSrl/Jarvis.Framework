@@ -16,14 +16,9 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 	/// </summary>
 	public class CommandHandlersRegistration
 	{
-		private ILogger _logger = NullLogger.Instance;
-		public ILogger Logger
-		{
-			get { return _logger; }
-			set { _logger = value; }
-		}
+        public ILogger Logger { get; set; } = NullLogger.Instance;
 
-		private readonly IWindsorContainer _container;
+        private readonly IWindsorContainer _container;
 		private readonly Assembly[] _assemblies;
 
 		public CommandHandlersRegistration(IWindsorContainer container, params Assembly[] assemblies)

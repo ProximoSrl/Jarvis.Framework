@@ -42,16 +42,20 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         /// <typeparam name="Tvalue"></typeparam>
         /// <param name="propertySelector"></param>
         /// <param name="value"></param>
+        /// <param name="subscription"></param>
         /// <returns></returns>
-        Task<IEnumerable<TModel>> FindByPropertyAsync<Tvalue>(Expression<Func<TModel, Tvalue>> propertySelector, Tvalue value);
+        Task FindByPropertyAsync<Tvalue>(Expression<Func<TModel, Tvalue>> propertySelector, Tvalue value, Func<TModel, Task> subscription);
 
-        IQueryable<TModel> Where(Expression<Func<TModel, bool>> filter);
+		IQueryable<TModel> Where(Expression<Func<TModel, bool>> filter);
 
         Task<bool> ContainsAsync(Expression<Func<TModel, bool>> filter);
 
         Task<InsertResult> InsertAsync(TModel model);
+
         Task<SaveResult> SaveWithVersionAsync(TModel model, int orignalVersion);
+
         Task<DeleteResult> DeleteAsync(TKey id);
+
         Task DropAsync();
 
         IMongoCollection<TModel>  Collection { get; }

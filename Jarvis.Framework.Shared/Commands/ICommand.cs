@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using Jarvis.Framework.Shared.IdentitySupport;
 using Jarvis.Framework.Shared.Messages;
-using Jarvis.NEventStoreEx.CommonDomainEx;
 using Newtonsoft.Json;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Bson.Serialization.Options;
@@ -12,7 +11,9 @@ namespace Jarvis.Framework.Shared.Commands
     public interface ICommand : IMessage
     {
         void SetContextData(string key, string value);
+
         string GetContextData(string key, string defaultValue = null);
+
         void InheritContextFrom(ICommand command);
 
         [JsonIgnore]
@@ -79,7 +80,6 @@ namespace Jarvis.Framework.Shared.Commands
             return GetType().FullName + " id: " + MessageId + "\n";
         }
     }
-
 
     [Serializable]
     public abstract class Command<TIdentity> : Command, ICommand<TIdentity> where TIdentity : IIdentity

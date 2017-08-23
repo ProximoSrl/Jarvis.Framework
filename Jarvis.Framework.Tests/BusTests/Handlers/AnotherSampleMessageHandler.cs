@@ -16,7 +16,7 @@ namespace Jarvis.Framework.Tests.BusTests.Handlers
         public Task Handle(AnotherSampleMessage message)
         {
             CallCount++;
-            return TaskHelpers.CompletedTask;
+            return Task.CompletedTask;
         }
     }
 }

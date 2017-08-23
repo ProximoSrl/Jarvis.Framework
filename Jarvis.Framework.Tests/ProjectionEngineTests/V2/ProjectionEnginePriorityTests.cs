@@ -11,6 +11,7 @@ using Jarvis.Framework.Shared.ReadModel;
 using Jarvis.Framework.TestHelpers;
 using Jarvis.Framework.Tests.EngineTests;
 using NUnit.Framework;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
@@ -44,15 +45,15 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
         }
 
         [Test]
-        public async void verify_priority_is_maintained()
+        public async Task verify_priority_is_maintained()
         {
             var reader = new MongoReader<SampleReadModel, string>(Database);
             var reader2 = new MongoReader<SampleReadModel2, string>(Database);
-            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(new SampleAggregateId(1));
+            var aggregate = await Repository.GetByIdAsync<SampleAggregate>(new SampleAggregateId(1)).ConfigureAwait(false);
             aggregate.Create();
-            Repository.Save(aggregate, Guid.NewGuid(), h => { });
+            await Repository.SaveAsync(aggregate, Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
             Thread.Sleep(100);
-            await Engine.UpdateAndWait();
+            await Engine.UpdateAndWaitAsync().ConfigureAwait(false);
 
             var rm = reader.AllUnsorted.Single();
             var rm2 = reader2.AllUnsorted.Single();

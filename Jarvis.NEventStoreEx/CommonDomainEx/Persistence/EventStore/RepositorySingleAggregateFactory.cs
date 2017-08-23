@@ -4,6 +4,7 @@ using System.Runtime.Caching;
 using System.Threading;
 using Jarvis.NEventStoreEx.Support;
 using Metrics;
+using NStore.Aggregates;
 
 namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 {
@@ -18,13 +19,13 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 
         private class CacheEntry
         {
-            public IRepositoryEx RepositoryEx { get; private set; }
+            public IRepository RepositoryEx { get; }
 
-            public IAggregateEx Aggregate { get; private set; }
+            public IAggregate Aggregate { get;}
 
             public Boolean InUse { get; set; }
 
-            public CacheEntry(IRepositoryEx repositoryEx, IAggregateEx aggregate)
+            public CacheEntry(IRepository repositoryEx, IAggregate aggregate)
             {
                 RepositoryEx = repositoryEx;
                 Aggregate = aggregate;
@@ -40,11 +41,11 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 			}
         }
 
-        readonly IRepositoryExFactory _repositoryFactory;
+        private readonly IRepositoryFactory _repositoryFactory;
         private readonly bool _cacheDisabled;
 
         /// <summary>
-        /// 
+        /// Create aggregate cached repository factory
         /// </summary>
         /// <param name="repositoryFactory"></param>
         /// <param name="cacheDisabled">If True cache is not used, and each time an instance of
@@ -55,7 +56,7 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
         /// it does not prevent two thread to execute at the same moment on the same aggregateId.
         /// </param>
         public AggregateCachedRepositoryFactory(
-			IRepositoryExFactory repositoryFactory,
+			IRepositoryFactory repositoryFactory,
             Boolean cacheDisabled = false)
         {
             _repositoryFactory = repositoryFactory;
@@ -77,7 +78,7 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
                 //cached repository and entity.
                 CacheEntry cached = GetCache(id);
 
-                IRepositoryEx innerRepository;
+                IRepository innerRepository;
                 TAggregate aggregate = null;
                 if (cached != null)
                 {
@@ -130,31 +131,30 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
             return cached;
         }
 
-        private void DisposeRepository(IIdentity id, IRepositoryEx repositoryEx)
+        private void DisposeRepository(String id, IRepository repository)
         {
             //This is called when the repository is disposed.
             ReleaseAggregateId(id);
         }
 
-        private void AfterSave(IIdentity id, IRepositoryEx repositoryEx, IAggregateEx aggregate)
+        private void AfterSave(String id, IRepository repositoryEx, IAggregate aggregate)
         {
             //store the repository on the cache, actually we are keeping the very
             //same entity that was disposed by the caller.
             var cacheEntry = new CacheEntry(repositoryEx, aggregate);
-            Cache.Add(id.AsString(), cacheEntry, _cachePolicy);
+            Cache.Add(id, cacheEntry, _cachePolicy);
         }
 
-        private void OnException(IIdentity id, IRepositoryEx repositoryEx)
+        private void OnException(String id, IRepository repositoryEx)
         {
 			//remove the repository from cache, this will really dispose wrapped repository
 			_repositoryFactory.Release(repositoryEx);
-            Cache.Remove(id.AsString());
+            Cache.Remove(id);
         }
 
-
-        private void ReleaseAggregateId(IIdentity id)
+        private void ReleaseAggregateId(String id)
         {
-
+            // Method intentionally left empty.
         }
     }
 }

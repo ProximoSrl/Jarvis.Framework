@@ -1,11 +1,7 @@
 ﻿using System;
 using Castle.MicroKernel;
 using Fasterflect;
-using Jarvis.Framework.Kernel.Store;
-using Jarvis.Framework.Shared.IdentitySupport;
 using Jarvis.NEventStoreEx.CommonDomainEx;
-using Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore;
-using NEventStore;
 
 namespace Jarvis.Framework.Kernel.Engine
 {

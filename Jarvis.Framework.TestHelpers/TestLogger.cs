@@ -6,7 +6,7 @@ using Castle.Core.Logging;
 
 namespace Jarvis.Framework.TestHelpers
 {
-	public class TestLogger : IExtendedLogger
+	public class TestLogger : ILogger
 	{
 		/// <summary>
 		/// Set this static variable to true to enable output to console,

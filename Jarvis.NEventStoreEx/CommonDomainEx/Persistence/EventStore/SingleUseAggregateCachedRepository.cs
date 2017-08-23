@@ -1,36 +1,32 @@
-﻿using System;
+﻿using NStore.Aggregates;
+using System;
 using System.Collections.Generic;
 
 namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 {
+#pragma warning disable S3881 // "IDisposable" should be implemented correctly
     /// <summary>
     /// This is a wrapper for <see cref="IAggregateCachedRepository{TAggregate}"/> that cannot be cached 
     /// and will be used for one shot only. It is necessary if a lock cannot be acquired or if the 
     /// user disabled the cache for repository.
     /// </summary>
     /// <typeparam name="TAggregate"></typeparam>
-    public class SingleUseAggregateCachedRepository<TAggregate> : IAggregateCachedRepository<TAggregate> where TAggregate : class, IAggregateEx
+    public class SingleUseAggregateCachedRepository<TAggregate> : IAggregateCachedRepository<TAggregate> where TAggregate : class, IAggregate
+#pragma warning restore S3881 // "IDisposable" should be implemented correctly
     {
-        readonly IRepositoryEx _wrappedRepository;
-		readonly IRepositoryExFactory _repositoryFactory;
-		readonly TAggregate _aggregate;
+        readonly IRepository _wrappedRepository;
+		readonly IRepositoryFactory _repositoryFactory;
 
         public SingleUseAggregateCachedRepository(
-            IRepositoryExFactory repositoryFactory,
+            IRepositoryFactory repositoryFactory,
             IIdentity id)
         {
 			_repositoryFactory = repositoryFactory;
 			_wrappedRepository = _repositoryFactory.Create();
-            _aggregate = _wrappedRepository.GetById<TAggregate>(id);
+            Aggregate = _wrappedRepository.GetById<TAggregate>(id.AsString()).Result;
         }
 
-        public TAggregate Aggregate
-        {
-            get
-            {
-                return _aggregate;
-            }
-        }
+        public TAggregate Aggregate { get; }
 
         /// <summary>
         /// This is a single use repository, so it need to dispose wrapped resources because
@@ -46,9 +42,9 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
         /// </summary>
         /// <param name="commitId"></param>
         /// <param name="updateHeaders"></param>
-        public void Save(Guid commitId, Action<IDictionary<string, object>> updateHeaders)
+        public void Save(Guid commitId, Action<IHeadersAccessor> updateHeaders)
         {
-            _wrappedRepository.Save(_aggregate, commitId, updateHeaders);
+            _wrappedRepository.Save(Aggregate, commitId.ToString(), updateHeaders);
         }
     }
 }

@@ -1,22 +1,19 @@
 ﻿using System;
-using Fasterflect;
-using Jarvis.Framework.Shared.Events;
-using Jarvis.Framework.Shared.IdentitySupport;
-using Jarvis.NEventStoreEx.CommonDomainEx;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
+using NStore.Domain;
 
 namespace Jarvis.Framework.Kernel.Engine
 {
-    /// <summary>
-    /// Stato interno dell'aggregato
-    /// Deve implementare ICloneable se usa strutture o referenze ad oggetti
-    /// </summary>
-    [Serializable]
-    public abstract class AggregateState : ICloneable, IInvariantsChecker
+	/// <summary>
+	/// Stato interno dell'aggregato
+	/// Deve implementare ICloneable se usa strutture o referenze ad oggetti
+	/// </summary>
+	[Serializable]
+    public abstract class JarvisAggregateState : ICloneable, IInvariantsChecker
     {
-        public AggregateState()
+        protected JarvisAggregateState()
         {
             VersionSignature = "default";
         }
@@ -30,16 +27,9 @@ namespace Jarvis.Framework.Kernel.Engine
             return DeepCloneMe();
         }
 
-        public void Apply(IDomainEvent evt)
+        public virtual InvariantsCheckResult CheckInvariants()
         {
-            var method = GetType().Method("When", new[] { evt.GetType() }, Flags.InstanceAnyVisibility);
-            if (method != null)
-                method.Invoke(this, new object[] { evt });
-        }
-
-        public virtual InvariantCheckResult CheckInvariants()
-        {
-            return InvariantCheckResult.Success;
+            return InvariantsCheckResult.Ok;
         }
 
         /// <summary>

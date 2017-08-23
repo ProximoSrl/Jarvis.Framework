@@ -14,7 +14,7 @@ namespace Jarvis.Framework.Tests.BusTests
         MongoDbMessagesTracker sut;
         IMongoCollection<TrackedMessageModel> _messages;
 
-        [TestFixtureSetUp]
+        [OneTimeSetUp]
         public void TestFixtureSetUp()
         {
             String connectionString = ConfigurationManager.ConnectionStrings["log"].ConnectionString;

@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using Jarvis.Framework.TestHelpers;
 using Fasterflect;
 using Jarvis.Framework.Shared.Helpers;
+using Jarvis.Framework.Shared.Logging;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 {
@@ -32,21 +33,21 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
                 "test",
                 config,
                 projections,
-                Substitute.For<IConcurrentCheckpointTracker>(),
-                4);
+                4,
+				NullLoggerThreadContextManager.Instance);
         }
 
         [Test]
         public async Task verify_finished_with_consecutive_events()
         {
             InitSut();
-            await DispatchEventAsync(1);
+            await DispatchEventAsync(1).ConfigureAwait(false);
             Assert.That(sut.Finished, Is.False);
-            await DispatchEventAsync(2);
+            await DispatchEventAsync(2).ConfigureAwait(false);
             Assert.That(sut.Finished, Is.False);
-            await DispatchEventAsync(3);
+            await DispatchEventAsync(3).ConfigureAwait(false);
             Assert.That(sut.Finished, Is.False);
-            await DispatchEventAsync(4);
+            await DispatchEventAsync(4).ConfigureAwait(false);
             Assert.That(sut.Finished, Is.True);
         }
 
@@ -54,9 +55,9 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         public async Task verify_finished_with_no_consecutive_events()
         {
             InitSut();
-            await DispatchEventAsync(1);
+            await DispatchEventAsync(1).ConfigureAwait(false);
             Assert.That(sut.Finished, Is.False);
-            await DispatchEventAsync(4);
+            await DispatchEventAsync(4).ConfigureAwait(false);
             Assert.That(sut.Finished, Is.True);
         }
 
@@ -69,7 +70,14 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 
             evt.AssignIdForTest(new SampleAggregateId(1));
             evt.SetPropertyValue(d => d.CheckpointToken, checkpointToken);
-            await sut.DispatchEventAsync(evt).ConfigureAwait(false);
+
+			UnwindedDomainEvent uevt = new UnwindedDomainEvent();
+			uevt.PartitionId = evt.AggregateId;
+			uevt.CheckpointToken = checkpointToken;
+			uevt.Event = evt;
+			uevt.EventType = evt.GetType().Name;
+
+            await sut.DispatchEventAsync(uevt).ConfigureAwait(false);
             return evt;
         }
     }

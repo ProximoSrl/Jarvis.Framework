@@ -51,6 +51,9 @@ namespace Jarvis.Framework.Shared.Helpers
 
         private static MemberExpression GetMemberExpression<T, TProperty>(Expression<Func<T, TProperty>> source)
         {
+            if (source == null)
+                throw new ArgumentNullException(nameof(source));
+
             var expression = source.Body as MemberExpression;
             if (expression == null)
             {
@@ -63,7 +66,7 @@ namespace Jarvis.Framework.Shared.Helpers
             return expression;
         }
 
-        public static void SetPropertyValue<T, TProperty>(this T obj, Expression<Func<T, TProperty>> source, Object value) 
+        public static void SetPropertyValue<T, TProperty>(this T obj, Expression<Func<T, TProperty>> source, Object value)
         {
             obj.SetPropertyValue(GetMemberName(source), value);
         }

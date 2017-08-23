@@ -4,6 +4,7 @@ using Jarvis.Framework.Shared.ReadModel;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using System.Threading.Tasks;
+using MongoDB.Driver.Linq;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
 {
@@ -38,5 +39,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         public IMongoCollection<TModel> Collection {
             get { return _storage.Collection;  }
         }
-    }
+
+		public IMongoQueryable<TModel> MongoQueryable
+		{
+			get { return _storage.Collection.AsQueryable(); }
+		}
+	}
 }

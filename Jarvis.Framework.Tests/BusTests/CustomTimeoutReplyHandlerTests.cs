@@ -33,7 +33,7 @@
 //        WindsorContainer _container;
 //        SampleMessageHandler _handler;
 
-//        [TestFixtureSetUp]
+//        [OneTimeSetUp]
 //        public void TestFixtureSetUp()
 //        {
 //            TestHelper.ClearAllQueue("cqrs.rebus.test", "cqrs.rebus.errors");
@@ -58,7 +58,7 @@
 //            _bus = startableBus.Start();
 //        }
 
-//        [TestFixtureTearDown]
+//        [OneTimeTearDown]
 //        public void TestFixtureTearDown()
 //        {
 //            _bus.Dispose();

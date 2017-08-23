@@ -2,6 +2,7 @@
 using Jarvis.Framework.Tests.BusTests.MessageFolder;
 using Jarvis.Framework.Kernel.Commands;
 using Jarvis.Framework.Shared.Commands;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.BusTests.Handlers
 {
@@ -9,15 +10,16 @@ namespace Jarvis.Framework.Tests.BusTests.Handlers
     {
         public readonly ManualResetEvent Reset = new ManualResetEvent(false);
 
-        public void Handle(SampleTestCommand cmd)
+        public Task HandleAsync(SampleTestCommand cmd)
         {
             this.ReceivedCommand = cmd;
             Reset.Set();
+            return Task.CompletedTask;
         }
 
-        public void Handle(ICommand command)
+        public Task HandleAsync(ICommand command)
         {
-            Handle(command as SampleTestCommand);
+            return HandleAsync(command as SampleTestCommand);
         }
 
         public SampleTestCommand ReceivedCommand { get; private set; }

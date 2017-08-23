@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NStore.Aggregates;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -19,6 +20,6 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence
         /// last operation. It is needed to implement the basic strategy that rely on a snapshot each 
         /// X events.</param>
         /// <returns></returns>
-        Boolean ShouldSnapshot(IAggregateEx aggregate, Int32 numberOfEventsSaved);
+        Boolean ShouldSnapshot(IAggregate aggregate, Int32 numberOfEventsSaved);
     }
 }

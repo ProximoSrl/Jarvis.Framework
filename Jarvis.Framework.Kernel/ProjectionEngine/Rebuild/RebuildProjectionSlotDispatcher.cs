@@ -4,204 +4,187 @@ using Jarvis.Framework.Kernel.MultitenantSupport;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 using Jarvis.Framework.Kernel.Support;
 using Jarvis.Framework.Shared.Events;
-using NEventStore;
+using Jarvis.Framework.Shared.Logging;
+using Jarvis.Framework.Shared.Support;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 {
-    internal class RebuildProjectionSlotDispatcher
-    {
-        public String SlotName { get; private set; }
-        private IExtendedLogger _logger;
-        private ProjectionEngineConfig _config;
-        private IEnumerable<IProjection> _projections;
-        private ProjectionMetrics _metrics;
-        private IConcurrentCheckpointTracker _checkpointTracker;
-        private Int64 _maxCheckpointDispatched;
-        private Int64 _lastCheckpointRebuilded;
+	internal class RebuildProjectionSlotDispatcher
+	{
+		public String SlotName { get; private set; }
+		private readonly ILogger _logger;
+		private readonly ProjectionEngineConfig _config;
+		private readonly IEnumerable<IProjection> _projections;
+		private readonly ProjectionMetrics _metrics;
+		private readonly Int64 _maxCheckpointDispatched;
+		private Int64 _lastCheckpointRebuilded;
+		private readonly ILoggerThreadContextManager _loggerThreadContextManager;
 
-        public RebuildProjectionSlotDispatcher(
-            IExtendedLogger logger,
-            String slotName,
-            ProjectionEngineConfig config,
-            IEnumerable<IProjection> projections,
-            IConcurrentCheckpointTracker checkpointTracker,
-            Int64 lastCheckpointDispatched)
-        {
-            SlotName = slotName;
-            _logger = logger;
-            _config = config;
-            _projections = projections;
-            _metrics = new ProjectionMetrics(projections);
-            _checkpointTracker = checkpointTracker;
-            _maxCheckpointDispatched = lastCheckpointDispatched;
-            _lastCheckpointRebuilded = 0;
-        }
+		public RebuildProjectionSlotDispatcher(
+			ILogger logger,
+			String slotName,
+			ProjectionEngineConfig config,
+			IEnumerable<IProjection> projections,
+			Int64 lastCheckpointDispatched,
+			ILoggerThreadContextManager loggerThreadContextManager)
+		{
+			SlotName = slotName;
+			_logger = logger;
+			_config = config;
+			_projections = projections;
+			_metrics = new ProjectionMetrics(projections);
+			_maxCheckpointDispatched = lastCheckpointDispatched;
+			_lastCheckpointRebuilded = 0;
+			_loggerThreadContextManager = loggerThreadContextManager;
+		}
 
-        public Int64 LastCheckpointDispatched
-        {
-            get { return _maxCheckpointDispatched; }
-        }
+		public Int64 LastCheckpointDispatched
+		{
+			get { return _maxCheckpointDispatched; }
+		}
 
-        public IEnumerable<IProjection> Projections
-        {
-            get { return _projections; }
-        }
+		public IEnumerable<IProjection> Projections
+		{
+			get { return _projections; }
+		}
 
-        public double CheckpointToDispatch { get { return LastCheckpointDispatched - _lastCheckpointRebuilded; } }
+		public double CheckpointToDispatch { get { return LastCheckpointDispatched - _lastCheckpointRebuilded; } }
 
-        public bool Finished { get { return _lastCheckpointRebuilded == LastCheckpointDispatched; } }
+		public bool Finished { get { return _lastCheckpointRebuilded == LastCheckpointDispatched; } }
 
-        private void ClearLoggerThreadPropertiesForEventDispatchLoop()
-        {
-            if (_logger.IsDebugEnabled) _logger.ThreadProperties["evType"] = null;
-            if (_logger.IsDebugEnabled) _logger.ThreadProperties["evMsId"] = null;
-            if (_logger.IsDebugEnabled) _logger.ThreadProperties["evCheckpointToken"] = null;
-            if (_logger.IsDebugEnabled) _logger.ThreadProperties["prj"] = null;
-        }
+		internal async Task DispatchEventAsync(UnwindedDomainEvent unwindedEvent)
+		{
+			var chkpoint = unwindedEvent.CheckpointToken;
+			var domainEvent = unwindedEvent.GetEvent() as DomainEvent;
+			if (chkpoint > LastCheckpointDispatched)
+			{
+				if (_logger.IsDebugEnabled) _logger.DebugFormat("Discharded event {0} commit {1} because last checkpoint dispatched for slot {2} is {3}.", unwindedEvent.CommitId, unwindedEvent.CheckpointToken, SlotName, _maxCheckpointDispatched);
+				return;
+			}
 
-        internal async Task DispatchEventAsync(DomainEvent evt)
-        {
-            var chkpoint = evt.CheckpointToken;
-            if (chkpoint > LastCheckpointDispatched)
-            {
-                if (_logger.IsDebugEnabled) _logger.DebugFormat("Discharded event {0} commit {1} because last checkpoint dispatched for slot {2} is {3}.", evt.CommitId, evt.CheckpointToken, SlotName, _maxCheckpointDispatched);
-                return;
-            }
+			Interlocked.Increment(ref RebuildProjectionMetrics.CountOfConcurrentDispatchingCommit);
 
-            Interlocked.Increment(ref RebuildProjectionMetrics.CountOfConcurrentDispatchingCommit);
+			using (DisposableStack serilogcontextList = new DisposableStack())
+			{
+				if (_logger.IsDebugEnabled)
+				{
+					_logger.DebugFormat("Dispatching checkpoit {0} on tenant {1}", unwindedEvent.CheckpointToken, _config.TenantId);
+					serilogcontextList.Push(_loggerThreadContextManager.SetContextProperty("commit", unwindedEvent.CommitId));
+					serilogcontextList.Push(_loggerThreadContextManager.SetContextProperty("evType", unwindedEvent.EventType));
+					serilogcontextList.Push(_loggerThreadContextManager.SetContextProperty("evMsId", domainEvent != null ? domainEvent.MessageId.ToString() : "null"));
+					serilogcontextList.Push(_loggerThreadContextManager.SetContextProperty("evCheckpointToken", unwindedEvent.CheckpointToken));
+				}
 
-            //Console.WriteLine("[{0:00}] - Slot {1}", Thread.CurrentThread.ManagedThreadId, slotName);
-            if (_logger.IsDebugEnabled)
-            {
-                _logger.ThreadProperties["commit"] = evt.CommitId;
-                _logger.DebugFormat("Dispatching checkpoit {0} on tenant {1}", evt.CheckpointToken, _config.TenantId);
-            }
+				TenantContext.Enter(_config.TenantId);
 
-            TenantContext.Enter(_config.TenantId);
+				try
+				{
+					string eventName = unwindedEvent.EventType;
+					foreach (var projection in _projections)
+					{
+						var cname = projection.Info.CommonName;
+						serilogcontextList.Push(_loggerThreadContextManager.SetContextProperty("prj", cname));
 
-            try
-            {
-                if (_logger.IsDebugEnabled)
-                {
-                    _logger.ThreadProperties["evType"] = evt.GetType().Name;
-                    _logger.ThreadProperties["evMsId"] = evt.MessageId;
-                    _logger.ThreadProperties["evCheckpointToken"] = evt.CheckpointToken;
-                }
-                string eventName = evt.GetType().Name;
-                foreach (var projection in _projections)
-                {
-                    var cname = projection.Info.CommonName;
-                    if (_logger.IsDebugEnabled) _logger.ThreadProperties["prj"] = cname;
+						long ticks = 0;
 
-                    long ticks = 0;
+						try
+						{
+							//pay attention, stopwatch consumes time.
+							var sw = new Stopwatch();
+							sw.Start();
+							await projection.HandleAsync(unwindedEvent.GetEvent(), true).ConfigureAwait(false);
+							sw.Stop();
+							ticks = sw.ElapsedTicks;
+							MetricsHelper.IncrementProjectionCounterRebuild(cname, SlotName, eventName, ticks);
+						}
+						catch (Exception ex)
+						{
+							_logger.FatalFormat(ex, "[Slot: {3} Projection: {4}] Failed checkpoint: {0} StreamId: {1} Event Name: {2}",
+								unwindedEvent.CheckpointToken,
+								unwindedEvent.PartitionId,
+								eventName,
+								SlotName,
+								cname
+							);
+							throw;
+						}
 
-                    try
-                    {
-                        //pay attention, stopwatch consumes time.
-                        var sw = new Stopwatch();
-                        sw.Start();
-                        await projection.HandleAsync(evt, true).ConfigureAwait(false);
-                        sw.Stop();
-                        ticks = sw.ElapsedTicks;
-                        MetricsHelper.IncrementProjectionCounterRebuild(cname, SlotName, eventName, ticks);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.FatalFormat(ex, "[Slot: {3} Projection: {4}] Failed checkpoint: {0} StreamId: {1} Event Name: {2}",
-                            evt.CheckpointToken,
-                            evt.AggregateId,
-                            eventName,
-                            SlotName,
-                            cname
-                        );
-                        throw;
-                    }
+						_metrics.Inc(cname, eventName, ticks);
 
-                    _metrics.Inc(cname, eventName, ticks);
+						if (_logger.IsDebugEnabled)
+							_logger.DebugFormat("[{3}] [{4}] Handled checkpoint {0}: {1} > {2}",
+								unwindedEvent.CheckpointToken,
+								unwindedEvent.PartitionId,
+								eventName,
+								SlotName,
+								cname
+							);
+					}
+				}
+				catch (Exception ex)
+				{
+					_logger.ErrorFormat(ex, "Error dispathing commit id: {0}\nMessage: {1}\nError: {2}",
+						unwindedEvent.CheckpointToken, unwindedEvent.Event, ex.Message);
+					throw;
+				}
+				_lastCheckpointRebuilded = chkpoint;
+			}
+			Interlocked.Decrement(ref RebuildProjectionMetrics.CountOfConcurrentDispatchingCommit);
+		}
+	}
 
-                    if (_logger.IsDebugEnabled)
-                        _logger.DebugFormat("[{3}] [{4}] Handled checkpoint {0}: {1} > {2}",
-                            evt.CheckpointToken,
-                            evt.AggregateId,
-                            eventName,
-                            SlotName,
-                            cname
-                        );
+	public class RebuildStatus
+	{
+		private int _bucketActiveCount = 0;
+		public int BucketActiveCount
+		{
+			get { return _bucketActiveCount; }
+		}
 
-                    if (_logger.IsDebugEnabled) _logger.ThreadProperties["prj"] = null;
-                }
+		public List<BucketSummaryStatus> SummaryStatus { get; set; }
 
-                ClearLoggerThreadPropertiesForEventDispatchLoop();
-            }
-            catch (Exception ex)
-            {
-                _logger.ErrorFormat(ex, "Error dispathing commit id: {0}\nMessage: {1}\nError: {2}",
-                    evt.CheckpointToken, evt, ex.Message);
-                ClearLoggerThreadPropertiesForEventDispatchLoop();
-                throw;
-            }
-            _lastCheckpointRebuilded = chkpoint;
-            if (_logger.IsDebugEnabled) _logger.ThreadProperties["commit"] = null;
-            Interlocked.Decrement(ref RebuildProjectionMetrics.CountOfConcurrentDispatchingCommit);
-        }
-    }
+		public Boolean Done { get { return BucketActiveCount == 0; } }
 
-    public class RebuildStatus
-    {
+		public RebuildStatus()
+		{
+			SummaryStatus = new List<BucketSummaryStatus>();
+		}
 
-        private int _bucketActiveCount = 0;
-        public int BucketActiveCount
-        {
-            get { return _bucketActiveCount; }
-        }
+		public void AddBucket()
+		{
+			Interlocked.Increment(ref _bucketActiveCount);
+		}
 
-        public List<BucketSummaryStatus> SummaryStatus { get; set; }
+		public void BucketDone(
+			String bucketDescription,
+			Int64 eventsDispatched,
+			Int64 durationInMilliseconds,
+			Int64 totalEventsToDispatchWithoutFiltering)
+		{
+			Interlocked.Decrement(ref _bucketActiveCount);
+			SummaryStatus.Add(new BucketSummaryStatus()
+			{
+				BucketDescription = bucketDescription,
+				EventsDispatched = eventsDispatched,
+				DurationInMilliseconds = durationInMilliseconds,
+				TotalEventsToDispatchWithoutFiltering = totalEventsToDispatchWithoutFiltering,
+			});
+		}
 
-        public Boolean Done { get { return BucketActiveCount == 0; } }
+		public class BucketSummaryStatus
+		{
+			public String BucketDescription { get; set; }
 
-        public RebuildStatus()
-        {
-            SummaryStatus = new List<BucketSummaryStatus>();
-        }
+			public Int64 TotalEventsToDispatchWithoutFiltering { get; set; }
 
-        public void AddBucket()
-        {
-            Interlocked.Increment(ref _bucketActiveCount);
-        }
+			public Int64 EventsDispatched { get; set; }
 
-        public void BucketDone(
-            String bucketDescription,
-            Int64 eventsDispatched, 
-            Int64 durationInMilliseconds,
-            Int64 totalEventsToDispatchWithoutFiltering)
-        {
-            Interlocked.Decrement(ref _bucketActiveCount);
-            SummaryStatus.Add(new BucketSummaryStatus()
-            {
-                BucketDescription = bucketDescription,
-                EventsDispatched = eventsDispatched,
-                DurationInMilliseconds = durationInMilliseconds,
-                TotalEventsToDispatchWithoutFiltering = totalEventsToDispatchWithoutFiltering,
-            });
-        }
-
-
-        public class BucketSummaryStatus
-        {
-            public String BucketDescription { get; set; }
-
-            public Int64 TotalEventsToDispatchWithoutFiltering { get; set; }
-
-            public Int64 EventsDispatched { get; set; }
-
-            public Int64 DurationInMilliseconds { get; set; }
-        }
-    }
+			public Int64 DurationInMilliseconds { get; set; }
+		}
+	}
 }

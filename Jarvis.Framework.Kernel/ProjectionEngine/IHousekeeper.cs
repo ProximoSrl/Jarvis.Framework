@@ -1,22 +1,25 @@
-using NEventStore.Persistence;
+using NStore.Core.Persistence;
+using NStore.Persistence;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
 {
     public interface IHousekeeper
     {
-        void Init();
-        void RemoveAll(IPersistStreams advanced);
+		Task InitAsync();
+		Task RemoveAllAsync(IPersistence advanced);
     }
 
     public class NullHouseKeeper : IHousekeeper
     {
-        public void Init()
+        public Task InitAsync()
         {
-
+			return Task.CompletedTask;
         }
 
-        public void RemoveAll(IPersistStreams advanced)
+        public Task RemoveAllAsync(IPersistence advanced)
         {
-        }
+			return Task.CompletedTask;
+		}
     }
 }

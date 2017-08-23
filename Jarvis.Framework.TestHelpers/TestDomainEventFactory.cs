@@ -5,8 +5,8 @@ using System.Text;
 using System.Threading.Tasks;
 using Fasterflect;
 using Jarvis.Framework.Shared.Events;
-using Jarvis.NEventStoreEx.CommonDomainEx;
 using Jarvis.Framework.Shared.Messages;
+using Jarvis.Framework.Shared.IdentitySupport;
 
 namespace Jarvis.Framework.TestHelpers
 {

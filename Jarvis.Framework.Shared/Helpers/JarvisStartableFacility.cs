@@ -13,15 +13,16 @@ namespace Jarvis.Framework.Shared.Helpers
     using Castle.Facilities.Startable;
     using global::Metrics;
     using Castle.Core.Logging;
+	using Jarvis.Framework.Shared.Exceptions;
 
-    /// <summary>
-    /// All these classes are copied from the original classes of Castle.Windsor and they 
-    /// were adapted to change the facility so we can have a delayed start.
-    /// 
-    /// This facility uses the same IStartable interface, but it does not start any component
-    /// automatically, instead it simply start everything when requested.
-    /// </summary>
-    public class JarvisStartableFacility
+	/// <summary>
+	/// All these classes are copied from the original classes of Castle.Windsor and they 
+	/// were adapted to change the facility so we can have a delayed start.
+	/// 
+	/// This facility uses the same IStartable interface, but it does not start any component
+	/// automatically, instead it simply start everything when requested.
+	/// </summary>
+	public class JarvisStartableFacility
         : AbstractFacility
     {
         private ITypeConverter _converter;
@@ -153,9 +154,9 @@ namespace Jarvis.Framework.Shared.Helpers
             if (_handlersWithStartError.Count == 0)
                 return HealthCheckResult.Healthy();
 
-            return HealthCheckResult.Unhealthy(
+			return HealthCheckResult.Unhealthy(
                 "The following startable object throw error on start: \n{0}",
-                    _handlersWithStartError.Select(h => h.Description + " Ex: " + h.StartException.Message)
+                    _handlersWithStartError.Select(h => h.Description + " Ex: " + h.StartException.GetExceptionDescription())
                         .Aggregate((s1, s2) => s1 + "\n" + s2));
         }
 

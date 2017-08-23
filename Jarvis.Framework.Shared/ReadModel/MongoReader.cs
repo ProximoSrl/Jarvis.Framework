@@ -45,5 +45,10 @@ namespace Jarvis.Framework.Shared.ReadModel
         {
             get { return _collection ?? (_collection = _readmodelDb.GetCollection<TModel>(CollectionName)); }
         }
-    }
+
+		public virtual IMongoQueryable<TModel> MongoQueryable
+		{
+			get { return Collection.AsQueryable(); }
+		}
+	}
 }

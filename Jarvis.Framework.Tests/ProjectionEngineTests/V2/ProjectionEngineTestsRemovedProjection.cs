@@ -12,11 +12,10 @@ using Jarvis.Framework.TestHelpers;
 using Jarvis.Framework.Tests.EngineTests;
 
 using NUnit.Framework;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
-
-    //[TestFixture("1")]
     [TestFixture("2")]
     public class ProjectionEngineTestsRemovedProjection : ProjectionEngineBasicTestBase
     {
@@ -46,36 +45,33 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
         private Boolean returnProjection3 = true;
 
         [Test]
-        public async void verify_projection_removed()
+        public async Task verify_projection_removed()
         {
-            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(new SampleAggregateId(1));
+            var aggregate = await Repository.GetByIdAsync<SampleAggregate>(new SampleAggregateId(1)).ConfigureAwait(false);
             aggregate.Create();
-            Repository.Save(aggregate, Guid.NewGuid(), h => { });
+            await Repository.SaveAsync(aggregate,Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
 
-            aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(new SampleAggregateId(2));
+            aggregate = await Repository.GetByIdAsync<SampleAggregate>(new SampleAggregateId(2)).ConfigureAwait(false);
             aggregate.Create();
-            Repository.Save(aggregate, Guid.NewGuid(), h => { });
+            await Repository.SaveAsync(aggregate,Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
 
-            var stream = _eventStore.Advanced.GetFrom(0);
-            var lastCommit = stream.Last();
-            await Engine.UpdateAndWait();
-            Assert.That(_statusChecker.IsCheckpointProjectedByAllProjection(lastCommit.CheckpointToken), Is.True);
+            var lastPosition = await GetLastPositionAsync().ConfigureAwait(false);
+
+            await Engine.UpdateAndWaitAsync().ConfigureAwait(false);
+            Assert.That(_statusChecker.IsCheckpointProjectedByAllProjection(lastPosition), Is.True);
 
             //now projection 3 is not returned anymore, it simulates a projection that is no more active
             returnProjection3 = false;
             ConfigureEventStore();
-            ConfigureProjectionEngine();
+            await ConfigureProjectionEngineAsync().ConfigureAwait(false);
 
-            aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(new SampleAggregateId(3));
+            aggregate = await Repository.GetByIdAsync<SampleAggregate>(new SampleAggregateId(3)).ConfigureAwait(false);
             aggregate.Create();
-            Repository.Save(aggregate, Guid.NewGuid(), h => { });
+            await Repository.SaveAsync(aggregate,Guid.NewGuid().ToString(), h => { });
 
-            stream = _eventStore.Advanced.GetFrom(0);
-            lastCommit = stream.Last();
-            await Engine.UpdateAndWait();
-            Assert.That(_statusChecker.IsCheckpointProjectedByAllProjection(lastCommit.CheckpointToken), Is.True);
-
+            lastPosition = await GetLastPositionAsync().ConfigureAwait(false);
+            await Engine.UpdateAndWaitAsync().ConfigureAwait(false);
+            Assert.That(_statusChecker.IsCheckpointProjectedByAllProjection(lastPosition), Is.True);
         }
-
     }
 }

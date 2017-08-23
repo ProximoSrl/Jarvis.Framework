@@ -7,7 +7,9 @@ namespace Jarvis.Framework.Shared.ReadModel
     {
         TKey Id { get; set; }
         int Version { get; set; }
+
         DateTime LastModified { get; set; }
+
         bool BuiltFromEvent(Guid id);
         void AddEvent(Guid id);
 
@@ -24,7 +26,7 @@ namespace Jarvis.Framework.Shared.ReadModel
 
         /// <summary>
         /// This is an unique value used to distinguish when 
-        /// <see cref="LastUpdatedTicks"/> is the same for two records.
+        /// <see cref="CheckpointToken"/> is the same for two records.
         /// </summary>
         Int64 SecondaryToken { get; set; }
 

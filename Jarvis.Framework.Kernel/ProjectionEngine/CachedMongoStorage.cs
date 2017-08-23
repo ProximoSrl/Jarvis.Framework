@@ -8,13 +8,16 @@ using MongoDB.Driver;
 using Jarvis.Framework.Shared.Helpers;
 using Fasterflect;
 using System.Threading.Tasks;
+using Jarvis.Framework.Shared.Exceptions;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
 {
     public class CachedMongoStorage<TModel, TKey> : IMongoStorage<TModel, TKey> where TModel : class, IReadModelEx<TKey>
     {
-        readonly IInmemoryCollection<TModel, TKey> _inmemoryCollection;
-        readonly MongoStorage<TModel, TKey> _storage;
+        private readonly IInmemoryCollection<TModel, TKey> _inmemoryCollection;
+        private readonly MongoStorage<TModel, TKey> _storage;
+        private readonly IndexCollection _indexes;
+
         public CachedMongoStorage(
                 IMongoCollection<TModel> collection,
                 IInmemoryCollection<TModel, TKey> inmemoryCollection
@@ -56,7 +59,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             public void RemoveInstance(TModel instance)
             {
                 if (instance == null) return;
-                var propertyValue = instance.GetPropertyValue(_propertyName);
                 if (_ownershipMap.ContainsKey(instance.Id))
                 {
                     _ownershipMap[instance.Id].Remove(instance);
@@ -94,11 +96,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         private class IndexCollection : Dictionary<String, Index>
         {
-            IInmemoryCollection<TModel, TKey> _collection;
+            private readonly IInmemoryCollection<TModel, TKey> _collection;
+
             public IndexCollection(IInmemoryCollection<TModel, TKey> collection)
             {
                 _collection = collection;
-        }
+            }
 
             public void Insert(TModel instance)
             {
@@ -136,8 +139,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             }
         }
 
-        private IndexCollection _indexes;
-
         #endregion
 
         public Task<bool> IndexExistsAsync(String name)
@@ -148,7 +149,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         void ThrowIfOperatingInMemory()
         {
             if (_inmemoryCollection.IsActive)
-                throw new Exception("Unsupported operation while operating in memory");
+                throw new JarvisFrameworkEngineException("Unsupported operation while operating in memory");
         }
 
         public Task CreateIndexAsync(String name, IndexKeysDefinition<TModel> keys, CreateIndexOptions options = null)
@@ -194,26 +195,33 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 _storage.FindOneById(id);
         }
 
-        public async Task<IEnumerable<TModel>> FindByPropertyAsync<TValue>(
+		public async Task FindByPropertyAsync<TValue>(
             Expression<Func<TModel, TValue>> propertySelector,
-            TValue value)
+            TValue value,
+            Func<TModel, Task> subscription)
         {
+            IEnumerable<TModel> enumerable;
             if (_inmemoryCollection.IsActive)
             {
                 var propertyName = propertySelector.GetMemberName();
                 _indexes.EnsureIndex(propertyName);
-                return _indexes.GetByPropertyValue(propertyName, value);
+                enumerable = _indexes.GetByPropertyValue(propertyName, value);
+
+                foreach (var item in enumerable)
+                {
+                    await subscription(item).ConfigureAwait(false);
+                }
             }
             else
             {
-               return await _storage.FindByPropertyAsync(propertySelector, value).ConfigureAwait(false);
+                await _storage.FindByPropertyAsync(propertySelector, value, subscription).ConfigureAwait(false);
             }
         }
 
         public IQueryable<TModel> Where(Expression<Func<TModel, bool>> filter)
         {
             return _inmemoryCollection.IsActive ?
-                _inmemoryCollection.GetAll().Where(filter).ToArray().AsQueryable() :
+                _inmemoryCollection.GetAll().Where(filter).AsQueryable() :
                 _storage.Where(filter);
         }
 
@@ -288,7 +296,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             await _storage.DropAsync().ConfigureAwait(false);
         }
 
-        public IMongoCollection<TModel> Collection {
+        public IMongoCollection<TModel> Collection
+        {
             get
             {
                 ThrowIfOperatingInMemory();
@@ -301,7 +310,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             if (_inmemoryCollection.IsActive)
             {
                 var allModels = _inmemoryCollection.GetAll().ToArray();
-                if(allModels.Any())
+                if (allModels.Length > 0)
                     await _storage.InsertBatchAsync(allModels).ConfigureAwait(false);
 
                 _inmemoryCollection.Deactivate();

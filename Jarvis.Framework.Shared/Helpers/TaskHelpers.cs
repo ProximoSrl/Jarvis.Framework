@@ -9,8 +9,6 @@ namespace Jarvis.Framework.Shared.Helpers
 {
     public static class TaskHelpers
     {
-        public static readonly Task CompletedTask = Task.FromResult(false);
-
         internal static Task Delay(double milliseconds, CancellationToken cancellationToken)
         {
             var tcs = new TaskCompletionSource<bool>();

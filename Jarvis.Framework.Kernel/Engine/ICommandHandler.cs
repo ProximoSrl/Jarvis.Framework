@@ -1,9 +1,10 @@
 ﻿using Jarvis.Framework.Shared.Commands;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.Engine
 {
     public interface ICommandHandler
     {
-        void Handle(ICommand command);
+        Task HandleAsync(ICommand command);
     }
 }

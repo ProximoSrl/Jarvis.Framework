@@ -18,10 +18,23 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         void Activate();
     }
 
+    [Serializable]
     public class DuplicatedElementException : Exception
     {
         public DuplicatedElementException(string id)
             :base(string.Format("Duplicated element with id {0}", id))
+        {
+        }
+
+        public DuplicatedElementException() : base()
+        {
+        }
+
+        public DuplicatedElementException(string message, Exception innerException) : base(message, innerException)
+        {
+        }
+
+        protected DuplicatedElementException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) : base(info, context)
         {
         }
     }

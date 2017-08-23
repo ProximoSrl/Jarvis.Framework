@@ -30,7 +30,7 @@ namespace Jarvis.Framework.Tests.ServicesTests
             _db.Drop();
         }
 
-        [TestFixtureTearDown]
+        [OneTimeTearDown]
         public void TestFixtureTearDown()
         {
             _collection.Drop();

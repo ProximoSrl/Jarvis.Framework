@@ -10,15 +10,16 @@ using NUnit.Framework;
 using Rebus;
 using Rebus.Bus;
 using Rebus.Handlers;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.BusTests
 {
     [TestFixture]
     public class ListenerSubscriptionsTests
     {
-        ListenerRegistration _registration;
-        IBus _fakeBus;
-        IKernel _kernel;
+        private ListenerRegistration _registration;
+        private IBus _fakeBus;
+        private IKernel _kernel;
 
         private void CreateSut(IKernel kernel = null, IProcessManagerListener[] listener = null)
         {
@@ -32,28 +33,31 @@ namespace Jarvis.Framework.Tests.BusTests
         }
 
         [Test]
-        public void Messages_should_be_subscripted()
+        public async Task Messages_should_be_subscripted()
         {
             CreateSut();
-            _registration.Subscribe();
-            _fakeBus.Received().Subscribe(typeof(SampleMessage));
-            _kernel.Received().Register(Arg.Is<IRegistration[]>(x =>
+            await _registration.SubscribeAsync().ConfigureAwait(false);
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+			_fakeBus.Received().Subscribe(typeof(SampleMessage));
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+			_kernel.Received().Register(Arg.Is<IRegistration[]>(x =>
                 x.Length == 1 && 
                 x[0] is ComponentRegistration
             ));
         }
 
         [Test]
-        public void IMessageHandler_should_subscribe()
+        public async Task IMessageHandler_should_subscribe()
         {
             WindsorContainer container = new WindsorContainer();
             container.Register(Component
                 .For<IHandleMessages<SampleMessage>>()
                 .ImplementedBy<SampleMessageHandler>());
             CreateSut(container.Kernel, new IProcessManagerListener[0]);
-            _registration.Subscribe();
-
-            _fakeBus.Received().Subscribe(typeof(SampleMessage));
-        }
-    }
+            await _registration.SubscribeAsync().ConfigureAwait(false);
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+			_fakeBus.Received().Subscribe(typeof(SampleMessage));
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+		}
+	}
 }

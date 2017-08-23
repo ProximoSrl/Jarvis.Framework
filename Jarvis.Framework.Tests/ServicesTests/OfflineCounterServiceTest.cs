@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Jarvis.Framework.Shared.Helpers;
+using Jarvis.Framework.Shared.Exceptions;
 
 namespace Jarvis.Framework.Tests.ServicesTests
 {
@@ -27,7 +28,7 @@ namespace Jarvis.Framework.Tests.ServicesTests
             _service = new OfflineCounterService(_db);
         }
 
-        [TestFixtureTearDown]
+        [OneTimeTearDown]
         public void TestFixtureTearDown()
         {
             _db.Drop();
@@ -36,7 +37,7 @@ namespace Jarvis.Framework.Tests.ServicesTests
         [Test]
         public void without_reservation_throws()
         {
-            Assert.Throws<ApplicationException>(() => _service.GetNext("test"), "without reservation it should throw");
+            Assert.Throws<JarvisFrameworkEngineException>(() => _service.GetNext("test"), "without reservation it should throw");
         }
 
         [Test]
@@ -91,7 +92,7 @@ namespace Jarvis.Framework.Tests.ServicesTests
             {
                 var next1 = _service.GetNext("test1");
                 Assert.That(next1, Is.EqualTo(i));
-                var next2 = _service.GetNext("test2");
+                _service.GetNext("test2");
                 Assert.That(next1, Is.EqualTo(i));
             }
         }
@@ -100,7 +101,7 @@ namespace Jarvis.Framework.Tests.ServicesTests
         public void basic_reservation_is_only_for_a_serie_name()
         {
             _service.AddReservation("test", new ReservationSlot(10, 20));
-            Assert.Throws<ApplicationException>(() => _service.GetNext("another-test"), "No reservation is done for another-test");
+            Assert.Throws<JarvisFrameworkEngineException>(() => _service.GetNext("another-test"), "No reservation is done for another-test");
         }
 
         [Test]
@@ -109,9 +110,9 @@ namespace Jarvis.Framework.Tests.ServicesTests
             _service.AddReservation("test", new ReservationSlot(10, 20));
             for (Int64 i = 10; i <= 20; i++)
             {
-                var next = _service.GetNext("test");
+                _service.GetNext("test");
             }
-            Assert.Throws<ApplicationException>(() => _service.GetNext("test"), "without reservation it should throw");
+            Assert.Throws<JarvisFrameworkEngineException>(() => _service.GetNext("test"), "without reservation it should throw");
         }
 
         [Test]

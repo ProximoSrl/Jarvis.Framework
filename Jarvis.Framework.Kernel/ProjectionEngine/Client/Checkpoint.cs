@@ -26,7 +26,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
 	    public ProjectionMetrics.Meter Details { get; set; }
 
-
         public Checkpoint(string id, Int64 value, string signature)
 		{
 			Id = id;

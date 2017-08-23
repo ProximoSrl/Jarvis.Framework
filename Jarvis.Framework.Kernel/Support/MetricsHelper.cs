@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 using Jarvis.Framework.Shared;
+using Jarvis.Framework.Kernel.Engine;
 
 namespace Jarvis.Framework.Kernel.Support
 {
@@ -26,7 +27,7 @@ namespace Jarvis.Framework.Kernel.Support
 
         public static void SetProjectionEngineCurrentDispatchCount(Func<double> valueProvider)
         {
-            Metric.Gauge(_projectionEngineCurrentDispatchCount, valueProvider, Unit.Custom("Commits"));
+            Metric.Gauge(_projectionEngineCurrentDispatchCount, valueProvider, Unit.Custom(EventStoreFactory.PartitionCollectionName));
         }
 
         public static void SetCheckpointCountToDispatch(String slotName, Func<double> valueProvider)
@@ -121,6 +122,6 @@ namespace Jarvis.Framework.Kernel.Support
         }
 
         public static readonly Timer CommandTimer = Metric.Timer("Commands Execution", Unit.Commands);
-        public static readonly Counter CommandCounter = CommandCounter = Metric.Counter("CommandsDuration", Unit.Custom("ms"));
+        public static readonly Counter CommandCounter = Metric.Counter("CommandsDuration", Unit.Custom("ms"));
     }
 }

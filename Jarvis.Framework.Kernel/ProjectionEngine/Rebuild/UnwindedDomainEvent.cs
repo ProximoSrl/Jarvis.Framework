@@ -22,7 +22,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
         public String Id { get; set; }
 
         [BsonElement("e")]
-        internal DomainEvent Event { get; set; }
+        internal Object Event { get; set; }
 
         /// <summary>
         /// Type of the event, used to filter events during rebuild.
@@ -40,10 +40,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
         public DateTime CommitStamp { get; set; }
 
         [BsonElement("g")]
-        public Guid CommitId { get; set; }
+        public String CommitId { get; set; }
 
         [BsonElement("v")]
-        public Int32 Version { get; set; }
+        public Int64 Version { get; set; }
+
+		[BsonElement("pId")]
+		public String PartitionId { get; set; }
 
         [BsonElement("x")]
         [BsonDictionaryOptions(MongoDB.Bson.Serialization.Options.DictionaryRepresentation.ArrayOfArrays)]
@@ -59,17 +62,19 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
         /// FasterFlect
         /// </summary>
         /// <returns></returns>
-        public DomainEvent GetEvent()
+        public Object GetEvent()
         {
-            if (_enhanced == false)
+            if (_enhanced == false && Event is DomainEvent)
             {
                 _enhanced = true;
-                Event.SetPropertyValue(d => d.CommitStamp, CommitStamp);
-                Event.SetPropertyValue(d => d.CommitId, CommitId);
+				var domainEvent = Event as DomainEvent;
 
-                Event.SetPropertyValue(d => d.Version, Version);
-                Event.SetPropertyValue(d => d.Context, Context);
-                Event.SetPropertyValue(d => d.CheckpointToken, CheckpointToken);
+                domainEvent.SetPropertyValue(d => d.CommitStamp, CommitStamp);
+				domainEvent.SetPropertyValue(d => d.CommitId, CommitId);
+
+                domainEvent.SetPropertyValue(d => d.Version, Version);
+                domainEvent.SetPropertyValue(d => d.Context, Context);
+				domainEvent.SetPropertyValue(d => d.CheckpointToken, CheckpointToken);
             }
 
             return Event;

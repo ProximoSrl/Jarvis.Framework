@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using MongoDB.Driver;
 using Jarvis.Framework.Shared.Helpers;
 using System.Configuration;
@@ -11,10 +8,18 @@ using System.Reflection;
 using Jarvis.Framework.Shared.IdentitySupport.Serialization;
 using MongoDB.Bson.Serialization;
 using System.Messaging;
+using NSubstitute;
+using Jarvis.Framework.Kernel.Engine;
+using NStore.Domain;
+using NStore.Core.Logging;
+using NStore.Core.Streams;
+using NStore.Core.Persistence;
+using System.Threading.Tasks;
+using System.Linq;
 
 namespace Jarvis.Framework.Tests.Support
 {
-    public static class TestHelper
+	public static class TestHelper
     {
         public static IMongoDatabase CreateNew(string connectionString)
         {
@@ -25,6 +30,29 @@ namespace Jarvis.Framework.Tests.Support
             db.Drop();
 
             return db;
+        }
+
+        public static IMongoDatabase GetEventStoreDb()
+        {
+            return CreateNew(ConfigurationManager.ConnectionStrings["eventstore"].ConnectionString);
+        }
+
+		public static async Task<List<Changeset>> EventStoreReadChangeset(this IPersistence persistence, String partitionId) 
+		{
+			Recorder tape = new Recorder();
+			var stream = new ReadOnlyStream(partitionId, persistence);
+			await stream.ReadAsync(tape, 1).ConfigureAwait(false);
+			return tape.Data.OfType<Changeset>().ToList();
+		}
+
+        public static Repository GetRepository()
+        {
+            var loggerFactory = Substitute.For<INStoreLoggerFactory>();
+            loggerFactory.CreateLogger(Arg.Any<String>()).Returns(NStoreNullLogger.Instance);
+            var persistence = new EventStoreFactory(loggerFactory)
+                .BuildEventStore(ConfigurationManager.ConnectionStrings["eventstore"].ConnectionString)
+                .Result;
+            return new Repository(new AggregateFactoryEx(null), new StreamsFactory(persistence));
         }
 
         private static IdentityManager _manager;
@@ -45,7 +73,6 @@ namespace Jarvis.Framework.Tests.Support
                 BsonSerializer.RegisterSerializer(typeof(T), new TypedEventStoreIdentityBsonSerializer<T>());
                 EventStoreIdentityCustomBsonTypeMapper.Register<T>();
             }
-
         }
 
         public static void ClearAllQueue(params String[] queueList)
@@ -63,6 +90,5 @@ namespace Jarvis.Framework.Tests.Support
                 }
             }
         }
-
     }
 }

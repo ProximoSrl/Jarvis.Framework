@@ -75,7 +75,7 @@ namespace Jarvis.MonitoringAgent
             _container.Kernel.Resolver.AddSubResolver(new CollectionResolver(_container.Kernel, true));
             _container.Kernel.Resolver.AddSubResolver(new ArrayResolver(_container.Kernel, true));
             _container.AddFacility<LoggingFacility>(f =>
-                f.LogUsing(LoggerImplementation.ExtendedLog4net)
+                f.LogUsing(LoggerImplementation.Null)
                 .WithConfig("log4net.config"));
             _logger = _container.Resolve<ILogger>();
 

@@ -5,6 +5,7 @@ using Jarvis.Framework.Tests.BusTests.MessageFolder;
 using Jarvis.Framework.Kernel.Commands;
 using Jarvis.Framework.Shared.Commands;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.BusTests.Handlers
 {
@@ -31,7 +32,7 @@ namespace Jarvis.Framework.Tests.BusTests.Handlers
 
         public readonly ManualResetEvent Reset = new ManualResetEvent(false);
 
-        public void Handle(AnotherSampleTestCommand cmd)
+        public Task HandleAsync(AnotherSampleTestCommand cmd)
         {
             RunData runData;
             if (!commandRunDatas.TryGetValue(cmd.MessageId, out runData))
@@ -45,11 +46,12 @@ namespace Jarvis.Framework.Tests.BusTests.Handlers
             }
             this.ReceivedCommand = cmd;
             Reset.Set();
+            return Task.CompletedTask;
         }
 
-        public void Handle(ICommand command)
+        public Task HandleAsync(ICommand command)
         {
-            Handle(command as AnotherSampleTestCommand);
+            return HandleAsync(command as AnotherSampleTestCommand);
         }
 
         public AnotherSampleTestCommand ReceivedCommand { get; private set; }
@@ -72,7 +74,9 @@ namespace Jarvis.Framework.Tests.BusTests.Handlers
 
             private Int32 _failCount;
 
+#pragma warning disable S3242 // Method parameters should be declared with base types
             internal void Fail(ManualResetEvent reset)
+#pragma warning restore S3242 // Method parameters should be declared with base types
             {
                 _failCount++;
                 if (SetEvent) reset.Set();

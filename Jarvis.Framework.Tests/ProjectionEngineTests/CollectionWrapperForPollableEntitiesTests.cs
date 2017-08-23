@@ -22,7 +22,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         private IMongoDatabase _db;
         private MongoClient _client;
 
-        [TestFixtureSetUp]
+        [OneTimeSetUp]
         public void TestFixtureSetUp()
         {
             var connectionString = ConfigurationManager.ConnectionStrings["readmodel"].ConnectionString;
@@ -37,7 +37,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             new ProjectionPollableReadmodel(sut);
         }
 
-        [TestFixtureTearDown]
+        [OneTimeTearDown]
         public void  TestFixtureTearDown()
         {
             _client.DropDatabase(_db.DatabaseNamespace.DatabaseName);

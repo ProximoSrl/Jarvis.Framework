@@ -1,4 +1,5 @@
-﻿using NEventStore;
+﻿using NStore.Aggregates;
+using NStore.SnapshotStore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,7 +17,7 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence
         /// <param name="bucket">Bucket the aggregate belongs to</param>
         /// <param name="numberOfEventsSaved">This method is called after repository saved the aggregate
         /// and this value represents the number of events saved with the last operation. </param>
-        void Snapshot(IAggregateEx aggregate, String bucket, Int32 numberOfEventsSaved);
+        void Snapshot(IAggregate aggregate, String bucket, Int32 numberOfEventsSaved);
 
         /// <summary>
         /// Retrieve a snapshot for an aggregate
@@ -26,7 +27,7 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence
         /// Int32.MaxValue is used it means that the caller needs the most recent snapshot.</param>
         /// <param name="aggregateType">Type of the aggregate to load</param>
         /// <returns></returns>
-        ISnapshot Load(String streamId, Int32 upToVersion, Type aggregateType);
+        SnapshotInfo Load(String streamId, Int32 upToVersion, Type aggregateType);
 
 		/// <summary>
 		/// Clear all snapshot cache for a stream

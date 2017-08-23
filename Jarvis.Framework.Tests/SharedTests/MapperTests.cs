@@ -68,7 +68,7 @@ namespace Jarvis.Framework.Tests.SharedTests
         private IMongoCollection<BsonDocument> mapperCollection;
         private IMongoCollection<BsonDocument> counterCollection;
 
-        [TestFixtureSetUp]
+        [OneTimeSetUp]
         public void TestFixtureSetUp()
         {
             var db = TestHelper.CreateNew(ConfigurationManager.ConnectionStrings["system"].ConnectionString);

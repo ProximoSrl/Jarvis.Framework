@@ -2,7 +2,6 @@
 //using System.Collections.Generic;
 //using System.Linq;
 //using Castle.Core.Logging;
-//using NEventStore.Domain.Core;
 //using Jarvis.Framework.Kernel.Engine;
 //using Jarvis.Framework.Kernel.Events;
 //using Jarvis.Framework.Kernel.ProjectionEngine;
@@ -10,9 +9,7 @@
 //using Jarvis.Framework.Shared.IdentitySupport;
 //using Jarvis.Framework.Shared.MultitenantSupport;
 //using Jarvis.Framework.Shared.ReadModel;
-//using Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore;
 //using MongoDB.Driver;
-//using NEventStore;
 //using NSubstitute;
 //using NUnit.Framework;
 //using Jarvis.Framework.Shared.Helpers;
@@ -33,7 +30,7 @@
 //        protected ConcurrentCheckpointTracker _tracker;
 //        protected ConcurrentCheckpointStatusChecker _statusChecker;
 
-//        [TestFixtureSetUp]
+//        [OneTimeSetUp]
 //        public virtual void TestFixtureSetUp()
 //        {
 //            _eventStoreConnectionString = GetConnectionString();
@@ -60,7 +57,7 @@
 //            Database.Drop();
 //        }
 
-//        [TestFixtureTearDown]
+//        [OneTimeTearDown]
 //        public virtual void TestFixtureTearDown()
 //        {
 //            _eventStore.Dispose();

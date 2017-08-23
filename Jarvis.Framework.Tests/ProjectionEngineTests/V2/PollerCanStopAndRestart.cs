@@ -48,23 +48,23 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
         [Test]
         public async Task stop_and_restart_polling_should_work()
         {
-            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(new SampleAggregateId(1));
+            var aggregate = await Repository.GetByIdAsync < SampleAggregate>(new SampleAggregateId(1)).ConfigureAwait(false);
             aggregate.Create();
-            Repository.Save(aggregate, Guid.NewGuid(), h => { });
+            await Repository.SaveAsync(aggregate,Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
 
             Boolean checkpointPassed = WaitForCheckpoint(1);
             Assert.IsTrue(checkpointPassed, "Automatic poller does not work.");
 
             Engine.Stop();
 
-            aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(new SampleAggregateId(2));
+            aggregate = await Repository.GetByIdAsync < SampleAggregate>(new SampleAggregateId(2)).ConfigureAwait(false);
             aggregate.Create();
-            Repository.Save(aggregate, Guid.NewGuid(), h => { });
+            await Repository.SaveAsync(aggregate,Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
 
             checkpointPassed = WaitForCheckpoint(2);
             Assert.IsFalse(checkpointPassed, "Automatic poller is still working after stop.");
 
-            await Engine.StartAsync();
+            await Engine.StartAsync().ConfigureAwait(false);
 
             checkpointPassed = WaitForCheckpoint(2);
             Assert.IsTrue(checkpointPassed, "Automatic poller is not restarted correctly.");

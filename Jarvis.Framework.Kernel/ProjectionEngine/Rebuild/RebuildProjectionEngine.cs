@@ -9,53 +9,35 @@ using Jarvis.Framework.Kernel.Events;
 using Jarvis.Framework.Kernel.MultitenantSupport;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 using Jarvis.Framework.Shared.Events;
-using Jarvis.Framework.Shared.Logging;
-using Jarvis.Framework.Shared.MultitenantSupport;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
-using NEventStore;
-using NEventStore.Client;
-using NEventStore.Serialization;
-using NEventStore.Persistence;
 using Jarvis.Framework.Kernel.Support;
 using System.Collections.Concurrent;
-using System.Text;
-using Jarvis.Framework.Shared.Helpers;
 using System.Threading.Tasks.Dataflow;
+using Jarvis.Framework.Kernel.Engine;
+using Jarvis.Framework.Shared.Logging;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 {
     public class RebuildProjectionEngine
     {
-        readonly EventUnwinder _eventUnwinder;
+        private readonly EventUnwinder _eventUnwinder;
 
-        readonly IConcurrentCheckpointTracker _checkpointTracker;
+        private readonly IConcurrentCheckpointTracker _checkpointTracker;
 
         private readonly ProjectionMetrics _metrics;
 
-        public IExtendedLogger Logger
-        {
-            get { return _logger; }
-            set { _logger = value; }
-        }
-        IExtendedLogger _logger = NullLogger.Instance;
+        public ILogger Logger { get; set; } = NullLogger.Instance;
 
-        public ILoggerFactory LoggerFactory
-        {
-            get { return _loggerFactory; }
-            set { _loggerFactory = value; }
-        }
-        private ILoggerFactory _loggerFactory;
-
-        readonly ProjectionEngineConfig _config;
-        readonly Dictionary<string, IProjection[]> _projectionsBySlot;
+        private readonly ProjectionEngineConfig _config;
+        private readonly Dictionary<string, IProjection[]> _projectionsBySlot;
         private readonly IProjection[] _allProjections;
 
         private readonly IRebuildContext _rebuildContext;
-        private ProjectionEventInspector _projectionInspector;
+        private readonly ProjectionEventInspector _projectionInspector;
 
-        private int _bufferSize = 4000;
+        private const int _bufferSize = 4000;
 
         public RebuildProjectionEngine(
             EventUnwinder eventUnwinder,
@@ -63,7 +45,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
             IProjection[] projections,
             IRebuildContext rebuildContext,
             ProjectionEngineConfig config,
-            ProjectionEventInspector projectionInspector)
+            ProjectionEventInspector projectionInspector,
+			ILoggerThreadContextManager loggerThreadContextManager)
         {
             _eventUnwinder = eventUnwinder;
             _checkpointTracker = checkpointTracker;
@@ -84,7 +67,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                 .ToDictionary(x => x.Key, x => x.OrderByDescending(p => p.Priority).ToArray());
 
             _metrics = new ProjectionMetrics(_allProjections);
-        }
+			_loggerThreadContextManager = loggerThreadContextManager;
+		}
 
         private void DumpProjections()
         {
@@ -102,17 +86,19 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
             }
         }
 
-        private readonly Dictionary<BucketInfo, List<RebuildProjectionSlotDispatcher>> _consumers = new Dictionary<BucketInfo, List<RebuildProjectionSlotDispatcher>>();
-        private readonly List<RebuildProjectionSlotDispatcher> _rebuildDispatchers = new List<RebuildProjectionSlotDispatcher>();
+        private readonly Dictionary<BucketInfo, List<RebuildProjectionSlotDispatcher>> _consumers =
+            new Dictionary<BucketInfo, List<RebuildProjectionSlotDispatcher>>();
+        private readonly List<RebuildProjectionSlotDispatcher> _rebuildDispatchers =
+            new List<RebuildProjectionSlotDispatcher>();
 
-        RebuildStatus _status;
+        private RebuildStatus _status;
 
         public async Task<RebuildStatus> RebuildAsync()
         {
             if (Logger.IsInfoEnabled) Logger.InfoFormat("Starting rebuild projection engine on tenant {0}", _config.TenantId);
             DumpProjections();
 
-            _eventUnwinder.Unwind();
+            await _eventUnwinder.UnwindAsync().ConfigureAwait(false);
 
             _status = new RebuildStatus();
             TenantContext.Enter(_config.TenantId);
@@ -138,7 +124,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                 Int64 maximumDispatchedValue = projectionsForThisSlot
                     .Select(p => _checkpointTracker.GetCheckpoint(p))
                     .Max();
-                var dispatcher = new RebuildProjectionSlotDispatcher(_logger, slotName, _config, projectionsForThisSlot, _checkpointTracker, maximumDispatchedValue);
+                var dispatcher = new RebuildProjectionSlotDispatcher(Logger, slotName, _config, projectionsForThisSlot, maximumDispatchedValue, _loggerThreadContextManager);
                 MetricsHelper.SetCheckpointCountToDispatch(slotName, () => dispatcher.CheckpointToDispatch);
                 _rebuildDispatchers.Add(dispatcher);
 
@@ -157,25 +143,25 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 
                 if (consumer.Value.Count == 0)
                 {
-                    _logger.InfoFormat("Bucket {0} has no active slot, and will be ignored!", bucketInfo);
+                    Logger.InfoFormat("Bucket {0} has no active slot, and will be ignored!", bucketInfo);
                     _status.BucketDone(bucketInfo, 0, 0, 0);
                     continue;
                 }
-                DataflowBlockOptions consumerBufferOptions = new DataflowBlockOptions();
+                var consumerBufferOptions = new DataflowBlockOptions();
                 consumerBufferOptions.BoundedCapacity = _bufferSize;
-                var _buffer = new BufferBlock<DomainEvent>(consumerBufferOptions);
+                var _buffer = new BufferBlock<UnwindedDomainEvent>(consumerBufferOptions);
 
                 ExecutionDataflowBlockOptions executionOption = new ExecutionDataflowBlockOptions();
                 executionOption.BoundedCapacity = _bufferSize;
 
                 var dispatcherList = consumer.Value;
                 _projectionInspector.ResetHandledEvents();
-                List<ActionBlock<DomainEvent>> consumers = new List<ActionBlock<DomainEvent>>();
+                List<ActionBlock<UnwindedDomainEvent>> consumers = new List<ActionBlock<UnwindedDomainEvent>>();
                 foreach (var dispatcher in dispatcherList)
                 {
                     ExecutionDataflowBlockOptions consumerOptions = new ExecutionDataflowBlockOptions();
                     consumerOptions.BoundedCapacity = _bufferSize;
-                    var actionBlock = new ActionBlock<DomainEvent>((Func<DomainEvent, Task>)dispatcher.DispatchEventAsync, consumerOptions);
+                    var actionBlock = new ActionBlock<UnwindedDomainEvent>((Func<UnwindedDomainEvent, Task>)dispatcher.DispatchEventAsync, consumerOptions);
                     consumers.Add(actionBlock);
                     foreach (var projection in dispatcher.Projections)
                     {
@@ -187,22 +173,41 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                 var _broadcaster = GuaranteedDeliveryBroadcastBlock.Create(consumers, bucketInfo, 3000);
                 _buffer.LinkTo(_broadcaster, new DataflowLinkOptions() { PropagateCompletion = true });
 
-                //Intentionally not waiting, just start polling in another thread.
-                StartPoll(_buffer, _broadcaster, bucketInfo, dispatcherList, allTypeHandledStringList, consumers);
-            }
+				//fire each bucket in own thread
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+				Task.Factory.StartNew(() => StartPoll(_buffer, _broadcaster, bucketInfo, dispatcherList, allTypeHandledStringList, consumers));
+
+				//await StartPoll(_buffer, _broadcaster, bucketInfo, dispatcherList, allTypeHandledStringList, consumers).ConfigureAwait(false);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+			}
 
             MetricsHelper.SetProjectionEngineCurrentDispatchCount(() => RebuildProjectionMetrics.CountOfConcurrentDispatchingCommit);
             return _status;
         }
 
         private async Task StartPoll(
-            BufferBlock<DomainEvent> buffer,
-            ActionBlock<DomainEvent> broadcaster,
+            BufferBlock<UnwindedDomainEvent> buffer,
+            ActionBlock<UnwindedDomainEvent> broadcaster,
             String bucketInfo,
             List<RebuildProjectionSlotDispatcher> dispatchers,
             List<String> allEventTypesHandledByAllSlots,
-            List<ActionBlock<DomainEvent>> consumers)
+            List<ActionBlock<UnwindedDomainEvent>> consumers)
         {
+            if (buffer == null)
+                throw new ArgumentNullException(nameof(buffer));
+
+            if (broadcaster == null)
+                throw new ArgumentNullException(nameof(broadcaster));
+
+            if (dispatchers == null)
+                throw new ArgumentNullException(nameof(dispatchers));
+
+            if (consumers == null)
+                throw new ArgumentNullException(nameof(consumers));
+
+            if (allEventTypesHandledByAllSlots == null)
+                throw new ArgumentNullException(nameof(allEventTypesHandledByAllSlots));
+
             Stopwatch sw = Stopwatch.StartNew();
 
             var eventCollection = _eventUnwinder.UnwindedCollection;
@@ -239,11 +244,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                         .Sort(Builders<UnwindedDomainEvent>.Sort.Ascending(e => e.CheckpointToken).Ascending(e => e.EventSequence));
                     foreach (var eventUnwinded in query.ToEnumerable())
                     {
-                        var evt = eventUnwinded.GetEvent();
-                        if (_logger.IsDebugEnabled) _logger.DebugFormat("TPL queued event {0}/{1} for bucket {2}", eventUnwinded.CheckpointToken, eventUnwinded.EventSequence, bucketInfo);
-                        var task = buffer.SendAsync(evt);
-                        //wait till the commit is stored in tpl queue
-                        task.Wait();
+                        if (Logger.IsDebugEnabled) Logger.DebugFormat("TPL queued event {0}/{1} for bucket {2}", eventUnwinded.CheckpointToken, eventUnwinded.EventSequence, bucketInfo);
+                        await buffer.SendAsync(eventUnwinded).ConfigureAwait(false);
+
                         dispatchedEvents++;
                         lastSequenceDispatched = eventUnwinded.EventSequence;
                         lastCheckpointTokenDispatched = eventUnwinded.CheckpointToken;
@@ -252,28 +255,28 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                 }
                 catch (MongoException ex)
                 {
-                    _logger.WarnFormat(ex, "Unable to poll event from UnwindedCollection: {0} - Last good checkpoint dispatched {1}", ex.Message, lastCheckpointTokenDispatched);
+                    Logger.WarnFormat(ex, "Unable to poll event from UnwindedCollection: {0} - Last good checkpoint dispatched {1}", ex.Message, lastCheckpointTokenDispatched);
                 }
                 catch (Exception ex)
                 {
-                    _logger.FatalFormat(ex, "Unable to poll event from UnwindedCollection: {0} - Last good checkpoint dispatched {1}", ex.Message, lastCheckpointTokenDispatched);
+                    Logger.FatalFormat(ex, "Unable to poll event from UnwindedCollection: {0} - Last good checkpoint dispatched {1}", ex.Message, lastCheckpointTokenDispatched);
                 }
             }
 
             try
             {
-                _logger.InfoFormat("Finished loading events for bucket {0} wait for tpl to finish flush", bucketInfo);
+                Logger.InfoFormat("Finished loading events for bucket {0} wait for tpl to finish flush", bucketInfo);
                 buffer.Complete();
                 broadcaster.Completion.Wait(); //wait for all event to be broadcasted.
                 Task.WaitAll(consumers.Select(c => c.Completion).ToArray()); //wait for all consumers to complete.
 
                 Thread.Sleep(1000); //wait for another secondo before finishing.
 
-                //create a list of dispatcher to wait for finish
+                //create a list of dispatcher to wait for finish, then start waiting.
                 List<RebuildProjectionSlotDispatcher> dispatcherWaitingToFinish = dispatchers.ToList();
                 while (dispatcherWaitingToFinish.Count > 0)
                 {
-                    if (_logger.IsDebugEnabled) _logger.DebugFormat("Waiting for {0} slot to finish events", dispatcherWaitingToFinish.Count);
+                    if (Logger.IsDebugEnabled) Logger.DebugFormat("Waiting for {0} slot to finish events", dispatcherWaitingToFinish.Count);
                     Int32 i = dispatcherWaitingToFinish.Count - 1;
                     while (i >= 0)
                     {
@@ -288,7 +291,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                                 }
                                 catch (Exception ex)
                                 {
-                                    _logger.ErrorFormat(ex, "Error in StopRebuild for projection {0}", projection.Info.CommonName);
+                                    Logger.ErrorFormat(ex, "Error in StopRebuild for projection {0}", projection.Info.CommonName);
                                     throw;
                                 }
 
@@ -311,28 +314,20 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 
                         i--;
                     }
-                    Thread.Sleep(2000);
+                    if (dispatcherWaitingToFinish.Count > 0 ) Thread.Sleep(2000);
                 }
                 sw.Stop();
-                _logger.InfoFormat("Bucket {0} finished dispathing all events for slots: {1}", bucketInfo, dispatchers.Select(d => d.SlotName).Aggregate((s1, s2) => s1 + ", " + s2));
+                Logger.InfoFormat("Bucket {0} finished dispathing all events for slots: {1}", bucketInfo, dispatchers.Select(d => d.SlotName).Aggregate((s1, s2) => s1 + ", " + s2));
                 _status.BucketDone(bucketInfo, dispatchedEvents, sw.ElapsedMilliseconds, totalEventToDispatch);
             }
             catch (Exception ex)
             {
-                _logger.FatalFormat(ex, "Error during rebuild finish {0}", ex.Message);
+                Logger.FatalFormat(ex, "Error during rebuild finish {0}", ex.Message);
                 throw;
             }
         }
 
-        Int64 GetStartGlobalCheckpoint()
-        {
-            var checkpoints = _projectionsBySlot.Keys.Select(GetStartCheckpointForSlot).Distinct().ToArray();
-            var min = checkpoints.Any() ? checkpoints.Min() : 0;
-
-            return min;
-        }
-
-        Int64 GetStartCheckpointForSlot(string slotName)
+        private Int64 GetStartCheckpointForSlot(string slotName)
         {
             Int64 min = Int64.MaxValue;
 
@@ -406,14 +401,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
             return lastCommit["_id"].AsInt64;
         }
 
-        private readonly ConcurrentDictionary<String, Int64> lastCheckpointDispatched = new ConcurrentDictionary<string, long>();
+		private readonly ILoggerThreadContextManager _loggerThreadContextManager;
 
-        private IMongoCollection<BsonDocument> GetMongoCommitsCollection()
+		private IMongoCollection<BsonDocument> GetMongoCommitsCollection()
         {
             var url = new MongoUrl(_config.EventStoreConnectionString);
             var client = new MongoClient(url);
             var db = client.GetDatabase(url.DatabaseName);
-            return db.GetCollection<BsonDocument>("Commits");
+            return db.GetCollection<BsonDocument>(EventStoreFactory.PartitionCollectionName);
         }
     }
 
@@ -421,7 +416,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 
     internal static class RebuildProjectionMetrics
     {
+#pragma warning disable S2223 // Non-constant static fields should not be visible
         internal static Int32 CountOfConcurrentDispatchingCommit = 0;
+#pragma warning restore S2223 // Non-constant static fields should not be visible
     }
 
     #endregion

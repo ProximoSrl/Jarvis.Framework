@@ -15,7 +15,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
         MyProjection _projection;
         CollectionWrapper<MyReadModel, string> _collection;
 
-        [TestFixtureSetUp]
+        [OneTimeSetUp]
         public void TestFixtureSetUp()
         {
             var url = new MongoUrl(ConfigurationManager.ConnectionStrings["readmodel"].ConnectionString);
@@ -44,7 +44,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
             evt.Text = "two";
             await _projection.On(evt);
 
-            var loaded = _collection.Where(x => x.Id == evt.AggregateId).Single();
+            var loaded = _collection.Where(x => x.Id == evt.AggregateId.AsString()).Single();
 
             Assert.AreEqual(1, loaded.ProcessedEvents.Count);
             Assert.IsTrue(loaded.ProcessedEvents.Contains(evt.MessageId));
@@ -64,7 +64,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
             update.Text = "skipped update";
             await _projection.On(update);
 
-            var loaded = _collection.Where(x => x.Id == update.AggregateId).Single();
+            var loaded = _collection.Where(x => x.Id == update.AggregateId.AsString()).Single();
 
             Assert.AreEqual(2, loaded.ProcessedEvents.Count);
             Assert.IsTrue(loaded.ProcessedEvents.Contains(insert.MessageId));
@@ -83,7 +83,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
             await _projection.On(delete);
             await _projection.On(delete);
 
-            var loaded = await _collection.FindOneByIdAsync(delete.AggregateId);
+            var loaded = await _collection.FindOneByIdAsync(delete.AggregateId.AsString());
 
             Assert.IsNull(loaded);
         }
@@ -108,16 +108,16 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
 
             await _collection.UpsertAsync(
                 insert,
-                insert.AggregateId,
+                insert.AggregateId.AsString(),
                 () => new MyReadModel()
                 {
-                    Id = insert.AggregateId,
+                    Id = insert.AggregateId.AsString(),
                     Text = "created"
                 },
                 r => { r.Text = "updated"; }
             );
 
-            var saved = _collection.All.FirstOrDefault(x => x.Id == insert.AggregateId);
+            var saved = _collection.All.FirstOrDefault(x => x.Id == insert.AggregateId.AsString());
 
             Assert.IsNotNull(saved);
             Assert.AreEqual("created", saved.Text);
@@ -132,22 +132,22 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
 
            await _collection.InsertAsync(insert, new MyReadModel()
             {
-                Id = insert.AggregateId,
+                Id = insert.AggregateId.AsString(),
                 Text = "created"
             });
 
             await _collection.UpsertAsync(
                 update,
-                update.AggregateId,
+                update.AggregateId.AsString(),
                 () => new MyReadModel()
                 {
-                    Id = insert.AggregateId,
+                    Id = insert.AggregateId.AsString(),
                     Text = "created"
                 },
                 r => { r.Text = "updated"; }
             );
 
-            var saved = _collection.All.FirstOrDefault(x => x.Id == insert.AggregateId);
+            var saved = _collection.All.FirstOrDefault(x => x.Id == insert.AggregateId.AsString());
 
             Assert.IsNotNull(saved);
             Assert.AreEqual("updated", saved.Text);

@@ -12,9 +12,10 @@ using Jarvis.Framework.TestHelpers;
 using Jarvis.Framework.Tests.EngineTests;
 using NUnit.Framework;
 using Jarvis.Framework.Shared.Helpers;
+using System.Threading.Tasks;
+
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
-
     public class ProjectionEngineBasicTestBase : AbstractV2ProjectionEngineTests
     {
         public ProjectionEngineBasicTestBase(String pollingClientVersion) : base(pollingClientVersion)
@@ -37,7 +38,6 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             var writer = new CollectionWrapper<SampleReadModel, string>(StorageFactory, new NotifyToNobody());
             yield return new Projection(writer);
         }
-
     }
 
     //[TestFixture("1")]
@@ -50,20 +50,18 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
         }
 
         [Test]
-        public async void run_poll_and_wait()
+        public async Task run_poll_and_wait()
         {
             var reader = new MongoReader<SampleReadModel, string>(Database);
-            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(new SampleAggregateId(1));
+            var aggregate = await Repository.GetByIdAsync<SampleAggregate>(new SampleAggregateId(1)).ConfigureAwait(false);
             aggregate.Create();
-            Repository.Save(aggregate, Guid.NewGuid(), h => { });
+            await Repository.SaveAsync(aggregate,Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
             Thread.Sleep(50);
-            await Engine.UpdateAndWait();
+            await Engine.UpdateAndWaitAsync().ConfigureAwait(false);
             Assert.AreEqual(1, reader.AllSortedById.Count());
         }
     }
 
-
-    //[TestFixture("1")]
     [TestFixture("2")]
     public class ProjectionEngineWithRebuild : ProjectionEngineBasicTestBase
     {
@@ -78,19 +76,17 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
         }
 
         [Test]
-        public async void start_with_rebuild_then_stop_rebuild()
+        public async Task start_with_rebuild_then_stop_rebuild()
         {
             var reader = new MongoReader<SampleReadModel, string>(Database);
-            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(new SampleAggregateId(1));
+            var aggregate = await Repository.GetByIdAsync<SampleAggregate>(new SampleAggregateId(1)).ConfigureAwait(false);
             aggregate.Create();
-            Repository.Save(aggregate, Guid.NewGuid(), h => { });
+           await Repository.SaveAsync(aggregate,Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
             Thread.Sleep(50);
-            await Engine.UpdateAndWait();
+            await Engine.UpdateAndWaitAsync().ConfigureAwait(false);
             Assert.AreEqual(1, reader.AllSortedById.Count());
             var checkpoint = _checkpoints.FindOneById("Projection");
             Assert.That(checkpoint.Value, Is.EqualTo(1), "Checkpoint is written after rebuild.");
         }
     }
-
-
 }

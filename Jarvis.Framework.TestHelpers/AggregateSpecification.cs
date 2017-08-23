@@ -1,26 +1,27 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using Fasterflect;
 using Jarvis.Framework.Kernel.Engine;
-using Jarvis.Framework.Kernel.Store;
 using Jarvis.Framework.Shared.Events;
-using Jarvis.NEventStoreEx.CommonDomainEx;
+using Jarvis.Framework.Shared.IdentitySupport;
 using Machine.Specifications;
+using NStore.Domain;
 
 namespace Jarvis.Framework.TestHelpers
 {
     // ReSharper disable InconsistentNaming
     [Tags("aggregate")]
-    public abstract class AggregateSpecification<TAggregate, TState> 
-        where TAggregate : AggregateRoot<TState>
-        where TState : AggregateState, new()
+    public abstract class AggregateSpecification<TAggregate, TState, TId>
+        where TAggregate : AggregateRoot<TState, TId>
+        where TState : JarvisAggregateState, new()
+		where TId : EventStoreIdentity
     {
         private static TAggregate _aggregate;
-        // ReSharper disable StaticFieldInGenericType
-        private static IDisposable test_executions_context;
-        private static string impersonatig_use_id = "prxm\\prxdev";
-        // ReSharper restore StaticFieldInGenericType
+
+        protected AggregateSpecification()
+        {
+        }
+
         protected static TAggregate Aggregate
         {
             get
@@ -33,22 +34,16 @@ namespace Jarvis.Framework.TestHelpers
         {
             get
             {
-                IAggregateEx agg = Aggregate;
-                return agg.GetUncommittedEvents().Cast<DomainEvent>();
+                var agg = (IEventSourcedAggregate) Aggregate;
+                return agg.GetChangeSet().Events.Cast<DomainEvent>();
             }
         }
 
         protected static void ClearUncommittedEvents()
         {
-            IAggregateEx agg = Aggregate;
-            agg.ClearUncommittedEvents();
+            var agg = (IEventSourcedAggregate)Aggregate;
+            agg.Persisted(agg.GetChangeSet());
         }
-
-        Establish context = () =>
-        {
-            _aggregate = null;
-//            test_executions_context = new ImpersonatedContext(impersonatig_use_id);
-        };
 
         protected static TState State
         {
@@ -57,21 +52,13 @@ namespace Jarvis.Framework.TestHelpers
 
         protected static void Create(IIdentity id)
         {
-            _aggregate = TestAggregateFactory.Create<TAggregate, TState>(new TState(), id, 0);
+            _aggregate = TestAggregateFactory.Create<TAggregate, TId, TState>(new TState(), id, 0);
         }
 
         protected static void SetUp(TState state, IIdentity id)
         {
-            _aggregate = TestAggregateFactory.Create<TAggregate, TState>(state, id, 99999);
+            _aggregate = TestAggregateFactory.Create<TAggregate, TId, TState>(state, id, 99999);
         }
-
-        private Cleanup stuff = () =>
-        {
-            if (test_executions_context != null)
-            {
-                test_executions_context.Dispose();
-            }
-        };
 
         protected static bool EventHasBeenRaised<T>()
         {

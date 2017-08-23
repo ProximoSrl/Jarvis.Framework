@@ -17,7 +17,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
     {
         private MongoStorage<SampleReadModel, String> _sut;
         private IMongoCollection<SampleReadModel> _collection;
-        [TestFixtureSetUp]
+        [OneTimeSetUp]
         public void TestFixtureSetUp()
         {
             var url = new MongoUrl(ConfigurationManager.ConnectionStrings["readmodel"].ConnectionString);

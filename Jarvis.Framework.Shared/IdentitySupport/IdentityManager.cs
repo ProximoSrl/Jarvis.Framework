@@ -4,10 +4,10 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using Fasterflect;
-using Jarvis.NEventStoreEx.CommonDomainEx;
 using System.Linq.Expressions;
 using Jarvis.Framework.Shared.Helpers;
 using Castle.Core.Logging;
+using Jarvis.Framework.Shared.Exceptions;
 
 namespace Jarvis.Framework.Shared.IdentitySupport
 {
@@ -36,13 +36,13 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                 return null;
             int pos = identityAsString.IndexOf(EventStoreIdentity.Separator);
             if (pos == -1)
-                throw new Exception(string.Format("invalid identity value {0}", identityAsString));
+                throw new JarvisFrameworkEngineException(string.Format("invalid identity value {0}", identityAsString));
             var tag = identityAsString.Substring(0, pos);
             var id = Int64.Parse(identityAsString.Substring(pos + 1));
             Func<Int64, IIdentity> factory;
             if (!_longBasedFactories.TryGetValue(tag, out factory))
             {
-                throw new Exception(string.Format("{0} not registered in IdentityManager", tag));
+                throw new JarvisFrameworkEngineException(string.Format("{0} not registered in IdentityManager", tag));
             }
             return factory(id);
         }
@@ -76,7 +76,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
             var errors = sb.ToString();
             if (!String.IsNullOrWhiteSpace(errors))
-                throw new Exception("Found identities with errors:\n" + errors);
+                throw new JarvisFrameworkEngineException("Found identities with errors:\n" + errors);
         }
 
         public TIdentity New<TIdentity>()
@@ -92,7 +92,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             Func<long, IIdentity> factory;
             if (!_longBasedFactories.TryGetValue(tag, out factory))
             {
-                throw new Exception(string.Format("{0} not registered in IdentityManager", tag));
+                throw new JarvisFrameworkEngineException(string.Format("{0} not registered in IdentityManager", tag));
             }
 
             return factory;
@@ -109,13 +109,15 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                 }
 			    return true;
 		    }
-// ReSharper disable EmptyGeneralCatchClause
-		    catch 
-// ReSharper restore EmptyGeneralCatchClause
-		    {
-		    }
+#pragma warning disable S2486 // Generic exceptions should not be ignored
+			catch
+#pragma warning disable S108 // Nested blocks of code should not be left empty
+			{
+			}
+#pragma warning restore S108 // Nested blocks of code should not be left empty
+#pragma warning restore S2486 // Generic exceptions should not be ignored
 
-		    typedIdentity = default(T);
+			typedIdentity = default(T);
 			return false;
 		}
     }

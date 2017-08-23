@@ -29,7 +29,7 @@ namespace Jarvis.Framework.Tests.BusTests
         private SampleCommandHandler _handler;
         private IMongoCollection<TrackedMessageModel> _messages;
 
-        [TestFixtureSetUp]
+        [OneTimeSetUp]
         public void TestFixtureSetUp()
         {
             _container = new WindsorContainer();
@@ -53,7 +53,12 @@ namespace Jarvis.Framework.Tests.BusTests
                 }
             };
 
-            BusBootstrapper bb = new BusBootstrapper(
+			configuration.AssembliesWithMessages = new List<System.Reflection.Assembly>()
+			{
+				typeof(SampleMessage).Assembly,
+			};
+
+			BusBootstrapper bb = new BusBootstrapper(
                 _container,
                 configuration,
                 tracker);
@@ -81,7 +86,7 @@ namespace Jarvis.Framework.Tests.BusTests
             }
         }
 
-        [TestFixtureTearDown]
+        [OneTimeTearDown]
         public void TestFixtureTearDown()
         {
             _bus.Dispose();
@@ -160,8 +165,8 @@ namespace Jarvis.Framework.Tests.BusTests
             var handledTrack = tracks.Single(t => t.MessageId != sampleMessage.MessageId.ToString());
             CommandHandled commandHandled = (CommandHandled)handledTrack.Message;
             Assert.That(commandHandled.CommandId, Is.EqualTo(sampleMessage.MessageId));
-            Assert.That(handledTrack.Description, Is.StringContaining(sampleMessage.MessageId.ToString()));
-            Assert.That(handledTrack.Description, Is.StringContaining("Handled!"));
+            Assert.That(handledTrack.Description, Does.Contain(sampleMessage.MessageId.ToString()));
+            Assert.That(handledTrack.Description, Does.Contain("Handled!"));
         }
 
         /// <summary>

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NStore.Aggregates;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,11 +12,11 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence
     /// because it can be cached for a single aggregate.
     /// </summary>
     /// <typeparam name="TAggregate"></typeparam>
-    public interface IAggregateCachedRepository<TAggregate> : IDisposable where TAggregate : class, IAggregateEx
+    public interface IAggregateCachedRepository<TAggregate> : IDisposable where TAggregate : class, IAggregate
     {
         TAggregate Aggregate { get; }
 
-        void Save(Guid commitId, Action<IDictionary<string, object>> updateHeaders);
+        void Save(Guid commitId, Action<IHeadersAccessor> updateHeaders);
     }
 
     /// <summary>
@@ -33,6 +34,6 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence
         /// <param name="id">The id of the aggregate, remember to Lock to prevent
         /// multiple threads to use the same aggregate concurrently.</param>
         /// <returns></returns>
-        IAggregateCachedRepository<TAggregate> Create<TAggregate>(IIdentity id) where TAggregate : class, IAggregateEx;
+        IAggregateCachedRepository<TAggregate> Create<TAggregate>(IIdentity id) where TAggregate : class, IAggregate;
     }
 }

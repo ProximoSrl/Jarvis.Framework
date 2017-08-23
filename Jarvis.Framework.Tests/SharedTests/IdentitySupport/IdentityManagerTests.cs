@@ -25,7 +25,7 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
         private ICounterService counterService;
         private IOfflineCounterService offlineCounterService;
 
-        [TestFixtureSetUp]
+        [OneTimeSetUp]
         public void TestFixtureSetup()
         {
             TestHelper.RegisterSerializerForFlatId<TestId>();

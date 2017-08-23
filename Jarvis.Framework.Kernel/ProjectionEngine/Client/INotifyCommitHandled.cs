@@ -1,26 +1,27 @@
 using Jarvis.Framework.Shared.Helpers;
-using NEventStore;
+using NStore.Core.Persistence;
+using NStore.Domain;
 using System;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 {
-    public interface INotifyCommitHandled
+	public interface INotifyCommitHandled
     {
-        /// <summary>
-        /// This signal when the <see cref="ProjectionEngine"/> dispatched
-        /// a <see cref="ICommit"/> to all projection of a given slot.
-        /// </summary>
-        /// <param name="slotName"></param>
-        /// <param name="commit"></param>
-        Task SetDispatched(String slotName, ICommit commit);
+		/// <summary>
+		/// This signal when the <see cref="ProjectionEngine"/> dispatched
+		/// a <see cref="Changeset"/> to all projection of a given slot.
+		/// </summary>
+		/// <param name="slotName"></param>
+		/// <param name="chunk"></param>
+		Task SetDispatched(String slotName, IChunk chunk);
     }
 
     public class NullNotifyCommitHandled : INotifyCommitHandled
     {
-        public Task SetDispatched(String slotName, ICommit commit)
+        public Task SetDispatched(String slotName, IChunk chunk)
         {
-            return TaskHelpers.CompletedTask;
+            return Task.CompletedTask;
         }
     }
 }

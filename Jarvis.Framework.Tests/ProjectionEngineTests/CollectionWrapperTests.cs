@@ -19,7 +19,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         private IMongoDatabase _db;
         private MongoClient _client;
 
-        [TestFixtureSetUp]
+        [OneTimeSetUp]
         public void TestFixtureSetUp()
         {
             var connectionString = ConfigurationManager.ConnectionStrings["readmodel"].ConnectionString;

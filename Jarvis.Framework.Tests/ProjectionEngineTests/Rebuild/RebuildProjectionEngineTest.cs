@@ -1,21 +1,15 @@
 ﻿using Jarvis.Framework.Shared.IdentitySupport;
-using Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore;
 using MongoDB.Driver;
-using NEventStore;
-using NUnit.Core;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Jarvis.Framework.Shared.Helpers;
 using Jarvis.Framework.Tests.EngineTests;
 using NSubstitute;
 using Castle.Core.Logging;
-using Jarvis.Framework.Kernel.Engine;
-using NEventStore.Domain.Core;
 using Jarvis.Framework.TestHelpers;
 using Jarvis.Framework.Kernel.ProjectionEngine.Rebuild;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
@@ -29,16 +23,22 @@ using System.Threading;
 using Jarvis.Framework.Kernel.Support;
 using System.Reflection;
 using MongoDB.Bson;
+using Jarvis.Framework.Kernel.Engine;
+using NStore.Core.Persistence;
+using NStore.Domain;
+using NStore.Core.Logging;
+using NStore.Core.Streams;
+using Jarvis.Framework.Shared.Logging;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 {
-    [TestFixture]
+	[TestFixture]
     public abstract class RebuildProjectionEngineBaseTests
     {
         private string _eventStoreConnectionString;
         private IdentityManager _identityConverter;
-        protected RepositoryEx Repository;
-        protected IStoreEvents _eventStore;
+        protected Repository Repository;
+        protected IPersistence _persistence;
         protected IMongoDatabase _db;
         protected IMongoStorageFactory _storageFactory;
 
@@ -65,18 +65,8 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             _db = client.GetDatabase(url.DatabaseName);
             _db.Drop();
 
-            ProjectionEngineConfig config = new ProjectionEngineConfig();
-            config.EventStoreConnectionString = _eventStoreConnectionString;
-            config.Slots = new string[] { "*" };
-            config.TenantId = new TenantId("A");
-            config.BucketInfo = new List<BucketInfo>();
-            config.BucketInfo.Add(new BucketInfo() { Slots = new[] { "*" }, BufferSize = 10000 });
-
             _identityConverter = new IdentityManager(new CounterService(_db));
             _identityConverter.RegisterIdentitiesFromAssembly(typeof(SampleAggregateId).Assembly);
-            ConfigureEventStore();
-
-            _eventUnwinder = new EventUnwinder(config, new TestLogger(LoggerLevel.Info));
 
             _unwindedEventCollection = _db.GetCollection<UnwindedDomainEvent>("UnwindedEvents");
             MongoFlatMapper.EnableFlatMapping(true);
@@ -89,6 +79,24 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             _reader2 = new MongoReader<SampleReadModel2, string>(_db);
             _reader3 = new MongoReader<SampleReadModel3, string>(_db);
 
+            var loggerFactory = Substitute.For<INStoreLoggerFactory>();
+            loggerFactory.CreateLogger(Arg.Any<String>()).Returns(NStoreNullLogger.Instance);
+            var factory = new EventStoreFactory(loggerFactory);
+            _persistence = factory.BuildEventStore(_eventStoreConnectionString).Result;
+            Repository = new Repository(
+                new AggregateFactoryEx(null),
+                new StreamsFactory(_persistence)
+           );
+
+            ProjectionEngineConfig config = new ProjectionEngineConfig();
+            config.EventStoreConnectionString = _eventStoreConnectionString;
+            config.Slots = new string[] { "*" };
+            config.TenantId = new TenantId("A");
+            config.BucketInfo = new List<BucketInfo>();
+            config.BucketInfo.Add(new BucketInfo() { Slots = new[] { "*" }, BufferSize = 10000 });
+
+            _eventUnwinder = new EventUnwinder(config, _persistence, new TestLogger(LoggerLevel.Info));
+
             //now configure RebuildProjectionEngine
             _tracker = new ConcurrentCheckpointTracker(_db);
 
@@ -97,31 +105,10 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             _tracker.SetUp(projections, 1, false);
             ProjectionEventInspector inspector = new ProjectionEventInspector();
             inspector.AddAssembly(Assembly.GetExecutingAssembly());
-            sut = new RebuildProjectionEngine(_eventUnwinder, _tracker, projections, rebuildContext, config, inspector);
+            sut = new RebuildProjectionEngine(_eventUnwinder, _tracker, projections, rebuildContext, config, inspector, NullLoggerThreadContextManager.Instance);
             sut.Logger = new TestLogger(LoggerLevel.Debug);
 
             _checkpointCollection = _db.GetCollection<Checkpoint>("checkpoints");
-        }
-
-        [TearDown]
-        public virtual void TestFixtureTearDown()
-        {
-            _eventStore.Dispose();
-        }
-
-        protected void ConfigureEventStore()
-        {
-            var loggerFactory = Substitute.For<ILoggerFactory>();
-            loggerFactory.Create(Arg.Any<Type>()).Returns(NullLogger.Instance);
-            var factory = new EventStoreFactory(loggerFactory);
-            _eventStore = factory.BuildEventStore(_eventStoreConnectionString);
-            Repository = new RepositoryEx(
-                _eventStore,
-                new AggregateFactory(),
-                new ConflictDetector(),
-                _identityConverter,
-               NSubstitute.Substitute.For<NEventStore.Logging.ILog>()
-           );
         }
 
         protected abstract IEnumerable<IProjection> BuildProjections();
@@ -136,12 +123,12 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             Assert.That(status.BucketActiveCount, Is.EqualTo(0), "Rebuild stuck");
         }
 
-        protected void CreateAggregate(Int64 id = 1)
+        protected async Task CreateAggregate(Int64 id = 1)
         {
             var aggregateId = new SampleAggregateId(id);
-            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(aggregateId);
+            var aggregate = await Repository.GetByIdAsync<SampleAggregate>(aggregateId).ConfigureAwait(false);
             aggregate.Create();
-            Repository.Save(aggregate, Guid.NewGuid(), h => { });
+            await Repository.SaveAsync(aggregate, Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
         }
 
         protected virtual Boolean NitroEnabled { get { return false; } }
@@ -161,9 +148,9 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         [Test]
         public async Task no_rebuild_occours()
         {
-            CreateAggregate();
+            await CreateAggregate().ConfigureAwait(false);
 
-            var status = await sut.RebuildAsync();
+            var status = await sut.RebuildAsync().ConfigureAwait(false);
             WaitForFinish(status);
             Assert.That(_writer.All.Count(), Is.EqualTo(0), "No event should be loaded because we did not dispatched anything");
         }
@@ -171,9 +158,9 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         [Test]
         public async Task unwind_is_called_to_unwind_events()
         {
-            CreateAggregate();
+            await CreateAggregate().ConfigureAwait(false);
 
-            var status = await sut.RebuildAsync();
+            var status = await sut.RebuildAsync().ConfigureAwait(false);
             WaitForFinish(status);
             Assert.That(_eventUnwinder.UnwindedCollection.AsQueryable().Count(), Is.EqualTo(1), "RebuildProjection should call unwind to ensure all events are unwinded");
         }
@@ -193,12 +180,12 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         [Test]
         public async Task event_is_dispatched()
         {
-            CreateAggregate();
+            await CreateAggregate().ConfigureAwait(false);
 
             //prepare the tracker
             _tracker.SetCheckpoint(_projection.Info.CommonName, 1); //Set the projection as dispatched
 
-            var status = await sut.RebuildAsync();
+            var status = await sut.RebuildAsync().ConfigureAwait(false);
             WaitForFinish(status);
             Assert.That(_writer.All.Count(), Is.EqualTo(1));
         }
@@ -206,16 +193,16 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         [Test]
         public async Task dispatch_only_until_maximum_checkpoint_already_dispatched()
         {
-            CreateAggregate(1);
-            CreateAggregate(2);
-            CreateAggregate(3);
+            await CreateAggregate(1).ConfigureAwait(false);
+            await CreateAggregate(2).ConfigureAwait(false);
+            await CreateAggregate(3).ConfigureAwait(false);
 
             //prepare the tracker
             ConcurrentCheckpointTracker thisTracker = new ConcurrentCheckpointTracker(_db);
             thisTracker.SetUp(new[] { _projection }, 1, false);
             thisTracker.UpdateSlotAndSetCheckpoint(_projection.Info.SlotName, new[] { _projection.Info.CommonName }, 2); //Set the projection as dispatched
 
-            var status = await sut.RebuildAsync();
+            var status = await sut.RebuildAsync().ConfigureAwait(false);
             WaitForFinish(status);
             Assert.That(_writer.All.Count(), Is.EqualTo(2));
         }
@@ -224,9 +211,9 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
     [TestFixture]
     public class Basic_dispatching_tests_with_multiple_projection : RebuildProjectionEngineBaseTests
     {
-        CollectionWrapper<SampleReadModel, string> _writer1;
-        CollectionWrapper<SampleReadModel3, string> _writer3;
-        IProjection _projection1, _projection3;
+        private CollectionWrapper<SampleReadModel, string> _writer1;
+        private CollectionWrapper<SampleReadModel3, string> _writer3;
+        private IProjection _projection1, _projection3;
 
         protected override IEnumerable<IProjection> BuildProjections()
         {
@@ -239,14 +226,14 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         [Test]
         public async Task event_is_dispatched()
         {
-            CreateAggregate();
+            await CreateAggregate().ConfigureAwait(false);
 
             ConcurrentCheckpointTracker thisTracker = new ConcurrentCheckpointTracker(_db);
             thisTracker.SetUp(new[] { _projection1, _projection3 }, 1, false);
             thisTracker.UpdateSlotAndSetCheckpoint(_projection1.Info.SlotName, new[] { _projection1.Info.CommonName }, 1);
             thisTracker.UpdateSlotAndSetCheckpoint(_projection3.Info.SlotName, new[] { _projection3.Info.CommonName }, 1);
 
-            var status = await sut.RebuildAsync();
+            var status = await sut.RebuildAsync().ConfigureAwait(false);
             WaitForFinish(status);
             Assert.That(_writer1.All.Count(), Is.EqualTo(1));
             Assert.That(_writer3.All.Count(), Is.EqualTo(1));
@@ -255,9 +242,9 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         [Test]
         public async Task max_dispatched_is_handled_per_distinct_slot()
         {
-            CreateAggregate(1);
-            CreateAggregate(2);
-            CreateAggregate(3);
+            await CreateAggregate(1).ConfigureAwait(false);
+            await CreateAggregate(2).ConfigureAwait(false);
+            await CreateAggregate(3).ConfigureAwait(false);
 
             //prepare the tracker
             ConcurrentCheckpointTracker thisTracker = new ConcurrentCheckpointTracker(_db);
@@ -265,7 +252,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             thisTracker.UpdateSlotAndSetCheckpoint(_projection1.Info.SlotName, new[] { _projection1.Info.CommonName }, 2);
             thisTracker.UpdateSlotAndSetCheckpoint(_projection3.Info.SlotName, new[] { _projection3.Info.CommonName }, 1);
 
-            var status = await sut.RebuildAsync();
+            var status = await sut.RebuildAsync().ConfigureAwait(false);
             WaitForFinish(status);
             Assert.That(_writer1.All.Count(), Is.EqualTo(2));
             Assert.That(_writer3.All.Count(), Is.EqualTo(1));
@@ -284,10 +271,10 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
     [TestFixture]
     public class Correct_handling_of_signature : RebuildProjectionEngineBaseTests
     {
-        CollectionWrapper<SampleReadModel, string> _writer1;
-        CollectionWrapper<SampleReadModel3, string> _writer3;
-        Projection _projection1;
-        Projection3 _projection3;
+        private CollectionWrapper<SampleReadModel, string> _writer1;
+        private CollectionWrapper<SampleReadModel3, string> _writer3;
+        private Projection _projection1;
+        private Projection3 _projection3;
 
         protected override IEnumerable<IProjection> BuildProjections()
         {
@@ -300,9 +287,9 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         [Test]
         public async Task signature_is_honored()
         {
-            CreateAggregate(1);
-            CreateAggregate(2);
-            CreateAggregate(3);
+            await CreateAggregate(1).ConfigureAwait(false);
+            await CreateAggregate(2).ConfigureAwait(false);
+            await CreateAggregate(3).ConfigureAwait(false);
 
             ConcurrentCheckpointTracker thisTracker = new ConcurrentCheckpointTracker(_db);
             thisTracker.SetUp(new IProjection[] { _projection1, _projection3 }, 1, false);
@@ -311,7 +298,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 
             //now change signature.
             _projection3.Signature = "Modified";
-            var status = await sut.RebuildAsync();
+            var status = await sut.RebuildAsync().ConfigureAwait(false);
             WaitForFinish(status);
             var checkpoint = _checkpointCollection.AsQueryable().Single(c => c.Id == ((IProjection)_projection3).Info.CommonName);
             Assert.That(checkpoint.Signature, Is.EqualTo(_projection3.Signature));
@@ -329,9 +316,9 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             }
         }
 
-        CollectionWrapper<SampleReadModel, string> _writer1;
-        CollectionWrapper<SampleReadModel3, string> _writer3;
-        IProjection _projection1, _projection3;
+        private CollectionWrapper<SampleReadModel, string> _writer1;
+        private CollectionWrapper<SampleReadModel3, string> _writer3;
+        private IProjection _projection1, _projection3;
 
         protected override IEnumerable<IProjection> BuildProjections()
         {
@@ -344,14 +331,14 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         [Test]
         public async Task event_is_dispatched()
         {
-            CreateAggregate();
+            await CreateAggregate().ConfigureAwait(false);
 
             ConcurrentCheckpointTracker thisTracker = new ConcurrentCheckpointTracker(_db);
             thisTracker.SetUp(new[] { _projection1, _projection3 }, 1, false);
             thisTracker.UpdateSlotAndSetCheckpoint(_projection1.Info.SlotName, new[] { _projection1.Info.CommonName }, 1);
             thisTracker.UpdateSlotAndSetCheckpoint(_projection3.Info.SlotName, new[] { _projection3.Info.CommonName }, 1);
 
-            var status = await sut.RebuildAsync();
+            RebuildStatus status = await sut.RebuildAsync();
             WaitForFinish(status);
             var coll = _db.GetCollection<BsonDocument>("Sample");
             var allRecord = coll.FindAll().ToList();

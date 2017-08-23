@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.26730.3
+# Visual Studio 14
+VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jarvis.Framework.Shared", "Jarvis.Framework.Shared\Jarvis.Framework.Shared.csproj", "{70B179ED-C419-4782-B080-0D1678C90279}"
 EndProject
@@ -22,8 +22,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{9870AC
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Logging", "Logging", "{1478AFD6-4740-4E37-9A4D-61B2151AF663}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jarvis.NEventStoreEx", "Jarvis.NEventStoreEx\Jarvis.NEventStoreEx.csproj", "{68A4D5D2-C860-48A5-9189-60BB2A9A7ED1}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jarvis.Framework.ElasticLogPoller", "Jarvis.Framework.ElasticLogPoller\Jarvis.Framework.ElasticLogPoller.csproj", "{A3A2F347-F91A-4C31-BE79-4D6132B57812}"
 EndProject
@@ -63,10 +61,6 @@ Global
 		{D5D90909-CFEF-443E-BDDE-318FE638E5C0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D5D90909-CFEF-443E-BDDE-318FE638E5C0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D5D90909-CFEF-443E-BDDE-318FE638E5C0}.Release|Any CPU.Build.0 = Release|Any CPU
-		{68A4D5D2-C860-48A5-9189-60BB2A9A7ED1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{68A4D5D2-C860-48A5-9189-60BB2A9A7ED1}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{68A4D5D2-C860-48A5-9189-60BB2A9A7ED1}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{68A4D5D2-C860-48A5-9189-60BB2A9A7ED1}.Release|Any CPU.Build.0 = Release|Any CPU
 		{A3A2F347-F91A-4C31-BE79-4D6132B57812}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{A3A2F347-F91A-4C31-BE79-4D6132B57812}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A3A2F347-F91A-4C31-BE79-4D6132B57812}.Release|Any CPU.ActiveCfg = Release|Any CPU

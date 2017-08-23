@@ -6,15 +6,16 @@ using System.Threading.Tasks;
 using Jarvis.Framework.Bus.Rebus.Integration.Support;
 using Jarvis.Framework.Tests.BusTests.MessageFolder;
 using NUnit.Framework;
+using System.Reflection;
 
 namespace Jarvis.Framework.Tests.BusTests
 {
     [TestFixture]
     public class JarvisDetermineMessageOwnershipFromConfigurationManagerTests
     {
-        private JarvisRebusConfigurationManagerRouter _sut;
+        private JarvisRebusConfigurationManagerRouterHelper _sut;
 
-        [TestFixtureSetUp]
+        [OneTimeSetUp]
         public void TestFixtureSetup()
         {
             var map = new Dictionary<string, string>()
@@ -22,7 +23,12 @@ namespace Jarvis.Framework.Tests.BusTests
                 {"Jarvis.Framework.Tests.BusTests.MessageFolder.SampleMessage, Jarvis.Framework.Tests", "test.queue1"},
                 {"Jarvis.Framework.Tests.BusTests.MessageFolder", "test.queue2"},
             };
-            _sut = new JarvisRebusConfigurationManagerRouter(map);
+			JarvisRebusConfiguration config = new JarvisRebusConfiguration("", "");
+			config.EndpointsMap = map;
+			config.AssembliesWithMessages = new List<System.Reflection.Assembly>() {
+				typeof(SampleMessage).Assembly
+			};
+			_sut = new JarvisRebusConfigurationManagerRouterHelper(config);
         }
 
         [Test]

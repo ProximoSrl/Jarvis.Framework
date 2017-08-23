@@ -1,49 +1,42 @@
 ﻿using System;
-using Castle.Core.Logging;
-using Jarvis.Framework.Shared.Logging;
-using NEventStore;
-
-using NEventStore.Persistence.MongoDB;
-using NEventStore.Serialization;
+using System.Threading.Tasks;
+using NStore.Persistence.Mongo;
+using System.Threading;
+using NStore.Core.Logging;
+using NStore.Core.Persistence;
 
 namespace Jarvis.Framework.Kernel.Engine
 {
 	public class EventStoreFactory
-	{
-	    private readonly ILoggerFactory _loggerFactory;
+    {
+        private readonly INStoreLoggerFactory _loggerFactory;
 
-	    public bool UseSyncDispatcher { get; set; }
+        public const String PartitionCollectionName = "Commits";
 
-        public EventStoreFactory(ILoggerFactory loggerFactory)
-	    {
-	        _loggerFactory = loggerFactory;
-	    }
+        public bool UseSyncDispatcher { get; set; }
 
-        public IStoreEvents BuildEventStore(
-            string connectionString, 
-            IPipelineHook[] hooks = null, 
-            Boolean useSyncDispatcher = false,
-            MongoPersistenceOptions mongoPersistenceOptions = null)
+        public EventStoreFactory(INStoreLoggerFactory loggerFactory)
         {
-            mongoPersistenceOptions = mongoPersistenceOptions ??
-                new MongoPersistenceOptions() {};
-            Wireup es = Wireup.Init()
-                    .LogTo(t => new NEventStoreLog4NetLogger(_loggerFactory.Create(t)))
-                    .UsingMongoPersistence(
-                        () => connectionString,
-                        new DocumentObjectSerializer(),
-                        mongoPersistenceOptions
-                    )
-                    .InitializeStorageEngine();
+            _loggerFactory = loggerFactory;
+        }
 
-            UseSyncDispatcher = useSyncDispatcher;           
+        public async Task<IPersistence> BuildEventStore(
+            string connectionString)
+        {
+            var mongoStoreOptions = new MongoPersistenceOptions
+            {
+                PartitionsConnectionString = connectionString,
+                UseLocalSequence = true,
+                PartitionsCollectionName = PartitionCollectionName,
+                SequenceCollectionName = "event_sequence",
+                DropOnInit = false
+            };
 
-            if (hooks != null)
-                es.HookIntoPipelineUsing(hooks);
+            var mongoPersistence = new MongoPersistence(mongoStoreOptions);
 
-            return es.Build();
+            await mongoPersistence.InitAsync(CancellationToken.None).ConfigureAwait(false);
+
+            return mongoPersistence;
         }
     }
-
-   
 }

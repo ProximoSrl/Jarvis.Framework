@@ -26,14 +26,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         /// </summary>
         Func<TModel, Object> TransformForNotification { get; set; }
 
-        /// <summary>
-        /// Insert a value into the underling storage
-        /// </summary>
-        /// <param name="e"></param>
-        /// <param name="model"></param>
-        /// <param name="notify"></param>
-        /// <returns></returns>
-        Task InsertAsync(DomainEvent e, TModel model, bool notify = false);
+		/// <summary>
+		/// Insert a value into the underling storage
+		/// </summary>
+		/// <param name="e"></param>
+		/// <param name="model"></param>
+		/// <param name="notify"></param>
+		/// <returns></returns>
+		Task InsertAsync(DomainEvent e, TModel model, bool notify = false);
 
         /// <summary>
         /// Upsert a readmodel into the underling persistence storage.
@@ -44,7 +44,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         /// <param name="update"></param>
         /// <param name="notify"></param>
         /// <returns></returns>
-        Task<TModel> UpsertAsync(DomainEvent e, TKey id, Func<TModel> insert, Action<TModel> update, bool notify = false);
+        Task<TModel> UpsertAsync(DomainEvent e, TKey id, Func<TModel> insert, Func<TModel, Task> update, bool notify = false);
 
         /// <summary>
         /// Find a single readmodel and execute an action to modify.
@@ -54,21 +54,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         /// <param name="action"></param>
         /// <param name="notify"></param>
         /// <returns></returns>
-        Task FindAndModifyAsync(DomainEvent e, Expression<Func<TModel, bool>> filter, Action<TModel> action, bool notify = false);
+        Task FindAndModifyAsync(DomainEvent e, Expression<Func<TModel, bool>> filter, Func<TModel, Task> action, bool notify = false);
 
         /// <summary>
         /// Find a single readmodel and execute an action to modify.
-        /// </summary>
-        /// <param name="e"></param>
-        /// <param name="id"></param>
-        /// <param name="action"></param>
-        /// <param name="notify"></param>
-        /// <returns></returns>
-        Task FindAndModifyAsync(DomainEvent e, TKey id, Action<TModel> action, bool notify = false);
-
-        /// <summary>
-        /// Find a single readmodel and execute an action to modify, this allow for an action that is 
-        /// awaitable, because it return Task.
         /// </summary>
         /// <param name="e"></param>
         /// <param name="id"></param>
@@ -89,7 +78,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         /// <param name="propertyValue">Value of the property.</param>
         /// <param name="action"></param>
         /// <param name="notify"></param>
-        Task FindAndModifyByPropertyAsync<TProperty>(DomainEvent e, Expression<Func<TModel, TProperty>> propertySelector, TProperty propertyValue, Action<TModel> action, bool notify = false);
+        Task FindAndModifyByPropertyAsync<TProperty>(DomainEvent e, Expression<Func<TModel, TProperty>> propertySelector, TProperty propertyValue, Func<TModel, Task> action, bool notify = false);
 
         /// <summary>
         /// Optimize the "in memory" collection allowing to search for a given object that has
@@ -100,7 +89,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         /// <typeparam name="TProperty"></typeparam>
         /// <param name="propertySelector"></param>
         /// <param name="propertyValue"></param>
-        Task<IEnumerable<TModel>> FindByPropertyAsync<TProperty>(Expression<Func<TModel, TProperty>> propertySelector, TProperty propertyValue);
+        /// <param name="subscription">Since we do not have async ienumerable, this is the action that will be called for each
+        /// object that will be returned by the query</param>
+        Task FindByPropertyAsync<TProperty>(Expression<Func<TModel, TProperty>> propertySelector, TProperty propertyValue, Func<TModel, Task> subscription);
 
         Task SaveAsync(DomainEvent e, TModel model, bool notify = false);
 

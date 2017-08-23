@@ -35,7 +35,7 @@ namespace Jarvis.Framework.Shared.Commands
             var @event = message as DomainEvent;
             if (@event != null)
             {
-                command.SetContextData("triggered-by-aggregate", @event.AggregateId);
+                command.SetContextData("triggered-by-aggregate", @event.AggregateId.AsString());
             }
 
             return command.WithDiagnosticDescription(description);

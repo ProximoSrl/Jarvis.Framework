@@ -20,7 +20,7 @@ namespace Jarvis.Framework.Shared.ReadModel
         public Int64 CheckpointToken { get; set; }
 
         /// <summary>
-        /// <see cref="LastUpdatedTicks"/> does not works, because we can have multiple
+        /// <see cref="CheckpointToken"/> does not works, because we can have multiple
         /// update on the same CheckpointToken. This secondary token is an unique number 
         /// always increasing to avoid problem of same CheckpointToken
         /// </summary>

@@ -1,167 +1,221 @@
 ﻿using Jarvis.Framework.Shared.IdentitySupport;
-using Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore;
 using MongoDB.Driver;
-using NEventStore;
-using NUnit.Core;
 using NUnit.Framework;
 using System;
-using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Jarvis.Framework.Shared.Helpers;
 using Jarvis.Framework.Tests.EngineTests;
 using NSubstitute;
 using Castle.Core.Logging;
-using Jarvis.Framework.Kernel.Engine;
-using NEventStore.Domain.Core;
-using Jarvis.Framework.TestHelpers;
 using Jarvis.Framework.Kernel.ProjectionEngine.Rebuild;
-using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 using Jarvis.Framework.Shared.IdentitySupport.Serialization;
 using Jarvis.Framework.Kernel.ProjectionEngine;
-using NEventStore.Logging;
-using Jarvis.NEventStoreEx.CommonDomainEx.Core;
+using Jarvis.Framework.Kernel.Engine;
+using System.Threading.Tasks;
+using NStore.Core.Persistence;
+using NStore.Domain;
+using NStore.Core.Streams;
+using NStore.Core.Snapshots;
+using NStore.Core.Logging;
+using Jarvis.Framework.Shared.Events;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 {
-    [TestFixture]
-    public class EventUnwinderTests 
-    {
-      
-        string _eventStoreConnectionString;
-        IdentityManager _identityConverter;
-        ILog _logger;
+	[TestFixture]
+	public class EventUnwinderTests
+	{
+		private string _eventStoreConnectionString;
 
-        protected RepositoryEx Repository;
-        protected IStoreEvents _eventStore;
-        protected IMongoDatabase _db;
+		protected Repository Repository;
+		protected IPersistence _persistence;
+		protected IMongoDatabase _db;
 
-        IMongoCollection<UnwindedDomainEvent> _unwindedEventCollection;
+		protected EventUnwinder sut;
 
-        protected EventUnwinder sut;
+		[OneTimeSetUp]
+		public virtual void TestFixtureSetUp()
+		{
+			_eventStoreConnectionString = ConfigurationManager.ConnectionStrings["eventstore"].ConnectionString;
+			var url = new MongoUrl(_eventStoreConnectionString);
+			var client = new MongoClient(url);
+			_db = client.GetDatabase(url.DatabaseName);
+			_db.Drop();
 
-        [TestFixtureSetUp]
-        public virtual void TestFixtureSetUp()
-        {
-            _logger = NSubstitute.Substitute.For<ILog>();
-            _eventStoreConnectionString = ConfigurationManager.ConnectionStrings["eventstore"].ConnectionString; ;
-            var url = new MongoUrl(_eventStoreConnectionString);
-            var client = new MongoClient(url);
-            _db = client.GetDatabase(url.DatabaseName);
-            _db.Drop();
+			var identityConverter = new IdentityManager(new CounterService(_db));
+			identityConverter.RegisterIdentitiesFromAssembly(typeof(SampleAggregateId).Assembly);
+			MongoFlatMapper.EnableFlatMapping(true);
+			MongoFlatIdSerializerHelper.Initialize(identityConverter);
+		}
 
-            _identityConverter = new IdentityManager(new CounterService(_db));
-            _identityConverter.RegisterIdentitiesFromAssembly(typeof(SampleAggregateId).Assembly);
-            
-            ProjectionEngineConfig config = new ProjectionEngineConfig() { EventStoreConnectionString = _eventStoreConnectionString };
-            CommitEnhancer commitEnhancer = new CommitEnhancer(_identityConverter);
-            sut = new EventUnwinder(config, NullLogger.Instance);
+		[SetUp]
+		public void SetUp()
+		{
+			_db.Drop();
+			ConfigureEventStore(); //Creates the _persistence
+			Repository = new Repository(
+			   new AggregateFactoryEx(null),
+			   new StreamsFactory(_persistence),
+			   Substitute.For<ISnapshotStore>()
+			);
 
-            _unwindedEventCollection = _db.GetCollection<UnwindedDomainEvent>("UnwindedEvents");
-            MongoFlatMapper.EnableFlatMapping(true);
-            MongoFlatIdSerializerHelper.Initialize(_identityConverter);
-        }
+			var config = new ProjectionEngineConfig() { EventStoreConnectionString = _eventStoreConnectionString };
+			sut = new EventUnwinder(config, _persistence, NullLogger.Instance);
+		}
 
-        [SetUp]
-        public void SetUp()
-        {
-            _db.Drop();
-            ConfigureEventStore();
-            Repository = new RepositoryEx(
-               _eventStore,
-               new AggregateFactory(),
-               new AlwaysConflict(),
-               _identityConverter,
-               _logger
-          );
-        }
+		protected void ConfigureEventStore()
+		{
+			var loggerFactory = Substitute.For<INStoreLoggerFactory>();
+			loggerFactory.CreateLogger(Arg.Any<String>()).Returns(NStoreNullLogger.Instance);
+			var factory = new EventStoreFactory(loggerFactory);
+			_persistence = factory.BuildEventStore(_eventStoreConnectionString).Result;
+		}
 
-        [TestFixtureTearDown]
-        public virtual void TestFixtureTearDown()
-        {
-            _eventStore.Dispose();
-        }
+		protected async Task<SampleAggregateId> CreateAggregateAsync(Int64 id = 1)
+		{
+			var aggregateId = new SampleAggregateId(id);
+			var aggregate = await Repository.GetByIdAsync<SampleAggregate>(aggregateId).ConfigureAwait(false);
+			aggregate.Create();
+			await Repository.SaveAsync(aggregate, Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
+			return aggregateId;
+		}
 
-        protected void ConfigureEventStore()
-        {
-            var loggerFactory = Substitute.For<ILoggerFactory>();
-            loggerFactory.Create(Arg.Any<Type>()).Returns(NullLogger.Instance);
-            var factory = new EventStoreFactory(loggerFactory);
-            _eventStore = factory.BuildEventStore(_eventStoreConnectionString);
-        }
+		protected async Task<SampleAggregateId> CreateAggregateAndTouchAsync(Int64 id = 1)
+		{
+			var aggregateId = new SampleAggregateId(id);
+			var aggregate = await Repository.GetByIdAsync<SampleAggregate>(aggregateId).ConfigureAwait(false);
+			aggregate.Create();
+			aggregate.Touch();
+			await Repository.SaveAsync(aggregate, Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
+			return aggregateId;
+		}
 
-        protected SampleAggregateId CreateAggregate(Int64 id = 1)
-        {
-            var aggregateId = new SampleAggregateId(id);
-            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(aggregateId);
-            aggregate.Create();
-            Repository.Save(aggregate, Guid.NewGuid(), h => { });
-            return aggregateId;
-        }
+		[Test]
+		public async Task verify_basic_unwinding()
+		{
+			var id = await CreateAggregateAsync().ConfigureAwait(false);
 
-       
-        [Test]
-        public void verify_basic_unwinding()
-        {
-            var id = CreateAggregate();
+			await sut.UnwindAsync().ConfigureAwait(false);
 
-            sut.Unwind();
+			var allEvents = sut.UnwindedCollection.FindAll();
+			Assert.That(allEvents.Count(), Is.EqualTo(1));
+			var evt = allEvents.Single();
+			Assert.That(evt.EventType, Is.EqualTo("SampleAggregateCreated"));
+			Assert.That((evt.GetEvent() as DomainEvent).AggregateId, Is.EqualTo(id));
+		}
 
-            var allEvents = sut.UnwindedCollection.FindAll();
-            Assert.That(allEvents.Count(), Is.EqualTo(1));
-            var evt = allEvents.Single();
-            Assert.That(evt.EventType, Is.EqualTo("SampleAggregateCreated"));
-            Assert.That(evt.GetEvent().AggregateId, Is.EqualTo(id));
-        }
+		[Test]
+		public async Task verify_unwinding_of_multiple_events()
+		{
+			var id = await CreateAggregateAndTouchAsync().ConfigureAwait(false);
 
-        [Test]
-        public void verify_basic_unwinding_with_headers()
-        {
-            var aggregateId = new SampleAggregateId(1);
-            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(aggregateId);
-            aggregate.Create();
-            Repository.Save(aggregate, Guid.NewGuid(), h => { h.Add("test.with.dot", "BLAH"); });
+			await sut.UnwindAsync().ConfigureAwait(false);
 
-            sut.Unwind();
+			var allEvents = sut.UnwindedCollection.FindAll().ToList();
 
-            var allEvents = sut.UnwindedCollection.FindAll();
-            Assert.That(allEvents.Count(), Is.EqualTo(1));
-            var evt = allEvents.Single();
-            Assert.That(evt.EventType, Is.EqualTo("SampleAggregateCreated")); 
-            Assert.That(evt.GetEvent().AggregateId, Is.EqualTo(aggregateId));
-            Assert.That(evt.GetEvent().Context["test.with.dot"], Is.EqualTo("BLAH"));
-        }
+			Assert.That(allEvents.Count(), Is.EqualTo(2));
+			var evt = allEvents.First();
+			Assert.That(evt.EventType, Is.EqualTo("SampleAggregateCreated"));
+			Assert.That((evt.GetEvent() as DomainEvent).AggregateId, Is.EqualTo(id));
 
+			evt = allEvents.ElementAt(1);
+			Assert.That(evt.EventType, Is.EqualTo("SampleAggregateTouched"));
+			Assert.That((evt.GetEvent() as DomainEvent).AggregateId, Is.EqualTo(id));
+		}
 
-        [Test]
-        public void verify_unwinding_preserve_enhancement()
-        {
-            CreateAggregate();
+		[Test]
+		public async Task verify_unwind_plain_object()
+		{
+			var poco = new PocoObject("TEST", 42);
+			await _persistence.AppendAsync("poco/42", poco).ConfigureAwait(false);
 
-            sut.Unwind();
+			await sut.UnwindAsync().ConfigureAwait(false);
 
-            var allEvents = sut.UnwindedCollection.FindAll();
-            Assert.That(allEvents.Count(), Is.EqualTo(1));
-            var evt = allEvents.Single();
-            Assert.That(evt.GetEvent().CheckpointToken, Is.Not.Null);
-        }
+			var allEvents = sut.UnwindedCollection.FindAll();
+			Assert.That(allEvents.Count(), Is.EqualTo(1));
+			var evt = allEvents.Single();
+			Assert.That(evt.EventType, Is.EqualTo("PocoObject"));
+			Assert.That((evt.GetEvent() as PocoObject).IntValue, Is.EqualTo(42));
+			Assert.That((evt.GetEvent() as PocoObject).Value, Is.EqualTo("TEST"));
+			Assert.That(evt.PartitionId, Is.EqualTo("poco/42"));
+		}
 
-        [Test]
-        public void verify_unwinding_not_miss_events()
-        {
-            var id = CreateAggregate();
-            sut.Unwind();
-            var aggregate = Repository.GetById<SampleAggregate>(id);
-            aggregate.DoubleTouch();
-            Repository.Save(aggregate, Guid.NewGuid(), h => { });
-            sut.Unwind();
+		[Test]
+		public async Task verify_basic_unwinding_with_headers()
+		{
+			var aggregateId = new SampleAggregateId(1);
+			var aggregate = await Repository.GetByIdAsync<SampleAggregate>(aggregateId).ConfigureAwait(false);
+			aggregate.Create();
+			await Repository.SaveAsync(aggregate, Guid.NewGuid().ToString(), h => h.Add("test.with.dot", "BLAH")).ConfigureAwait(false);
 
-            var allEvents = sut.UnwindedCollection.FindAll();
-            Assert.That(allEvents.Count(), Is.EqualTo(3));
-        }
-    }
+			await sut.UnwindAsync().ConfigureAwait(false);
 
-  
+			var allEvents = sut.UnwindedCollection.FindAll();
+			Assert.That(allEvents.Count(), Is.EqualTo(1));
+			var evt = allEvents.Single();
+			Assert.That(evt.EventType, Is.EqualTo("SampleAggregateCreated"));
+			Assert.That((evt.GetEvent() as DomainEvent).AggregateId, Is.EqualTo(aggregateId));
+			Assert.That((evt.GetEvent() as DomainEvent).Context["test.with.dot"], Is.EqualTo("BLAH"));
+		}
+
+		[Test]
+		public async Task verify_unwinding_preserve_enhancement()
+		{
+			await CreateAggregateAsync().ConfigureAwait(false);
+
+			await sut.UnwindAsync().ConfigureAwait(false);
+
+			var allEvents = sut.UnwindedCollection.FindAll();
+			Assert.That(allEvents.Count(), Is.EqualTo(1));
+			var evt = allEvents.Single();
+			Assert.That((evt.GetEvent() as DomainEvent).CheckpointToken, Is.Not.Null);
+		}
+
+		[Test]
+		public async Task verify_unwinding_not_miss_events()
+		{
+			var id = await CreateAggregateAsync().ConfigureAwait(false);
+			var aggregate = Repository.GetByIdAsync<SampleAggregate>(id).Result;
+			aggregate.DoubleTouch();
+			await Repository.SaveAsync(aggregate, Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
+			await sut.UnwindAsync().ConfigureAwait(false);
+
+			var allEvents = sut.UnwindedCollection.FindAll();
+			Assert.That(allEvents.Count(), Is.EqualTo(3));
+		}
+
+		[Test]
+		public async Task verify_unwinding_then_modif_then_unwind_again()
+		{
+			//Save and unwind
+			var id = await CreateAggregateAsync().ConfigureAwait(false);
+			await sut.UnwindAsync().ConfigureAwait(false);
+
+			//reload, save and unwind.
+			var aggregate = Repository.GetByIdAsync<SampleAggregate>(id).Result;
+			aggregate.Touch();
+			await Repository.SaveAsync(aggregate, Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
+			await sut.UnwindAsync().ConfigureAwait(false);
+
+			var allEvents = sut.UnwindedCollection.FindAll();
+			Assert.That(allEvents.Count(), Is.EqualTo(2), "Unwinding in more than one execution missed events.");
+		}
+
+		#region Helpers
+
+		public class PocoObject
+		{
+			public PocoObject(string value, int intValue)
+			{
+				Value = value;
+				IntValue = intValue;
+			}
+
+			public String Value { get; set; }
+
+			public Int32 IntValue { get; set; }
+		}
+
+		#endregion
+	}
 }

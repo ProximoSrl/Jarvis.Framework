@@ -1,12 +1,12 @@
-﻿using Jarvis.NEventStoreEx.CommonDomainEx;
-using Jarvis.NEventStoreEx.CommonDomainEx.Core;
+﻿using Jarvis.Framework.Shared.Exceptions;
+using NStore.Domain;
 
 namespace Jarvis.Framework.Kernel.Engine
 {
-    public class DomainValidationException : DomainException
+	public class DomainValidationException : DomainException
     {
-        public DomainValidationException(AggregateRoot aggregate, string message)
-            : base(aggregate.Id.ToString(), message)
+        public DomainValidationException(IAggregate aggregate, string message)
+            : base(aggregate.Id, message)
         {
         }
     }

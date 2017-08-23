@@ -16,8 +16,6 @@ using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
-
-    //[TestFixture("1")]
     [TestFixture("2")]
     public class ProjectionStatusLoaderTest : ProjectionEngineBasicTestBase
     {
@@ -44,23 +42,22 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             yield return new Projection3(writer3);
         }
 
-
         [Test]
-        public async void Verify_aggregation_call()
+        public async Task Verify_aggregation_call()
         {
             ProjectionStatusLoader sut = new ProjectionStatusLoader(Database, Database, 5);
 
-            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(new SampleAggregateId(1));
+            SampleAggregateId identity1 = new SampleAggregateId(1);
+            var aggregate = await Repository.GetByIdAsync<SampleAggregate>(identity1).ConfigureAwait(false);
             aggregate.Create();
-            Repository.Save(aggregate, Guid.NewGuid(), h => { });
+            await Repository.SaveAsync(aggregate,Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
 
-            aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.SampleAggregateState>(new SampleAggregateId(2));
+            SampleAggregateId identity2 = new SampleAggregateId(2);
+            aggregate = await Repository.GetByIdAsync<SampleAggregate>(identity2).ConfigureAwait(false);
             aggregate.Create();
-            Repository.Save(aggregate, Guid.NewGuid(), h => { });
+            await Repository.SaveAsync(aggregate,Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
 
-            var stream = _eventStore.Advanced.GetFrom(0);
-            var lastCommit = stream.Last();
-            await Engine.UpdateAndWait();
+            await Engine.UpdateAndWaitAsync().ConfigureAwait(false);
 
             var result = sut.GetSlotMetrics();
             Assert.That(result.Count(), Is.EqualTo(2));

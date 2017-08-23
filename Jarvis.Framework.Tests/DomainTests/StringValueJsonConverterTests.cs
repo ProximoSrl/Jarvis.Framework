@@ -9,7 +9,7 @@ namespace Jarvis.Framework.Tests.DomainTests
     {
         JsonSerializerSettings _settings;
 
-        [TestFixtureSetUp]
+        [OneTimeSetUp]
         public void TestFixtureSetUp()
         {
             _settings = new JsonSerializerSettings()

@@ -39,8 +39,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                         Builders<Checkpoint>.Filter.Or(
                             Builders<Checkpoint>.Filter.Lt(x => x.Current, checkpointString),
                             Builders<Checkpoint>.Filter.Eq("Current", BsonNull.Value)
-                        )
-                        
+                        )  
                     )
                 )
                 .Project(Builders<Checkpoint>.Projection.Include("_id"));

@@ -1,16 +1,13 @@
 using System;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Threading;
 using Castle.Core.Logging;
 using Jarvis.Framework.Kernel.Events;
 using Jarvis.Framework.Kernel.Support;
 using MongoDB.Driver;
-using NEventStore;
 using Jarvis.Framework.Shared.Helpers;
+using Jarvis.Framework.Kernel.Engine;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 {
@@ -95,18 +92,15 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         public void SetUp(IProjection[] projections, int version, Boolean setupMetrics)
         {
-            Checkpoint versionInfo = _checkpoints.FindOneById("VERSION");
-            if (versionInfo == null)
-            {
-                versionInfo = new Checkpoint("VERSION", 0, null);
-            }
+            Checkpoint versionInfo = _checkpoints.FindOneById("VERSION")
+                ?? new Checkpoint("VERSION", 0, null);
 
-            int currentVersion = (Int32) versionInfo.Value;
+            int currentVersion = (Int32)versionInfo.Value;
 
             Int64 projectionStartFormCheckpointValue = 0L;
             if (currentVersion == 0)
             {
-                var eventsVersion = _checkpoints.FindOneById("events");
+                var eventsVersion = _checkpoints.FindOneById(EventStoreFactory.PartitionCollectionName);
                 if (eventsVersion != null)
                     projectionStartFormCheckpointValue = eventsVersion.Value;
             }
@@ -160,7 +154,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             return RebuildSettings.ShouldRebuild;
         }
 
-        public void RebuildStarted(IProjection projection, Int64 lastCommitId)
+        public void RebuildStarted(IProjection projection, Int64 lastCommit)
         {
             var projectionName = projection.Info.CommonName;
             _checkpoints.UpdateOne(
@@ -176,7 +170,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             //Check if some commit was deleted and lastCommitId in Eventstore 
             //is lower than the latest dispatched commit.
             var trackerLastValue = _checkpointTracker[projection.Info.CommonName];
-            var lastCommitIdLong = lastCommitId;
+            var lastCommitIdLong = lastCommit;
             if (trackerLastValue > 0)
             {
                 //new projection, it has no dispatched checkpoint.
@@ -184,10 +178,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             }
             if (lastCommitIdLong < trackerLastValue)
             {
-                _checkpointTracker[projection.Info.CommonName] = lastCommitId;
+                _checkpointTracker[projection.Info.CommonName] = lastCommit;
                 _checkpoints.UpdateOne(
                    Builders<Checkpoint>.Filter.Eq("_id", projectionName),
-                   Builders<Checkpoint>.Update.Set(x => x.Value, lastCommitId));
+                   Builders<Checkpoint>.Update.Set(x => x.Value, lastCommit));
             }
             _higherCheckpointToDispatchInRebuild = Math.Max(
                 _higherCheckpointToDispatchInRebuild,
@@ -200,7 +194,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             _slotRebuildTracker[_projectionToSlot[projectionName]] = false;
             var checkpoint = _checkpoints.FindOneById(projectionName);
             checkpoint.RebuildStop = DateTime.UtcNow;
-            if (checkpoint != null && checkpoint.RebuildStop.HasValue && checkpoint.RebuildStart.HasValue)
+            if (checkpoint.RebuildStop.HasValue && checkpoint.RebuildStart.HasValue)
             {
                 checkpoint.RebuildTotalSeconds = (long)(checkpoint.RebuildStop - checkpoint.RebuildStart).Value.TotalSeconds;
             }
@@ -234,7 +228,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                    Builders<Checkpoint>.Filter.Eq("Slot", slotName),
                    Builders<Checkpoint>.Update
                     .Set("Current", currentCheckpointToken ?? valueCheckpointToken)
-                    .Set("Value", valueCheckpointToken )
+                    .Set("Value", valueCheckpointToken)
               );
             _currentCheckpointTracker.AddOrUpdate(slotName, currentCheckpointToken ?? 0, (key, value) => currentCheckpointToken ?? 0);
             foreach (var projectionId in projectionIdList)

@@ -18,7 +18,7 @@ namespace Jarvis.Framework.Kernel.Events
 
         Task SetUpAsync();
 
-        Task<Boolean> HandleAsync(IDomainEvent e, bool isReplay);
+        Task<Boolean> HandleAsync(Object e, bool isReplay);
 
         Task StartRebuildAsync(IRebuildContext context);
 

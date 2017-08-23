@@ -1,84 +1,85 @@
 ﻿using Castle.Core.Logging;
 using Jarvis.Framework.Kernel.Support;
+using Jarvis.Framework.Shared.Exceptions;
 using Metrics;
-using NEventStore;
-using NEventStore.Client;
-using NEventStore.Persistence;
+using NStore.Core.Logging;
+using NStore.Core.Persistence;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 {
-
-    /// <summary>
-    /// Based on the new polling client of NEventStore.
-    /// </summary>
-    public class CommitPollingClient2 : ICommitPollingClient
+	/// <summary>
+	/// Based on the new polling client of NEventStore.
+	/// </summary>
+	public class CommitPollingClient2 : ICommitPollingClient
     {
         private int _bufferSize = 4000;
 
-        readonly ICommitEnhancer _enhancer;
+        private readonly ICommitEnhancer _enhancer;
         private readonly String _id;
 
-        readonly ILogger _logger;
+        private readonly ILogger _logger;
 
         public CommitPollingClientStatus Status { get; private set; }
 
         public Exception LastException { get; private set; }
 
-        PollingClient2 _innerClient;
-
-        CommitSequencer _sequencer;
-        readonly IPersistStreams _persistStream;
+        private PollingClient _innerClient;
+        private LambdaSubscription _innerSubscription;
+        private readonly IPersistence _persistence;
 
         public CommitPollingClient2(
-            IPersistStreams persistStreams,
+            IPersistence persistStreams,
             ICommitEnhancer enhancer,
             String id,
-            ILogger logger)
+            ILogger logger,
+            INStoreLoggerFactory factory)
         {
             if (persistStreams == null)
-            {
-                throw new ArgumentNullException("persistStream");
-            }
+                throw new ArgumentNullException(nameof(persistStreams));
+
+            if (enhancer == null)
+                throw new ArgumentNullException(nameof(enhancer));
+
+            if (logger == null)
+                throw new ArgumentNullException(nameof(logger));
+
             _enhancer = enhancer;
-            _consumers = new List<ITargetBlock<ICommit>>();
-            _persistStream = persistStreams;
+            _consumers = new List<ITargetBlock<IChunk>>();
             _logger = logger;
             _id = id;
             Status = CommitPollingClientStatus.Stopped;
+            _persistence = persistStreams;
+            _factory = factory;
         }
 
-        public void AddConsumer(Func<ICommit, Task> consumerAction)
+        public void AddConsumer(Func<IChunk, Task> consumerAction)
         {
             ExecutionDataflowBlockOptions consumerOptions = new ExecutionDataflowBlockOptions();
             consumerOptions.BoundedCapacity = _bufferSize;
             ConsumerActionWrapper wrapper = new ConsumerActionWrapper(consumerAction, this);
-            var actionBlock = new ActionBlock<ICommit>((Func<ICommit, Task>) wrapper.Consume, consumerOptions);
+            var actionBlock = new ActionBlock<IChunk>((Func<IChunk, Task>)wrapper.Consume, consumerOptions);
 
             _consumers.Add(actionBlock);
         }
 
         #region Dispatching
 
-        private readonly List<ITargetBlock<ICommit>> _consumers;
+        private readonly List<ITargetBlock<IChunk>> _consumers;
 
         private class ConsumerActionWrapper
         {
-            private readonly Func<ICommit, Task> _consumerAction;
+            private readonly Func<IChunk, Task> _consumerAction;
             private Boolean _active;
             private String _error;
-  
+
             private readonly CommitPollingClient2 _owner;
 
-            public ConsumerActionWrapper(Func<ICommit, Task> consumerAction, CommitPollingClient2 owner)
+            public ConsumerActionWrapper(Func<IChunk, Task> consumerAction, CommitPollingClient2 owner)
             {
                 _consumerAction = consumerAction;
                 _active = true;
@@ -88,7 +89,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             public string Error { get { return _error; } }
             public Boolean Active { get { return _active; } }
 
-            public async Task Consume(ICommit commit)
+            public async Task Consume(IChunk commit)
             {
                 if (Active == false) return; //consumer failed.
                 try
@@ -115,35 +116,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         private readonly CancellationTokenSource _stopRequested = new CancellationTokenSource();
 
-        /// <summary>
-        /// Start automatic polling.
-        /// </summary>
-        /// <param name="checkpointTokenFrom"></param>
-        /// <param name="intervalInMilliseconds"></param>
-        /// <param name="checkpointTokenSequenced">When there is a rebuild we already know that commit until the
-        /// rebuild checkpoint are already sequenced so there is no need to wait for them. All CheckpointToken
-        /// less than this value are considered to be sequenced.</param>
-        /// <param name="bufferSize"></param>
-        /// <param name="pollerName"></param>
-        public void StartAutomaticPolling(
-          Int64 checkpointTokenFrom,
-          Int32 intervalInMilliseconds,
-          Int64 checkpointTokenSequenced,
-          Int32 bufferSize,
-          String pollerName)
-        {
-            Init(checkpointTokenFrom, intervalInMilliseconds,checkpointTokenSequenced, bufferSize, pollerName);
-            _innerClient.StartFrom(checkpointTokenFrom);
-            Status = CommitPollingClientStatus.Polling;
-        }
-
-        public void StartManualPolling(Int64 checkpointTokenFrom, Int32 intervalInMilliseconds, Int32 bufferSize, String pollerName)
-        {
-            Init(checkpointTokenFrom, intervalInMilliseconds, 0,bufferSize, pollerName);
-            _innerClient.ConfigurePollingFunction();
-        }
-
-        private void Init(Int64 checkpointTokenFrom, int intervalInMilliseconds, Int64 checkpointTokenSequenced, int bufferSize, string pollerName)
+        public void Configure(
+                   Int64 checkpointTokenFrom,
+                   Int32 bufferSize)
         {
             _bufferSize = bufferSize;
             _checkpointTokenCurrent = checkpointTokenFrom;
@@ -151,19 +126,24 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             //prepare single poller thread.
             CreateTplChain();
 
-            _sequencer = new CommitSequencer(DispatchCommit, _checkpointTokenCurrent, 2000);
-            _innerClient = new PollingClient2(
-                _persistStream,
-                c =>
-                {
-                    if (c.CheckpointToken <= checkpointTokenSequenced)
-                        return DispatchCommit(c);
+            _innerSubscription = new LambdaSubscription(DispatchChunk);
 
-                    return _sequencer.Handle(c);
-                },
-                intervalInMilliseconds);
+            _innerClient = new PollingClient(
+                _persistence,
+                checkpointTokenFrom,
+                _innerSubscription,
+                _factory);
 
-            RegisterHealthChecks(pollerName);
+            RegisterHealthChecks(_id);
+        }
+
+        public void Start()
+        {
+            if (_innerClient == null)
+                throw new JarvisFrameworkEngineException("Cannot start polling client because you forget to call Configure First");
+
+            _innerClient.Start();
+            Status = CommitPollingClientStatus.Polling;
         }
 
         private void RegisterHealthChecks(string pollerName)
@@ -184,28 +164,40 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                     exceptionText = exceptionText.Replace("{", "{{").Replace("}", "}}");
                     return HealthCheckResult.Unhealthy("Faulted (exception in consumer): " + exceptionText);
                 }
-                var elapsed = DateTime.UtcNow - _innerClient.LastActivityTimestamp;
-                if (elapsed.TotalMilliseconds > 5000)
-                {
-                    //more than 5 seconds without a poll, polling probably is stopped
-                    return HealthCheckResult.Unhealthy(String.Format("poller stuck, last polling {0} ms ago", elapsed));
-                }
+
+                //TODO NSTORE: Verify to insert in NStore poller some diagnostics.
+                //var elapsed = DateTime.UtcNow - _innerClient.LastActivityTimestamp;
+                //if (elapsed.TotalMilliseconds > 5000)
+                //{
+                //    //more than 5 seconds without a poll, polling probably is stopped
+                //    return HealthCheckResult.Unhealthy(String.Format("poller stuck, last polling {0} ms ago", elapsed));
+                //}
 
                 return HealthCheckResult.Healthy("Poller alive");
             });
+
             //Now register health check for the internal NES poller, to diagnose errors in polling.
             HealthChecks.RegisterHealthCheck("Polling internal errors: ", () =>
             {
-                if (_innerClient != null && !String.IsNullOrEmpty(_innerClient.LastPollingError))
+                if (_innerSubscription?.LastError != null)
                 {
-                    return HealthCheckResult.Unhealthy($"Inner NES poller has error: {_innerClient.LastPollingError}");
+                    return HealthCheckResult.Unhealthy($"Inner NStore poller has error: {_innerSubscription?.LastError}");
                 }
                 return HealthCheckResult.Healthy("Inner NES Poller Ok");
             });
         }
 
-        public void StopPolling(Boolean setToFaulted)
+        public void Stop(Boolean setToFaulted)
         {
+            if (_innerClient == null)
+                throw new JarvisFrameworkEngineException("Cannot stop polling client because you forget to call Configure First");
+
+            if (Status != CommitPollingClientStatus.Polling)
+            {
+                _logger.Warn($"Cannot stop poller {_id}, poller is in unstoppable status: {Status}");
+                return;
+            }
+
             _innerClient.Stop();
             CloseEverything();
             Status = setToFaulted ?
@@ -219,15 +211,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             CloseTplChain();
         }
 
-
         /// <summary>
-        /// Add a manual poll command, it will be executed from the single thread that
-        /// read commits from stream.
+        /// Add a manual poll command, this is an async function so it return
+        /// Task.
         /// </summary>
-        public void Poll()
+        public Task PollAsync()
         {
             //Add poll command if there are no other poll command in queuel
-            _innerClient.PollNow();
+            return _innerClient.Poll();
         }
 
         private double GetClientBufferSize()
@@ -237,28 +228,30 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             return 0;
         }
 
-        private Int32 _postErrors = 0;
-
-        private PollingClient2.HandlingResult DispatchCommit(ICommit commit)
+        private Task<Boolean> DispatchChunk(IChunk chunk)
         {
             try
             {
                 if (_stopRequested.IsCancellationRequested)
                 {
                     CloseTplChain();
-                    return PollingClient2.HandlingResult.Stop;
+                    return Task.FromResult(false);
                 }
 
-                if (commit.StreamId.StartsWith("system.empty"))
+                if (chunk.PartitionId.StartsWith("system.empty"))
                 {
-                    _logger.DebugFormat("Found empty commit - {0}", commit.CheckpointToken);
+                    _logger.DebugFormat("Found empty commit - {0}", chunk.Position);
                 }
                 else
                 {
-                    _enhancer.Enhance(commit);
+                    _enhancer.Enhance(chunk);
                 }
 
-                var task = _buffer.SendAsync(commit);
+                var task = _buffer.SendAsync(chunk);
+                //TODO: CHECK if this is really needed, we could simply await
+                //This was introduced because if you cancel the polling but the
+                //mesh is full and the projections are stopped the mesh will never
+                //accept the message again.
                 //wait till the commit is stored in tpl queue
                 while (!task.Wait(2000))
                 {
@@ -266,32 +259,27 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                     if (_stopRequested.IsCancellationRequested)
                     {
                         _buffer.Complete();
-                        return PollingClient2.HandlingResult.Stop;
+                        return Task.FromResult(false);
                     }
-                };
+                }
+
                 //Check if block postponed the message, if for some
                 //reason the message is postponed, exit from the polling
                 if (!task.Result)
                 {
-                    if (_postErrors > 2)
-                    {
-                        //TPL is somewhat stuck
-                        _logger.ErrorFormat("CommitPollingClient {0}: Unable to dispatch commit {1} into TPL chain, buffer block did not accept message", _id, commit.CheckpointToken);
-                        _stopRequested.Cancel();
-                    }
-                    _postErrors++;
-                    _logger.WarnFormat("CommitPollingClient {0}: TPL did not accept message for commit {1}", _id, commit.CheckpointToken);
-                    Thread.Sleep(1000); //let some time to flush some messages.
-                    return PollingClient2.HandlingResult.Retry;
+                    //TPL is somewhat stuck
+                    _logger.ErrorFormat("CommitPollingClient {0}: Unable to dispatch commit {1} into TPL chain, buffer block did not accept message", _id, chunk.Position);
+                    _stopRequested.Cancel();
+                    return Task.FromResult(false); //stop polling.
                 }
-                _postErrors = 0;
-                _checkpointTokenCurrent = commit.CheckpointToken;
-                return PollingClient2.HandlingResult.MoveToNext;
+
+                _checkpointTokenCurrent = chunk.Position;
+                return Task.FromResult(true);
             }
             catch (Exception ex)
             {
-                _logger.ErrorFormat(ex, "Error in dispatching commit {0} - {1}", commit.CheckpointToken, ex.Message);
-                return PollingClient2.HandlingResult.Stop;
+                _logger.ErrorFormat(ex, "Error in dispatching commit {0} - {1}", chunk.Position, ex.Message);
+                return Task.FromResult(false);
             }
         }
 
@@ -299,14 +287,15 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         #region Tpl
 
-        private BufferBlock<ICommit> _buffer;
-        private ITargetBlock<ICommit> _broadcaster;
+        private BufferBlock<IChunk> _buffer;
+        private ITargetBlock<IChunk> _broadcaster;
+        private readonly INStoreLoggerFactory _factory;
 
         private void CreateTplChain()
         {
             DataflowBlockOptions bufferOptions = new DataflowBlockOptions();
             bufferOptions.BoundedCapacity = _bufferSize;
-            _buffer = new BufferBlock<ICommit>(bufferOptions);
+            _buffer = new BufferBlock<IChunk>(bufferOptions);
 
             ExecutionDataflowBlockOptions executionOption = new ExecutionDataflowBlockOptions();
             executionOption.BoundedCapacity = _bufferSize;
@@ -324,6 +313,5 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         }
 
         #endregion
-
     }
 }

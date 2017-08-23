@@ -10,8 +10,6 @@ using MongoDB.Driver;
 using System.Linq;
 using Jarvis.Framework.Bus.Rebus.Integration.Adapters;
 using Jarvis.Framework.Tests.BusTests.MessageFolder;
-using Jarvis.NEventStoreEx.CommonDomainEx.Core;
-using NEventStore.Domain.Persistence;
 using MongoDB.Bson;
 using Rebus.Bus;
 using Rebus.Handlers;
@@ -19,10 +17,13 @@ using Jarvis.Framework.Tests.BusTests.Handlers;
 using Jarvis.Framework.Shared.Helpers;
 using Rebus.Config;
 using System.Threading.Tasks;
+using Jarvis.Framework.Shared.Exceptions;
+using NStore.Core.Streams;
+using System.Collections.Generic;
 
 namespace Jarvis.Framework.Tests.BusTests
 {
-    [TestFixture]
+	[TestFixture]
     public class MessageTrackerFithFailureTests
     {
         private IBus _bus;
@@ -30,7 +31,7 @@ namespace Jarvis.Framework.Tests.BusTests
         private AnotherSampleCommandHandler _handler;
         private IMongoCollection<TrackedMessageModel> _messages;
 
-        [TestFixtureSetUp]
+        [OneTimeSetUp]
         public void TestFixtureSetUp()
         {
             _container = new WindsorContainer();
@@ -48,11 +49,16 @@ namespace Jarvis.Framework.Tests.BusTests
                 NumOfWorkers = 1,
                 EndpointsMap = new System.Collections.Generic.Dictionary<string, string>()
                 {
-                    { "Jarvis.Framework.Tests" , "jarvistest-input"}
+                    ["Jarvis.Framework.Tests"] = "jarvistest-input"
                 }
             };
 
-            MongoDbMessagesTracker tracker = new MongoDbMessagesTracker(logDb);
+			configuration.AssembliesWithMessages = new List<System.Reflection.Assembly>()
+			{
+				typeof(SampleMessage).Assembly,
+			};
+
+			MongoDbMessagesTracker tracker = new MongoDbMessagesTracker(logDb);
             BusBootstrapper bb = new BusBootstrapper(
                 _container,
                 configuration,
@@ -74,7 +80,7 @@ namespace Jarvis.Framework.Tests.BusTests
             );
         }
 
-        [TestFixtureTearDown]
+        [OneTimeTearDown]
         public void TestFixtureTearDown()
         {
             _bus.Dispose();
@@ -154,7 +160,7 @@ namespace Jarvis.Framework.Tests.BusTests
             Assert.That(tracks, Has.Count.EqualTo(0), "messages collection is not empty");
 
             var sampleMessage = new AnotherSampleTestCommand(2, "verify_retry_start_execution_tracking");
-            AnotherSampleCommandHandler.SetFixtureData(sampleMessage.MessageId, 2, new ConflictingCommandException("TEST_1", null), true);
+            AnotherSampleCommandHandler.SetFixtureData(sampleMessage.MessageId, 2, new ConcurrencyException("TEST_1", null), true);
 
             await _bus.Send(sampleMessage);
             _handler.Reset.WaitOne(10000);
@@ -197,8 +203,8 @@ namespace Jarvis.Framework.Tests.BusTests
         public async Task Verify_exceeding_retry()
         {
             var sampleMessage = new AnotherSampleTestCommand(3, "verify_exceeding_retry");
-            AnotherSampleCommandHandler.SetFixtureData(sampleMessage.MessageId, Int32.MaxValue, new ConflictingCommandException("TEST_1", null), false);
-            await _bus.Send(sampleMessage);
+            AnotherSampleCommandHandler.SetFixtureData(sampleMessage.MessageId, Int32.MaxValue, new ConcurrencyException("TEST_1", null), false);
+            await _bus.Send(sampleMessage).ConfigureAwait(false);
             _handler.Reset.WaitOne(10000);
             //cycle until we found handled message on tracking
             TrackedMessageModel track;
@@ -206,12 +212,12 @@ namespace Jarvis.Framework.Tests.BusTests
             do
             {
                 Thread.Sleep(200);
-                track = _messages.AsQueryable().SingleOrDefault(t => t.MessageId == sampleMessage.MessageId.ToString() &&
-                    t.ExecutionCount == 100 &&
-                    t.Completed == true);
+                track = _messages.AsQueryable().SingleOrDefault(t => t.MessageId == sampleMessage.MessageId.ToString()
+                    && t.ExecutionCount == 100
+                    && t.Completed == true);
             }
             while (
-                    track == null && DateTime.Now.Subtract(startTime).TotalSeconds < 60 //TODO: find a better way to handle this test.
+                    track == null && DateTime.Now.Subtract(startTime).TotalSeconds < 4 //TODO: find a better way to handle this test.
             );
 
             if (track == null)
@@ -232,7 +238,7 @@ namespace Jarvis.Framework.Tests.BusTests
             Assert.That(track.Completed, Is.True);
             Assert.That(track.Success, Is.False);
 
-            Assert.That(track.ExecutionCount, Is.EqualTo(100));
+            Assert.That(track.ExecutionCount, Is.EqualTo(100), "Execution retry for conflict should do for 100 times");
         }
     }
 }

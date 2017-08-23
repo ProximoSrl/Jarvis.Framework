@@ -72,21 +72,21 @@ namespace Jarvis.Framework.Shared.Helpers
         public static void Save<T, Tid>(this IMongoCollection<T> collection, T objToSave, Tid objectId)
         {
             if (ObjectId.Empty.Equals(objectId))
-                throw new ApplicationException("Cannot save with null objectId");
-            var result = collection.ReplaceOne(
+				throw new ArgumentException("Cannot save with null objectId", nameof(objectId));
+			collection.ReplaceOne(
                    Builders<T>.Filter.Eq("_id", objectId),
                    objToSave,
                    new UpdateOptions { IsUpsert = true });
         }
 
-        public static async Task SaveAsync<T, Tid>(this IMongoCollection<T> collection, T objToSave, Tid objectId)
+        public static Task SaveAsync<T, Tid>(this IMongoCollection<T> collection, T objToSave, Tid objectId)
         {
             if (ObjectId.Empty.Equals(objectId))
-                throw new ApplicationException("Cannot save with null objectId");
-            await collection.ReplaceOneAsync(
+                throw new ArgumentException( "Cannot save with null objectId", nameof(objectId));
+            return collection.ReplaceOneAsync(
                    Builders<T>.Filter.Eq("_id", objectId),
                    objToSave,
-                   new UpdateOptions { IsUpsert = true }).ConfigureAwait(false);
+                   new UpdateOptions { IsUpsert = true });
         }
 
         public static DeleteResult RemoveById<T, Tid>(this IMongoCollection<T> collection, Tid idValue)

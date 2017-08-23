@@ -18,7 +18,7 @@ namespace Jarvis.Framework.Tests.BusTests.Handlers
         {
             this.ReceivedMessage = message;
             Reset.Set();
-            return TaskHelpers.CompletedTask;
+            return Task.CompletedTask;
         }
 
         public SampleMessage ReceivedMessage { get; private set; }

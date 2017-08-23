@@ -1,5 +1,4 @@
 ﻿using System;
-using Jarvis.NEventStoreEx.CommonDomainEx;
 using MongoDB.Bson;
 using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;

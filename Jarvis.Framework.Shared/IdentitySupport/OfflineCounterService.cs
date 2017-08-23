@@ -1,4 +1,5 @@
-﻿using MongoDB.Bson;
+﻿using Jarvis.Framework.Shared.Exceptions;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
@@ -69,7 +70,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                 });
             if (counter == null)
             {
-                throw new ApplicationException("Unable to generate next number for serie " + serie);
+                throw new JarvisFrameworkEngineException("Unable to generate next number for serie " + serie);
             }
             return counter.Value;
         }

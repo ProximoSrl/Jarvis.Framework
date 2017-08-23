@@ -20,11 +20,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             _collection = collection;
         }
 
-        public async Task<Boolean> IndexExistsAsync(string indexName)
+        public async Task<Boolean> IndexExistsAsync(string name)
         {
-            var cursor = await _collection.Indexes.ListAsync().ConfigureAwait(false);
-            var list = await cursor.ToListAsync().ConfigureAwait(false);
-            return list.Any(i => i["name"].AsString == indexName);
+            using (var cursor = await _collection.Indexes.ListAsync().ConfigureAwait(false))
+            {
+                var list = await cursor.ToListAsync().ConfigureAwait(false);
+                return list.Any(i => i["name"].AsString == name);
+            }
         }
 
         public async Task CreateIndexAsync(String name, IndexKeysDefinition<TModel> keys, CreateIndexOptions options = null)
@@ -67,25 +69,30 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             return _collection.FindOneById(id);
         }
 
-        public async Task<IEnumerable<TModel>> FindByPropertyAsync<TValue>(Expression<Func<TModel, TValue>> propertySelector, TValue value)
-        {
-            var cursor = await _collection.FindAsync(
-                Builders<TModel>.Filter.Eq<TValue>(propertySelector, value),
-                new FindOptions<TModel>()
-                {
-                    Sort = Builders<TModel>.Sort.Ascending(m => m.Id)
-                }).ConfigureAwait(false);
-            return cursor.ToEnumerable();
-        }
+		public async Task FindByPropertyAsync<TValue>(Expression<Func<TModel, TValue>> propertySelector, TValue value, Func<TModel, Task> subscription)
+		{
+			using (var cursor = await _collection.FindAsync(
+				Builders<TModel>.Filter.Eq<TValue>(propertySelector, value),
+				new FindOptions<TModel>()
+				{
+					Sort = Builders<TModel>.Sort.Ascending(m => m.Id)
+				}).ConfigureAwait(false))
+			{
+				foreach (var item in cursor.ToEnumerable())
+				{
+					await subscription(item).ConfigureAwait(false);
+				}
+			}
+		}
 
-        public IQueryable<TModel> Where(Expression<Func<TModel, bool>> filter)
+		public IQueryable<TModel> Where(Expression<Func<TModel, bool>> filter)
         {
             return _collection.AsQueryable().Where(filter).OrderBy(x => x.Id);
         }
 
-        public async Task<bool> ContainsAsync(Expression<Func<TModel, bool>> filter)
+        public Task<bool> ContainsAsync(Expression<Func<TModel, bool>> filter)
         {
-            return await _collection.AsQueryable().AnyAsync(filter).ConfigureAwait(false);
+            return _collection.AsQueryable().AnyAsync(filter);
         }
 
         public async Task<InsertResult> InsertAsync(TModel model)
@@ -141,7 +148,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         public Task FlushAsync()
         {
-            return TaskHelpers.CompletedTask;
+            return Task.CompletedTask;
         }
     }
 }
