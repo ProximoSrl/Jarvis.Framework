@@ -3,6 +3,7 @@ using System.Configuration;
 using NUnit.Framework;
 using Jarvis.Framework.Kernel.Support;
 using Jarvis.Framework.Shared.IdentitySupport;
+using Jarvis.Framework.TestHelpers;
 
 namespace Jarvis.Framework.Tests
 {
@@ -34,6 +35,8 @@ namespace Jarvis.Framework.Tests
 
             config.Save();
             ConfigurationManager.RefreshSection("connectionStrings");
+
+			TestLogger.GlobalEnabled = false;
         }
     }
 }
