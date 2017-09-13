@@ -57,9 +57,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             get { return _collection.AsQueryable(); }
         }
 
-        public async Task<TModel> FindOneByIdAsync(TKey id)
+        public Task<TModel> FindOneByIdAsync(TKey id)
         {
-            return await _collection.FindOneByIdAsync(id).ConfigureAwait(false);
+            return _collection.FindOneByIdAsync(id);
+        }
+
+        public TModel FindOneById(TKey id)
+        {
+            return _collection.FindOneById(id);
         }
 
         public async Task<IEnumerable<TModel>> FindByPropertyAsync<TValue>(Expression<Func<TModel, TValue>> propertySelector, TValue value)

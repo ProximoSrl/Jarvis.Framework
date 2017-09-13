@@ -187,6 +187,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 await _storage.FindOneByIdAsync(id).ConfigureAwait(false);
         }
 
+        public TModel FindOneById(TKey id)
+        {
+            return _inmemoryCollection.IsActive ?
+                _inmemoryCollection.GetById(id) :
+                _storage.FindOneById(id);
+        }
+
         public async Task<IEnumerable<TModel>> FindByPropertyAsync<TValue>(
             Expression<Func<TModel, TValue>> propertySelector,
             TValue value)

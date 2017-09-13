@@ -30,6 +30,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             return _storage.FindOneByIdAsync(id);
         }
 
+        public TModel FindOneById(TKey id)
+        {
+            return _storage.FindOneById(id);
+        }
+
         public IMongoCollection<TModel> Collection {
             get { return _storage.Collection;  }
         }

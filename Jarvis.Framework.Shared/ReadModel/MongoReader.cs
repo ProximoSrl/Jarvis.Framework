@@ -36,6 +36,11 @@ namespace Jarvis.Framework.Shared.ReadModel
             return Collection.FindOneByIdAsync(id);
         }
 
+        public virtual TModel FindOneById(TKey id)
+        {
+            return Collection.FindOneById(id);
+        }
+
         public virtual IMongoCollection<TModel> Collection
         {
             get { return _collection ?? (_collection = _readmodelDb.GetCollection<TModel>(CollectionName)); }

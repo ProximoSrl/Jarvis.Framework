@@ -20,7 +20,19 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         IQueryable<TModel> All { get; }
 
+        /// <summary>
+        /// Get a single instance of an element.
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
         Task<TModel> FindOneByIdAsync(TKey id);
+
+        /// <summary>
+        /// Sync version of <see cref="FindOneByIdAsync(TKey)"/>
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        TModel FindOneById(TKey id);
 
         /// <summary>
         /// Find all the element that have a specific property with a value equal to <paramref name="value"/> 
