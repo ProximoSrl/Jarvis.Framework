@@ -22,21 +22,21 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
             Logger = NullLogger.Instance;
         }
 
-        public async Task<ICommand> Send(ICommand command, string impersonatingUser = null)
+        public async Task<ICommand> SendAsync(ICommand command, string impersonatingUser = null)
         {
             PrepareCommand(command, impersonatingUser);
             await _bus.Send(command).ConfigureAwait(false);
             return command;
         }
 
-        public async Task<ICommand> SendLocal(ICommand command, string impersonatingUser = null)
+        public async Task<ICommand> SendLocalAsync(ICommand command, string impersonatingUser = null)
         {
             PrepareCommand(command, impersonatingUser);
             await _bus.SendLocal(command).ConfigureAwait(false);
             return command;
         }
 
-        public async Task<ICommand> Defer(TimeSpan delay, ICommand command, string impersonatingUser = null)
+        public async Task<ICommand> DeferAsync(TimeSpan delay, ICommand command, string impersonatingUser = null)
         {
             PrepareCommand(command, impersonatingUser);
 

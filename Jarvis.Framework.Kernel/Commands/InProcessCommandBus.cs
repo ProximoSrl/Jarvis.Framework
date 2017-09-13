@@ -44,18 +44,25 @@ namespace Jarvis.Framework.Kernel.Commands
             _kernel = kernel;
         }
 
-        public Task<ICommand> Send(ICommand command, string impersonatingUser = null)
+        public Task<ICommand> SendAsync(ICommand command, string impersonatingUser = null)
         {
-            return SendLocal(command, impersonatingUser);
+            return SendLocalAsync(command, impersonatingUser);
         }
 
-        public Task<ICommand> Defer(TimeSpan delay, ICommand command, string impersonatingUser = null)
+        /// <summary>
+        /// TODO: deferring command with in process command bus actually does not defer anything.
+        /// </summary>
+        /// <param name="delay"></param>
+        /// <param name="command"></param>
+        /// <param name="impersonatingUser"></param>
+        /// <returns></returns>
+        public Task<ICommand> DeferAsync(TimeSpan delay, ICommand command, string impersonatingUser = null)
         {
             Logger.WarnFormat("Sending command {0} without delay", command.MessageId);
-            return SendLocal(command, impersonatingUser);
+            return SendLocalAsync(command, impersonatingUser);
         }
 
-        public Task<ICommand> SendLocal(ICommand command, string impersonatingUser = null)
+        public Task<ICommand> SendLocalAsync(ICommand command, string impersonatingUser = null)
         {
             try
             {

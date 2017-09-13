@@ -51,7 +51,7 @@ namespace Jarvis.Framework.Kernel.Commands
 
             try
             {
-                await _commandBus.Send(command, user).ConfigureAwait(false);
+                await _commandBus.SendAsync(command, user).ConfigureAwait(false);
                 return new ExecuteCommandResultDto(true, "", null);
             }
             catch (AggregateModifiedException ex)
