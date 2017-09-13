@@ -81,26 +81,26 @@ namespace Jarvis.Framework.Kernel.Events
                 var methodInfo = this.GetType().Method("On", new Type[] { eventType }, Flags.InstancePublic);
                 if (methodInfo != null)
                 {
-                    if (methodInfo.ReturnType == null)
-                    {
-                        throw new NotSupportedException($"On function should return Task to support async. Method {methodInfo.Name} of object {this.GetType().FullName} is not compliant");
-                    }
                     invoker = methodInfo.DelegateForCallMethod();
                 }
                 _handlersCache.Add(key, invoker);
             }
 
-            if(invoker != null)
+            if (invoker != null)
             {
-                Task retValue = (Task) invoker.Invoke(this, e);
-                await retValue.ConfigureAwait(false);
+                var retValueTask = invoker.Invoke(this, e) as Task;
+                if (retValueTask != null)
+                {
+                    await retValueTask.ConfigureAwait(false);
+                }
                 return true;
             }
 
             return false;
         }
 
-        public bool IsReplay {
+        public bool IsReplay
+        {
             get { return IsRebuilding; }
         }
 

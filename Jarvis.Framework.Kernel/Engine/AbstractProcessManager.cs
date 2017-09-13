@@ -25,7 +25,7 @@ namespace Jarvis.Framework.Kernel.Engine
 
     public abstract class AbstractProcessManagerListener<TProcessManager> : IProcessManagerListener<TProcessManager> where TProcessManager : ISagaEx
     {
-        Dictionary<Type, Func<IMessage, string>> _correlator = new Dictionary<Type, Func<IMessage, string>>();
+        private Dictionary<Type, Func<IMessage, string>> _correlator = new Dictionary<Type, Func<IMessage, string>>();
         /// <summary>
         /// Estabilish a correlation between a Message and the Id of the saga that should
         /// handle that message.
@@ -186,7 +186,5 @@ namespace Jarvis.Framework.Kernel.Engine
         {
             throw new ApplicationException(String.Format(message, param), innerException);
         }
-
-
     }
 }
