@@ -37,7 +37,7 @@ namespace Jarvis.Framework.Kernel.Commands
             Logger = NullLogger.Instance;
         }
 
-        public async Task<ExecuteCommandResultDto> Execute(ExecuteCommandDto dto)
+        public async Task<ExecuteCommandResultDto> ExecuteAsync(ExecuteCommandDto dto)
         {
             var command = ExecuteCommandDto.Deserialize(dto);
             Logger.InfoFormat("Ask execution of command {0} - {1}", command.MessageId, command.Describe());
