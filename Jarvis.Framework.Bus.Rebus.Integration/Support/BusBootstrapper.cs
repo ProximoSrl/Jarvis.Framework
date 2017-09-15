@@ -1,37 +1,27 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Configuration;
-using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Text;
 using Castle.MicroKernel.Registration;
 using Castle.Windsor;
-
 using Jarvis.Framework.Shared.Commands;
 using Jarvis.Framework.Shared.Messages;
 using Jarvis.Framework.Shared.ReadModel;
 using Newtonsoft.Json;
-using Rebus;
 using Rebus.Bus;
 using Rebus.Messages;
 using Castle.Core;
-using Castle.Facilities.Startable;
-using Jarvis.Framework.Shared.Helpers;
 using Castle.Core.Logging;
 using Rebus.Config;
 using MongoDB.Driver;
 using Rebus.Serialization.Json;
 using Jarvis.Framework.Shared.Domain.Serialization;
-using Newtonsoft.Json.Serialization;
 using Rebus.Pipeline;
 using Rebus.Retry;
 using Rebus.Transport;
 using System.Threading.Tasks;
 using Rebus.Retry.Simple;
-using Rebus.Routing.TypeBased;
-using Rebus.Routing;
 
 namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 {
@@ -88,7 +78,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
             _container.Register(Component.For<RebusConfigurer>().Instance(busConfiguration));
         }
 
-        RebusConfigurer CreateDefaultBusConfiguration()
+        private RebusConfigurer CreateDefaultBusConfiguration()
         {
             Dictionary<String, String> endpointsMap = _configuration.EndpointsMap;
             var router = new JarvisRebusConfigurationManagerRouter(endpointsMap);
@@ -137,8 +127,8 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
             {
                 if (transportMessage.Headers.ContainsKey("command.id"))
                 {
-                    Guid commandId = Guid.Parse(transportMessage.Headers["command.id"].ToString());
-                    var description = transportMessage.Headers["command.description"].ToString();
+                    Guid commandId = Guid.Parse(transportMessage.Headers["command.id"]);
+                    var description = transportMessage.Headers["command.description"];
                     String exMessage = description;
 
                     while (exception is TargetInvocationException)
