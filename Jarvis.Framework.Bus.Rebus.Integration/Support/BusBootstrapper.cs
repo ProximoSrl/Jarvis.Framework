@@ -95,8 +95,8 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
             busConfiguration = busConfiguration
                 .Transport(t => t.UseMsmq(_configuration.InputQueue))
                 .Options(o => o.SimpleRetryStrategy(
-                    errorQueueAddress: _configuration.ErrorQueue, 
-                    maxDeliveryAttempts : _configuration.MaxRetry
+                    errorQueueAddress: _configuration.ErrorQueue,
+                    maxDeliveryAttempts: _configuration.MaxRetry
                  )).Options(o => o.SetNumberOfWorkers(_configuration.NumOfWorkers))
                 .Routing(r => r.Register(irc => router));
 

@@ -186,7 +186,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 }
             }
         }
-
+     
         public async Task FindAndModifyByPropertyAsync<TProperty>(DomainEvent e, Expression<Func<TModel, TProperty>> propertySelector, TProperty propertyValue, Action<TModel> action, bool notify = false)
         {
             var result = await _storage.FindByPropertyAsync(propertySelector, propertyValue).ConfigureAwait(false);
@@ -205,12 +205,21 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             return _storage.FindByPropertyAsync(propertySelector, propertyValue);
         }
 
-        public async Task FindAndModifyAsync(DomainEvent e, TKey id, Action<TModel> action, bool notify = false)
+        public Task FindAndModifyAsync(DomainEvent e, TKey id, Action<TModel> action, bool notify = false)
+        {
+            //Delegates to the async function.
+            return FindAndModifyAsync(e, id, m => {
+                action(m);
+                return TaskHelpers.CompletedTask;
+            });
+        }
+
+        public async Task FindAndModifyAsync(DomainEvent e, TKey id, Func<TModel, Task> action, bool notify = false)
         {
             var model = await _storage.FindOneByIdAsync(id).ConfigureAwait(false);
             if (model != null && !model.BuiltFromEvent(e.MessageId))
             {
-                action(model);
+                await action(model).ConfigureAwait(false);
                 await SaveAsync(e, model, notify).ConfigureAwait(false);
             }
         }

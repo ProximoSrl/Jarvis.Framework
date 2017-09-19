@@ -42,7 +42,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         private long _maxDispatchedCheckpoint = 0;
         private Int32 _countOfConcurrentDispatchingCommit = 0;
 
-        public IExtendedLogger Logger { get; set; } 
+        public IExtendedLogger Logger { get; set; }
 
         public ILoggerFactory LoggerFactory { get; set; }
 
@@ -61,7 +61,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         private readonly ConcurrentBag<String> _engineFatalErrors;
 
         public ProjectionEngine(
-			ICommitPollingClientFactory pollingClientFactory,
+            ICommitPollingClientFactory pollingClientFactory,
             IConcurrentCheckpointTracker checkpointTracker,
             IProjection[] projections,
             IHousekeeper housekeeper,
@@ -111,6 +111,15 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                     Logger.Warn("no projections found!");
                 }
             }
+        }
+
+        /// <summary>
+        /// This is only to give the ability to register and start with old startable aux function
+        /// for castle.
+        /// </summary>
+        public void StartSync()
+        {
+            StartAsync().Wait();
         }
 
         public async Task StartAsync()
@@ -202,7 +211,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
             var allSlots = _projectionsBySlot.Keys.ToArray();
 
-            var allClients = new List<ICommitPollingClient> ();
+            var allClients = new List<ICommitPollingClient>();
             //recreate all polling clients.
             foreach (var bucket in _config.BucketInfo)
             {
@@ -294,7 +303,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                             //so we need to immediately stop rebuilding.
                             await projection.StopRebuildAsync().ConfigureAwait(false);
                         }
-                        maxCheckpointRebuilded = Math.Max(maxCheckpointRebuilded,_checkpointTracker.GetCheckpoint(projection));
+                        maxCheckpointRebuilded = Math.Max(maxCheckpointRebuilded, _checkpointTracker.GetCheckpoint(projection));
                     }
 
                     await projection.SetUpAsync().ConfigureAwait(false);
@@ -552,8 +561,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
             while (true)
             {
-                var last = collection  
-                    .FindAll()            
+                var last = collection
+                    .FindAll()
                     .Sort(Builders<BsonDocument>.Sort.Descending("_id"))
                     .Limit(1)
                     .Project(Builders<BsonDocument>.Projection.Include("_id"))
@@ -577,7 +586,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                     }
                     if (checkpointId == dispatched)
                     {
-                        last =  collection
+                        last = collection
                             .FindAll()
                             .Sort(Builders<BsonDocument>.Sort.Descending("_id"))
                             .Limit(1)

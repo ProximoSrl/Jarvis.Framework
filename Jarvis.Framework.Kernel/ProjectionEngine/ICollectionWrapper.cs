@@ -67,6 +67,17 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         Task FindAndModifyAsync(DomainEvent e, TKey id, Action<TModel> action, bool notify = false);
 
         /// <summary>
+        /// Find a single readmodel and execute an action to modify, this allow for an action that is 
+        /// awaitable, because it return Task.
+        /// </summary>
+        /// <param name="e"></param>
+        /// <param name="id"></param>
+        /// <param name="action"></param>
+        /// <param name="notify"></param>
+        /// <returns></returns>
+        Task FindAndModifyAsync(DomainEvent e, TKey id, Func<TModel, Task> action, bool notify = false);
+
+        /// <summary>
         /// Optimize the "in memory" collection allowing to search for a given object that has
         /// a specific property equal to specific value.
         /// 
