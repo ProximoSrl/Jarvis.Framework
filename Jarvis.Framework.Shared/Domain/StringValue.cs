@@ -11,7 +11,7 @@ namespace Jarvis.Framework.Shared.Domain
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            
+
             // NB!
             if (other.GetType() != this.GetType()) return false;
 
@@ -44,7 +44,7 @@ namespace Jarvis.Framework.Shared.Domain
         protected string Value
         {
             get { return _value; }
-            private set {  _value = Normalize(value); }
+            private set { _value = Normalize(value); }
         }
 
         protected virtual string Normalize(string value)
@@ -54,7 +54,7 @@ namespace Jarvis.Framework.Shared.Domain
 
         public static implicit operator string(StringValue id)
         {
-            return id.Value;
+            return id?.Value;
         }
 
         protected StringValue(string value)
