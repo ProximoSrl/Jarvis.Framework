@@ -17,7 +17,7 @@ namespace Jarvis.Framework.Kernel.Events
     {
         protected ProjectionInfoAttribute _projectionInfoAttribute;
 
-        public AbstractProjection()
+        protected AbstractProjection()
         {
             _projectionInfoAttribute = GetType().GetCustomAttribute<ProjectionInfoAttribute>();
             if (_projectionInfoAttribute == null)
@@ -66,7 +66,7 @@ namespace Jarvis.Framework.Kernel.Events
             this._observers.Add(observer);
         }
 
-        public bool Handle(IDomainEvent e, bool isReplay)
+        public virtual bool Handle(IDomainEvent e, bool isReplay)
         {
             IsRebuilding = isReplay;
 
