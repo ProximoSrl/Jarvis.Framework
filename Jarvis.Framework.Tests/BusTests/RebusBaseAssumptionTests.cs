@@ -74,7 +74,6 @@ namespace Jarvis.Framework.Tests.BusTests
                 //Now I register myself to the routing
                 await process1.Bus.Subscribe<AnotherSampleMessage>();
                 await process2.Bus.Subscribe<AnotherSampleMessage>();
-                Thread.Sleep(3900);
                 await process2.Bus.Send(new AnotherSampleMessage(1));
 
                 //This fail because of the publishing

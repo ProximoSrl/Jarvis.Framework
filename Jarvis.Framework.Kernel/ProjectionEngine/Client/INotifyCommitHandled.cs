@@ -20,7 +20,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
     {
         public Task SetDispatched(String slotName, ICommit commit)
         {
-            // Method intentionally left empty.
+            return TaskHelpers.CompletedTask;
         }
     }
 }
