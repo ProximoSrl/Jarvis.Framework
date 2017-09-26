@@ -34,5 +34,11 @@ namespace Jarvis.Framework.Kernel.Events
         Int32 Priority { get;  }
 
         ProjectionInfoAttribute Info { get; }
+
+        /// <summary>
+        /// Called when the projection engine dispatched all the events of a checkpoint.
+        /// </summary>
+        /// <param name="checkpointToken"></param>
+        void CheckpointProjected(Int64 checkpointToken);
     }
 }

@@ -107,5 +107,10 @@ namespace Jarvis.Framework.Kernel.Events
         {
             get { return 0; }
         }
+
+        public virtual void CheckpointProjected(Int64 checkpointToken)
+        {
+            // Method intentionally left empty.
+        }
     }
 }

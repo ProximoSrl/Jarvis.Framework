@@ -494,6 +494,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 //I'm not on rebuilding or we are in continuous rebuild., we have projection to update, update everything with one call.
                 _checkpointTracker.UpdateSlotAndSetCheckpoint(slotName, projectionToUpdate, commit.CheckpointToken);
             }
+
+            //TODO: Find a better way, for now we signal projection that we fully dispatched a checkpoint token
+            //all events are dispatched.
+            foreach (var projection in projections)
+            {
+                projection.CheckpointProjected(commit.CheckpointToken);
+            }
+
             MetricsHelper.MarkCommitDispatchedCount(slotName, 1);
 
             if (dispatchCommit)
