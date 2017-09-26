@@ -128,7 +128,6 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
                 );
         }
 
-
         protected void ConfigureProjectionEngine(Boolean dropCheckpoints = true)
         {
             if (Engine != null)

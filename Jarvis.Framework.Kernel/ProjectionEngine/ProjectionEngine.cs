@@ -497,7 +497,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             MetricsHelper.MarkCommitDispatchedCount(slotName, 1);
 
             if (dispatchCommit)
-                _notifyCommitHandled.SetDispatched(commit);
+                _notifyCommitHandled.SetDispatched(slotName, commit);
 
             // ok in multithread wihout locks!
             if (_maxDispatchedCheckpoint < chkpoint)

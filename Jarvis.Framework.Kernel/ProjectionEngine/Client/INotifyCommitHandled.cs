@@ -1,23 +1,24 @@
 using NEventStore;
+using System;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 {
     public interface INotifyCommitHandled
     {
         /// <summary>
-        /// TODO: This should be refactored, because this set the commit as 
-        /// dispatched when the first slot process the commit, it should 
-        /// contain at lest slot Name.
+        /// This signal when the <see cref="ProjectionEngine"/> dispatched
+        /// a <see cref="ICommit"/> to all projection of a given slot.
         /// </summary>
+        /// <param name="slotName"></param>
         /// <param name="commit"></param>
-        void SetDispatched(ICommit commit);
+        void SetDispatched(String slotName, ICommit commit);
     }
 
     public class NullNotifyCommitHandled : INotifyCommitHandled
     {
-        public void SetDispatched(ICommit commit)
+        public void SetDispatched(String slotName, ICommit commit)
         {
-
+            // Method intentionally left empty.
         }
     }
 }
