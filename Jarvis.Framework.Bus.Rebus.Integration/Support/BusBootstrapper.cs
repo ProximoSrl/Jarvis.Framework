@@ -37,6 +37,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
         public static readonly JsonSerializerSettings JsonSerializerSettingsForRebus = new JsonSerializerSettings
         {
             TypeNameHandling = TypeNameHandling.All,
+            TypeNameAssemblyFormat = System.Runtime.Serialization.Formatters.FormatterAssemblyStyle.Full,
             ContractResolver = new MessagesContractResolver(),
             ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
             Converters = new JsonConverter[]

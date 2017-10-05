@@ -13,9 +13,9 @@ namespace Jarvis.Framework.Shared.Logging
     {
         public static void MarkCommandExecution(this IExtendedLogger logger, ICommand message)
         {
-            logger.ThreadProperties[LoggingConstants.CommandId] = message.MessageId;
-            logger.ThreadProperties[LoggingConstants.UserId] = message.GetContextData(MessagesConstants.UserId);
-            logger.ThreadProperties[LoggingConstants.CommandDescription] = String.Format("{0} [{1}]", message.Describe(), message.GetType());
+            logger.ThreadProperties[LoggingConstants.CommandId] = message?.MessageId;
+            logger.ThreadProperties[LoggingConstants.UserId] = message?.GetContextData(MessagesConstants.UserId);
+            logger.ThreadProperties[LoggingConstants.CommandDescription] = String.Format("{0} [{1}]", message?.Describe(), message?.GetType());
         }
 
         public static void ClearCommandExecution(this IExtendedLogger logger)
