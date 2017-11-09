@@ -394,10 +394,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 try
                 {
                     var evt = eventMessage.Body as DomainEvent;
-                    //Remember that eventstore can contain simple event stream that does not
-                    //inherits from DomainEvents
-                    if (evt == null)
-                        continue;
+					//Remember that eventstore can contain simple event stream that does not
+					//inherits from DomainEvents
+					if (evt == null)
+					{
+						//this is not a domain event, all projection should update or we have error between value and Current.
+						projectionToUpdate.AddRange(projections.Select(p => p.Info.CommonName));
+						continue;
+					}
 
                     if (Logger.IsDebugEnabled) Logger.ThreadProperties["evType"] = evt.GetType().Name;
                     if (Logger.IsDebugEnabled) Logger.ThreadProperties["evMsId"] = evt.MessageId;
