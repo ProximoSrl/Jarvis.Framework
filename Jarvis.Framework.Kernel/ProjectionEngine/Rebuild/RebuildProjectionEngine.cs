@@ -245,7 +245,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                     foreach (var eventUnwinded in query.ToEnumerable())
                     {
                         if (Logger.IsDebugEnabled) Logger.DebugFormat("TPL queued event {0}/{1} for bucket {2}", eventUnwinded.CheckpointToken, eventUnwinded.EventSequence, bucketInfo);
-                        await buffer.SendAsync(eventUnwinded).ConfigureAwait(false);
+						//rehydrate the event before dispatching
+						eventUnwinded.EnhanceEvent();
+						await buffer.SendAsync(eventUnwinded).ConfigureAwait(false);
 
                         dispatchedEvents++;
                         lastSequenceDispatched = eventUnwinded.EventSequence;
