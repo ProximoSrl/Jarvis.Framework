@@ -60,7 +60,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 		internal async Task DispatchEventAsync(UnwindedDomainEvent unwindedEvent)
 		{
 			var chkpoint = unwindedEvent.CheckpointToken;
-			var domainEvent = unwindedEvent.GetEvent() as DomainEvent;
 			if (chkpoint > LastCheckpointDispatched)
 			{
 				if (_logger.IsDebugEnabled) _logger.DebugFormat("Discharded event {0} commit {1} because last checkpoint dispatched for slot {2} is {3}.", unwindedEvent.CommitId, unwindedEvent.CheckpointToken, SlotName, _maxCheckpointDispatched);
@@ -68,72 +67,58 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 			}
 
 			Interlocked.Increment(ref RebuildProjectionMetrics.CountOfConcurrentDispatchingCommit);
+			TenantContext.Enter(_config.TenantId);
 
-			using (DisposableStack serilogcontextList = new DisposableStack())
+			try
 			{
-				if (_logger.IsDebugEnabled)
+				string eventName = unwindedEvent.EventType;
+				foreach (var projection in _projections)
 				{
-					_logger.DebugFormat("Dispatching checkpoit {0} on tenant {1}", unwindedEvent.CheckpointToken, _config.TenantId);
-					serilogcontextList.Push(_loggerThreadContextManager.SetContextProperty("commit", unwindedEvent.CommitId));
-					serilogcontextList.Push(_loggerThreadContextManager.SetContextProperty("evType", unwindedEvent.EventType));
-					serilogcontextList.Push(_loggerThreadContextManager.SetContextProperty("evMsId", domainEvent != null ? domainEvent.MessageId.ToString() : "null"));
-					serilogcontextList.Push(_loggerThreadContextManager.SetContextProperty("evCheckpointToken", unwindedEvent.CheckpointToken));
-				}
+					var cname = projection.Info.CommonName;
+					long ticks = 0;
 
-				TenantContext.Enter(_config.TenantId);
-
-				try
-				{
-					string eventName = unwindedEvent.EventType;
-					foreach (var projection in _projections)
+					try
 					{
-						var cname = projection.Info.CommonName;
-						serilogcontextList.Push(_loggerThreadContextManager.SetContextProperty("prj", cname));
-
-						long ticks = 0;
-
-						try
-						{
-							//pay attention, stopwatch consumes time.
-							var sw = new Stopwatch();
-							sw.Start();
-							await projection.HandleAsync(unwindedEvent.GetEvent(), true).ConfigureAwait(false);
-							sw.Stop();
-							ticks = sw.ElapsedTicks;
-							MetricsHelper.IncrementProjectionCounterRebuild(cname, SlotName, eventName, ticks);
-						}
-						catch (Exception ex)
-						{
-							_logger.FatalFormat(ex, "[Slot: {3} Projection: {4}] Failed checkpoint: {0} StreamId: {1} Event Name: {2}",
-								unwindedEvent.CheckpointToken,
-								unwindedEvent.PartitionId,
-								eventName,
-								SlotName,
-								cname
-							);
-							throw;
-						}
-
-						_metrics.Inc(cname, eventName, ticks);
-
-						if (_logger.IsDebugEnabled)
-							_logger.DebugFormat("[{3}] [{4}] Handled checkpoint {0}: {1} > {2}",
-								unwindedEvent.CheckpointToken,
-								unwindedEvent.PartitionId,
-								eventName,
-								SlotName,
-								cname
-							);
+						//pay attention, stopwatch consumes time.
+						var sw = new Stopwatch();
+						sw.Start();
+						await projection.HandleAsync(unwindedEvent.GetEvent(), true).ConfigureAwait(false);
+						sw.Stop();
+						ticks = sw.ElapsedTicks;
+						MetricsHelper.IncrementProjectionCounterRebuild(cname, SlotName, eventName, ticks);
 					}
+					catch (Exception ex)
+					{
+						_logger.FatalFormat(ex, "[Slot: {3} Projection: {4}] Failed checkpoint: {0} StreamId: {1} Event Name: {2}",
+							unwindedEvent.CheckpointToken,
+							unwindedEvent.PartitionId,
+							eventName,
+							SlotName,
+							cname
+						);
+						throw;
+					}
+
+					_metrics.Inc(cname, eventName, ticks);
+
+					if (_logger.IsDebugEnabled)
+						_logger.DebugFormat("[{3}] [{4}] Handled checkpoint {0}: {1} > {2}",
+							unwindedEvent.CheckpointToken,
+							unwindedEvent.PartitionId,
+							eventName,
+							SlotName,
+							cname
+						);
 				}
-				catch (Exception ex)
-				{
-					_logger.ErrorFormat(ex, "Error dispathing commit id: {0}\nMessage: {1}\nError: {2}",
-						unwindedEvent.CheckpointToken, unwindedEvent.Event, ex.Message);
-					throw;
-				}
-				_lastCheckpointRebuilded = chkpoint;
 			}
+			catch (Exception ex)
+			{
+				_logger.ErrorFormat(ex, "Error dispathing commit id: {0}\nMessage: {1}\nError: {2}",
+					unwindedEvent.CheckpointToken, unwindedEvent.Event, ex.Message);
+				throw;
+			}
+			_lastCheckpointRebuilded = chkpoint;
+
 			Interlocked.Decrement(ref RebuildProjectionMetrics.CountOfConcurrentDispatchingCommit);
 		}
 	}
