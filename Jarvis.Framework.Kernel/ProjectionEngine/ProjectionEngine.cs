@@ -331,7 +331,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 		{
 			Interlocked.Increment(ref _countOfConcurrentDispatchingCommit);
 
-			using (_loggerThreadContextManager.SetContextProperty("commit", $"{chunk.OperationId}/{chunk.Position}"))
+			using (_loggerThreadContextManager.SetDisposableContextProperty("commit", $"{chunk.OperationId}/{chunk.Position}"))
 			{
 				if (_logger.IsDebugEnabled) _logger.DebugFormat("Dispatching checkpoit {0} on tenant {1}", chunk.Position, _config.TenantId);
 				TenantContext.Enter(_config.TenantId);
@@ -384,16 +384,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 						DisposableStack serilogcontext = new DisposableStack();
 						string eventName = eventMessage.GetType().Name;
 
-						serilogcontext.Push(_loggerThreadContextManager.SetContextProperty("evType", eventName));
-						serilogcontext.Push(_loggerThreadContextManager.SetContextProperty("evMsId", message?.MessageId));
-						serilogcontext.Push(_loggerThreadContextManager.SetContextProperty("evCheckpointToken", chunk.Position));
+						serilogcontext.Push(_loggerThreadContextManager.SetDisposableContextProperty("evType", eventName));
+						serilogcontext.Push(_loggerThreadContextManager.SetDisposableContextProperty("evMsId", message?.MessageId));
+						serilogcontext.Push(_loggerThreadContextManager.SetDisposableContextProperty("evCheckpointToken", chunk.Position));
 
 						using (serilogcontext)
 						{
 							foreach (var projection in projections)
 							{
 								var cname = projection.Info.CommonName;
-								using (_loggerThreadContextManager.SetContextProperty("prj", cname))
+								using (_loggerThreadContextManager.SetDisposableContextProperty("prj", cname))
 								{
 									var checkpointStatus = _checkpointTracker.GetCheckpointStatus(cname, chunk.Position);
 									if (checkpointStatus.IsRebuilding)

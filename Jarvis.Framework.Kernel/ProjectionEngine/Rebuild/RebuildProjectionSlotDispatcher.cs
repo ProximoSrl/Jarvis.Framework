@@ -67,6 +67,17 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 			}
 
 			Interlocked.Increment(ref RebuildProjectionMetrics.CountOfConcurrentDispatchingCommit);
+			object objectToDispatch = unwindedEvent.GetEvent();
+			DomainEvent domainEvent = objectToDispatch as DomainEvent;
+			if (_logger.IsDebugEnabled)
+			{
+				_logger.DebugFormat("Dispatching checkpoit {0} on tenant {1}", unwindedEvent.CheckpointToken, _config.TenantId);
+				_loggerThreadContextManager.SetContextProperty("commit", unwindedEvent.CommitId);
+				_loggerThreadContextManager.SetContextProperty("evType", unwindedEvent.EventType);
+				_loggerThreadContextManager.SetContextProperty("evMsId", domainEvent != null ? domainEvent.MessageId.ToString() : "null");
+				_loggerThreadContextManager.SetContextProperty("evCheckpointToken", unwindedEvent.CheckpointToken);
+			}
+
 			TenantContext.Enter(_config.TenantId);
 
 			try
@@ -75,6 +86,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 				foreach (var projection in _projections)
 				{
 					var cname = projection.Info.CommonName;
+					if (_logger.IsDebugEnabled) _loggerThreadContextManager.SetContextProperty("prj", cname);
 					long ticks = 0;
 
 					try
@@ -82,7 +94,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 						//pay attention, stopwatch consumes time.
 						var sw = new Stopwatch();
 						sw.Start();
-						await projection.HandleAsync(unwindedEvent.GetEvent(), true).ConfigureAwait(false);
+
+						await projection.HandleAsync(objectToDispatch, true).ConfigureAwait(false);
 						sw.Stop();
 						ticks = sw.ElapsedTicks;
 						MetricsHelper.IncrementProjectionCounterRebuild(cname, SlotName, eventName, ticks);
@@ -109,6 +122,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 							SlotName,
 							cname
 						);
+					if (_logger.IsDebugEnabled) _loggerThreadContextManager.ClearContextProperty("prj");
 				}
 			}
 			catch (Exception ex)
@@ -116,6 +130,17 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 				_logger.ErrorFormat(ex, "Error dispathing commit id: {0}\nMessage: {1}\nError: {2}",
 					unwindedEvent.CheckpointToken, unwindedEvent.Event, ex.Message);
 				throw;
+			}
+			finally
+			{
+				if (_logger.IsDebugEnabled)
+				{
+					_loggerThreadContextManager.ClearContextProperty("prj");
+					_loggerThreadContextManager.ClearContextProperty("commit");
+					_loggerThreadContextManager.ClearContextProperty("evType");
+					_loggerThreadContextManager.ClearContextProperty("evMsId");
+					_loggerThreadContextManager.ClearContextProperty("evCheckpointToken");
+				}
 			}
 			_lastCheckpointRebuilded = chkpoint;
 

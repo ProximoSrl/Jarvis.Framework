@@ -99,6 +99,7 @@
     <Compile Include="Events\ChangesetCommonHeaders.cs" />
     <Compile Include="Events\DomainEventHelpers.cs" />
     <Compile Include="Exceptions\ExceptionHelper.cs" />
+    <Compile Include="Logging\LoggingThreadContext.cs" />
     <Compile Include="Messages\IMessageBus.cs" />
     <Compile Include="NeventStoreExGlobalConfiguration.cs" />
     <Compile Include="Persistence\EventStore\CachableAggregateCachedRepository.cs" />
