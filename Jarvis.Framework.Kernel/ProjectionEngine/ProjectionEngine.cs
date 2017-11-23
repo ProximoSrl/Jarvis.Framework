@@ -47,7 +47,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
 		public ILoggerFactory LoggerFactory { get; set; }
 
-		private IPersistence _persistence;
+		private readonly IPersistence _persistence;
 		private readonly ProjectionEngineConfig _config;
 		private readonly Dictionary<string, IProjection[]> _projectionsBySlot;
 		private readonly IProjection[] _allProjections;
