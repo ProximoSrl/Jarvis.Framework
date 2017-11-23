@@ -96,7 +96,8 @@ namespace Jarvis.Framework.Kernel.Commands
 						CheckAggregateVersionForIfVersionEqualTo(repo.Aggregate);
 
 						callback(aggregate);
-						repo.SaveAsync(_commitId, StoreCommandHeaders);
+						//TODO: This is not exceptional but we cannot await inside a lock.
+						repo.SaveAsync(_commitId, StoreCommandHeaders).Wait();
 					}
 				}
 			}

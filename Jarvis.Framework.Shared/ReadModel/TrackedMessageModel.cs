@@ -39,16 +39,16 @@ namespace Jarvis.Framework.Shared.ReadModel
         /// <param name="completedAt"></param>
         void Completed(ICommand command, DateTime completedAt);
 
-        /// <summary>
-        /// Dispatched is the status when the event related to the command is 
-        /// dispatched by the NotifyCommitHandled in projection engine. This means
-        /// that the command is executed then dispatched to the bus and if there
-        /// is a Reply-to a reply command is sent.
-        /// </summary>
-        /// <param name="messageId"></param>
-        /// <param name="dispatchedAt"></param>
-        /// <returns></returns>
-        bool Dispatched(Guid messageId, DateTime dispatchedAt);
+		/// <summary>
+		/// Dispatched is the status when the event related to the command is 
+		/// dispatched by the <see cref="Jarvis.Framework.Kernel.ProjectionEngine.Client.INotifyCommitHandled"/> in projection engine. This means
+		/// that the command is executed then dispatched to the bus and if there
+		/// is a Reply-to a reply command is sent.
+		/// </summary>
+		/// <param name="messageId"></param>
+		/// <param name="dispatchedAt"></param>
+		/// <returns></returns>
+		bool Dispatched(Guid messageId, DateTime dispatchedAt);
 
         /// <summary>
         /// Drop the entire collection.

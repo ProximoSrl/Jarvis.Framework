@@ -10,8 +10,8 @@ namespace Jarvis.Framework.Shared.Messages
     {
         public enum CommandResult
         {
-            Handled,
-            Failed
+            Handled = 0,
+            Failed = 1
         }
 
         public CommandResult Result { get; private set; }
