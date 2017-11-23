@@ -63,6 +63,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
 		public ProjectionEngine(
 			ICommitPollingClientFactory pollingClientFactory,
+			IPersistence persistence,
 			IConcurrentCheckpointTracker checkpointTracker,
 			IProjection[] projections,
 			IHousekeeper housekeeper,
@@ -88,6 +89,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
 			if (config == null)
 				throw new ArgumentNullException(nameof(config));
+
+			if (persistence == null)
+				throw new ArgumentNullException(nameof(persistence));
+
+			_persistence = persistence;
 
 			_logger = logger;
 			_loggerThreadContextManager = loggerThreadContextManager;
@@ -217,21 +223,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 			TenantContext.Enter(_config.TenantId);
 
 			await _housekeeper.InitAsync().ConfigureAwait(false);
-
-			var mongoStoreOptions = new MongoPersistenceOptions
-			{
-				PartitionsConnectionString = _config.EventStoreConnectionString,
-				UseLocalSequence = true,
-				PartitionsCollectionName = EventStoreFactory.PartitionCollectionName,
-				SequenceCollectionName = "event_sequence",
-				DropOnInit = false
-			};
-
-			var mongoPersistence = new MongoPersistence(mongoStoreOptions);
-
-			await mongoPersistence.InitAsync(CancellationToken.None).ConfigureAwait(false);
-
-			_persistence = mongoPersistence;
 
 			await ConfigureProjectionsAsync().ConfigureAwait(false);
 
@@ -396,8 +387,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 								using (_loggerThreadContextManager.SetContextProperty("prj", cname))
 								{
 									var checkpointStatus = _checkpointTracker.GetCheckpointStatus(cname, chunk.Position);
-									if (checkpointStatus.IsRebuilding)
-										throw new JarvisFrameworkEngineException($"Error in projection engine, position {chunk.Position} for projection {projection.Info.CommonName} have IsRebuilding to true. This is not admitted");
+									if (checkpointStatus.IsRebuilding && !RebuildSettings.ContinuousRebuild)
+										throw new JarvisFrameworkEngineException($"Error in projection engine, position {chunk.Position} for projection {projection.Info.CommonName} have IsRebuilding to true.");
 
 									bool handled;
 									long ticks = 0;
@@ -407,7 +398,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 										//pay attention, stopwatch consumes time.
 										var sw = new Stopwatch();
 										sw.Start();
-										handled = await projection.HandleAsync(eventMessage, false).ConfigureAwait(false);
+										handled = await projection.HandleAsync(eventMessage, RebuildSettings.ContinuousRebuild).ConfigureAwait(false);
 										sw.Stop();
 										ticks = sw.ElapsedTicks;
 										MetricsHelper.IncrementProjectionCounter(cname, slotName, eventName, ticks);
@@ -457,7 +448,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
 				//TODO NSTORE: We removed the ability to use standard projection engine with rebuild, but we still need to support the
 				//continuous rebuidl mode probably.
-				if (projectionToUpdate.Count == 0 && RebuildSettings.ContinuousRebuild == false)
+				if (projectionToUpdate.Count == 0 && !RebuildSettings.ContinuousRebuild)
 				{
 					//I'm in rebuilding or no projection had run any events, only update slot
 					_checkpointTracker.UpdateSlot(slotName, chunk.Position);

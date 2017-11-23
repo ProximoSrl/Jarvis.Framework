@@ -26,6 +26,7 @@ using NStore.Domain;
 using NStore.Core.Logging;
 using NStore.Core.Streams;
 using NStore.Core.Persistence;
+using NStore.Persistence.Mongo;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
@@ -167,9 +168,10 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             var rebuildContext = new RebuildContext(RebuildSettings.NitroMode);
             StorageFactory = new MongoStorageFactory(Database, rebuildContext);
 
-            Engine = new ProjectionEngine(
+			Engine = new ProjectionEngine(
                 _pollingClientFactory,
-                _tracker,
+				Persistence,
+				_tracker,
                 BuildProjections().ToArray(),
                 new NullHouseKeeper(),
                 new NullNotifyCommitHandled(),
