@@ -133,6 +133,13 @@ namespace Jarvis.Framework.Kernel.Engine
 		{
 			IsInReplay = false;
 		}
+
+		protected T PrepareCommand<T>(T command) where T : ICommand
+		{
+			command.SetContextData(MessagesConstants.ReplyToHeader, ProcessManagerId);
+			command.SetContextData(MessagesConstants.SagaIdHeader, ProcessManagerId);
+			return command;
+		}
 	}
 
 	public sealed class ProcessManagerPayloadProcessor : IPayloadProcessor
