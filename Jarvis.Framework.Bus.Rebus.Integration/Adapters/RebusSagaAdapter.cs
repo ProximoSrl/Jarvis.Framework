@@ -53,9 +53,9 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
 					{
 						_repository.Clear(); //remember to clear, we are retrying.
 					}
-					pm = await _repository.GetByIdAsync<TProcessManager>(id).ConfigureAwait(true);
+					pm = _repository.GetByIdAsync<TProcessManager>(id).Result;
 					pm.MessageReceived(message);
-					await _repository.SaveAsync(pm, message.MessageId.ToString(), null).ConfigureAwait(true);
+					_repository.SaveAsync(pm, message.MessageId.ToString(), null).Wait();
 					done = true;
 				}
 				catch (ConcurrencyException ex)
