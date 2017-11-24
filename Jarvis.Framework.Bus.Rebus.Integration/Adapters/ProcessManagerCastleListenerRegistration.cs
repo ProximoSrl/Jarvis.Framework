@@ -12,36 +12,27 @@ using System.Threading.Tasks;
 namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
 {
 	/// <summary>
-	/// Register all listener for Saga an Message Handler.
+	/// Register in castle windsor all listeners for Saga an Message Handlers.
+	/// This DOES NOT NEED THE IBus and ONLY register handlers in castle.
 	/// </summary>
-	public class ListenerRegistration
+	public class ProcessManagerCastleListenerRegistration
 	{
-		readonly IProcessManagerListener[] _listeners;
-		readonly IBus _bus;
-		readonly IKernel _kernel;
+		private readonly IProcessManagerListener[] _listeners;
+		private readonly IKernel _kernel;
 
-		public ListenerRegistration(IProcessManagerListener[] listeners, IBus bus, IKernel kernel)
+		public ProcessManagerCastleListenerRegistration(IProcessManagerListener[] listeners, IKernel kernel)
 		{
 			_listeners = listeners;
-			_bus = bus;
 			_kernel = kernel;
 		}
 
-		public void SubscribeSync() 
+		public void Subscribe()
 		{
-			SubscribeAsync().Wait();
-		}
-
-		public async Task SubscribeAsync()
-		{
-			var subscribeToMessages = new HashSet<Type>();
 			foreach (var listener in _listeners)
 			{
 				var processManagerType = listener.GetProcessType();
 				foreach (var message in listener.ListeningTo)
 				{
-					subscribeToMessages.Add(message);
-
 					// adapter
 					var handlerType = typeof(IHandleMessages<>).MakeGenericType(message);
 					var handlerImpl = typeof(RebusSagaAdapter<,,>).MakeGenericType(
@@ -53,9 +44,9 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
 						Component
 							.For(handlerType)
 							.ImplementedBy(handlerImpl)
-							.LifeStyle.Transient
-					);
+							.LifeStyle.Transient);
 				}
+
 				//do not forget to register the process manager, it has dependencies.
 				_kernel.Register(
 					Component
@@ -63,23 +54,6 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
 						.ImplementedBy(processManagerType)
 						.LifestyleTransient()
 				);
-			}
-
-			//then should scan Castle for each component that registered IHandleMessage
-			foreach (var handler in _kernel.GetAssignableHandlers(typeof(Object)))
-			{
-				var messageHandlers = handler.ComponentModel.Services
-					.Where(s => s.IsGenericType && s.GetGenericTypeDefinition() == typeof(IHandleMessages<>));
-				foreach (var handlerType in messageHandlers)
-				{
-					subscribeToMessages.Add(handlerType.GenericTypeArguments[0]);
-				}
-			}
-
-			foreach (var type in subscribeToMessages)
-			{
-				// subscription
-				await _bus.Subscribe(type).ConfigureAwait(false);
 			}
 		}
 	}

@@ -53,9 +53,9 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
 					{
 						_repository.Clear(); //remember to clear, we are retrying.
 					}
-					pm = await _repository.GetByIdAsync<TProcessManager>(id).ConfigureAwait(false);
+					pm = await _repository.GetByIdAsync<TProcessManager>(id).ConfigureAwait(true);
 					pm.MessageReceived(message);
-					await _repository.SaveAsync(pm, message.MessageId.ToString(), null).ConfigureAwait(false);
+					await _repository.SaveAsync(pm, message.MessageId.ToString(), null).ConfigureAwait(true);
 					done = true;
 				}
 				catch (ConcurrencyException ex)
@@ -83,7 +83,6 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
 			if (!done)
 			{
 				_logger.ErrorFormat($"Saga [{pm?.GetType()?.Name}]: Too many conflict on command {message.GetType()} [MessageId: {message.MessageId}] : {message.Describe()}");
-				var exception = new Exception("Command failed. Too many Conflicts");
 			}
 			if (_logger.IsDebugEnabled) _logger.DebugFormat($"Saga [{pm?.GetType()?.Name}]: Handled {message.GetType().FullName} {message.MessageId} {message.Describe()}");
 		}

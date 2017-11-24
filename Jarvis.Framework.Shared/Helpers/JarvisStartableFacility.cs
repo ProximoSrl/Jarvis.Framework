@@ -199,7 +199,16 @@ namespace Jarvis.Framework.Shared.Helpers
             return registration;
         }
 
-        public static ComponentRegistration<T> WithStartablePriorityHighest<T>(this ComponentRegistration<T> registration)
+		public static ComponentRegistration<T> WithStartablePriorityNormal<T>(this ComponentRegistration<T> registration)
+		  where T : class
+		{
+			registration.ExtendedProperties(
+				new Property(JarvisStartableFacility.PriorityExtendedPropertyKey,
+				JarvisStartableFacility.Priorities.Normal));
+			return registration;
+		}
+
+		public static ComponentRegistration<T> WithStartablePriorityHighest<T>(this ComponentRegistration<T> registration)
             where T : class
         {
             registration.ExtendedProperties(

@@ -98,7 +98,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Adapters\ListenerRegistration.cs" />
+    <Compile Include="Adapters\ProcessManagerSubscriptionManager.cs" />
+    <Compile Include="Adapters\ProcessManagerCastleListenerRegistration.cs" />
     <Compile Include="Adapters\RebusCommandBus.cs" />
     <Compile Include="Adapters\MessageHandlerToCommandHandlerAdapter.cs" />
     <Compile Include="Adapters\RebusMessageBus.cs" />
