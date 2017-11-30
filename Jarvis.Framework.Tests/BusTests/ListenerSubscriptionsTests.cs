@@ -50,7 +50,7 @@ namespace Jarvis.Framework.Tests.BusTests
         }
 
 		[Test]
-		public void Messages_should_be_regiesterd_in_windsor_castle()
+		public void Messages_should_be_registered_in_windsor_castle()
 		{
 			CreateSut();
 			_processManagerCastleListenerRegistration.Subscribe();
