@@ -1,5 +1,6 @@
 ﻿using Jarvis.Framework.Shared.Commands;
 using Jarvis.Framework.Shared.Domain.Serialization;
+using Jarvis.Framework.Shared.Exceptions;
 using Jarvis.Framework.Shared.Messages;
 using Newtonsoft.Json;
 using System;
@@ -16,6 +17,7 @@ namespace Jarvis.Framework.Kernel.Commands
     /// be used to send any kind of command for direct execution to the
     /// corresponding service.
     /// </summary>
+	[Serializable]
     public class ExecuteCommandDto
     {
         public static ExecuteCommandDto CreateExecutionDto(ICommand command, string impersonatingUser)
@@ -41,7 +43,7 @@ namespace Jarvis.Framework.Kernel.Commands
             var type = System.Type.GetType(dto.Type);
             if (type == null)
             {
-                throw new ApplicationException($"Unable to load command type {dto.Type}");
+                throw new JarvisFrameworkEngineException($"Unable to load command type {dto.Type}");
             }
 
             var jsonSerializerSettings = GetSerializationSettings();
@@ -50,7 +52,7 @@ namespace Jarvis.Framework.Kernel.Commands
             var command = rawDeserializedObject as ICommand;
             if (command == null)
             {
-                throw new ApplicationException($"Deserialzied type {dto.Type} does not implements ICommand interface");
+                throw new JarvisFrameworkEngineException($"Deserialzied type {dto.Type} does not implements ICommand interface");
             }
 
             return command;

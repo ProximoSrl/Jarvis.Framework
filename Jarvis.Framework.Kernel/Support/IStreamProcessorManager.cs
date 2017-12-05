@@ -19,7 +19,7 @@ namespace Jarvis.Framework.Kernel.Support
 	/// </summary>
 	public interface IStreamProcessorManager
 	{
-		Task<T> ProcessAsync<T>(IIdentity streamId, Int32 versionUpTo) where T : class, new();
+		Task<T> ProcessAsync<T>(String streamId, Int32 versionUpTo) where T : class, new();
 	}
 
 	public class StreamProcessorManager : IStreamProcessorManager
@@ -34,10 +34,10 @@ namespace Jarvis.Framework.Kernel.Support
 			_streams = new StreamsFactory(persistence);
 		}
 
-		public async Task<T> ProcessAsync<T>(IIdentity streamId, int versionUpTo)
+		public async Task<T> ProcessAsync<T>(String streamId, int versionUpTo)
 			where T : class, new()
 		{
-			var stream = _streams.Open(streamId.AsString());
+			var stream = _streams.Open(streamId);
 			return await stream
 				.Fold(StreamProcessorManagerPayloadProcessor.Instance)
 				.ToIndex(versionUpTo)

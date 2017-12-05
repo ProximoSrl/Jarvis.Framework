@@ -1,18 +1,14 @@
 ﻿using Jarvis.Framework.Kernel.Engine;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
-using MongoDB.Bson.Serialization.Attributes;
-using MongoDB.Bson.Serialization.Options;
 using MongoDB.Driver;
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.Events
 {
-    public class DirectMongoEventStoreQueryManager : IEventStoreQueryManager
+	public class DirectMongoEventStoreQueryManager : IEventStoreQueryManager
     {
         private readonly IMongoCollection<BsonDocument> _collection;
 
