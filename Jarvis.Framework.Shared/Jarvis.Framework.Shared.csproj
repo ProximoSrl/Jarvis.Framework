@@ -64,13 +64,13 @@
       <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="NStore.Core, Version=0.2.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NStore.Core.0.2.0-pre0091\lib\net461\NStore.Core.dll</HintPath>
+      <HintPath>..\packages\NStore.Core.0.2.0-beta0004\lib\net461\NStore.Core.dll</HintPath>
     </Reference>
     <Reference Include="NStore.Domain, Version=0.2.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NStore.Domain.0.2.0-pre0091\lib\net461\NStore.Domain.dll</HintPath>
+      <HintPath>..\packages\NStore.Domain.0.2.0-beta0004\lib\net461\NStore.Domain.dll</HintPath>
     </Reference>
     <Reference Include="NStore.Persistence.Mongo, Version=0.2.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NStore.Persistence.Mongo.0.2.0-pre0091\lib\net461\NStore.Persistence.Mongo.dll</HintPath>
+      <HintPath>..\packages\NStore.Persistence.Mongo.0.2.0-beta0004\lib\net461\NStore.Persistence.Mongo.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />

@@ -32,7 +32,7 @@ namespace Jarvis.Framework.TestHelpers
                     initialState.VersionSignature);
 
                 aggregate.Init(identity.ToString());
-                var restoreResult = ((ISnaphottable)aggregate).TryRestore(snapshot);
+                var restoreResult = ((ISnapshottable)aggregate).TryRestore(snapshot);
                 if (!restoreResult)
                     throw new Machine.Specifications.SpecificationException("Unable to restore snapshot into the aggregate under test");
             }
