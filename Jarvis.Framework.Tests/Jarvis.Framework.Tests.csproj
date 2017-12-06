@@ -155,6 +155,7 @@
     <Compile Include="Kernel\Commands\RepositoryCommandHandlerTests.cs" />
     <Compile Include="Kernel\Events\DirectMongoEventStoreQueryManagerTests.cs" />
     <Compile Include="Kernel\Support\MetricsHealthCheckExplicitTests.cs" />
+    <Compile Include="Kernel\Support\StreamProcessorManagerTests.cs" />
     <Compile Include="NeventStoreExTests\Persistence\RepositoryTests.cs" />
     <Compile Include="EngineTests\SagaTests\BillPrinted.cs" />
     <Compile Include="EngineTests\SagaTests\DeliverPizzaSaga2.cs" />

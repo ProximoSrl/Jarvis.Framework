@@ -24,25 +24,21 @@ namespace Jarvis.Framework.Kernel.Support
 
 	public class StreamProcessorManager : IStreamProcessorManager
 	{
-		private readonly IPersistence _persistence;
-		private readonly ISnapshotStore _snapshotStore;
 		private readonly StreamsFactory _streams;
-		public StreamProcessorManager(IPersistence persistence, ISnapshotStore snapshotStore)
+
+		public StreamProcessorManager(IPersistence persistence)
 		{
-			_persistence = persistence;
-			_snapshotStore = snapshotStore;
 			_streams = new StreamsFactory(persistence);
 		}
 
-		public async Task<T> ProcessAsync<T>(String streamId, int versionUpTo)
+		public Task<T> ProcessAsync<T>(String streamId, int versionUpTo)
 			where T : class, new()
 		{
 			var stream = _streams.Open(streamId);
-			return await stream
+			return stream
 				.Fold(StreamProcessorManagerPayloadProcessor.Instance)
 				.ToIndex(versionUpTo)
-				.RunAsync<T>()
-				.ConfigureAwait(false);
+				.RunAsync<T>();
 		}
 	}
 
@@ -58,28 +54,37 @@ namespace Jarvis.Framework.Kernel.Support
 
 		public object Process(object state, object payload)
 		{
-			Changeset changeset = payload as Changeset;
+			if (payload == null)
+				return false;
 
+			Changeset changeset = payload as Changeset;
 			if (changeset == null)
 			{
-				//TODO: Log, this is an error.
-				return false;
+				//This happens for StreamProcessing, we have not a changesets with events, we have only a simple payload
+				CallProcessMethod(state, payload);
 			}
-
-			foreach (var evt in changeset.Events)
+			else
 			{
-				foreach (var methodName in _methods)
+				foreach (var evt in changeset.Events)
 				{
-					var method = state.GetType().Method(methodName, new[] { evt.GetType() }, Flags.InstanceAnyVisibility);
-					if (method != null)
-					{
-						method.Call(state, new object[] { evt });
-						break; //skip method, go to the next event.
-					}
+					CallProcessMethod(state, evt);
 				}
 			}
 
 			return true;
+		}
+
+		private void CallProcessMethod(object state, object evt)
+		{
+			foreach (var methodName in _methods)
+			{
+				var method = state.GetType().Method(methodName, new[] { evt.GetType() }, Flags.InstanceAnyVisibility);
+				if (method != null)
+				{
+					method.Call(state, new object[] { evt });
+					break; //skip method, go to the next event.
+				}
+			}
 		}
 	}
 }
