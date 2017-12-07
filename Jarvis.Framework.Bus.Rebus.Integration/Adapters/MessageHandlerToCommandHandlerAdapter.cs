@@ -56,7 +56,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
 					try
 					{
 						_messagesTracker.ElaborationStarted(message, DateTime.UtcNow);
-						_commandHandler.HandleAsync(message).Wait(); //need to wait, or you will free the worker rebus thread and you will dispatch many concurrent handler.
+						await _commandHandler.HandleAsync(message).ConfigureAwait(true); //need to wait, or you will free the worker rebus thread and you will dispatch many concurrent handler.
 						_messagesTracker.Completed(message, DateTime.UtcNow);
 						done = true;
 
@@ -69,7 +69,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
 								message.Describe()
 							);
 							replyCommand.CopyHeaders(message);
-							_bus.Reply(replyCommand).Wait();
+							await _bus.Reply(replyCommand).ConfigureAwait(true);
 						}
 					}
 					catch (ConcurrencyException ex)
