@@ -108,8 +108,8 @@
     <Compile Include="Serializers\JsonSerializerWithProtectedPropertiesSupport.cs" />
     <Compile Include="Support\CommandHandlersRegistration.cs" />
     <Compile Include="Support\BusBootstrapper.cs" />
-    <Compile Include="Support\CustomTimeoutReplyHandler.cs" />
     <Compile Include="Support\BusStarter.cs" />
+    <Compile Include="Support\JarvisFrameworkRebusErrorHandler.cs" />
     <Compile Include="Support\JarvisRebusConfiguration.cs" />
     <Compile Include="Support\JarvisRebusConfigurationManagerRouterHelper.cs" />
     <Compile Include="Support\RebusExtension.cs" />
