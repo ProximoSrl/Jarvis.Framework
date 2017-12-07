@@ -75,7 +75,14 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             MapIdentity(alias, key);
         }
 
-        protected TKey Translate(string externalKey, bool createOnMissing = true)
+		protected String GetAlias(TKey key)
+		{
+			if (key == null) throw new ArgumentNullException(nameof(key));
+			var alias = _collection.Find(Builders<MappedIdentity>.Filter.Eq("AggregateId", key.AsString())).FirstOrDefault();
+			return alias?.ExternalKey;
+		}
+
+		protected TKey Translate(string externalKey, bool createOnMissing = true)
         {
             if (IdentityGenerator == null) throw new JarvisFrameworkEngineException("Identity Generator not set");
 
