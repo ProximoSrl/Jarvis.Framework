@@ -1,4 +1,5 @@
 ﻿using Castle.Core.Logging;
+using Jarvis.Framework.Shared.Exceptions;
 using Metrics;
 using Metrics.Core;
 using MongoDB.Driver;
@@ -37,7 +38,9 @@ namespace Jarvis.Framework.Kernel.Support
         }
     }
 
-    public class MsmqHealthCheck : HealthCheck
+#pragma warning disable S101 // Types should be named in camel case
+
+	public class MsmqHealthCheck : HealthCheck
     {
         private readonly String _queueName;
         private readonly Int32 _messageLimit;
@@ -78,7 +81,6 @@ namespace Jarvis.Framework.Kernel.Support
             {
                 //ignore exception, just peek the queue to force activation
             }
-
         }
 
         /// <summary>
@@ -91,7 +93,7 @@ namespace Jarvis.Framework.Kernel.Support
         {
             if (!MessageQueue.Exists(_queueName))
             {
-                throw new ApplicationException(String.Format("Queue {0} does not exists!", _queueName));
+                throw new JarvisFrameworkEngineException(String.Format("Queue {0} does not exists!", _queueName));
             }
 
             var props = new NativeMethods.MQMGMTPROPS { cProp = 1 };
@@ -147,8 +149,8 @@ namespace Jarvis.Framework.Kernel.Support
 
             //size must be 16
             [StructLayout(LayoutKind.Sequential)]
-            internal struct MQPROPVariant
-            {
+			internal struct MQPROPVariant
+			{
                 public byte vt;       //0
                 public byte spacer;   //1
                 public short spacer2; //2
@@ -165,8 +167,8 @@ namespace Jarvis.Framework.Kernel.Support
                 public IntPtr aPropID;
                 public IntPtr aPropVar;
                 public IntPtr status;
-
             }
         }
     }
+#pragma warning restore S101 // Types should be named in camel case
 }

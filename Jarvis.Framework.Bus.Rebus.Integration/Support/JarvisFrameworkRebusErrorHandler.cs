@@ -21,7 +21,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 	{
 		private class JarvisFrameworkErrorHandler : IErrorHandler
 		{
-			const string JsonContentTypeName = "application/json";
+			private const string JsonContentTypeName = "application/json";
 			private readonly JsonSerializerSettings _jsonSerializerSettings;
 			private readonly IWindsorContainer _container;
 
@@ -48,6 +48,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 			public void SetTransport(ITransport transport)
 			{
 				_transport = transport;
+				_transport.CreateQueue(_jarvisRebusConfiguration.ErrorQueue);
 			}
 
 			public async Task HandlePoisonMessage(TransportMessage transportMessage, ITransactionContext transactionContext, Exception exception)
@@ -137,27 +138,28 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 				//This is not a command.
 				return null;
 
-				//string body;
-				//switch (message.Headers["rebus-encoding"].ToLowerInvariant())
-				//{
-				//	case "utf-7":
-				//		body = Encoding.UTF7.GetString(message.Body);
-				//		break;
-				//	case "utf-8":
-				//		body = Encoding.UTF8.GetString(message.Body);
-				//		break;
-				//	case "utf-32":
-				//		body = Encoding.UTF32.GetString(message.Body);
-				//		break;
-				//	case "ascii":
-				//		body = Encoding.ASCII.GetString(message.Body);
-				//		break;
-				//	case "unicode":
-				//		body = Encoding.Unicode.GetString(message.Body);
-				//		break;
-				//	default:
-				//		return null;
-				//}
+#pragma warning disable S125 // Sections of code should not be "commented out"
+							//string body;
+							//switch (message.Headers["rebus-encoding"].ToLowerInvariant())
+							//{
+							//	case "utf-7":
+							//		body = Encoding.UTF7.GetString(message.Body);
+							//		break;
+							//	case "utf-8":
+							//		body = Encoding.UTF8.GetString(message.Body);
+							//		break;
+							//	case "utf-32":
+							//		body = Encoding.UTF32.GetString(message.Body);
+							//		break;
+							//	case "ascii":
+							//		body = Encoding.ASCII.GetString(message.Body);
+							//		break;
+							//	case "unicode":
+							//		body = Encoding.Unicode.GetString(message.Body);
+							//		break;
+							//	default:
+							//		return null;
+							//}
 
 				//var msg = JsonConvert.DeserializeObject(body, _jsonSerializerSettings);
 				//var array = msg as Object[];
@@ -168,6 +170,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 
 				//return null;
 			}
+#pragma warning restore S125 // Sections of code should not be "commented out"
 
 			private Message Deserialize(TransportMessage transportMessage)
 			{
