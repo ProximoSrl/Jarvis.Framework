@@ -48,7 +48,17 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 			public void SetTransport(ITransport transport)
 			{
 				_transport = transport;
-				_transport.CreateQueue(_jarvisRebusConfiguration.ErrorQueue);
+				//Create the error queue, can ignore any other error because in this phase rebus is
+				//initializing and throwing in this routine can generate a strange an difficult to diagnostic
+				//error message.
+				try
+				{
+					_transport.CreateQueue(_jarvisRebusConfiguration.ErrorQueue);
+				}
+				catch (Exception ex)
+				{
+					_logger.ErrorFormat(ex, "Error creating error queue {0} - {1}", _jarvisRebusConfiguration.ErrorQueue, ex.Message);
+				}
 			}
 
 			public async Task HandlePoisonMessage(TransportMessage transportMessage, ITransactionContext transactionContext, Exception exception)
