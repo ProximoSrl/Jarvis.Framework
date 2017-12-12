@@ -6,6 +6,11 @@ using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.Messages
 {
+	/// <summary>
+	/// Static class used to identify typical headers that can be used in 
+	/// the header of the command and thus replicated into the headers
+	/// of the Changeset.
+	/// </summary>
     public static class MessagesConstants
     {
         public const String SagaIdHeader = "sagaId";
@@ -22,34 +27,10 @@ namespace Jarvis.Framework.Shared.Messages
         /// is executed with a different handler this header is not honored.</remarks>
         public const String IfVersionEqualsTo = "if-version-equals-to";
 
-        /// <summary>
-        /// When an offline session starts, it copied commits database up to a certain
-        /// checkpoint token. To understand if we have conflicts, we need to know this value
-        /// to execute the command conditionally.
-        /// </summary>
-        public const String SessionStartCheckpointToken = "session-start-checkpoint-token";
-
-        /// <summary>
-        /// if this header is present, the execution of the command is a "sync" execution and
-        /// the command will be executed only if the aggregate has no commit greater than
-        /// <see cref="MessagesConstants.SessionStartCheckpointToken"/> that does not belongs to
-        /// <see cref="MessagesConstants.OfflineSessionId"/>.
-        /// </summary>
-        public const String SessionStartCheckEnabled = "session-start-check-enabled";
-
-        /// <summary>
-        /// This header contains the guid of the offline session that originally generates the message
-        /// </summary>
-        public const String OfflineSessionId = "offline-session-id";
-
-        /// <summary>
-        /// original execution timestamp of the command. 
-        /// </summary>
-        public const String OfflineExecutionTimestamp = "offline-execution-timestamp";
-
-        /// <summary>
-        /// Text that contains information of offline execution, it is used only to troubleshoot.
-        /// </summary>
-        public const String OfflineExecutionInfo = "offline-execution-info";
+		/// <summary>
+		/// When offline system push a command to main system to synchronize, this header
+		/// will contain the list of events that were generated offline due to that command.
+		/// </summary>
+		public const String OfflineEvents = "offline-events";
     }
 }

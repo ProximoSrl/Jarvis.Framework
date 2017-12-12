@@ -112,68 +112,6 @@ namespace Jarvis.Framework.Tests.Kernel.Commands
             Assert.That(_sut.Aggregate.Version, Is.EqualTo(startVersion + 1));
         }
 
-        [Test]
-        public async Task command_handler_should_throw_if_checkpoint_token_not_pass()
-        {
-            SampleAggregate aggregate = await CreateAndSaveAggregate().ConfigureAwait(false);
-
-            var cmd = new TouchSampleAggregate(new SampleAggregateId(1));
-            var checkpointToken = GetLastCheckpointTokenFromEvenstoreDb();
-            String sessionId = Guid.NewGuid().ToString();
-            cmd.SetContextData(MessagesConstants.SessionStartCheckpointToken, checkpointToken.ToString());
-            cmd.SetContextData(MessagesConstants.OfflineSessionId, sessionId);
-            cmd.SetContextData(MessagesConstants.SessionStartCheckEnabled, "true");
-
-            //now simulate another change of the entity
-            aggregate.Touch();
-            await _repositoryEx.SaveAsync(aggregate, Guid.NewGuid().ToString(), null).ConfigureAwait(false);
-
-            Assert.ThrowsAsync<AggregateSyncConflictException>(async () => await _sut.HandleAsync(cmd).ConfigureAwait(false));
-        }
-
-        [Test]
-        public async Task command_handler_should_not_throw_if_checkpoint_token_not_pass_but_session_check_is_not_enabled()
-        {
-            SampleAggregate aggregate = await CreateAndSaveAggregate().ConfigureAwait(false);
-
-            var cmd = new TouchSampleAggregate(new SampleAggregateId(1));
-            var checkpointToken = GetLastCheckpointTokenFromEvenstoreDb();
-            String sessionId = Guid.NewGuid().ToString();
-            cmd.SetContextData(MessagesConstants.SessionStartCheckpointToken, checkpointToken.ToString());
-            cmd.SetContextData(MessagesConstants.OfflineSessionId, sessionId);
-
-            //DO NOT SET HEADER FOR SESSION START CHECK ENABLED
-            //cmd.SetContextData(MessagesConstants.SessionStartCheckEnabled, "true");
-
-            //now simulate another change of the entity
-            aggregate.Touch();
-            await _repositoryEx.SaveAsync(aggregate, Guid.NewGuid().ToString(), null).ConfigureAwait(false);
-
-            await _sut.HandleAsync(cmd).ConfigureAwait(false);
-        }
-
-        [Test]
-        public async Task command_handler_should_not_throw_if_there_are_newer_commits_but_of_same_session()
-        {
-            SampleAggregate aggregate = await CreateAndSaveAggregate().ConfigureAwait(false);
-
-            var cmd = new TouchSampleAggregate(new SampleAggregateId(1));
-            var checkpointToken = GetLastCheckpointTokenFromEvenstoreDb();
-            String sessionId = Guid.NewGuid().ToString();
-            cmd.SetContextData(MessagesConstants.SessionStartCheckpointToken, checkpointToken.ToString());
-            cmd.SetContextData(MessagesConstants.OfflineSessionId, sessionId);
-            cmd.SetContextData(MessagesConstants.SessionStartCheckEnabled, "true");
-
-            //now simulate another change of the entity
-            aggregate.Touch();
-            await _repositoryEx.SaveAsync(
-                aggregate,
-                Guid.NewGuid().ToString(),
-                d => d.Add(MessagesConstants.OfflineSessionId, sessionId)).ConfigureAwait(false);
-
-           await _sut.HandleAsync(cmd).ConfigureAwait(false);
-        }
-
         public Int64 GetLastCheckpointTokenFromEvenstoreDb()
         {
             var lastCommitSynced = _eventsCollection

@@ -8,8 +8,16 @@ using MongoDB.Bson.Serialization.Options;
 
 namespace Jarvis.Framework.Shared.Commands
 {
+	/// <summary>
+	/// This is a generic interface for ICommand
+	/// </summary>
     public interface ICommand : IMessage
     {
+		/// <summary>
+		/// This method will set a string value in the command header. 
+		/// </summary>
+		/// <param name="key"></param>
+		/// <param name="value"></param>
         void SetContextData(string key, string value);
 
         string GetContextData(string key, string defaultValue = null);

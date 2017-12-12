@@ -10,70 +10,71 @@ using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.Support
 {
-    public class MongoConnectionsManager
-    {
-        public ILogger Logger { get; set; }
+	public class MongoConnectionsManager
+	{
+		public ILogger Logger { get; set; }
 
-        public struct ConnectionInfo
-        {
-            public String Name { get; set; }
+		public struct ConnectionInfo
+		{
+			public String Name { get; set; }
 
-            public String ConnectionString { get; set; }
+			public String ConnectionString { get; set; }
 
+			public ConnectionInfo(String name, String connectionString) : this()
+			{
+				Name = name;
+				ConnectionString = connectionString;
+			}
+		}
 
-            public ConnectionInfo(String name, String connectionString) : this()
-            {
-                Name = name;
-                ConnectionString = connectionString;
-            }
-        }
+		private readonly ConnectionInfo[] _connectionStrings;
 
-        private ConnectionInfo[] _connectionStrings;
+		public MongoConnectionsManager(ConnectionInfo[] connectionStrings)
+		{
+			Logger = NullLogger.Instance;
+			_connectionStrings = connectionStrings;
+			SetupHealthCheck();
+		}
 
-        public MongoConnectionsManager(ConnectionInfo[] connectionStrings)
-        {
-            Logger = NullLogger.Instance;
-            _connectionStrings = connectionStrings;
-            SetupHealthCheck();
-        }
+		private List<DatabaseHealthCheck> _healthChecks;
 
-        private void SetupHealthCheck()
-        {
-            foreach (var connection in _connectionStrings)
-            {
-                new DatabaseHealthCheck(connection.Name, connection.ConnectionString);
-            }
-        }
+		private void SetupHealthCheck()
+		{
+			_healthChecks = new List<DatabaseHealthCheck>();
 
-        public bool CheckDatabase()
-        {
-            foreach (var connection in _connectionStrings)
-            {
-                if (!CheckConnection(connection.ConnectionString))
-                {
-                    Logger.DebugFormat("Check database failed for connection {0}", connection.ConnectionString);
-                    return false;
-                }
-            }
-            return true;
-        }
+			foreach (var connection in _connectionStrings)
+			{
+				_healthChecks.Add(new DatabaseHealthCheck(connection.Name, connection.ConnectionString));
+			}
+		}
 
-        private Boolean CheckConnection(String connection)
-        {
-            var url = new MongoUrl(connection);
-            var client = new MongoClient(url);
-            Task.Factory.StartNew(() => client.ListDatabases()); //forces a database connection
-            Int32 spinCount = 0;
-            ClusterState clusterState;
+		public bool CheckDatabase()
+		{
+			foreach (var connection in _connectionStrings)
+			{
+				if (!CheckConnection(connection.ConnectionString))
+				{
+					Logger.DebugFormat("Check database failed for connection {0}", connection.ConnectionString);
+					return false;
+				}
+			}
+			return true;
+		}
 
-            while ((clusterState = client.Cluster.Description.State) != ClusterState.Connected &&
-                spinCount++ < 100)
-            {
-                Thread.Sleep(20);
-            }
-            return clusterState == MongoDB.Driver.Core.Clusters.ClusterState.Connected;
-        }
+		private Boolean CheckConnection(String connection)
+		{
+			var url = new MongoUrl(connection);
+			var client = new MongoClient(url);
+			Task.Factory.StartNew(() => client.ListDatabases()); //forces a database connection
+			Int32 spinCount = 0;
+			ClusterState clusterState;
 
-
-    }
+			while ((clusterState = client.Cluster.Description.State) != ClusterState.Connected &&
+				spinCount++ < 100)
+			{
+				Thread.Sleep(20);
+			}
+			return clusterState == ClusterState.Connected;
+		}
+	}
 }

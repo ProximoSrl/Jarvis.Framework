@@ -35,7 +35,9 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
     public class SampleReadModelTest : AbstractReadModel<TestId>
     {
         public String Value { get; set; }
-    }
+
+		public Int32 Counter { get; set; }
+	}
 
     public class SampleReadModelPollableTest : PollableReadModel<TestId>
     {

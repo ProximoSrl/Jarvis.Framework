@@ -80,7 +80,6 @@ namespace Jarvis.Framework.Kernel.Commands
 		/// <param name="createIfNotExists"></param>
 		protected async Task FindAndModifyAsync(EventStoreIdentity id, Action<TAggregate> callback, bool createIfNotExists = false)
 		{
-			await CheckAggregateForOfflineAsync(id).ConfigureAwait(false);
 			if (JarvisFrameworkGlobalConfiguration.SingleAggregateRepositoryCacheEnabled)
 			{
 				//Lock is NEEDED because multiple thread cannot access the very same aggregate.
@@ -112,35 +111,6 @@ namespace Jarvis.Framework.Kernel.Commands
 
 				callback(aggregate);
 				await Repository.SaveAsync(aggregate, _commitId.ToString(), StoreCommandHeaders).ConfigureAwait(false);
-			}
-		}
-
-		private async Task CheckAggregateForOfflineAsync(EventStoreIdentity id)
-		{
-			if (_currentCommand.GetContextData(MessagesConstants.SessionStartCheckEnabled) != null)
-			{
-				var checkpointTokenString = _currentCommand.GetContextData(MessagesConstants.SessionStartCheckpointToken);
-				var checkpointToken = Int64.Parse(checkpointTokenString);
-				var sessionId = _currentCommand.GetContextData(MessagesConstants.OfflineSessionId);
-
-				var allCommitsForThisEntity = await EventStoreQueryManager.GetCommitsAfterCheckpointTokenAsync(checkpointToken, new List<String>() { id.ToString() }).ConfigureAwait(false);
-				foreach (var commit in allCommitsForThisEntity)
-				{
-					//we have a conflicting commit, but the conflict occurred only if the headers OfflineSessionId is different from sessionId
-					if (!commit.Headers.ContainsKey(MessagesConstants.OfflineSessionId)
-						|| commit.Headers[MessagesConstants.OfflineSessionId]?.ToString() != sessionId)
-					{
-						throw new AggregateSyncConflictException(
-						   String.Format("Command cannot be executed because header required that aggregate {0} does not have commits greater than checkpoint token {1} that does not belong to session {2}. Checkpoint {3} violates this rule",
-								id,
-								checkpointToken,
-								sessionId,
-								commit.Id),
-						   id,
-						   checkpointToken,
-						   sessionId);
-					}
-				}
 			}
 		}
 

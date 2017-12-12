@@ -117,7 +117,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 					throw;
 
 				var saved = await _storage.FindOneByIdAsync((dynamic)model.Id).ConfigureAwait(false);
-				if (saved.BuiltFromEvent(e.MessageId))
+				if (saved.BuiltFromEvent(e))
 					return;
 
 				throw new CollectionWrapperException("Readmodel created by two different events!");
@@ -135,7 +135,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 			var readModel = await _storage.FindOneByIdAsync(id).ConfigureAwait(false);
 			if (readModel != null)
 			{
-				if (readModel.BuiltFromEvent(e.MessageId))
+				if (readModel.BuiltFromEvent(e))
 					return readModel;
 
 				await update(readModel).ConfigureAwait(false);
@@ -175,7 +175,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 		{
 			foreach (var model in _storage.All.Where(filter).OrderBy(x => x.Id))
 			{
-				if (!model.BuiltFromEvent(e.MessageId))
+				if (!model.BuiltFromEvent(e))
 				{
 					await action(model).ConfigureAwait(false);
 					await SaveAsync(e, model, notify).ConfigureAwait(false);
@@ -192,7 +192,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 		{
 			Func<TModel, Task> saveAction = async model =>
 			{
-				if (!model.BuiltFromEvent(e.MessageId))
+				if (!model.BuiltFromEvent(e))
 				{
 					await action(model).ConfigureAwait(false);
 					await SaveAsync(e, model, notify).ConfigureAwait(false);
@@ -209,7 +209,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 		public async Task FindAndModifyAsync(DomainEvent e, TKey id, Func<TModel, Task> action, bool notify = false)
 		{
 			var model = await _storage.FindOneByIdAsync(id).ConfigureAwait(false);
-			if (model != null && !model.BuiltFromEvent(e.MessageId))
+			if (model != null && !model.BuiltFromEvent(e))
 			{
 				await action(model).ConfigureAwait(false);
 				await SaveAsync(e, model, notify).ConfigureAwait(false);

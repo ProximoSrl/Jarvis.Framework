@@ -41,7 +41,7 @@ namespace Jarvis.Framework.Shared.ReadModel
 
 		/// <summary>
 		/// Dispatched is the status when the event related to the command is 
-		/// dispatched by the <see cref="Jarvis.Framework.Kernel.ProjectionEngine.Client.INotifyCommitHandled"/> in projection engine. This means
+		/// dispatched by the INotifyCommitHandled in projection engine. This means
 		/// that the command is executed then dispatched to the bus and if there
 		/// is a Reply-to a reply command is sent.
 		/// </summary>
@@ -68,7 +68,6 @@ namespace Jarvis.Framework.Shared.ReadModel
     public interface IMessagesTrackerQueryManager
     {
         List<TrackedMessageModel> GetByIdList(List<String> idList);
-
     }
 
     public enum TrackedMessageType
@@ -152,11 +151,6 @@ namespace Jarvis.Framework.Shared.ReadModel
         /// </summary>
         public DateTime? DispatchedAt { get; set; }
 
-        ///// <summary>
-        ///// Timestamp of failure if the command cannot be executed.
-        ///// </summary>
-        //public DateTime? FailedAt { get; set; }
-
         public IMessage Message { get; set; }
 
         public string Description { get; set; }
@@ -206,11 +200,9 @@ namespace Jarvis.Framework.Shared.ReadModel
 
         private static readonly Meter errorMeter = Metric.Meter("CommandFailures", Unit.Commands);
 
-        //private static readonly Counter retryCount = Metric.Counter("CommandsRetry", Unit.Custom("ms"));
-
         public ILogger Logger { get; set; }
 
-        private IMongoDatabase _db;
+        private readonly IMongoDatabase _db;
 
         public MongoDbMessagesTracker(IMongoDatabase db)
         {
@@ -274,7 +266,7 @@ namespace Jarvis.Framework.Shared.ReadModel
             try
             {
                 var id = command.MessageId.ToString();
-                var updated = Commands.UpdateOne(
+                Commands.UpdateOne(
                     Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
                      Builders<TrackedMessageModel>.Update
                         .Set(x => x.LastExecutionStartTime, startAt)
@@ -315,8 +307,8 @@ namespace Jarvis.Framework.Shared.ReadModel
                     {
                         if (trackMessage.StartedAt > DateTime.MinValue)
                         {
-                            if (trackMessage.ExecutionStartTimeList != null &&
-                                trackMessage.ExecutionStartTimeList.Length > 0)
+                            if (trackMessage.ExecutionStartTimeList != null
+								&& trackMessage.ExecutionStartTimeList.Length > 0)
                             {
                                 var firstExecutionValue = trackMessage.ExecutionStartTimeList[0];
                                 var queueTime = firstExecutionValue.Subtract(trackMessage.StartedAt).TotalMilliseconds;
@@ -325,7 +317,7 @@ namespace Jarvis.Framework.Shared.ReadModel
                                 queueTimer.Record((Int64)queueTime, TimeUnit.Milliseconds, messageType);
                                 queueCounter.Increment(messageType, (Int64)queueTime);
 
-                                var executionTime = completedAt.Subtract(trackMessage.StartedAt);
+                                //var executionTime = completedAt.Subtract(trackMessage.StartedAt);
                                 totalExecutionTimer.Record((Int64)queueTime, TimeUnit.Milliseconds, messageType);
                                 totalExecutionCounter.Increment(messageType, (Int64)queueTime);
                             }
@@ -407,46 +399,6 @@ namespace Jarvis.Framework.Shared.ReadModel
             return Commands.Find(
                 Builders<TrackedMessageModel>.Filter.In(m => m.MessageId, idList))
                 .ToList();
-        }
-    }
-
-    public class NullMessageTracker : IMessagesTracker
-    {
-        public static NullMessageTracker Instance { get; set; }
-
-        static NullMessageTracker()
-        {
-            Instance = new NullMessageTracker();
-        }
-
-        public void Started(IMessage msg)
-        {
-
-        }
-
-        public void Completed(ICommand command, DateTime completedAt)
-        {
-
-        }
-
-        public bool Dispatched(Guid messageId, DateTime dispatchedAt)
-        {
-            return true;
-        }
-
-        public void Drop()
-        {
-
-        }
-
-        public void Failed(ICommand command, DateTime failedAt, Exception ex)
-        {
-
-        }
-
-        public void ElaborationStarted(ICommand command, DateTime startAt)
-        {
-
         }
     }
 }

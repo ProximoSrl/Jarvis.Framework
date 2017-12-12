@@ -8,7 +8,6 @@ using Jarvis.Framework.Shared.ReadModel;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.Commands
@@ -75,14 +74,9 @@ namespace Jarvis.Framework.Kernel.Commands
 				catch (AggregateSyncConflictException ex)
 				{
 					var retValue = new ExecuteCommandResultDto(false, ex.ToString(), ex);
+					
 					//TODO: use the new logic to find conflicting commands.
-					List<CommitShortInfo> newCommits = await GetNewCommid(ex.CheckpointToken, ex.AggregateId).ConfigureAwait(false);
-					String sessionId = ex.SessionGuidId;
-					var idList = newCommits
-						.Where(c => NotBelongToSession(c, sessionId))
-						.Select(c => c.OperationId)
-						.ToList();
-					retValue.ConflictingCommands = GetConflictingCommandList(ex.AggregateId, idList);
+					//retValue.ConflictingCommands = GetConflictingCommandList(ex.AggregateId, idList);
 					return retValue;
 				}
 				catch (Exception ex)
@@ -90,18 +84,6 @@ namespace Jarvis.Framework.Kernel.Commands
 					return new ExecuteCommandResultDto(false, ex.ToString(), ex);
 				}
 			}
-		}
-
-		/// <summary>
-		/// Return True if the commit info does not belongs to this session.
-		/// </summary>
-		/// <param name="c"></param>
-		/// <param name="sessionId"></param>
-		/// <returns></returns>
-		private bool NotBelongToSession(CommitShortInfo c, string sessionId)
-		{
-			return !c.Headers.ContainsKey(MessagesConstants.OfflineSessionId)
-				|| c.Headers[MessagesConstants.OfflineSessionId]?.ToString() != sessionId;
 		}
 
 		private Task<List<CommitShortInfo>> GetNewCommid(Int64 checkpointTokenFrom, String aggregateId)

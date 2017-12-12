@@ -14,16 +14,15 @@ using Jarvis.MonitoringAgent.Common.Jarvis.MonitoringAgent.Common;
 namespace Jarvis.MonitoringAgent.Client.Jobs
 {
     [DisallowConcurrentExecution]
-    public class LogUpdloaderJob : IJob
+    public class LogUploaderJob : IJob
     {
         public ILogger Logger { get; set; }
 
-        private MonitoringAgentConfiguration _configuration;
+        private readonly MonitoringAgentConfiguration _configuration;
 
-        public LogUpdloaderJob(MonitoringAgentConfiguration configuration)
+        public LogUploaderJob(MonitoringAgentConfiguration configuration)
         {
             _configuration = configuration;
-
         }
 
         public void Execute(IJobExecutionContext context)
@@ -34,13 +33,12 @@ namespace Jarvis.MonitoringAgent.Client.Jobs
                 try
                 {
                     UploadFile(fileToUpload);
-                    retMessage.AppendFormat("Uploaded {0}\n");
+                    retMessage.AppendFormat("Uploaded {0}\n", fileToUpload);
                 }
                 catch (Exception ex)
                 {
                     retMessage.AppendFormat("Error uploading {0} - {1}\n", fileToUpload, ex.Message);
                 }
-
             }
             if (retMessage.Length > 10000)
             {
@@ -82,7 +80,6 @@ namespace Jarvis.MonitoringAgent.Client.Jobs
                 archive.CreateEntryFromFile(encryptedFileName, Path.GetFileName(encryptedFileName));
                 archive.CreateEntryFromFile(keyFileName, Path.GetFileName(keyFileName));
             }
-
 
             var url = String.Format("{0}/api/logs/upload/{1}",
                 _configuration.ServerAddress, _configuration.CustomerId);

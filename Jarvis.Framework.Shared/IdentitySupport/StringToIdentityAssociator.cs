@@ -4,6 +4,7 @@ using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -146,13 +147,15 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 				{
 					element.OriginalKey = element.Key;
 					//If we are case insensitive, and key is not all lowercase, we need to change the key.
-					if (_caseInsensitive && element.Key != element.Key.ToLower())
+					if (_caseInsensitive && element.Key != element.Key.ToLower(CultureInfo.InvariantCulture))
 					{
 						//this is where we can have problem, because we need to check if we have a conflicting
 						//registration, two key that differs only with casing.
 						var conflicting = _collection.AsQueryable()
+#pragma warning disable RCS1155 // Use StringComparison when comparing strings.
 							.Any(e => e.Key.ToLower() == element.Key.ToLower() && e.Key != element.Key);
-						if (conflicting == false)
+#pragma warning restore RCS1155 // Use StringComparison when comparing strings.
+						if (!conflicting)
 						{
 							var originalKey = element.Key;
 							element.Key = element.Key.ToLower();

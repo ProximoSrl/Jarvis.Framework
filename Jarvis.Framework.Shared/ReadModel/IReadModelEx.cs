@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Jarvis.Framework.Shared.Events;
+using System;
 using System.Collections.Generic;
 
 namespace Jarvis.Framework.Shared.ReadModel
@@ -10,7 +11,8 @@ namespace Jarvis.Framework.Shared.ReadModel
 
         DateTime LastModified { get; set; }
 
-        bool BuiltFromEvent(Guid id);
+		bool BuiltFromEvent(DomainEvent evt);
+
         void AddEvent(Guid id);
 
         void ThrowIfInvalidId();
