@@ -102,6 +102,7 @@
     <Compile Include="Exceptions\InvalidAggregateIdException.cs" />
     <Compile Include="Helpers\CommandExtensions.cs" />
     <Compile Include="Helpers\DomainEventExtensions.cs" />
+    <Compile Include="Helpers\NStoreSequencer.cs" />
     <Compile Include="Messages\IMessageBus.cs" />
     <Compile Include="NeventStoreExGlobalConfiguration.cs" />
     <Compile Include="Persistence\EventStore\CachableAggregateCachedRepository.cs" />

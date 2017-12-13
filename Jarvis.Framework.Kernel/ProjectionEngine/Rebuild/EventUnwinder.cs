@@ -8,6 +8,8 @@ using Castle.Core.Logging;
 using System.Threading.Tasks;
 using NStore.Core.Persistence;
 using NStore.Domain;
+using Jarvis.Framework.Shared.Helpers;
+using System.Threading;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 {
@@ -67,6 +69,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 				startToken = lastEvent.CheckpointToken;
 			}
 
+			//we want to avoid holes up to the maximum committed tokens, holes are only when we are
+			//in high concurrency.
+			var lastCommittedToken = await _persistence.ReadLastPositionAsync().ConfigureAwait(false);
+			lastCommittedToken = Math.Max(0, lastCommittedToken - 10); //we choose an arbitrary offset to avoid problem in high concurrency
+
 			_logger.InfoFormat("Unwind events starting from commit {0}", startToken);
 
 			//Since we could have crashed during unwind of last commit, we want to reunwind again last commit
@@ -96,7 +103,21 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 				return true;
 			});
 
-			await _persistence.ReadAllAsync(startToken, subscription).ConfigureAwait(false);
+			var sequencer = new NStoreSequencer(
+				startToken - 1,
+				subscription,
+				timeToWaitInMilliseconds: 0,
+				maximumWaitCountForSingleHole: 5,
+				safePosition: lastCommittedToken,
+				logger: _logger);
+
+			//Need to cycle until the sequencer skipped an hole, to be sure to unwind all events.
+			do
+			{
+				//Reload from the last position where the sequencer stopped.
+				await _persistence.ReadAllAsync(sequencer.Position + 1, sequencer).ConfigureAwait(false);
+			} while (sequencer.RetriesOnHole > 0);
+
 			//Flush last batch.
 			if (batchEventUnwind.Count > 0)
 			{
