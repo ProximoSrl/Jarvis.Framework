@@ -89,17 +89,22 @@ namespace Jarvis.Framework.Kernel.Support
         private static readonly Counter projectionCounter = Metric.Counter("prj-time", Unit.Custom("ticks"));
         private static readonly Counter projectionSlotCounter = Metric.Counter("prj-slot-time", Unit.Custom("ticks"));
         private static readonly Counter projectionEventCounter = Metric.Counter("prj-event-time", Unit.Custom("ticks"));
+		private static readonly Counter projectionSlowEventCounter = Metric.Counter("prj-slow-event", Unit.Custom("ms"));
 
-        private static readonly Counter projectionCounterRebuild = Metric.Counter("prj-time-rebuild", Unit.Custom("ticks"));
+		private static readonly Counter projectionCounterRebuild = Metric.Counter("prj-time-rebuild", Unit.Custom("ticks"));
         private static readonly Counter projectionSlotCounterRebuild = Metric.Counter("prj-slot-time-rebuild", Unit.Custom("ticks"));
         private static readonly Counter projectionEventCounterRebuild = Metric.Counter("prj-event-time-rebuild", Unit.Custom("ticks"));
 
-        public static void IncrementProjectionCounter(String projectionName, String slotName, String eventName, Int64 milliseconds)
+        public static void IncrementProjectionCounter(String projectionName, String slotName, String eventName, Int64 ticks, Int64 milliseconds)
         {
-            projectionCounter.Increment(projectionName, milliseconds);
-            projectionSlotCounter.Increment(slotName, milliseconds);
-            projectionEventCounter.Increment(eventName, milliseconds);
-        }
+            projectionCounter.Increment(projectionName, ticks);
+            projectionSlotCounter.Increment(slotName, ticks);
+            projectionEventCounter.Increment(eventName, ticks);
+			if (milliseconds > 50)
+			{
+				projectionSlowEventCounter.Increment($"{projectionName}/{eventName}", milliseconds);
+			}
+		}
 
         public static void IncrementProjectionCounterRebuild(String projectionName, String slotName, String eventName, Int64 milliseconds)
         {
