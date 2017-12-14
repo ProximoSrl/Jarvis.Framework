@@ -61,6 +61,18 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
 		public Boolean Initialized { get; private set; }
 
+		/// <summary>
+		/// This is the basic constructor for the projection engine.
+		/// </summary>
+		/// <param name="pollingClientFactory"></param>
+		/// <param name="persistence"></param>
+		/// <param name="checkpointTracker"></param>
+		/// <param name="projections"></param>
+		/// <param name="housekeeper"></param>
+		/// <param name="notifyCommitHandled"></param>
+		/// <param name="config"></param>
+		/// <param name="logger"></param>
+		/// <param name="loggerThreadContextManager"></param>
 		public ProjectionEngine(
 			ICommitPollingClientFactory pollingClientFactory,
 			IPersistence persistence,
@@ -119,7 +131,19 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 					.ToArray();
 			}
 
-			_allProjections = projections;
+			if (OfflineMode.Enabled)
+			{
+				//In offline mode we already have filtered out the projection.
+				_allProjections = projections;
+			}
+			else
+			{
+				//we are not in offline mode, just use all projection that are not marked to 
+				//run only in offline mode
+				logger.Info($"Projection engine is NOT in online mode, we remove all projections that are not explicitly marked for offline");
+				_allProjections = projections.Where(_ => !_.Info.OfflineProjection).ToArray();
+			}
+
 			_projectionsBySlot = projections
 				.GroupBy(x => x.Info.SlotName)
 				.ToDictionary(x => x.Key, x => x.OrderByDescending(p => p.Priority).ToArray());

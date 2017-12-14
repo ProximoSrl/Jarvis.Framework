@@ -180,6 +180,7 @@
     <Compile Include="Support\DisposableList.cs" />
     <Compile Include="Support\IMongoPersistedPocoObject.cs" />
     <Compile Include="Support\NamedLocker.cs" />
+    <Compile Include="Support\OfflineMode.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
