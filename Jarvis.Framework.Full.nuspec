@@ -12,9 +12,9 @@
     <tags>Jarvis,Framework</tags>
 
     <dependencies>		  
-      <!--<dependency id="NEventStore" version="(5.4,7.0.0)" />
-      <dependency id="NEventStore.Persistence.MongoDb" version="(5.4,7.0.0)" />-->
-      <dependency id="MongoDB.Driver" version="2.4.4" />
+      <dependency id="NStore.Core" version="0.2.0" />
+      <dependency id="NStore.Domain" version="0.2.0" />
+      <dependency id="NStore.Persistence.Mongo" version="0.2.0" />
 
       <dependency id="Castle.Core" version="4.1.1" />
       <dependency id="Castle.Windsor" version="4.0.0" />
