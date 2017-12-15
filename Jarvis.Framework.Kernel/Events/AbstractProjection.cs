@@ -9,6 +9,7 @@ using Jarvis.Framework.Shared.MultitenantSupport;
 using System.Reflection;
 using System.Threading.Tasks;
 using Jarvis.Framework.Shared.Exceptions;
+using Jarvis.Framework.Shared.Support;
 
 namespace Jarvis.Framework.Kernel.Events
 {
@@ -23,8 +24,11 @@ namespace Jarvis.Framework.Kernel.Events
         {
             _projectionInfoAttribute = GetType().GetCustomAttribute<ProjectionInfoAttribute>();
             if (_projectionInfoAttribute == null)
-                throw new Exception($"Projection {GetType().FullName} does not contain ProjectionInfoAttribute");
-        }
+                throw new JarvisFrameworkEngineException($"Projection {GetType().FullName} does not contain ProjectionInfoAttribute");
+
+			if (_projectionInfoAttribute.OfflineProjection && !OfflineMode.Enabled)
+				throw new JarvisFrameworkEngineException($"Cannot run projection {GetType().Name} because is an offline projection and OfflineMode is not enabled.");
+		}
 
         /// <summary>
         /// Single thread projection

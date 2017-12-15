@@ -122,6 +122,7 @@
     <Compile Include="Events\IEventStoreQueryManager.cs" />
     <Compile Include="Events\IObserveProjection.cs" />
     <Compile Include="Events\IProjection.cs" />
+    <Compile Include="Events\ProjectionServiceSelector.cs" />
     <Compile Include="Events\TenantProjections.cs" />
     <Compile Include="ProjectionEngine\Client\CheckpointSlotStatus.cs" />
     <Compile Include="ProjectionEngine\Client\CommitPollingClient2.cs" />
