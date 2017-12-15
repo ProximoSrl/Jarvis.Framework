@@ -163,6 +163,7 @@
     <Compile Include="Persistence\IAggregateCachedRepository.cs" />
     <Compile Include="Persistence\IRepositoryFactory.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ReadModel\AbstractChildReadModel.cs" />
     <Compile Include="ReadModel\AbstractReadModel.cs" />
     <Compile Include="ReadModel\CollectionNames.cs" />
     <Compile Include="ReadModel\NullMessageTracker.cs" />
