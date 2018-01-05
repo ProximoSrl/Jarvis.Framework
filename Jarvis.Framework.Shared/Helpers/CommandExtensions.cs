@@ -34,5 +34,21 @@ namespace Jarvis.Framework.Shared.Helpers
 
 			return JsonConvert.DeserializeObject<T>(serialized, jsonSerializerSettings);
 		}
+
+		/// <summary>
+		/// If the command has some complex header, it will be serialized as string,
+		/// to avoid serialization mismatch, this method will de-serialize the 
+		/// content to the real object.
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="value"></param>
+		/// <returns></returns>
+		public static T DeserializeFromCommandHeader<T>(this String value)
+		{
+			if (string.IsNullOrEmpty(value))
+				return default(T);
+
+			return JsonConvert.DeserializeObject<T>(value, jsonSerializerSettings);
+		}
 	}
 }

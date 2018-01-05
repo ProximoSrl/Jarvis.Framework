@@ -26,6 +26,12 @@ namespace Jarvis.Framework.Shared.Helpers
 			if (evt.Context != null && evt.Context.ContainsKey(MessagesConstants.OfflineEvents))
 			{
 				var contextValue = evt.Context[MessagesConstants.OfflineEvents];
+
+				//If header is string, it was probably serialized with command exchange from 
+				//offline and online system,.
+				if (contextValue is String)
+					contextValue = ((String)contextValue).DeserializeFromCommandHeader<IEnumerable<DomainEvent>>();
+
 				if (contextValue == null || !(contextValue is IEnumerable))
 					return Empty;
 

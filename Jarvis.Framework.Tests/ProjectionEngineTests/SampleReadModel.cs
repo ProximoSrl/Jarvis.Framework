@@ -32,7 +32,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         public Int32 Value { get; set; }
     }
 
-    public class SampleReadModelTest : AbstractReadModel<TestId>
+    public class SampleReadModelTest : AbstractReadModel<String>
     {
         public String Value { get; set; }
 

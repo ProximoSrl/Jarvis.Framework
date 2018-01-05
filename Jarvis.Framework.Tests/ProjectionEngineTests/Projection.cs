@@ -173,9 +173,9 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
 	[ProjectionInfo("ProjectionTypedId")]
 	public class ProjectionTypedId : AbstractProjection
 	{
-		readonly ICollectionWrapper<SampleReadModelTest, TestId> _collection;
+		readonly ICollectionWrapper<SampleReadModelTest, String> _collection;
 
-		public ProjectionTypedId(ICollectionWrapper<SampleReadModelTest, TestId> collection)
+		public ProjectionTypedId(ICollectionWrapper<SampleReadModelTest, String> collection)
 		{
 			_collection = collection;
 			_collection.Attach(this, false);

@@ -16,50 +16,50 @@ using Jarvis.Framework.Shared.Helpers;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests
 {
-    [TestFixture]
-    public class CollectionWrapperTests
-    {
-        private CollectionWrapper<SampleReadModelTest, TestId> sut;
+	[TestFixture]
+	public class CollectionWrapperTests
+	{
+		private CollectionWrapper<SampleReadModelTest, String> sut;
 
-        private IMongoDatabase _db;
-        private MongoClient _client;
+		private IMongoDatabase _db;
+		private MongoClient _client;
 
-        [OneTimeSetUp]
-        public void TestFixtureSetUp()
-        {
-            var connectionString = ConfigurationManager.ConnectionStrings["readmodel"].ConnectionString;
-            var url = new MongoUrl(connectionString);
-            _client = new MongoClient(url);
-            _db = _client.GetDatabase(url.DatabaseName);
+		[OneTimeSetUp]
+		public void TestFixtureSetUp()
+		{
+			var connectionString = ConfigurationManager.ConnectionStrings["readmodel"].ConnectionString;
+			var url = new MongoUrl(connectionString);
+			_client = new MongoClient(url);
+			_db = _client.GetDatabase(url.DatabaseName);
 
-            TestHelper.RegisterSerializerForFlatId<TestId>();
-        }
+			TestHelper.RegisterSerializerForFlatId<TestId>();
+		}
 
-        [SetUp]
-        public void SetUp()
-        {
-            _client.DropDatabase(_db.DatabaseNamespace.DatabaseName);
-            var rebuildContext = new RebuildContext(false);
-            var storageFactory = new MongoStorageFactory(_db, rebuildContext);
-            sut = new CollectionWrapper<SampleReadModelTest, TestId>(storageFactory, new NotifyToNobody());
-            //It is important to create the projection to attach the collection wrapper
-            new ProjectionTypedId(sut);
-        }
+		[SetUp]
+		public void SetUp()
+		{
+			_client.DropDatabase(_db.DatabaseNamespace.DatabaseName);
+			var rebuildContext = new RebuildContext(false);
+			var storageFactory = new MongoStorageFactory(_db, rebuildContext);
+			sut = new CollectionWrapper<SampleReadModelTest, String>(storageFactory, new NotifyToNobody());
+			//It is important to create the projection to attach the collection wrapper
+			new ProjectionTypedId(sut);
+		}
 
-        [Test]
-        public async Task Verify_basic_delete()
-        {
-            var rm = new SampleReadModelTest();
-            rm.Id = new TestId(1);
-            rm.Value = "test";
-            await sut.InsertAsync(new SampleAggregateCreated(), rm);
-            var all = sut.All.ToList();
-            Assert.That(all, Has.Count.EqualTo(1));
+		[Test]
+		public async Task Verify_basic_delete()
+		{
+			var rm = new SampleReadModelTest();
+			rm.Id = new TestId(1);
+			rm.Value = "test";
+			await sut.InsertAsync(new SampleAggregateCreated(), rm).ConfigureAwait(false);
+			var all = sut.All.ToList();
+			Assert.That(all, Has.Count.EqualTo(1));
 
-            await sut.DeleteAsync(new SampleAggregateInvalidated(), rm.Id);
-            all = sut.All.ToList();
-            Assert.That(all, Has.Count.EqualTo(0));
-        }
+			await sut.DeleteAsync(new SampleAggregateInvalidated(), rm.Id).ConfigureAwait(false);
+			all = sut.All.ToList();
+			Assert.That(all, Has.Count.EqualTo(0));
+		}
 
 		[Test]
 		public async Task Verify_check_on_creation_by_two_different_event()
@@ -98,19 +98,19 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
 		}
 
 		[Test]
-        public async Task Verify_basic_update()
-        {
-            var rm = new SampleReadModelTest();
-            rm.Id = new TestId(1);
-            rm.Value = "test";
-            await sut.InsertAsync(new SampleAggregateCreated(), rm);
-            rm.Value = "test2";
-            await sut.SaveAsync(new SampleAggregateTouched(), rm);
-            var all = sut.All.ToList();
-            Assert.That(all, Has.Count.EqualTo(1));
-            var loaded = all.First();
-            Assert.That(loaded.Value, Is.EqualTo("test2"));
-        }
+		public async Task Verify_basic_update()
+		{
+			var rm = new SampleReadModelTest();
+			rm.Id = new TestId(1);
+			rm.Value = "test";
+			await sut.InsertAsync(new SampleAggregateCreated(), rm).ConfigureAwait(false);
+			rm.Value = "test2";
+			await sut.SaveAsync(new SampleAggregateTouched(), rm).ConfigureAwait(false);
+			var all = sut.All.ToList();
+			Assert.That(all, Has.Count.EqualTo(1));
+			var loaded = all[0];
+			Assert.That(loaded.Value, Is.EqualTo("test2"));
+		}
 
 		[Test]
 		public async Task Verify_update_idempotency()
@@ -166,9 +166,44 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
 			onlineEvent.Context.Add(MessagesConstants.OfflineEvents, new DomainEvent[] { offlineEvent });
 
 			//now call findOneById, but this time the readmodel should ignore because the event was bound to an offline event
-			await sut.FindAndModifyAsync(offlineEvent, rm.Id, _ => _.Counter++).ConfigureAwait(false);
+			await sut.FindAndModifyAsync(onlineEvent, rm.Id, _ => _.Counter++).ConfigureAwait(false);
 			reloaded = await sut.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
+			Assert.That(reloaded.Counter, Is.EqualTo(11), "Idempotency check failed");
+		}
+
+		[Test]
+		public async Task Verify_update_idempotency_on_offline_messages_serialized()
+		{
+			SampleAggregateId aggregateId = new SampleAggregateId(1);
+			var rm = new SampleReadModelTest
+			{
+				Id = aggregateId,
+				Value = "test",
+				Counter = 10,
+			};
+			await sut.InsertAsync(new SampleAggregateCreated(), rm).ConfigureAwait(false);
+
+			//now try to update counter with an event that was generated offline
+			SampleAggregateTouched offlineEvent = new SampleAggregateTouched();
+
+			await sut.FindAndModifyAsync(offlineEvent, rm.Id, _ => _.Counter++).ConfigureAwait(false);
+			var reloaded = await sut.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
 			Assert.That(reloaded.Counter, Is.EqualTo(11));
+
+			//now eventOffline is syncronized with main system.
+			//simulate the command that will be send to the main system
+			var command = new TouchSampleAggregate(aggregateId);
+			command.SetContextData(MessagesConstants.OfflineEvents, new DomainEvent[] { offlineEvent });
+
+			//main system will copy the headers from the command to the event
+			SampleAggregateTouched onlineEvent = new SampleAggregateTouched();
+			onlineEvent.SetPropertyValue(_ => _.Context, new Dictionary<string, Object>());
+			onlineEvent.Context.Add(MessagesConstants.OfflineEvents, command.GetContextData(MessagesConstants.OfflineEvents));
+
+			//now call findOneById, but this time the readmodel should ignore because the event was bound to an offline event
+			await sut.FindAndModifyAsync(onlineEvent, rm.Id, _ => _.Counter++).ConfigureAwait(false);
+			reloaded = await sut.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
+			Assert.That(reloaded.Counter, Is.EqualTo(11), "Idempotency check failed");
 		}
 	}
 }
