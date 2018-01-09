@@ -19,7 +19,7 @@
       <dependency id="NStore.Domain" version="0.2.0" />
       <dependency id="NStore.Persistence.Mongo" version="0.2.0" />
       
-      <dependency id="MongoDB.Driver" version="2.4.4" />
+      <dependency id="MongoDB.Driver" version="2.5.0" />
       <dependency id="Rebus" version="4.0.0" />
       <dependency id="Rebus.Events" version="4.0.0" />
       <dependency id="Rebus.MongoDb" version="4.0.0" />

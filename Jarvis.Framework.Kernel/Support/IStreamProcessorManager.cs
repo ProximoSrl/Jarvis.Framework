@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.Support
@@ -45,9 +46,9 @@ namespace Jarvis.Framework.Kernel.Support
 		{
 			var stream = _streams.Open(streamId);
 			return stream
-				.Fold(StreamProcessorManagerPayloadProcessor.Instance)
+				.Fold()
 				.ToIndex(versionUpTo)
-				.RunAsync<T>();
+				.RunAsync<T>(StreamProcessorManagerPayloadProcessor.Instance, CancellationToken.None);
 		}
 	}
 
