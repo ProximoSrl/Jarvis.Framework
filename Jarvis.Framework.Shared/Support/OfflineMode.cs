@@ -25,5 +25,11 @@ namespace Jarvis.Framework.Shared.Support
 			Enabled = true;
 			OfflineContext = offlineContext;
 		}
+
+		public static void ResetOfflineMode()
+		{
+			Enabled = false;
+			OfflineContext = null;
+		}
 	}
 }

@@ -36,8 +36,19 @@ namespace Jarvis.Framework.Shared.ReadModel
 		/// <returns></returns>
 		public bool BuiltFromEvent(DomainEvent evt)
 		{
-			return ProcessedEvents.Contains(evt.MessageId)
+			return BuiltFromMessage(evt.MessageId)
 				|| evt.GetOfflineEventIdList().Intersect(ProcessedEvents).Any();
+		}
+
+		/// <summary>
+		/// This version check only a single message id, does not check for
+		/// event in the header of the domain event.
+		/// </summary>
+		/// <param name="messageId"></param>
+		/// <returns></returns>
+		public Boolean BuiltFromMessage(Guid messageId)
+		{
+			return ProcessedEvents.Contains(messageId);
 		}
 
 		public void AddEvent(Guid id)
