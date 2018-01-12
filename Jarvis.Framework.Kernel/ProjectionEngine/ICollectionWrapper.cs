@@ -26,14 +26,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         /// </summary>
         Func<TModel, Object> TransformForNotification { get; set; }
 
-		/// <summary>
-		/// Insert a value into the underling storage
-		/// </summary>
-		/// <param name="e"></param>
-		/// <param name="model"></param>
-		/// <param name="notify"></param>
-		/// <returns></returns>
-		Task InsertAsync(DomainEvent e, TModel model, bool notify = false);
+        /// <summary>
+        /// Insert a value into the underling storage
+        /// </summary>
+        /// <param name="e"></param>
+        /// <param name="model"></param>
+        /// <param name="notify"></param>
+        /// <returns></returns>
+        Task InsertAsync(DomainEvent e, TModel model, bool notify = false);
 
         /// <summary>
         /// Upsert a readmodel into the underling persistence storage.
@@ -108,7 +108,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         /// </summary>
         /// <param name="projection"></param>
         /// <param name="bEnableNotifications"></param>
-        void Attach(IProjection projection, bool bEnableNotifications);
+        void Attach(IProjection projection, bool bEnableNotifications = true);
 
         /// <summary>
         /// Insert a batch of readmodels with a single call.

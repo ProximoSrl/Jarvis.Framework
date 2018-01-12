@@ -8,287 +8,290 @@ using Jarvis.Framework.Shared.Messages;
 using Jarvis.Framework.Shared.ReadModel;
 using MongoDB.Driver;
 using System.Threading.Tasks;
-using Jarvis.Framework.Shared.Helpers;
-using Jarvis.Framework.Kernel.Engine;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
 {
-	public class CollectionWrapper<TModel, TKey> :
-		IObserveProjection,
-		ICollectionWrapper<TModel, TKey> where TModel : class, IReadModelEx<TKey>
-	{
-		private const string ConcurrencyException = "E1100";
-		private readonly INotifyToSubscribers _notifyToSubscribers;
-		private readonly IMongoStorage<TModel, TKey> _storage;
-		private Int64 _pollableSecondaryIndexCounter;
+    public class CollectionWrapper<TModel, TKey> :
+        IObserveProjection,
+        ICollectionWrapper<TModel, TKey> where TModel : class, IReadModelEx<TKey>
+    {
+        private const string ConcurrencyException = "E1100";
+        private readonly INotifyToSubscribers _notifyToSubscribers;
+        private readonly IMongoStorage<TModel, TKey> _storage;
+        private Int64 _pollableSecondaryIndexCounter;
 
-		public CollectionWrapper(
-			IMongoStorageFactory factory,
-			INotifyToSubscribers notifyToSubscribers
-			)
-		{
-			_notifyToSubscribers = notifyToSubscribers;
-			_storage = factory.GetCollection<TModel, TKey>();
-			_pollableSecondaryIndexCounter = DateTime.UtcNow.Ticks;
-		}
+        public CollectionWrapper(
+            IMongoStorageFactory factory,
+            INotifyToSubscribers notifyToSubscribers
+            )
+        {
+            _notifyToSubscribers = notifyToSubscribers;
+            _storage = factory.GetCollection<TModel, TKey>();
+            _pollableSecondaryIndexCounter = DateTime.UtcNow.Ticks;
+        }
 
-		/// <summary>
-		/// Attach a projection to the collection wrapper.
-		/// </summary>
-		/// <param name="projection"></param>
-		/// <param name="bEnableNotifications"></param>
-		public void Attach(IProjection projection, bool bEnableNotifications = true)
-		{
-			if (this.Projection != null)
-				throw new CollectionWrapperException("Collection wrapper already attached to projection");
+        private string FormatCollectionWrapperExceptionMessage(string message)
+        {
+            return $"CollectionWrapper [{typeof(TModel).Name}] - {message}";
+        }
 
-			this.Projection = projection;
-			this.NotifySubscribers = bEnableNotifications;
-			projection.Observe(this);
-		}
+        /// <summary>
+        /// Attach a projection to the collection wrapper.
+        /// </summary>
+        /// <param name="projection"></param>
+        /// <param name="bEnableNotifications"></param>
+        public void Attach(IProjection projection, bool bEnableNotifications = true)
+        {
+            if (this.Projection != null)
+                throw new CollectionWrapperException(FormatCollectionWrapperExceptionMessage("already attached to projection."));
 
-		private IProjection Projection { get; set; }
+            this.Projection = projection;
+            this.NotifySubscribers = bEnableNotifications;
+            projection.Observe(this);
+        }
 
-		#region IReadOnlyCollectionWrapper members
+        private IProjection Projection { get; set; }
 
-		public Task<TModel> FindOneByIdAsync(TKey id)
-		{
-			return _storage.FindOneByIdAsync(id);
-		}
+        #region IReadOnlyCollectionWrapper members
 
-		public IQueryable<TModel> Where(Expression<Func<TModel, bool>> filter)
-		{
-			return _storage.Where(filter);
-		}
+        public Task<TModel> FindOneByIdAsync(TKey id)
+        {
+            return _storage.FindOneByIdAsync(id);
+        }
 
-		public Task<bool> ContainsAsync(Expression<Func<TModel, bool>> filter)
-		{
-			return _storage.ContainsAsync(filter);
-		}
+        public IQueryable<TModel> Where(Expression<Func<TModel, bool>> filter)
+        {
+            return _storage.Where(filter);
+        }
 
-		#endregion
+        public Task<bool> ContainsAsync(Expression<Func<TModel, bool>> filter)
+        {
+            return _storage.ContainsAsync(filter);
+        }
 
-		#region ICollectionWrapper members
+        #endregion
 
-		public Task CreateIndexAsync(String name, IndexKeysDefinition<TModel> keys, CreateIndexOptions options = null)
-		{
-			return _storage.CreateIndexAsync(name, keys, options);
-		}
+        #region ICollectionWrapper members
 
-		public Task<Boolean> IndexExistsAsync(String name)
-		{
-			return _storage.IndexExistsAsync(name);
-		}
+        public Task CreateIndexAsync(String name, IndexKeysDefinition<TModel> keys, CreateIndexOptions options = null)
+        {
+            return _storage.CreateIndexAsync(name, keys, options);
+        }
 
-		public Task InsertBatchAsync(IEnumerable<TModel> values)
-		{
-			return _storage.InsertBatchAsync(values);
-		}
+        public Task<Boolean> IndexExistsAsync(String name)
+        {
+            return _storage.IndexExistsAsync(name);
+        }
 
-		public IQueryable<TModel> All
-		{
-			get { return _storage.All; }
-		}
+        public Task InsertBatchAsync(IEnumerable<TModel> values)
+        {
+            return _storage.InsertBatchAsync(values);
+        }
 
-		protected bool NotifySubscribers { get; set; }
+        public IQueryable<TModel> All
+        {
+            get { return _storage.All; }
+        }
 
-		public Action<TModel, DomainEvent> OnSave { get; set; } = (model, e) => { };
+        protected bool NotifySubscribers { get; set; }
 
-		public async Task InsertAsync(DomainEvent e, TModel model, bool notify = false)
-		{
-			OnSave(model, e);
-			model.Version = 1;
-			model.LastModified = e.CommitStamp;
+        public Action<TModel, DomainEvent> OnSave { get; set; } = (model, e) => { };
 
-			model.AddEvent(e.MessageId);
-			HandlePollableReadModel(e, model);
-			try
-			{
-				var result = await _storage.InsertAsync(model).ConfigureAwait(false);
+        public async Task InsertAsync(DomainEvent e, TModel model, bool notify = false)
+        {
+            OnSave(model, e);
+            model.Version = 1;
+            model.LastModified = e.CommitStamp;
 
-				if (!result.Ok)
-				{
-					throw new CollectionWrapperException("Error writing on mongodb :" + result.ErrorMessage);
-				}
-			}
-			catch (MongoException ex)
-			{
-				if (!ex.Message.Contains(ConcurrencyException))
-					throw;
+            model.AddEvent(e.MessageId);
+            HandlePollableReadModel(e, model);
+            try
+            {
+                var result = await _storage.InsertAsync(model).ConfigureAwait(false);
 
-				var saved = await _storage.FindOneByIdAsync((dynamic)model.Id).ConfigureAwait(false);
-				if (saved.BuiltFromEvent(e))
-					return;
+                if (!result.Ok)
+                {
+                    throw new CollectionWrapperException(FormatCollectionWrapperExceptionMessage("Error writing on mongodb :" + result.ErrorMessage));
+                }
+            }
+            catch (MongoException ex)
+            {
+                if (!ex.Message.Contains(ConcurrencyException))
+                    throw;
 
-				throw new CollectionWrapperException("Readmodel created by two different events!");
-			}
+                var saved = await _storage.FindOneByIdAsync((dynamic)model.Id).ConfigureAwait(false);
+                if (saved.BuiltFromEvent(e))
+                    return;
 
-			if (!IsReplay && (notify || NotifySubscribers))
-			{
-				Object notificationPayload = TransformForNotification(model);
-				await _notifyToSubscribers.Send(ReadModelUpdatedMessage.Created<TModel, TKey>(model.Id, notificationPayload)).ConfigureAwait(false);
-			}
-		}
+                throw new CollectionWrapperException(FormatCollectionWrapperExceptionMessage("Readmodel created by two different events!"));
+            }
 
-		public async Task<TModel> UpsertAsync(DomainEvent e, TKey id, Func<TModel> insert, Func<TModel, Task> update, bool notify = false)
-		{
-			var readModel = await _storage.FindOneByIdAsync(id).ConfigureAwait(false);
-			if (readModel != null)
-			{
-				if (readModel.BuiltFromEvent(e))
-					return readModel;
+            if (!IsReplay && (notify || NotifySubscribers))
+            {
+                Object notificationPayload = TransformForNotification(model);
+                await _notifyToSubscribers.Send(ReadModelUpdatedMessage.Created<TModel, TKey>(model.Id, notificationPayload)).ConfigureAwait(false);
+            }
+        }
 
-				await update(readModel).ConfigureAwait(false);
-				await SaveAsync(e, readModel, notify).ConfigureAwait(false);
-			}
-			else
-			{
-				readModel = insert();
-				readModel.Id = id;
-				await InsertAsync(e, readModel, notify).ConfigureAwait(false);
-			}
+        public async Task<TModel> UpsertAsync(DomainEvent e, TKey id, Func<TModel> insert, Func<TModel, Task> update, bool notify = false)
+        {
+            var readModel = await _storage.FindOneByIdAsync(id).ConfigureAwait(false);
+            if (readModel != null)
+            {
+                if (readModel.BuiltFromEvent(e))
+                    return readModel;
 
-			return readModel;
-		}
+                await update(readModel).ConfigureAwait(false);
+                await SaveAsync(e, readModel, notify).ConfigureAwait(false);
+            }
+            else
+            {
+                readModel = insert();
+                readModel.Id = id;
+                await InsertAsync(e, readModel, notify).ConfigureAwait(false);
+            }
 
-		public async Task SaveAsync(DomainEvent e, TModel model, bool notify = false)
-		{
-			OnSave(model, e);
-			var orignalVersion = model.Version;
-			model.Version++;
-			model.LastModified = e.CommitStamp;
-			model.AddEvent(e.MessageId);
-			HandlePollableReadModel(e, model);
-			var result = await _storage.SaveWithVersionAsync(model, orignalVersion).ConfigureAwait(false);
+            return readModel;
+        }
 
-			if (!result.Ok)
-				throw new CollectionWrapperException("Concurency exception");
+        public async Task SaveAsync(DomainEvent e, TModel model, bool notify = false)
+        {
+            OnSave(model, e);
+            var orignalVersion = model.Version;
+            model.Version++;
+            model.LastModified = e.CommitStamp;
+            model.AddEvent(e.MessageId);
+            HandlePollableReadModel(e, model);
+            var result = await _storage.SaveWithVersionAsync(model, orignalVersion).ConfigureAwait(false);
 
-			if (!IsReplay && (notify || NotifySubscribers))
-			{
-				Object notificationPayload = TransformForNotification(model);
-				await _notifyToSubscribers.Send(ReadModelUpdatedMessage.Updated<TModel, TKey>(model.Id, notificationPayload)).ConfigureAwait(false);
-			}
-		}
+            if (!result.Ok)
+                throw new CollectionWrapperException(FormatCollectionWrapperExceptionMessage("Concurency exception"));
 
-		public async Task FindAndModifyAsync(DomainEvent e, Expression<Func<TModel, bool>> filter, Func<TModel, Task> action, bool notify = false)
-		{
-			foreach (var model in _storage.All.Where(filter).OrderBy(x => x.Id))
-			{
-				if (!model.BuiltFromEvent(e))
-				{
-					await action(model).ConfigureAwait(false);
-					await SaveAsync(e, model, notify).ConfigureAwait(false);
-				}
-			}
-		}
+            if (!IsReplay && (notify || NotifySubscribers))
+            {
+                Object notificationPayload = TransformForNotification(model);
+                await _notifyToSubscribers.Send(ReadModelUpdatedMessage.Updated<TModel, TKey>(model.Id, notificationPayload)).ConfigureAwait(false);
+            }
+        }
 
-		public async Task FindAndModifyByPropertyAsync<TProperty>(
-			DomainEvent e,
-			Expression<Func<TModel, TProperty>> propertySelector,
-			TProperty propertyValue, 
-			Func<TModel, Task> action,
-			bool notify = false)
-		{
-			Func<TModel, Task> saveAction = async model =>
-			{
-				if (!model.BuiltFromEvent(e))
-				{
-					await action(model).ConfigureAwait(false);
-					await SaveAsync(e, model, notify).ConfigureAwait(false);
-				}
-			};
-			await _storage.FindByPropertyAsync(propertySelector, propertyValue, saveAction).ConfigureAwait(false);
-		}
+        public async Task FindAndModifyAsync(DomainEvent e, Expression<Func<TModel, bool>> filter, Func<TModel, Task> action, bool notify = false)
+        {
+            foreach (var model in _storage.All.Where(filter).OrderBy(x => x.Id))
+            {
+                if (!model.BuiltFromEvent(e))
+                {
+                    await action(model).ConfigureAwait(false);
+                    await SaveAsync(e, model, notify).ConfigureAwait(false);
+                }
+            }
+        }
 
-		public Task FindByPropertyAsync<TProperty>(Expression<Func<TModel, TProperty>> propertySelector, TProperty propertyValue, Func<TModel, Task> subscription)
-		{
-			return _storage.FindByPropertyAsync(propertySelector, propertyValue, subscription);
-		}
+        public async Task FindAndModifyByPropertyAsync<TProperty>(
+            DomainEvent e,
+            Expression<Func<TModel, TProperty>> propertySelector,
+            TProperty propertyValue,
+            Func<TModel, Task> action,
+            bool notify = false)
+        {
+            Func<TModel, Task> saveAction = async model =>
+            {
+                if (!model.BuiltFromEvent(e))
+                {
+                    await action(model).ConfigureAwait(false);
+                    await SaveAsync(e, model, notify).ConfigureAwait(false);
+                }
+            };
+            await _storage.FindByPropertyAsync(propertySelector, propertyValue, saveAction).ConfigureAwait(false);
+        }
 
-		public async Task FindAndModifyAsync(DomainEvent e, TKey id, Func<TModel, Task> action, bool notify = false)
-		{
-			var model = await _storage.FindOneByIdAsync(id).ConfigureAwait(false);
-			if (model != null && !model.BuiltFromEvent(e))
-			{
-				await action(model).ConfigureAwait(false);
-				await SaveAsync(e, model, notify).ConfigureAwait(false);
-			}
-		}
+        public Task FindByPropertyAsync<TProperty>(Expression<Func<TModel, TProperty>> propertySelector, TProperty propertyValue, Func<TModel, Task> subscription)
+        {
+            return _storage.FindByPropertyAsync(propertySelector, propertyValue, subscription);
+        }
 
-		/// <summary>
-		/// Elimina un readmodel
-		/// ?? gestire un flag di eliminato e memorizzare l'id dell'evento??
-		/// </summary>
-		/// <param name="e"></param>
-		/// <param name="id"></param>
-		/// <param name="notify"></param>
-		public async Task DeleteAsync(DomainEvent e, TKey id, bool notify = false)
-		{
-			string[] topics = null;
+        public async Task FindAndModifyAsync(DomainEvent e, TKey id, Func<TModel, Task> action, bool notify = false)
+        {
+            var model = await _storage.FindOneByIdAsync(id).ConfigureAwait(false);
+            if (model != null && !model.BuiltFromEvent(e))
+            {
+                await action(model).ConfigureAwait(false);
+                await SaveAsync(e, model, notify).ConfigureAwait(false);
+            }
+        }
 
-			if (NotifySubscribers && typeof(ITopicsProvider).IsAssignableFrom(typeof(TModel)))
-			{
-				var model = await _storage.FindOneByIdAsync(id).ConfigureAwait(false);
-				if (model == null)
-					return;
+        /// <summary>
+        /// Elimina un readmodel
+        /// ?? gestire un flag di eliminato e memorizzare l'id dell'evento??
+        /// </summary>
+        /// <param name="e"></param>
+        /// <param name="id"></param>
+        /// <param name="notify"></param>
+        public async Task DeleteAsync(DomainEvent e, TKey id, bool notify = false)
+        {
+            string[] topics = null;
 
-				topics = ((ITopicsProvider)model).GetTopics().ToArray();
-			}
+            if (NotifySubscribers && typeof(ITopicsProvider).IsAssignableFrom(typeof(TModel)))
+            {
+                var model = await _storage.FindOneByIdAsync(id).ConfigureAwait(false);
+                if (model == null)
+                    return;
 
-			var result = await _storage.DeleteAsync(id).ConfigureAwait(false);
-			if (!result.Ok)
-				throw new CollectionWrapperException(string.Format("Delete error on {0} :: {1}", typeof(TModel).FullName, id));
+                topics = ((ITopicsProvider)model).GetTopics().ToArray();
+            }
 
-			if (result.DocumentsAffected == 1 && !IsReplay && (notify || NotifySubscribers))
-			{
-				await _notifyToSubscribers.Send(ReadModelUpdatedMessage.Deleted<TModel, TKey>(id, topics)).ConfigureAwait(false);
-			}
-		}
+            var result = await _storage.DeleteAsync(id).ConfigureAwait(false);
+            if (!result.Ok)
+                throw new CollectionWrapperException(FormatCollectionWrapperExceptionMessage(string.Format("Delete error on {0} :: {1}", typeof(TModel).FullName, id)));
 
-		public Task DropAsync()
-		{
-			return _storage.DropAsync();
-		}
+            if (result.DocumentsAffected == 1 && !IsReplay && (notify || NotifySubscribers))
+            {
+                await _notifyToSubscribers.Send(ReadModelUpdatedMessage.Deleted<TModel, TKey>(id, topics)).ConfigureAwait(false);
+            }
+        }
 
-		private void HandlePollableReadModel(DomainEvent e, TModel model)
-		{
-			IPollableReadModel pollableReadModel;
-			if ((pollableReadModel = model as IPollableReadModel) != null)
-			{
-				pollableReadModel.CheckpointToken = e.CheckpointToken;
-				pollableReadModel.SecondaryToken = _pollableSecondaryIndexCounter++;
-			}
-		}
+        public Task DropAsync()
+        {
+            return _storage.DropAsync();
+        }
 
-		#endregion
+        private void HandlePollableReadModel(DomainEvent e, TModel model)
+        {
+            IPollableReadModel pollableReadModel;
+            if ((pollableReadModel = model as IPollableReadModel) != null)
+            {
+                pollableReadModel.CheckpointToken = e.CheckpointToken;
+                pollableReadModel.SecondaryToken = _pollableSecondaryIndexCounter++;
+            }
+        }
 
-		private bool IsReplay
-		{
-			get
-			{
-				ThrowIfNotAttached();
-				return Projection.IsRebuilding;
-			}
-		}
+        #endregion
 
-		public Func<TModel, Object> TransformForNotification { get; set; } = (model) => model;
+        private bool IsReplay
+        {
+            get
+            {
+                ThrowIfNotAttached();
+                return Projection.IsRebuilding;
+            }
+        }
 
-		public Task RebuildStartedAsync()
-		{
-			ThrowIfNotAttached();
-			return Task.CompletedTask;
-		}
+        public Func<TModel, Object> TransformForNotification { get; set; } = (model) => model;
 
-		private void ThrowIfNotAttached()
-		{
-			if (Projection == null)
-				throw new CollectionWrapperException(string.Format("Projection not attached to {0}", this.GetType().FullName));
-		}
+        public Task RebuildStartedAsync()
+        {
+            ThrowIfNotAttached();
+            return Task.CompletedTask;
+        }
 
-		public Task RebuildEndedAsync()
-		{
-			return _storage.FlushAsync();
-		}
-	}
+        private void ThrowIfNotAttached()
+        {
+            if (Projection == null)
+                throw new CollectionWrapperException(FormatCollectionWrapperExceptionMessage(string.Format("Projection not attached to {0}", this.GetType().FullName)));
+        }
+
+        public Task RebuildEndedAsync()
+        {
+            return _storage.FlushAsync();
+        }
+    }
 }
