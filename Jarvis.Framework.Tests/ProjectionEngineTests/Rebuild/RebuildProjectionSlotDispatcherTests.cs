@@ -38,7 +38,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         }
 
         [Test]
-        public async Task verify_finished_with_consecutive_events()
+        public async Task verify_finished_with_marker_events()
         {
             InitSut();
             await DispatchEventAsync(1).ConfigureAwait(false);
@@ -48,18 +48,10 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             await DispatchEventAsync(3).ConfigureAwait(false);
             Assert.That(sut.Finished, Is.False);
             await DispatchEventAsync(4).ConfigureAwait(false);
-            Assert.That(sut.Finished, Is.True);
-        }
-
-        [Test]
-        public async Task verify_finished_with_no_consecutive_events()
-        {
-            InitSut();
-            await DispatchEventAsync(1).ConfigureAwait(false);
             Assert.That(sut.Finished, Is.False);
-            await DispatchEventAsync(4).ConfigureAwait(false);
-            Assert.That(sut.Finished, Is.True);
-        }
+			await sut.DispatchEventAsync(UnwindedDomainEvent.LastEvent).ConfigureAwait(false);
+			Assert.That(sut.Finished, Is.True);
+		}
 
         private async Task<SampleAggregateCreated> DispatchEventAsync(Int64 checkpointToken)
         {

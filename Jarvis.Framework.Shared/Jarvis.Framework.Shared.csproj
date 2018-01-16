@@ -106,6 +106,7 @@
     <Compile Include="Events\DomainEventHelpers.cs" />
     <Compile Include="Exceptions\ExceptionHelper.cs" />
     <Compile Include="Exceptions\InvalidAggregateIdException.cs" />
+    <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="Helpers\CommandExtensions.cs" />
     <Compile Include="Helpers\DomainEventExtensions.cs" />
     <Compile Include="Helpers\NStoreSequencer.cs" />

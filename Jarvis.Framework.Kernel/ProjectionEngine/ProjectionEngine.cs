@@ -37,7 +37,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 		private readonly IHousekeeper _housekeeper;
 		private readonly INotifyCommitHandled _notifyCommitHandled;
 
-		private readonly ProjectionMetrics _metrics;
 		private long _maxDispatchedCheckpoint = 0;
 		private Int32 _countOfConcurrentDispatchingCommit = 0;
 
@@ -148,7 +147,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 				.GroupBy(x => x.Info.SlotName)
 				.ToDictionary(x => x.Key, x => x.OrderByDescending(p => p.Priority).ToArray());
 
-			_metrics = new ProjectionMetrics(_allProjections);
 			_bucketToClient = new Dictionary<BucketInfo, ICommitPollingClient>();
 
 			RegisterHealthCheck();
@@ -288,22 +286,21 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 			MetricsHelper.SetProjectionEngineCurrentDispatchCount(() => _countOfConcurrentDispatchingCommit);
 		}
 
-		Int64 GetStartGlobalCheckpoint()
+		private Int64 GetStartGlobalCheckpoint()
 		{
 			var checkpoints = _projectionsBySlot.Keys.Select(GetStartCheckpointForSlot).Distinct().ToArray();
-			return checkpoints.Any() ? checkpoints.Min() : 0;
+			return checkpoints.Length > 0 ? checkpoints.Min() : 0;
 		}
 
-		Int64 GetStartCheckpointForSlot(string slotName)
+		private Int64 GetStartCheckpointForSlot(string slotName)
 		{
 			Int64 min = Int64.MaxValue;
+			if (RebuildSettings.ShouldRebuild)
+				throw new JarvisFrameworkEngineException("Projection engine is not used anymore for rebuild. Rebuild is done with the specific RebuildProjectionEngine");
 
 			var projections = _projectionsBySlot[slotName];
 			foreach (var projection in projections)
 			{
-				if (_checkpointTracker.NeedsRebuild(projection))
-					throw new JarvisFrameworkEngineException("Projection engine is not used anymore for rebuild. Rebuild is done with the specific RebuildProjectionEngine");
-
 				var currentValue = _checkpointTracker.GetCurrent(projection);
 				if (currentValue < min)
 				{
@@ -326,7 +323,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 			}
 		}
 
-		void StopPolling()
+		private void StopPolling()
 		{
 			if (_clients != null)
 			{
@@ -381,86 +378,72 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
 				var projections = _projectionsBySlot[slotName];
 
-				bool dispatchCommit = false;
-
 				object[] events = GetArrayOfObjectFromChunk(chunk);
 
 				var eventCount = events.Length;
 
-				var projectionToUpdate = new List<string>();
-
-				for (int index = 0; index < eventCount; index++)
+				//now it is time to dispatch the commit, we will dispatch each projection 
+				//and for each projection we dispatch all the events present in changeset
+				foreach (var projection in projections)
 				{
-					var eventMessage = events[index];
+					var cname = projection.Info.CommonName;
+					Object eventMessage = null;
 					try
 					{
-						var message = eventMessage as IMessage;
-
-						DisposableStack serilogcontext = new DisposableStack();
-						string eventName = eventMessage.GetType().Name;
-
-						serilogcontext.Push(_loggerThreadContextManager.SetContextProperty("evType", eventName));
-						serilogcontext.Push(_loggerThreadContextManager.SetContextProperty("evMsId", message?.MessageId));
-						serilogcontext.Push(_loggerThreadContextManager.SetContextProperty("evCheckpointToken", chunk.Position));
-
-						using (serilogcontext)
+						//Foreach projection we need to dispach every event
+						for (int index = 0; index < eventCount; index++)
 						{
-							foreach (var projection in projections)
+							eventMessage = events[index];
+
+							var message = eventMessage as IMessage;
+							string eventName = eventMessage.GetType().Name;
+							using (var serilogcontext = new DisposableStack())
 							{
-								var cname = projection.Info.CommonName;
-								using (_loggerThreadContextManager.SetContextProperty("prj", cname))
+								serilogcontext.Push(_loggerThreadContextManager.SetContextProperty("evType", eventName));
+								serilogcontext.Push(_loggerThreadContextManager.SetContextProperty("evMsId", message?.MessageId));
+								serilogcontext.Push(_loggerThreadContextManager.SetContextProperty("evCheckpointToken", chunk.Position));
+								serilogcontext.Push(_loggerThreadContextManager.SetContextProperty("prj", cname));
+
+								var checkpointStatus = _checkpointTracker.GetCheckpointStatus(cname, chunk.Position);
+								long ticks = 0;
+
+								try
 								{
-									var checkpointStatus = _checkpointTracker.GetCheckpointStatus(cname, chunk.Position);
-									if (checkpointStatus.IsRebuilding && !RebuildSettings.ContinuousRebuild)
-										throw new JarvisFrameworkEngineException($"Error in projection engine, position {chunk.Position} for projection {projection.Info.CommonName} have IsRebuilding to true.");
+									//pay attention, stopwatch consumes time.
+									var sw = new Stopwatch();
+									sw.Start();
+									await projection
+										.HandleAsync(eventMessage, checkpointStatus.IsRebuilding)
+										.ConfigureAwait(false);
+									sw.Stop();
+									ticks = sw.ElapsedTicks;
+									MetricsHelper.IncrementProjectionCounter(cname, slotName, eventName, ticks, sw.ElapsedMilliseconds);
 
-									bool handled;
-									long ticks = 0;
-
-									try
+									if (_logger.IsDebugEnabled)
 									{
-										//pay attention, stopwatch consumes time.
-										var sw = new Stopwatch();
-										sw.Start();
-										handled = await projection.HandleAsync(eventMessage, RebuildSettings.ContinuousRebuild).ConfigureAwait(false);
-										sw.Stop();
-										ticks = sw.ElapsedTicks;
-										MetricsHelper.IncrementProjectionCounter(cname, slotName, eventName, ticks, sw.ElapsedMilliseconds);
-									}
-									catch (Exception ex)
-									{
-										var error = String.Format("[Slot: {3} Projection: {4}] Failed checkpoint: {0} StreamId: {1} Event Name: {2}",
+										_logger.DebugFormat("[Slot:{3}] [Projection {4}] Handled checkpoint {0}: {1} > {2}",
 											chunk.Position,
 											chunk.PartitionId,
-											eventName,
+											$"eventName: {eventName} [event N°{index}]",
 											slotName,
-											cname);
-										_logger.Fatal(error, ex);
-										_engineFatalErrors.Add(error);
-										throw;
+											cname
+										);
 									}
-
-									if (handled)
-									{
-										_metrics.Inc(cname, eventName, ticks);
-
-										if (_logger.IsDebugEnabled)
-											_logger.DebugFormat("[{3}] [{4}] Handled checkpoint {0}: {1} > {2}",
-												chunk.Position,
-												chunk.PartitionId,
-												eventName,
-												slotName,
-												cname
-											);
-									}
-
-									if (handled)
-										dispatchCommit = true;
-
-									projectionToUpdate.Add(cname);
+								}
+								catch (Exception ex)
+								{
+									var error = String.Format("[Slot: {3} Projection: {4}] Failed checkpoint: {0} StreamId: {1} Event Name: {2}",
+										chunk.Position,
+										chunk.PartitionId,
+										eventName,
+										slotName,
+										cname);
+									_logger.Fatal(error, ex);
+									_engineFatalErrors.Add(error);
+									throw;
 								}
 							}
-						}
+						} //End of event cycle
 					}
 					catch (Exception ex)
 					{
@@ -468,34 +451,21 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 							chunk.Position, eventMessage?.GetType()?.Name, ex.Message);
 						throw;
 					}
-				}
 
-				//TODO NSTORE: We removed the ability to use standard projection engine with rebuild, but we still need to support the
-				//continuous rebuidl mode probably.
-				if (projectionToUpdate.Count == 0 && !RebuildSettings.ContinuousRebuild)
-				{
-					//I'm in rebuilding or no projection had run any events, only update slot
-					_checkpointTracker.UpdateSlot(slotName, chunk.Position);
-				}
-				else
-				{
-					//I'm not on rebuilding or we are in continuous rebuild., we have projection to update, update everything with one call.
-					_checkpointTracker.UpdateSlotAndSetCheckpoint(slotName, projectionToUpdate, chunk.Position);
-				}
-
-				//TODO: Find a better way, for now we signal projection that we fully dispatched a checkpoint token
-				//all events are dispatched.
-				foreach (var projection in projections)
-				{
 					projection.CheckpointProjected(chunk.Position);
-				}
 
+					//TODO: Evaluate if it is needed to update single projection checkpoint
+					//Update this projection, set all events of this checkpoint as dispatched.
+					//await _checkpointTracker.UpdateProjectionCheckpointAsync(cname, chunk.Position).ConfigureAwait(false);
+				} //End of projection cycle.
+
+				await _checkpointTracker.UpdateSlotAndSetCheckpointAsync(
+					slotName,
+					projections.Select(_ => _.Info.CommonName),
+					chunk.Position).ConfigureAwait(false);
 				MetricsHelper.MarkCommitDispatchedCount(slotName, 1);
 
-				if (dispatchCommit)
-				{
-					await _notifyCommitHandled.SetDispatched(slotName, chunk).ConfigureAwait(false);
-				}
+				await _notifyCommitHandled.SetDispatched(slotName, chunk).ConfigureAwait(false);
 
 				// ok in multithread wihout locks!
 				if (_maxDispatchedCheckpoint < chkpoint)

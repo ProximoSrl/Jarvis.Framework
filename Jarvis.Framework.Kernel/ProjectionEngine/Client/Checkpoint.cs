@@ -7,7 +7,18 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 	public class Checkpoint
 	{
 		public string Id { get; protected set; }
+
+		/// <summary>
+		/// Checkpoint token of last dispatched changeset for this projection
+		/// </summary>
 		public Int64 Value { get; set; }
+
+		/// <summary>
+		/// Currently last dispatched changeset for this projection, this is 
+		/// null during rebuild, and it was used in the very first version of
+		/// framework to restart interrupted rebuild. This could be removed
+		/// in future version.
+		/// </summary>
         public Int64? Current { get; set; }
         public string Signature { get; set; }
         public string Slot { get; set; }

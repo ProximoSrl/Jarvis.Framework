@@ -25,6 +25,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 		private Int64 _lastCheckpointRebuilded;
 		private readonly ILoggerThreadContextManager _loggerThreadContextManager;
 
+		/// <summary>
+		/// TODO: We should pass a dictionary where we have the last dispatched
+		/// checkpoint for EACH projection.
+		/// </summary>
+		/// <param name="logger"></param>
+		/// <param name="slotName"></param>
+		/// <param name="config"></param>
+		/// <param name="projections"></param>
+		/// <param name="lastCheckpointDispatched"></param>
+		/// <param name="loggerThreadContextManager"></param>
 		public RebuildProjectionSlotDispatcher(
 			ILogger logger,
 			String slotName,
@@ -55,10 +65,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 
 		public double CheckpointToDispatch { get { return LastCheckpointDispatched - _lastCheckpointRebuilded; } }
 
-		public bool Finished { get { return _lastCheckpointRebuilded == LastCheckpointDispatched; } }
+		public bool Finished { get; private set; }
 
 		internal async Task DispatchEventAsync(UnwindedDomainEvent unwindedEvent)
 		{
+			if (unwindedEvent == UnwindedDomainEvent.LastEvent)
+			{
+				Finished = true;
+				return;
+			}
+
 			var chkpoint = unwindedEvent.CheckpointToken;
 			if (chkpoint > LastCheckpointDispatched)
 			{

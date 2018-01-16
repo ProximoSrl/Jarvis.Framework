@@ -51,7 +51,7 @@ namespace Jarvis.Framework.Kernel.Commands
 		}
 
 		/// <summary>
-		/// TODO: deferring command with in process command bus actually does not defer anything.
+		/// ATTENTION: deferring command with in process command bus actually does not defer anything.
 		/// </summary>
 		/// <param name="delay"></param>
 		/// <param name="command"></param>

@@ -248,6 +248,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                 }
 
                 var task = _buffer.SendAsync(chunk);
+
                 //TODO: CHECK if this is really needed, we could simply await
                 //This was introduced because if you cancel the polling but the
                 //mesh is full and the projections are stopped the mesh will never

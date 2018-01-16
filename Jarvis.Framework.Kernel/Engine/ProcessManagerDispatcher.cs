@@ -81,10 +81,8 @@ namespace Jarvis.Framework.Kernel.Engine
 					{
 						try
 						{
-							//TODO: nstore update and dispatch real message
-							if (message is IScheduledAt)
+							if (message is IScheduledAt scheduledAt)
 							{
-								IScheduledAt scheduledAt = (IScheduledAt)message;
 								TimeSpan? at = null;
 
 								if (scheduledAt.At.ToUniversalTime() > DateTime.UtcNow)
@@ -93,9 +91,8 @@ namespace Jarvis.Framework.Kernel.Engine
 								}
 								await Dispatch(scheduledAt.Payload, at).ConfigureAwait(false);
 							}
-							else if (message is IMessageAndTimeout)
+							else if (message is IMessageAndTimeout messageAndTimeout)
 							{
-								IMessageAndTimeout messageAndTimeout = (IMessageAndTimeout)message;
 								//1) send the message if needed
 								if (messageAndTimeout.SendMessageOut)
 								{

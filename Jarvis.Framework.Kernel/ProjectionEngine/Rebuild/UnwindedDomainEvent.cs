@@ -16,6 +16,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 	public class UnwindedDomainEvent
 	{
 		/// <summary>
+		/// To signal end of rebuild, this special unwinded domain event is sent to the 
+		/// TPL queue.
+		/// </summary>
+		public readonly static UnwindedDomainEvent LastEvent = new UnwindedDomainEvent();
+
+		/// <summary>
 		/// Id of the record, is the CheckpointToken concatenated with the ordinal of the event
 		/// to generate a unique id that is calculated based on commit data
 		/// </summary>

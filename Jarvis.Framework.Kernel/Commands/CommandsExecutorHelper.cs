@@ -71,14 +71,6 @@ namespace Jarvis.Framework.Kernel.Commands
 
 					return retValue;
 				}
-				catch (AggregateSyncConflictException ex)
-				{
-					var retValue = new ExecuteCommandResultDto(false, ex.ToString(), ex);
-					
-					//TODO: use the new logic to find conflicting commands.
-					//retValue.ConflictingCommands = GetConflictingCommandList(ex.AggregateId, idList);
-					return retValue;
-				}
 				catch (Exception ex)
 				{
 					return new ExecuteCommandResultDto(false, ex.ToString(), ex);

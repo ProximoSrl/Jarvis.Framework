@@ -76,7 +76,7 @@ namespace Jarvis.Framework.Kernel.Support
         {
             if (!CommitDispatchIndex.ContainsKey(slotName))
             {
-                var meter = Metric.Meter("commit-dispatched-" + slotName, Unit.Items, TimeUnit.Seconds);
+                var meter = Metric.Meter("projection-chunk-dispatched-" + slotName, Unit.Items, TimeUnit.Seconds);
                 CommitDispatchIndex[slotName] = meter;
             }
         }
@@ -84,7 +84,8 @@ namespace Jarvis.Framework.Kernel.Support
         public static void MarkCommitDispatchedCount(String slotName, Int32 count)
         {
             CommitDispatchIndex[slotName].Mark(count);
-        }
+			projectionDispatchMeter.Mark(count);
+		}
 
         private static readonly Counter projectionCounter = Metric.Counter("prj-time", Unit.Custom("ticks"));
         private static readonly Counter projectionSlotCounter = Metric.Counter("prj-slot-time", Unit.Custom("ticks"));
@@ -94,6 +95,8 @@ namespace Jarvis.Framework.Kernel.Support
 		private static readonly Counter projectionCounterRebuild = Metric.Counter("prj-time-rebuild", Unit.Custom("ticks"));
         private static readonly Counter projectionSlotCounterRebuild = Metric.Counter("prj-slot-time-rebuild", Unit.Custom("ticks"));
         private static readonly Counter projectionEventCounterRebuild = Metric.Counter("prj-event-time-rebuild", Unit.Custom("ticks"));
+
+		private static readonly Meter projectionDispatchMeter = Metric.Meter("projection-chunk-dispatched-_TOTAL", Unit.Items, TimeUnit.Seconds);
 
         public static void IncrementProjectionCounter(String projectionName, String slotName, String eventName, Int64 ticks, Int64 milliseconds)
         {

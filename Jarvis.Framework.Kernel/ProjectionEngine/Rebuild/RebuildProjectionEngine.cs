@@ -20,158 +20,157 @@ using Jarvis.Framework.Shared.Logging;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 {
-    public class RebuildProjectionEngine
-    {
-        private readonly EventUnwinder _eventUnwinder;
+	public class RebuildProjectionEngine
+	{
+		private readonly EventUnwinder _eventUnwinder;
 
-        private readonly IConcurrentCheckpointTracker _checkpointTracker;
+		private readonly IConcurrentCheckpointTracker _checkpointTracker;
 
-        private readonly ProjectionMetrics _metrics;
+		private readonly ProjectionMetrics _metrics;
 
-        public ILogger Logger { get; set; } = NullLogger.Instance;
+		public ILogger Logger { get; set; } = NullLogger.Instance;
 
-        private readonly ProjectionEngineConfig _config;
-        private readonly Dictionary<string, IProjection[]> _projectionsBySlot;
-        private readonly IProjection[] _allProjections;
+		private readonly ProjectionEngineConfig _config;
+		private readonly Dictionary<string, IProjection[]> _projectionsBySlot;
+		private readonly IProjection[] _allProjections;
 
-        private readonly IRebuildContext _rebuildContext;
-        private readonly ProjectionEventInspector _projectionInspector;
+		private readonly IRebuildContext _rebuildContext;
+		private readonly ProjectionEventInspector _projectionInspector;
 
-        private const int _bufferSize = 4000;
+		private const int _bufferSize = 4000;
 
-        public RebuildProjectionEngine(
-            EventUnwinder eventUnwinder,
-            IConcurrentCheckpointTracker checkpointTracker,
-            IProjection[] projections,
-            IRebuildContext rebuildContext,
-            ProjectionEngineConfig config,
-            ProjectionEventInspector projectionInspector,
+		public RebuildProjectionEngine(
+			EventUnwinder eventUnwinder,
+			IConcurrentCheckpointTracker checkpointTracker,
+			IProjection[] projections,
+			IRebuildContext rebuildContext,
+			ProjectionEngineConfig config,
+			ProjectionEventInspector projectionInspector,
 			ILoggerThreadContextManager loggerThreadContextManager)
-        {
-            _eventUnwinder = eventUnwinder;
-            _checkpointTracker = checkpointTracker;
-            _rebuildContext = rebuildContext;
-            _config = config;
-            _projectionInspector = projectionInspector;
+		{
+			_eventUnwinder = eventUnwinder;
+			_checkpointTracker = checkpointTracker;
+			_rebuildContext = rebuildContext;
+			_config = config;
+			_projectionInspector = projectionInspector;
 
-            if (_config.Slots[0] != "*")
-            {
-                projections = projections
-                    .Where(x => _config.Slots.Any(y => y == x.Info.SlotName))
-                    .ToArray();
-            }
+			if (_config.Slots[0] != "*")
+			{
+				projections = projections
+					.Where(x => _config.Slots.Any(y => y == x.Info.SlotName))
+					.ToArray();
+			}
 
-            _allProjections = projections;
-            _projectionsBySlot = projections
-                .GroupBy(x => x.Info.SlotName)
-                .ToDictionary(x => x.Key, x => x.OrderByDescending(p => p.Priority).ToArray());
+			_allProjections = projections;
+			_projectionsBySlot = projections
+				.GroupBy(x => x.Info.SlotName)
+				.ToDictionary(x => x.Key, x => x.OrderByDescending(p => p.Priority).ToArray());
 
-            _metrics = new ProjectionMetrics(_allProjections);
+			_metrics = new ProjectionMetrics(_allProjections);
 			_loggerThreadContextManager = loggerThreadContextManager;
 		}
 
-        private void DumpProjections()
-        {
-            if (Logger.IsDebugEnabled)
-            {
-                foreach (var prj in _allProjections)
-                {
-                    if (Logger.IsDebugEnabled) Logger.DebugFormat("Projection: {0}", prj.GetType().FullName);
-                }
+		private void DumpProjections()
+		{
+			if (Logger.IsDebugEnabled)
+			{
+				foreach (var prj in _allProjections)
+				{
+					if (Logger.IsDebugEnabled) Logger.DebugFormat("Projection: {0}", prj.GetType().FullName);
+				}
 
-                if (_allProjections.Length == 0)
-                {
-                    Logger.Warn("no projections found!");
-                }
-            }
-        }
+				if (_allProjections.Length == 0)
+				{
+					Logger.Warn("no projections found!");
+				}
+			}
+		}
 
-        private readonly Dictionary<BucketInfo, List<RebuildProjectionSlotDispatcher>> _consumers =
-            new Dictionary<BucketInfo, List<RebuildProjectionSlotDispatcher>>();
-        private readonly List<RebuildProjectionSlotDispatcher> _rebuildDispatchers =
-            new List<RebuildProjectionSlotDispatcher>();
+		private readonly Dictionary<BucketInfo, List<RebuildProjectionSlotDispatcher>> _consumers =
+			new Dictionary<BucketInfo, List<RebuildProjectionSlotDispatcher>>();
+		private readonly List<RebuildProjectionSlotDispatcher> _rebuildDispatchers =
+			new List<RebuildProjectionSlotDispatcher>();
 
-        private RebuildStatus _status;
+		private RebuildStatus _status;
 
-        public async Task<RebuildStatus> RebuildAsync()
-        {
-            if (Logger.IsInfoEnabled) Logger.InfoFormat("Starting rebuild projection engine on tenant {0}", _config.TenantId);
-            DumpProjections();
+		public async Task<RebuildStatus> RebuildAsync()
+		{
+			if (Logger.IsInfoEnabled) Logger.InfoFormat("Starting rebuild projection engine on tenant {0}", _config.TenantId);
+			DumpProjections();
 
-            await _eventUnwinder.UnwindAsync().ConfigureAwait(false);
+			await _eventUnwinder.UnwindAsync().ConfigureAwait(false);
 
-            _status = new RebuildStatus();
-            TenantContext.Enter(_config.TenantId);
+			_status = new RebuildStatus();
+			TenantContext.Enter(_config.TenantId);
 
-            await ConfigureProjections().ConfigureAwait(false);
+			await ConfigureProjections().ConfigureAwait(false);
 
-            var allSlots = _projectionsBySlot.Keys.ToArray();
+			var allSlots = _projectionsBySlot.Keys.ToArray();
 
-            //initialize dispatching of the commits
-            foreach (var bucket in _config.BucketInfo)
-            {
-                _consumers.Add(bucket, new List<RebuildProjectionSlotDispatcher>());
-                _status.AddBucket();
-            }
+			//initialize dispatching of the commits
+			foreach (var bucket in _config.BucketInfo)
+			{
+				_consumers.Add(bucket, new List<RebuildProjectionSlotDispatcher>());
+				_status.AddBucket();
+			}
 
-            //Setup the slots
-            foreach (var slotName in allSlots)
-            {
-                var startCheckpoint = GetStartCheckpointForSlot(slotName);
-                Logger.InfoFormat("Slot {0} starts from {1}", slotName, startCheckpoint);
+			//Setup the slots
+			foreach (var slotName in allSlots)
+			{
+				Logger.InfoFormat("Slot {0} will be rebuilded", slotName);
 
-                var projectionsForThisSlot = _projectionsBySlot[slotName];
-                Int64 maximumDispatchedValue = projectionsForThisSlot
-                    .Select(p => _checkpointTracker.GetCheckpoint(p))
-                    .Max();
-                var dispatcher = new RebuildProjectionSlotDispatcher(Logger, slotName, _config, projectionsForThisSlot, maximumDispatchedValue, _loggerThreadContextManager);
-                MetricsHelper.SetCheckpointCountToDispatch(slotName, () => dispatcher.CheckpointToDispatch);
-                _rebuildDispatchers.Add(dispatcher);
+				var projectionsForThisSlot = _projectionsBySlot[slotName];
+				Int64 maximumDispatchedValue = projectionsForThisSlot
+					.Select(p => _checkpointTracker.GetCheckpoint(p))
+					.Max();
+				var dispatcher = new RebuildProjectionSlotDispatcher(Logger, slotName, _config, projectionsForThisSlot, maximumDispatchedValue, _loggerThreadContextManager);
+				MetricsHelper.SetCheckpointCountToDispatch(slotName, () => dispatcher.CheckpointToDispatch);
+				_rebuildDispatchers.Add(dispatcher);
 
-                //find right consumer
-                var slotBucket = _config.BucketInfo.SingleOrDefault(b =>
-                    b.Slots.Any(s => s.Equals(slotName, StringComparison.OrdinalIgnoreCase))) ??
-                    _config.BucketInfo.Single(b => b.Slots[0] == "*");
-                var consumerList = _consumers[slotBucket];
-                consumerList.Add(dispatcher);
-            }
+				//find right consumer
+				var slotBucket = _config.BucketInfo.SingleOrDefault(b =>
+					b.Slots.Any(s => s.Equals(slotName, StringComparison.OrdinalIgnoreCase))) ??
+					_config.BucketInfo.Single(b => b.Slots[0] == "*");
+				var consumerList = _consumers[slotBucket];
+				consumerList.Add(dispatcher);
+			}
 
-            //now start tpl and start polling in other threads.
-            foreach (var consumer in _consumers)
-            {
-                var bucketInfo = String.Join(",", consumer.Key.Slots);
+			//now start tpl and start polling in other threads.
+			foreach (var consumer in _consumers)
+			{
+				var bucketInfo = String.Join(",", consumer.Key.Slots);
 
-                if (consumer.Value.Count == 0)
-                {
-                    Logger.InfoFormat("Bucket {0} has no active slot, and will be ignored!", bucketInfo);
-                    _status.BucketDone(bucketInfo, 0, 0, 0);
-                    continue;
-                }
-                var consumerBufferOptions = new DataflowBlockOptions();
-                consumerBufferOptions.BoundedCapacity = _bufferSize;
-                var _buffer = new BufferBlock<UnwindedDomainEvent>(consumerBufferOptions);
+				if (consumer.Value.Count == 0)
+				{
+					Logger.InfoFormat("Bucket {0} has no active slot, and will be ignored!", bucketInfo);
+					_status.BucketDone(bucketInfo, 0, 0, 0);
+					continue;
+				}
+				var consumerBufferOptions = new DataflowBlockOptions();
+				consumerBufferOptions.BoundedCapacity = _bufferSize;
+				var _buffer = new BufferBlock<UnwindedDomainEvent>(consumerBufferOptions);
 
-                ExecutionDataflowBlockOptions executionOption = new ExecutionDataflowBlockOptions();
-                executionOption.BoundedCapacity = _bufferSize;
+				ExecutionDataflowBlockOptions executionOption = new ExecutionDataflowBlockOptions();
+				executionOption.BoundedCapacity = _bufferSize;
 
-                var dispatcherList = consumer.Value;
-                _projectionInspector.ResetHandledEvents();
-                List<ActionBlock<UnwindedDomainEvent>> consumers = new List<ActionBlock<UnwindedDomainEvent>>();
-                foreach (var dispatcher in dispatcherList)
-                {
-                    ExecutionDataflowBlockOptions consumerOptions = new ExecutionDataflowBlockOptions();
-                    consumerOptions.BoundedCapacity = _bufferSize;
-                    var actionBlock = new ActionBlock<UnwindedDomainEvent>((Func<UnwindedDomainEvent, Task>)dispatcher.DispatchEventAsync, consumerOptions);
-                    consumers.Add(actionBlock);
-                    foreach (var projection in dispatcher.Projections)
-                    {
-                        _projectionInspector.InspectProjectionForEvents(projection.GetType());
-                    }
-                }
-                var allTypeHandledStringList = _projectionInspector.EventHandled.Select(t => t.Name).ToList();
+				var dispatcherList = consumer.Value;
+				_projectionInspector.ResetHandledEvents();
+				List<ActionBlock<UnwindedDomainEvent>> consumers = new List<ActionBlock<UnwindedDomainEvent>>();
+				foreach (var dispatcher in dispatcherList)
+				{
+					ExecutionDataflowBlockOptions consumerOptions = new ExecutionDataflowBlockOptions();
+					consumerOptions.BoundedCapacity = _bufferSize;
+					var actionBlock = new ActionBlock<UnwindedDomainEvent>((Func<UnwindedDomainEvent, Task>)dispatcher.DispatchEventAsync, consumerOptions);
+					consumers.Add(actionBlock);
+					foreach (var projection in dispatcher.Projections)
+					{
+						_projectionInspector.InspectProjectionForEvents(projection.GetType());
+					}
+				}
+				var allTypeHandledStringList = _projectionInspector.EventHandled.Select(t => t.Name).ToList();
 
-                var _broadcaster = GuaranteedDeliveryBroadcastBlock.Create(consumers, bucketInfo, 3000);
-                _buffer.LinkTo(_broadcaster, new DataflowLinkOptions() { PropagateCompletion = true });
+				var _broadcaster = GuaranteedDeliveryBroadcastBlock.Create(consumers, bucketInfo, 3000);
+				_buffer.LinkTo(_broadcaster, new DataflowLinkOptions() { PropagateCompletion = true });
 
 				//fire each bucket in own thread
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
@@ -181,247 +180,207 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 			}
 
-            MetricsHelper.SetProjectionEngineCurrentDispatchCount(() => RebuildProjectionMetrics.CountOfConcurrentDispatchingCommit);
-            return _status;
-        }
+			MetricsHelper.SetProjectionEngineCurrentDispatchCount(() => RebuildProjectionMetrics.CountOfConcurrentDispatchingCommit);
+			return _status;
+		}
 
-        private async Task StartPoll(
-            BufferBlock<UnwindedDomainEvent> buffer,
-            ActionBlock<UnwindedDomainEvent> broadcaster,
-            String bucketInfo,
-            List<RebuildProjectionSlotDispatcher> dispatchers,
-            List<String> allEventTypesHandledByAllSlots,
-            List<ActionBlock<UnwindedDomainEvent>> consumers)
-        {
-            if (buffer == null)
-                throw new ArgumentNullException(nameof(buffer));
+		private async Task StartPoll(
+			BufferBlock<UnwindedDomainEvent> buffer,
+			ActionBlock<UnwindedDomainEvent> broadcaster,
+			String bucketInfo,
+			List<RebuildProjectionSlotDispatcher> dispatchers,
+			List<String> allEventTypesHandledByAllSlots,
+			List<ActionBlock<UnwindedDomainEvent>> consumers)
+		{
+			if (buffer == null)
+				throw new ArgumentNullException(nameof(buffer));
 
-            if (broadcaster == null)
-                throw new ArgumentNullException(nameof(broadcaster));
+			if (broadcaster == null)
+				throw new ArgumentNullException(nameof(broadcaster));
 
-            if (dispatchers == null)
-                throw new ArgumentNullException(nameof(dispatchers));
+			if (dispatchers == null)
+				throw new ArgumentNullException(nameof(dispatchers));
 
-            if (consumers == null)
-                throw new ArgumentNullException(nameof(consumers));
+			if (consumers == null)
+				throw new ArgumentNullException(nameof(consumers));
 
-            if (allEventTypesHandledByAllSlots == null)
-                throw new ArgumentNullException(nameof(allEventTypesHandledByAllSlots));
+			if (allEventTypesHandledByAllSlots == null)
+				throw new ArgumentNullException(nameof(allEventTypesHandledByAllSlots));
 
-            Stopwatch sw = Stopwatch.StartNew();
+			Stopwatch sw = Stopwatch.StartNew();
 
-            var eventCollection = _eventUnwinder.UnwindedCollection;
-            Int64 lastCheckpointTokenDispatched = 0;
-            Int32 lastSequenceDispatched = 0;
-            Int64 maxEventDispatched = dispatchers.Max(d => d.LastCheckpointDispatched);
-            Int64 totalEventToDispatch = eventCollection.Count(Builders<UnwindedDomainEvent>.Filter.Lte(e => e.CheckpointToken, maxEventDispatched));
-            Int64 dispatchedEvents = 0;
+			var eventCollection = _eventUnwinder.UnwindedCollection;
+			Int64 lastCheckpointTokenDispatched = 0;
+			Int32 lastSequenceDispatched = 0;
+			Int64 maxEventDispatched = dispatchers.Max(d => d.LastCheckpointDispatched);
+			Int64 totalEventToDispatch = eventCollection.Count(Builders<UnwindedDomainEvent>.Filter.Lte(e => e.CheckpointToken, maxEventDispatched));
+			Int64 dispatchedEvents = 0;
 
-            //this is the main cycle that continue to poll events and send to the tpl buffer
-            Boolean done = false;
-            while (!done)
-            {
-                try
-                {
-                    var query = eventCollection
-                        .Find(
-                                //Greater than last dispatched, less than maximum dispatched and one of the events that are elaborated by at least one of the projection
-                                Builders<UnwindedDomainEvent>.Filter.And(
-                                    Builders<UnwindedDomainEvent>.Filter.Or( //this is the condition on last dispatched
-                                        Builders<UnwindedDomainEvent>.Filter.Gt(e => e.CheckpointToken, lastCheckpointTokenDispatched), //or checkpoint token is greater than last dispatched.
-                                        Builders<UnwindedDomainEvent>.Filter.And( //or is equal to the last dispatched, but the EventSequence is greater.
-                                            Builders<UnwindedDomainEvent>.Filter.Gt(e => e.EventSequence, lastSequenceDispatched),
-                                            Builders<UnwindedDomainEvent>.Filter.Eq(e => e.CheckpointToken, lastCheckpointTokenDispatched)
-                                        )
-                                    ),
-                                    Builders<UnwindedDomainEvent>.Filter.Lte(e => e.CheckpointToken, maxEventDispatched), //less than or equal max event dispatched.
-                                    Builders<UnwindedDomainEvent>.Filter.Or( //should be one of the handled type, or the last one.
-                                        Builders<UnwindedDomainEvent>.Filter.In(e => e.EventType, allEventTypesHandledByAllSlots),
-                                        Builders<UnwindedDomainEvent>.Filter.Eq(e => e.CheckpointToken, maxEventDispatched)
-                                    )
-                             )
-                        )
-                        .Sort(Builders<UnwindedDomainEvent>.Sort.Ascending(e => e.CheckpointToken).Ascending(e => e.EventSequence));
-                    foreach (var eventUnwinded in query.ToEnumerable())
-                    {
-                        if (Logger.IsDebugEnabled) Logger.DebugFormat("TPL queued event {0}/{1} for bucket {2}", eventUnwinded.CheckpointToken, eventUnwinded.EventSequence, bucketInfo);
+			//this is the main cycle that continue to poll events and send to the tpl buffer
+			Boolean done = false;
+			while (!done)
+			{
+				try
+				{
+					IFindFluent<UnwindedDomainEvent, UnwindedDomainEvent> filter = eventCollection
+						.Find(
+								//Greater than last dispatched, less than maximum dispatched and one of the events that are elaborated by at least one of the projection
+								Builders<UnwindedDomainEvent>.Filter.And(
+									Builders<UnwindedDomainEvent>.Filter.Or( //this is the condition on last dispatched
+										Builders<UnwindedDomainEvent>.Filter.Gt(e => e.CheckpointToken, lastCheckpointTokenDispatched), //or checkpoint token is greater than last dispatched.
+										Builders<UnwindedDomainEvent>.Filter.And( //or is equal to the last dispatched, but the EventSequence is greater.
+											Builders<UnwindedDomainEvent>.Filter.Gt(e => e.EventSequence, lastSequenceDispatched),
+											Builders<UnwindedDomainEvent>.Filter.Eq(e => e.CheckpointToken, lastCheckpointTokenDispatched)
+										)
+									),
+									Builders<UnwindedDomainEvent>.Filter.Lte(e => e.CheckpointToken, maxEventDispatched), //less than or equal max event dispatched.
+									Builders<UnwindedDomainEvent>.Filter.In(e => e.EventType, allEventTypesHandledByAllSlots)
+							 )
+						);
+					Logger.InfoFormat($"polled rebuild query {filter}");
+					var query = filter
+						.Sort(Builders<UnwindedDomainEvent>.Sort.Ascending(e => e.CheckpointToken).Ascending(e => e.EventSequence));
+					foreach (var eventUnwinded in query.ToEnumerable())
+					{
+						if (Logger.IsDebugEnabled) Logger.DebugFormat("TPL queued event {0}/{1} for bucket {2}", eventUnwinded.CheckpointToken, eventUnwinded.EventSequence, bucketInfo);
 						//rehydrate the event before dispatching
 						eventUnwinded.EnhanceEvent();
 						await buffer.SendAsync(eventUnwinded).ConfigureAwait(false);
 
-                        dispatchedEvents++;
-                        lastSequenceDispatched = eventUnwinded.EventSequence;
-                        lastCheckpointTokenDispatched = eventUnwinded.CheckpointToken;
-                    }
-                    done = true;
-                }
-                catch (MongoException ex)
-                {
-                    Logger.WarnFormat(ex, "Unable to poll event from UnwindedCollection: {0} - Last good checkpoint dispatched {1}", ex.Message, lastCheckpointTokenDispatched);
-                }
-                catch (Exception ex)
-                {
-                    Logger.FatalFormat(ex, "Unable to poll event from UnwindedCollection: {0} - Last good checkpoint dispatched {1}", ex.Message, lastCheckpointTokenDispatched);
-                }
-            }
+						dispatchedEvents++;
+						lastSequenceDispatched = eventUnwinded.EventSequence;
+						lastCheckpointTokenDispatched = eventUnwinded.CheckpointToken;
+					}
 
-            try
-            {
-                Logger.InfoFormat("Finished loading events for bucket {0} wait for tpl to finish flush", bucketInfo);
-                buffer.Complete();
-                broadcaster.Completion.Wait(); //wait for all event to be broadcasted.
-                Task.WaitAll(consumers.Select(c => c.Completion).ToArray()); //wait for all consumers to complete.
+					//Send marker unwindws domain event to signal that rebuild is finished
+					await buffer.SendAsync(UnwindedDomainEvent.LastEvent).ConfigureAwait(false);
+					done = true;
+				}
+				catch (MongoException ex)
+				{
+					Logger.WarnFormat(ex, "Unable to poll event from UnwindedCollection: {0} - Last good checkpoint dispatched {1}", ex.Message, lastCheckpointTokenDispatched);
+				}
+				catch (Exception ex)
+				{
+					Logger.FatalFormat(ex, "Unable to poll event from UnwindedCollection: {0} - Last good checkpoint dispatched {1}", ex.Message, lastCheckpointTokenDispatched);
+				}
+			}
 
-                Thread.Sleep(1000); //wait for another secondo before finishing.
+			try
+			{
+				Logger.InfoFormat("Finished loading events for bucket {0} wait for tpl to finish flush", bucketInfo);
+				buffer.Complete();
+				broadcaster.Completion.Wait(); //wait for all event to be broadcasted.
+				Task.WaitAll(consumers.Select(c => c.Completion).ToArray()); //wait for all consumers to complete.
 
-                //create a list of dispatcher to wait for finish, then start waiting.
-                List<RebuildProjectionSlotDispatcher> dispatcherWaitingToFinish = dispatchers.ToList();
-                while (dispatcherWaitingToFinish.Count > 0)
-                {
-                    if (Logger.IsDebugEnabled) Logger.DebugFormat("Waiting for {0} slot to finish events", dispatcherWaitingToFinish.Count);
-                    Int32 i = dispatcherWaitingToFinish.Count - 1;
-                    while (i >= 0)
-                    {
-                        var dispatcher = dispatcherWaitingToFinish[i];
-                        if (dispatcher.Finished)
-                        {
-                            foreach (var projection in dispatcher.Projections)
-                            {
-                                try
-                                {
-                                    await projection.StopRebuildAsync().ConfigureAwait(false);
-                                }
-                                catch (Exception ex)
-                                {
-                                    Logger.ErrorFormat(ex, "Error in StopRebuild for projection {0}", projection.Info.CommonName);
-                                    throw;
-                                }
+				Thread.Sleep(1000); //wait for another secondo before finishing.
 
-                                var meter = _metrics.GetMeter(projection.Info.CommonName);
-                                _checkpointTracker.RebuildEnded(projection, meter);
+				//create a list of dispatcher to wait for finish, then start waiting.
+				List<RebuildProjectionSlotDispatcher> dispatcherWaitingToFinish = dispatchers.ToList();
+				while (dispatcherWaitingToFinish.Count > 0)
+				{
+					if (Logger.IsDebugEnabled) Logger.DebugFormat("Waiting for {0} slot to finish events", dispatcherWaitingToFinish.Count);
+					Int32 i = dispatcherWaitingToFinish.Count - 1;
+					while (i >= 0)
+					{
+						var dispatcher = dispatcherWaitingToFinish[i];
+						if (dispatcher.Finished)
+						{
+							foreach (var projection in dispatcher.Projections)
+							{
+								try
+								{
+									await projection.StopRebuildAsync().ConfigureAwait(false);
+								}
+								catch (Exception ex)
+								{
+									Logger.ErrorFormat(ex, "Error in StopRebuild for projection {0}", projection.Info.CommonName);
+									throw;
+								}
 
-                                Logger.InfoFormat("Rebuild done for projection {0} @ {1}",
-                                    projection.GetType().FullName,
-                                    dispatcher.LastCheckpointDispatched
-                                );
-                            }
-                            _checkpointTracker.UpdateSlotAndSetCheckpoint(
-                                dispatcher.SlotName,
-                                dispatcher.Projections.Select(p => p.Info.CommonName),
-                                dispatcher.LastCheckpointDispatched);
+								var meter = _metrics.GetMeter(projection.Info.CommonName);
+								_checkpointTracker.RebuildEnded(projection, meter);
 
-                            dispatcherWaitingToFinish.Remove(dispatcher);
-                            Logger.InfoFormat("Rebuild ended for slot {0}", dispatcher.SlotName);
-                        }
+								Logger.InfoFormat("Rebuild done for projection {0} @ {1}",
+									projection.GetType().FullName,
+									dispatcher.LastCheckpointDispatched
+								);
+							}
+							await _checkpointTracker.UpdateSlotAndSetCheckpointAsync(
+								dispatcher.SlotName,
+								dispatcher.Projections.Select(p => p.Info.CommonName),
+								dispatcher.LastCheckpointDispatched).ConfigureAwait(false);
 
-                        i--;
-                    }
-                    if (dispatcherWaitingToFinish.Count > 0 ) Thread.Sleep(2000);
-                }
-                sw.Stop();
-                Logger.InfoFormat("Bucket {0} finished dispathing all events for slots: {1}", bucketInfo, dispatchers.Select(d => d.SlotName).Aggregate((s1, s2) => s1 + ", " + s2));
-                _status.BucketDone(bucketInfo, dispatchedEvents, sw.ElapsedMilliseconds, totalEventToDispatch);
-            }
-            catch (Exception ex)
-            {
-                Logger.FatalFormat(ex, "Error during rebuild finish {0}", ex.Message);
-                throw;
-            }
-        }
+							dispatcherWaitingToFinish.Remove(dispatcher);
+							Logger.InfoFormat("Rebuild ended for slot {0}", dispatcher.SlotName);
+						}
 
-        private Int64 GetStartCheckpointForSlot(string slotName)
-        {
-            Int64 min = Int64.MaxValue;
+						i--;
+					}
+					if (dispatcherWaitingToFinish.Count > 0) Thread.Sleep(2000);
+				}
+				sw.Stop();
+				Logger.InfoFormat("Bucket {0} finished dispathing all events for slots: {1}", bucketInfo, dispatchers.Select(d => d.SlotName).Aggregate((s1, s2) => s1 + ", " + s2));
+				_status.BucketDone(bucketInfo, dispatchedEvents, sw.ElapsedMilliseconds, totalEventToDispatch);
+			}
+			catch (Exception ex)
+			{
+				Logger.FatalFormat(ex, "Error during rebuild finish {0}", ex.Message);
+				throw;
+			}
+		}
 
-            var projections = _projectionsBySlot[slotName];
-            foreach (var projection in projections)
-            {
-                if (_checkpointTracker.NeedsRebuild(projection))
-                    return 0;
+		private async Task ConfigureProjections()
+		{
+			_checkpointTracker.SetUp(_allProjections, 1, false);
+			var lastCommit = GetLastCommitId();
+			foreach (var slot in _projectionsBySlot)
+			{
+				foreach (var projection in slot.Value)
+				{
+					await projection.DropAsync().ConfigureAwait(false);
+					await projection.StartRebuildAsync(_rebuildContext).ConfigureAwait(false);
+					_checkpointTracker.RebuildStarted(projection, lastCommit);
+					await projection.SetUpAsync().ConfigureAwait(false);
+				}
+			}
+			//Standard projection engine now executes check for GetCheckpointErrors but
+			//it is not useful here, because we are in rebuild, so every error will be fixed.
+		}
 
-                var currentValue = _checkpointTracker.GetCurrent(projection);
-                if (currentValue < min)
-                {
-                    min = currentValue;
-                }
-            }
+		private Int64 GetLastCommitId()
+		{
+			var collection = GetMongoCommitsCollection();
+			var lastCommit = collection
+				.Find(Builders<BsonDocument>.Filter.Gte("_id", 0))
+				.Sort(Builders<BsonDocument>.Sort.Descending("_id"))
+				.Limit(1)
+				.FirstOrDefault();
 
-            return min;
-        }
+			if (lastCommit == null) return 0;
 
-        private async Task ConfigureProjections()
-        {
-            _checkpointTracker.SetUp(_allProjections, 1, false);
-            var lastCommit = GetLastCommitId();
-            foreach (var slot in _projectionsBySlot)
-            {
-                var maxCheckpointDispatchedInSlot = slot.Value
-                    .Select(projection =>
-                    {
-                        var checkpoint = _checkpointTracker.GetCheckpoint(projection);
-                        var longCheckpoint = checkpoint;
-                        return longCheckpoint;
-                    })
-                    .Max();
-
-                foreach (var projection in slot.Value)
-                {
-                    //Check if this slot has ever dispatched at least one commit
-                    if (maxCheckpointDispatchedInSlot > 0)
-                    {
-                        _checkpointTracker.SetCheckpoint(projection.Info.CommonName,
-                            maxCheckpointDispatchedInSlot);
-                        await projection.DropAsync().ConfigureAwait(false);
-                        await projection.StartRebuildAsync(_rebuildContext).ConfigureAwait(false);
-                        _checkpointTracker.RebuildStarted(projection, lastCommit);
-                    }
-                    else
-                    {
-                        //this is a new slot, all the projection should execute
-                        //as if they are not in rebuild, because they are new
-                        //so we need to immediately stop rebuilding.
-                        await projection.StopRebuildAsync().ConfigureAwait(false);
-                    }
-                    await projection.SetUpAsync().ConfigureAwait(false);
-                }
-            }
-            //Standard projection engine now executes check for GetCheckpointErrors but
-            //it is not useful here, because we are in rebuild, so every error will be fixed.
-        }
-
-        private Int64 GetLastCommitId()
-        {
-            var collection = GetMongoCommitsCollection();
-            var lastCommit = collection
-                .Find(Builders<BsonDocument>.Filter.Gte("_id", 0))
-                .Sort(Builders<BsonDocument>.Sort.Descending("_id"))
-                .Limit(1)
-                .FirstOrDefault();
-
-            if (lastCommit == null) return 0;
-
-            return lastCommit["_id"].AsInt64;
-        }
+			return lastCommit["_id"].AsInt64;
+		}
 
 		private readonly ILoggerThreadContextManager _loggerThreadContextManager;
 
 		private IMongoCollection<BsonDocument> GetMongoCommitsCollection()
-        {
-            var url = new MongoUrl(_config.EventStoreConnectionString);
-            var client = new MongoClient(url);
-            var db = client.GetDatabase(url.DatabaseName);
-            return db.GetCollection<BsonDocument>(EventStoreFactory.PartitionCollectionName);
-        }
-    }
+		{
+			var url = new MongoUrl(_config.EventStoreConnectionString);
+			var client = new MongoClient(url);
+			var db = client.GetDatabase(url.DatabaseName);
+			return db.GetCollection<BsonDocument>(EventStoreFactory.PartitionCollectionName);
+		}
+	}
 
-    #region metrics 
+	#region metrics 
 
-    internal static class RebuildProjectionMetrics
-    {
+	internal static class RebuildProjectionMetrics
+	{
 #pragma warning disable S2223 // Non-constant static fields should not be visible
-        internal static Int32 CountOfConcurrentDispatchingCommit = 0;
+		internal static Int32 CountOfConcurrentDispatchingCommit = 0;
 #pragma warning restore S2223 // Non-constant static fields should not be visible
-    }
+	}
 
-    #endregion
+	#endregion
 }

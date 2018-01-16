@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace Jarvis.Framework.Shared.Support
 {
 	/// <summary>
-	/// TODO: Refactor, this is a quick way to setup a global settings
+	/// This is a quick way to setup a global settings
 	/// that can be used to diagnose if the code is running in offline mode.
 	/// </summary>
 	public static class OfflineMode

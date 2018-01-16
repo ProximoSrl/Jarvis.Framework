@@ -16,8 +16,8 @@ using NStore.Domain;
 namespace Jarvis.Framework.Kernel.Commands
 {
 	public abstract class RepositoryCommandHandler<TAggregate, TCommand> : AbstractCommandHandler<TCommand>
-		where TCommand : ICommand
 		where TAggregate : class, IAggregate
+		where TCommand : ICommand
 	{
 		/// <summary>
 		/// This is the instance of the repository used to load/save aggregates
@@ -95,7 +95,7 @@ namespace Jarvis.Framework.Kernel.Commands
 						CheckAggregateVersionForIfVersionEqualTo(repo.Aggregate);
 
 						callback(aggregate);
-						//TODO: This is not exceptional but we cannot await inside a lock.
+						//TODO: Waiting is not a perfect solution, but we cannot await inside a lock.
 						repo.SaveAsync(_commitId, StoreCommandHeaders).Wait();
 					}
 				}

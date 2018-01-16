@@ -1,6 +1,7 @@
 ﻿using Castle.Core.Logging;
 using Jarvis.Framework.Kernel.Events;
 using Jarvis.Framework.Shared.Helpers;
+using Jarvis.Framework.Shared.Support;
 using MongoDB.Driver;
 using System;
 using System.Collections.Concurrent;
@@ -124,7 +125,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             //we need to group projection per slot
             var allCheckpoint = _allCheckpoints
                 .ToDictionary(c => c.Id, c => c);
-            var slots = _projectionInfo.GroupBy(
+            var slots = _projectionInfo
+				.Where(_ => !_.OfflineProjection || OfflineMode.Enabled) //skip projection for offline when offline is not enabled
+				.GroupBy(
                 p => p.SlotName,
                 p => new
                 {
@@ -186,7 +189,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             List<ProjectionChangeInfo> retValue = new List<ProjectionChangeInfo>();
             foreach (var projection in _projectionInfo)
             {
-                ProjectionChangeInfo projectionChangeInfo = new ProjectionChangeInfo(projection.CommonName, projection.SlotName, projection.Signature);
+				if (projection.OfflineProjection && !OfflineMode.Enabled)
+				{
+					continue; //This is a projection only needed for offline mode.
+				}
+                ProjectionChangeInfo projectionChangeInfo = new ProjectionChangeInfo(projection.CommonName, projection.SlotName, projection.Signature, projection.OfflineProjection);
                 var checkpoint = _allCheckpoints.SingleOrDefault(c => c.Id == projection.CommonName);
                 if (checkpoint == null)
                 {
@@ -206,7 +213,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
             foreach (var checkpoint in _allCheckpoints.Where(c => !_projectionInfo.Any(p => p.CommonName == c.Id)))
             {
-                ProjectionChangeInfo projectionChangeInfo = new ProjectionChangeInfo(checkpoint.Id, checkpoint.Slot, checkpoint.Signature);
+                ProjectionChangeInfo projectionChangeInfo = new ProjectionChangeInfo(checkpoint.Id, checkpoint.Slot, checkpoint.Signature, false);
                 projectionChangeInfo.SetMissing();
                 retValue.Add(projectionChangeInfo);
             }
