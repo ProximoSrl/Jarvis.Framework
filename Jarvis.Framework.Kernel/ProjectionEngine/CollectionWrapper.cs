@@ -8,6 +8,7 @@ using Jarvis.Framework.Shared.Messages;
 using Jarvis.Framework.Shared.ReadModel;
 using MongoDB.Driver;
 using System.Threading.Tasks;
+using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
 {
@@ -271,7 +272,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             get
             {
                 ThrowIfNotAttached();
-                return Projection.IsRebuilding;
+                return Projection.IsRebuilding && !RebuildSettings.ContinuousRebuild;
             }
         }
 
