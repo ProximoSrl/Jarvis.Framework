@@ -96,11 +96,15 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         protected bool NotifySubscribers { get; set; }
 
-        public Action<TModel, DomainEvent> OnSave { get; set; } = (model, e) => { };
+		/// <summary>
+		/// This is an action that can be subscribed from the user to intercept
+		/// when we update the readmodel with a save operation
+		/// </summary>
+        public Action<TModel, DomainEvent, CollectionWrapperOperationType> OnSave { get; set; } = (model, e, operationType) => { };
 
         public async Task InsertAsync(DomainEvent e, TModel model, bool notify = false)
         {
-            OnSave(model, e);
+            OnSave(model, e, CollectionWrapperOperationType.Insert);
             model.Version = 1;
             model.LastModified = e.CommitStamp;
 
@@ -157,7 +161,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         public async Task SaveAsync(DomainEvent e, TModel model, bool notify = false)
         {
-            OnSave(model, e);
+            OnSave(model, e, CollectionWrapperOperationType.Update);
             var orignalVersion = model.Version;
             model.Version++;
             model.LastModified = e.CommitStamp;
@@ -229,7 +233,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         /// <param name="notify"></param>
         public async Task DeleteAsync(DomainEvent e, TKey id, bool notify = false)
         {
-            string[] topics = null;
+			string[] topics = null;
 
             if (NotifySubscribers && typeof(ITopicsProvider).IsAssignableFrom(typeof(TModel)))
             {
