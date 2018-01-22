@@ -7,15 +7,12 @@ using Quartz;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using MongoDB.Driver.Linq;
 
 namespace Jarvis.MonitoringAgent.Client.Jobs
 {
-    [DisallowConcurrentExecution]
+	[DisallowConcurrentExecution]
     public class LogPollerJob : IJob
     {
         public ILogger Logger { get; set; }
@@ -28,22 +25,17 @@ namespace Jarvis.MonitoringAgent.Client.Jobs
             public String CollectionName { get; set; }
         }
 
-        public String Connection { get; set; }
+        private readonly MonitoringAgentConfiguration _configuration;
 
-        public String Collection { get; set; }
+		private readonly List<LogCollectionInfo> _logCollectionInfoList = new List<LogCollectionInfo>();
 
-        private IMongoCollection<BsonDocument> _collection;
-        private IMongoCollection<UploadCheckpoint> _checkpointCollection;
-        private UploadCheckpoint _checkpoint;
-        private MonitoringAgentConfiguration _configuration;
-
-        private class LogCollectionInfo
+		private class LogCollectionInfo
         {
-            private IMongoCollection<BsonDocument> _collection;
-            private IMongoCollection<UploadCheckpoint> _checkpointCollection;
-            private UploadCheckpoint _checkpoint;
-            private String _collectionName;
-            private String _connection;
+            private readonly IMongoCollection<BsonDocument> _collection;
+            private readonly IMongoCollection<UploadCheckpoint> _checkpointCollection;
+            private readonly UploadCheckpoint _checkpoint;
+            private readonly String _collectionName;
+            private readonly String _connection;
 
             public string Name { get; private set; }
 
@@ -99,11 +91,7 @@ namespace Jarvis.MonitoringAgent.Client.Jobs
                 }
                 return logs;
             }
-
-
         }
-
-        private List<LogCollectionInfo> _logCollectionInfoList = new List<LogCollectionInfo>();
 
         public LogPollerJob(MonitoringAgentConfiguration configuration)
         {
@@ -144,7 +132,7 @@ namespace Jarvis.MonitoringAgent.Client.Jobs
                         }
                     }
                     logs = logInfo.GetNextBlockOfLogs();
-                } ;
+                }
                 retMessage.AppendFormat("Poller {0} polled {1} logs.\n",
                     logInfo.Name, count);
             }

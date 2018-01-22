@@ -32,7 +32,7 @@ namespace Jarvis.Framework.Shared.Helpers
             return obj;
         }
 
-        static string GetPropertyName(Expression expression)
+		private static string GetPropertyName(Expression expression)
         {
             if (expression == null) return "";
 

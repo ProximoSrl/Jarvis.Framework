@@ -4,16 +4,15 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using Fasterflect;
-using System.Linq.Expressions;
 using Jarvis.Framework.Shared.Helpers;
 using Castle.Core.Logging;
 using Jarvis.Framework.Shared.Exceptions;
 
 namespace Jarvis.Framework.Shared.IdentitySupport
 {
-    public class IdentityManager : IIdentityManager
+	public class IdentityManager : IIdentityManager
     {
-        readonly ICounterService _counterService;
+		private readonly ICounterService _counterService;
 
         private readonly Dictionary<string, Func<long, IIdentity>> _longBasedFactories = new Dictionary<string, Func<long, IIdentity>>();
 
@@ -37,7 +36,8 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             int pos = identityAsString.IndexOf(EventStoreIdentity.Separator);
             if (pos == -1)
                 throw new JarvisFrameworkEngineException(string.Format("invalid identity value {0}", identityAsString));
-            var tag = identityAsString.Substring(0, pos);
+            
+				var tag = identityAsString.Substring(0, pos);
             var id = Int64.Parse(identityAsString.Substring(pos + 1));
             Func<Int64, IIdentity> factory;
             if (!_longBasedFactories.TryGetValue(tag, out factory))

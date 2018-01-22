@@ -63,6 +63,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 	/// a string and an Id. No another Id could be associated to the very same string except
 	/// if the association is broken
 	/// </summary>
+	/// <typeparam name="TId"></typeparam>
 	public abstract class MongoStringToIdentityAssociator<TId> : IStringToIdentityAssociator<TId>
 		where TId : EventStoreIdentity
 	{
@@ -153,12 +154,14 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 						//registration, two key that differs only with casing.
 						var conflicting = _collection.AsQueryable()
 #pragma warning disable RCS1155 // Use StringComparison when comparing strings.
+#pragma warning disable S1449 //Sonar; Use locale whenb use toLower, ignored because this is a regex query in LINQ
 							.Any(e => e.Key.ToLower() == element.Key.ToLower() && e.Key != element.Key);
 #pragma warning restore RCS1155 // Use StringComparison when comparing strings.
+#pragma warning restore S1449 
 						if (!conflicting)
 						{
 							var originalKey = element.Key;
-							element.Key = element.Key.ToLower();
+							element.Key = element.Key.ToLower(CultureInfo.InvariantCulture);
 							_collection.RemoveById(originalKey);
 							try
 							{
@@ -261,7 +264,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 			var idKey = key;
 			if (_caseInsensitive)
 			{
-				idKey = key.ToLower();
+				idKey = key.ToLower(CultureInfo.InvariantCulture);
 			}
 
 			return idKey;

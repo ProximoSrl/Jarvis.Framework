@@ -9,7 +9,7 @@
 
         protected override string Normalize(string value)
         {
-            return value == null ? null : value.ToUpperInvariant();
+            return value?.ToUpperInvariant();
         }
     }
 }

@@ -17,6 +17,7 @@ namespace Jarvis.Framework.Shared.Exceptions
 		{
 			if (ex == null)
 				return "";
+
 			if (ex is AggregateException)
 			{
 				var flattened = ((AggregateException)ex).Flatten();

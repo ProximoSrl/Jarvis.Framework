@@ -6,18 +6,15 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Jarvis.Framework.ElasticLogPoller.Importers
 {
-    public abstract class BaseImporter
+	public abstract class BaseImporter
     {
         protected ILog _log;
 
-        public BaseImporter()
+        protected BaseImporter()
         {
             _log = LogManager.GetLogger(this.GetType());
         }
@@ -71,9 +68,9 @@ namespace Jarvis.Framework.ElasticLogPoller.Importers
                         pollResult.FullJsonForElasticBulkEndpoint);
 
                     var deserialized = (JObject)JsonConvert.DeserializeObject(result);
-                    if (deserialized["errors"].Value<Boolean>() == true)
+                    if (deserialized["errors"].Value<Boolean>())
                     {
-                        throw new Exception($"Unable to index block of logs: {result}");
+                        throw new ImportException($"Unable to index block of logs: {result}");
                     }
                 }
                 SaveCheckpoint(pollResult.Checkpoint);
@@ -91,7 +88,7 @@ namespace Jarvis.Framework.ElasticLogPoller.Importers
                 var response = Client.CreateIndex(EsIndex, id => id
                     .Settings(s => s.NumberOfShards(2)));
                 if (!response.IsValid)
-                    throw new Exception($"Unable to create index {EsIndex} - {response.DebugInformation}");
+                    throw new ImportException($"Unable to create index {EsIndex} - {response.DebugInformation}");
 
                 var mapResponse = Client.Map<EsLog>(m => m
                     .AutoMap()
@@ -99,7 +96,7 @@ namespace Jarvis.Framework.ElasticLogPoller.Importers
                     .AllField(all => all.Enabled(false)));
 
                 if (!mapResponse.IsValid)
-                    throw new Exception($"Unable to map object in index {EsIndex} - {mapResponse.DebugInformation}");
+                    throw new ImportException($"Unable to map object in index {EsIndex} - {mapResponse.DebugInformation}");
             }
         }
     }

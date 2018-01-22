@@ -93,6 +93,7 @@
     <Compile Include="EsLog.cs" />
     <Compile Include="ImporterEngine.cs" />
     <Compile Include="Importers\BaseImporter.cs" />
+    <Compile Include="Importers\ImportException.cs" />
     <Compile Include="Importers\JsonConverters.cs" />
     <Compile Include="Importers\MongoImporter.cs" />
     <Compile Include="Importers\PollResult.cs" />

@@ -126,7 +126,7 @@ namespace Jarvis.Framework.Shared.ReadModel
     public class OfflineCommandMessageTracker : IMessagesTracker, IOfflineCommandManager
     {
         private readonly IMessagesTracker _originalTracker;
-        private IMongoCollection<OfflineCommandInfo> _offlineCommandCollection;
+        private readonly IMongoCollection<OfflineCommandInfo> _offlineCommandCollection;
 
         public OfflineCommandMessageTracker(IMessagesTracker originalTracker, IMongoDatabase logDb)
         {

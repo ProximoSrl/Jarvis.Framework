@@ -2,12 +2,13 @@
 
 namespace Jarvis.Framework.Shared.Claims
 {
-    public class ClaimsMatcher
+#pragma warning disable S3218 // Inner class members should not shadow outer class "static" or type members
+	public static class ClaimsMatcher
     {
         public class AlwaysMatcher : IClaimsMatcher
         {
-            public bool Matches(params Claim[] claims)
-            {
+			public bool Matches(params Claim[] claims)
+			{
                 return true;
             }
         }
@@ -119,4 +120,5 @@ namespace Jarvis.Framework.Shared.Claims
             return new AlwaysMatcher();
         }
     }
+#pragma warning restore S3218 // Inner class members should not shadow outer class "static" or type members
 }

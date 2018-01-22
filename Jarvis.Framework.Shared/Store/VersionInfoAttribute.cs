@@ -7,7 +7,7 @@ namespace Jarvis.Framework.Shared.Store
 	{
 		public string Name { get; set; }
 		public int Version { get; set; }
-		
+
 		public VersionInfoAttribute()
 		{
 			Name = null;

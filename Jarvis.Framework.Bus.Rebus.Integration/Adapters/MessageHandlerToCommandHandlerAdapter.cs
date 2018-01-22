@@ -33,7 +33,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
 			ICommandHandler<T> commandHandler,
 			IMessagesTracker messagesTracker,
 			IBus bus,
-			Int32 numberOfConcurrencyExceptionBeforeRandomSleeping = 5)
+			Int32 numberOfConcurrencyExceptionBeforeRandomSleeping)
 		{
 			Logger = NullLogger.Instance;
 			LoggerThreadContextManager = NullLoggerThreadContextManager.Instance;
@@ -41,6 +41,19 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
 			_messagesTracker = messagesTracker;
 			_bus = bus;
 			_numberOfConcurrencyExceptionBeforeRandomSleeping = numberOfConcurrencyExceptionBeforeRandomSleeping;
+		}
+
+		/// <summary>
+		/// Overload for default value of numberOfConcurrencyExceptionBeforeRandomSleeping
+		/// </summary>
+		/// <param name="commandHandler"></param>
+		/// <param name="messagesTracker"></param>
+		/// <param name="bus"></param>
+		public MessageHandlerToCommandHandlerAdapter(
+			ICommandHandler<T> commandHandler,
+			IMessagesTracker messagesTracker,
+			IBus bus) : this(commandHandler, messagesTracker, bus, 5)
+		{
 		}
 
 		public async Task Handle(T message)

@@ -15,8 +15,8 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
     public class SingleUseAggregateCachedRepository<TAggregate> : IAggregateCachedRepository<TAggregate> where TAggregate : class, IAggregate
 #pragma warning restore S3881 // "IDisposable" should be implemented correctly
     {
-        readonly IRepository _wrappedRepository;
-		readonly IRepositoryFactory _repositoryFactory;
+        private readonly IRepository _wrappedRepository;
+		private readonly IRepositoryFactory _repositoryFactory;
 
         public SingleUseAggregateCachedRepository(
             IRepositoryFactory repositoryFactory,

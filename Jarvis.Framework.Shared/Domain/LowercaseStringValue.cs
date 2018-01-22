@@ -11,7 +11,7 @@ namespace Jarvis.Framework.Shared.Domain
 
         protected override string Normalize(string value)
         {
-            return value == null ? null : value.ToLowerInvariant();
+            return value?.ToLowerInvariant();
         }
     }
 }

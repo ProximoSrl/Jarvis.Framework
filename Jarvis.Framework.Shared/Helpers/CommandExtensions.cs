@@ -1,5 +1,6 @@
 ﻿using Jarvis.Framework.Shared.Commands;
 using Jarvis.Framework.Shared.Domain.Serialization;
+using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.Messages;
 using Newtonsoft.Json;
 using System;
@@ -19,6 +20,13 @@ namespace Jarvis.Framework.Shared.Helpers
 					new StringValueJsonConverter()
 				}
 		};
+
+		public static bool EnableDiagnostics { get; set; }
+
+		static CommandExtensions()
+		{
+			EnableDiagnostics = false;
+		}
 
 		public static void SetContextData(this ICommand command, String key, Object objectValue)
 		{
@@ -49,6 +57,40 @@ namespace Jarvis.Framework.Shared.Helpers
 				return default(T);
 
 			return JsonConvert.DeserializeObject<T>(value, jsonSerializerSettings);
+		}
+
+		public static ICommand WithDiagnosticDescription(this ICommand command, string description)
+		{
+			if (!EnableDiagnostics)
+				return command;
+
+			if (description != null)
+			{
+				command.SetContextData("triggered-by-description", description);
+			}
+			return command;
+		}
+
+		public static ICommand WithDiagnosticTriggeredByInfo(this ICommand command, IMessage message, string description = null)
+		{
+			if (!EnableDiagnostics)
+				return command;
+
+			command.SetContextData("triggered-by", message.GetType().FullName);
+			command.SetContextData("triggered-by-id", message.MessageId.ToString());
+
+			var @event = message as DomainEvent;
+			if (@event != null)
+			{
+				command.SetContextData("triggered-by-aggregate", @event.AggregateId.AsString());
+			}
+
+			return command.WithDiagnosticDescription(description);
+		}
+
+		public static string ExtractUserId(this ICommand command)
+		{
+			return command.GetContextData(MessagesConstants.UserId);
 		}
 	}
 }

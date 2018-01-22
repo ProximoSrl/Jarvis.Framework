@@ -14,18 +14,6 @@ namespace Jarvis.Framework.Kernel.Events
 {
     public class CommitShortInfo
     {
-        //public CommitShortInfo(BsonDocument document)
-        //{
-        //    Id = document["_id"].AsInt64;
-        //    PartitionId = document["PartitionId"].AsString;
-        //    OperationId = document["OperationId"].AsString;
-
-        //    var payload = document["Payload"].AsBsonDocument;
-        //    var headers = payload["Headers"].AsBsonDocument;
-
-        //    Headers = BsonSerializer.Deserialize<Dictionary<String, Object>>(headers);
-        //}
-
         public Int64 Id { get; private set; }
 
         public String PartitionId { get; private set; }

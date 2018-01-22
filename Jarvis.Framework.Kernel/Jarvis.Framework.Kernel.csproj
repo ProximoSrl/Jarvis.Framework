@@ -147,7 +147,6 @@
     <Compile Include="Engine\InvalidAggregateOperationException.cs" />
     <Compile Include="Engine\SagaMessage.cs" />
     <Compile Include="Engine\UninitializedAggregateException.cs" />
-    <Compile Include="Events\DelegatingEventBus.cs" />
     <Compile Include="Engine\DomainValidationException.cs" />
     <Compile Include="Engine\ICommandHandler.cs" />
     <Compile Include="Events\IEventBus.cs" />

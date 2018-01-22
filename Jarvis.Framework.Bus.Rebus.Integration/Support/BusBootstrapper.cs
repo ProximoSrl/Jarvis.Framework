@@ -31,7 +31,9 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 		private readonly IMongoDatabase _mongoDatabase;
 		private readonly IMessagesTracker _messagesTracker;
 
-		public ILogger Logger { get; set; }
+		public ILogger Logger { get; set; } = NullLogger.Instance;
+
+		public ILoggerFactory LoggerFactory { get; set; }
 
 		public static readonly JsonSerializerSettings JsonSerializerSettingsForRebus = new JsonSerializerSettings
 		{
@@ -115,7 +117,8 @@ at least configure one assembly with messages to be dispatched.";
 				.Subscriptions(s => s.StoreInMongoDb(_mongoDatabase, _configuration.Prefix + "-subscriptions", isCentralized: _configuration.CentralizedConfiguration))
 				.Events(e => e.BeforeMessageSent += BeforeMessageSent);
 
-			var errorHandler = new JarvisFrameworkErrorHandler(_configuration, JsonSerializerSettingsForRebus, _container, Logger);
+			var errorHandlerLogger = LoggerFactory?.Create("RebusErrorHandlerLogger") ?? Logger;
+			var errorHandler = new JarvisFrameworkErrorHandler(_configuration, JsonSerializerSettingsForRebus, _container, errorHandlerLogger);
 
 			//Important, register IErrorHandler before RetryStrategy or it will register default one.
 			busConfiguration = busConfiguration

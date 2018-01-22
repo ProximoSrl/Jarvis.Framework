@@ -1,10 +1,6 @@
 ﻿using Jarvis.Framework.Shared.Messages;
 using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.Engine
 {
@@ -28,29 +24,6 @@ namespace Jarvis.Framework.Kernel.Engine
 			SagaId = sagaId;
 		}
 	}
-
-	//public class SagaDeferredMessage : IMessage
-	//{
-	//	public IMessage MessageToDispatch { get; set; }
-
-	//	public DateTime TimeToDispatch { get; set; }
-
-	//	public SagaDeferredMessage(
-	//		IMessage messageToDispatch,
-	//		DateTime timeToDispatch)
-	//	{
-	//		MessageToDispatch = messageToDispatch;
-	//		TimeToDispatch = timeToDispatch;
-	//		MessageId = Guid.NewGuid();
-	//	}
-
-	//	public Guid MessageId { get; set; }
-
-	//	public string Describe()
-	//	{
-	//		return String.Format("Deferred Saga Message. Time {0}, original message: {1} ", TimeToDispatch, MessageToDispatch);
-	//	}
-	//}
 
 	public class SagaTimeout : SagaMessage
 	{
