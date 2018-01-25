@@ -152,7 +152,10 @@
     <Compile Include="DomainTests\EventstoreIdentityBsonSerializationTests.cs" />
     <Compile Include="DomainTests\StringValueMongoTests.cs" />
     <Compile Include="DomainTests\TypedStringValue.cs" />
-    <Compile Include="EngineTests\AggregateTests.cs" />
+    <Compile Include="EngineTests\AggregateTests\AggregateRepositoryTests.cs" />
+    <Compile Include="EngineTests\AggregateTests\BasicEventRoutingTests.cs" />
+    <Compile Include="EngineTests\AggregateTests\SnapshotTests.cs" />
+    <Compile Include="EngineTests\AggregateTests\SupportClasses.cs" />
     <Compile Include="EngineTests\BsonIdentitySerializationTests.cs" />
     <Compile Include="EngineTests\EngineSetupTests.cs" />
     <Compile Include="EngineTests\EventsDispatcherTests.cs" />

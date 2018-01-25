@@ -48,7 +48,8 @@ namespace Jarvis.Framework.Tests.EngineTests
             }
 
 #pragma warning restore RCS1163 // Unused parameter.
-            public override InvariantsCheckResult CheckInvariants()
+
+            protected override InvariantsCheckResult OnCheckInvariants()
             {
                 return ShouldBeFalse ? InvariantsCheckResult.Invalid("Test error") : InvariantsCheckResult.Ok;
             }
