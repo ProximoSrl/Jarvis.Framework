@@ -118,6 +118,7 @@
     <Compile Include="Engine\AggregateStateEventPayloadProcessor.cs" />
     <Compile Include="Engine\DomainAggregateDeletedException.cs" />
     <Compile Include="Engine\EventStoreFactory.cs" />
+    <Compile Include="Engine\IEntityFactory.cs" />
     <Compile Include="Engine\IEntityRoot.cs" />
     <Compile Include="Engine\JarvisEntityRoot.cs" />
     <Compile Include="Engine\JarvisEntityState.cs" />
