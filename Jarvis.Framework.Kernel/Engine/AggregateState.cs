@@ -26,7 +26,7 @@ namespace Jarvis.Framework.Kernel.Engine
 		/// <summary>
 		/// To transparently handle snapshots of child entities, we need to 
 		/// </summary>
-		[BsonDictionaryOptions(Representation = DictionaryRepresentation.ArrayOfArrays)]
+		[BsonDictionaryOptions(Representation = DictionaryRepresentation.ArrayOfDocuments)]
 		public Dictionary<String, JarvisEntityState> EntityStates { get; set; }
 
 		/// <summary>
@@ -39,7 +39,7 @@ namespace Jarvis.Framework.Kernel.Engine
 			if (cloned.EntityStates == null || Object.ReferenceEquals(cloned.EntityStates, EntityStates))
 			{
 				cloned.EntityStates = this.EntityStates
-					.ToDictionary(_ => _.Key, _ => (JarvisEntityState) _.Value.DeepCloneMe());
+					.ToDictionary(_ => _.Key, _ => (JarvisEntityState) _.Value.Clone());
 			}
 			return cloned;
         }

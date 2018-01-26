@@ -1,4 +1,5 @@
-﻿using NStore.Core.Snapshots;
+﻿using MongoDB.Bson;
+using NStore.Core.Snapshots;
 using NStore.Domain;
 using NUnit.Framework;
 using System;
@@ -170,6 +171,19 @@ namespace Jarvis.Framework.Tests.EngineTests.AggregateTests
 			Assert.That(sut.InternalState, Is.Null);
 			Assert.That(sut.Version, Is.EqualTo(0));
 			Assert.That(sut.Id, Is.Null);
+		}
+
+		[Test]
+		public void Verify_serialization_of_user_state()
+		{
+			AggregateTestSampleAggregate1 aggregate = new AggregateTestSampleAggregate1();
+			aggregate.Init(new AggregateTestSampleAggregate1Id(1));
+			aggregate.Touch();
+
+			var snapshot = ((ISnapshottable)aggregate).GetSnapshot();
+
+			var serialized = snapshot.ToJson();
+			Assert.That(!serialized.Contains(" \"_t\" : \"AggregateTestSampleAggregate1Id\""));
 		}
 
 		private void ApplyChanges()
