@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 
 namespace Jarvis.Framework.Shared.Claims
 {
@@ -38,6 +39,7 @@ namespace Jarvis.Framework.Shared.Claims
 
 		public string Value { get; private set; }
 
+		[JsonConstructor]
 		public Claim(string id, string value)
 		{
 			if (string.IsNullOrWhiteSpace(id))
