@@ -166,9 +166,9 @@
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="Kernel\Commands\RepositoryCommandHandlerTests.cs" />
     <Compile Include="Kernel\Events\DirectMongoEventStoreQueryManagerTests.cs" />
+    <Compile Include="Kernel\Support\IdentityToAggregateManagerTests.cs" />
     <Compile Include="Kernel\Support\MetricsHealthCheckExplicitTests.cs" />
     <Compile Include="Kernel\Support\StreamProcessorManagerTests.cs" />
-    <Compile Include="NeventStoreExTests\Persistence\RepositoryTests.cs" />
     <Compile Include="EngineTests\SagaTests\BillPrinted.cs" />
     <Compile Include="EngineTests\SagaTests\DeliverPizzaSaga2.cs" />
     <Compile Include="EngineTests\SagaTests\DeliverPizzaSaga.cs" />
@@ -182,8 +182,6 @@
     <Compile Include="GlobalTestInit.cs" />
     <Compile Include="MultitenantSupportTests\MultiTenantSubDependencyResolverTests.cs" />
     <Compile Include="MultitenantSupportTests\TenantManagerTests.cs" />
-    <Compile Include="NeventStoreExTests\Persistence\ShapshotPersistenceStrategiesTests.cs" />
-    <Compile Include="NeventStoreExTests\Persistence\SnapshotManagerTests.cs" />
     <Compile Include="ProjectionEngineTests\CollectionWrapperForPollableEntitiesTests.cs" />
     <Compile Include="ProjectionEngineTests\CollectionWrapperResolveWithTypedFacilityTests.cs" />
     <Compile Include="ProjectionEngineTests\CollectionWrapperTests.cs" />

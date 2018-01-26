@@ -109,6 +109,8 @@
     <Compile Include="Helpers\CommandExtensions.cs" />
     <Compile Include="Helpers\DomainEventExtensions.cs" />
     <Compile Include="Helpers\NStoreSequencer.cs" />
+    <Compile Include="Helpers\RepositoryHelper.cs" />
+    <Compile Include="IdentitySupport\IIdentityToAggregateManager.cs" />
     <Compile Include="Messages\IMessageBus.cs" />
     <Compile Include="NeventStoreExGlobalConfiguration.cs" />
     <Compile Include="Persistence\EventStore\CachableAggregateCachedRepository.cs" />

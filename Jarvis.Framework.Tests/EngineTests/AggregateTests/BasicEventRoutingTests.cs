@@ -20,7 +20,7 @@ namespace Jarvis.Framework.Tests.EngineTests.AggregateTests
 		public void SetUp()
 		{
 			sut = new AggregateTestSampleAggregate1();
-			sut.Init("SampleAggregate_42");
+			sut.Init("AggregateTestSampleAggregate1_42");
 		}
 
 		[Test]

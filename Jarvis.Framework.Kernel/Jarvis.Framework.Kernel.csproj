@@ -201,6 +201,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Store\SnapshotsHelper.cs" />
     <Compile Include="Support\GuaranteedDeliveryBroadcastBlock.cs" />
+    <Compile Include="Support\IdentityToAggregateManager.cs" />
     <Compile Include="Support\IProjectionMetricsDotNetConfigurer.cs" />
     <Compile Include="Support\IStreamProcessorManager.cs" />
     <Compile Include="Support\MetricsHealthCheck.cs" />

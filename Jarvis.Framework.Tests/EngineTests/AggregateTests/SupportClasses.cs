@@ -1,5 +1,6 @@
 ﻿using Jarvis.Framework.Kernel.Engine;
 using Jarvis.Framework.Shared.Events;
+using Jarvis.Framework.Shared.IdentitySupport;
 using NStore.Domain;
 using NUnit.Framework;
 using System;
@@ -11,7 +12,7 @@ using System.Threading.Tasks;
 namespace Jarvis.Framework.Tests.EngineTests.AggregateTests
 {
 	public class AggregateTestSampleAggregate1 :
-		AggregateRoot<AggregateTestSampleAggregate1State, SampleAggregateId>
+		AggregateRoot<AggregateTestSampleAggregate1State, AggregateTestSampleAggregate1Id>
 	{
 		private AggregateTestSampleEntity sample;
 
@@ -55,6 +56,17 @@ namespace Jarvis.Framework.Tests.EngineTests.AggregateTests
 		}
 
 		public new AggregateTestSampleAggregate1State InternalState { get { return base.InternalState; } }
+	}
+
+	public class AggregateTestSampleAggregate1Id : EventStoreIdentity
+	{
+		public AggregateTestSampleAggregate1Id(long id) : base(id)
+		{
+		}
+
+		public AggregateTestSampleAggregate1Id(string id) : base(id)
+		{
+		}
 	}
 
 	public class AggregateTestSampleAggregate1State : JarvisAggregateState

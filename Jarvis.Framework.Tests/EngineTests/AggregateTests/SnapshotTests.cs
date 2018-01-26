@@ -28,7 +28,7 @@ namespace Jarvis.Framework.Tests.EngineTests.AggregateTests
 			sourcedAggregate = sut;
 			if (initialize)
 			{
-				sut.Init("SampleAggregate_42");
+				sut.Init("AggregateTestSampleAggregate1_42");
 			}
 		}
 
@@ -89,7 +89,7 @@ namespace Jarvis.Framework.Tests.EngineTests.AggregateTests
 			Assert.That(sut.InternalState.TouchCount, Is.EqualTo(1));
 			Assert.IsFalse(Object.ReferenceEquals(sut.InternalState, originalState), "Restored state is the same instance of payload state");
 			Assert.That(sut.Version, Is.EqualTo(1));
-			Assert.That(sut.Id, Is.EqualTo("SampleAggregate_42"));
+			Assert.That(sut.Id, Is.EqualTo("AggregateTestSampleAggregate1_42"));
 		}
 
 		[Test]
