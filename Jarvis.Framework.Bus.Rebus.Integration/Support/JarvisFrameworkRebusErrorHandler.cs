@@ -76,13 +76,14 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 							exception = exception.InnerException;
 						}
 
-						if (exception != null)
-						{
-							exMessage = exception.Message;
-						}
-
 						var command = GetCommandFromMessage(transportMessage);
 						_lazyMessageTracker.Value.Failed(command, DateTime.UtcNow, exception);
+
+						if (exception != null)
+						{
+							exMessage = GetErrorMessage(exception);
+							_logger.ErrorFormat("HandlingPoisionMessage for {0}/{1} - {2}", commandId, description, command?.Describe());
+						}
 
 						if (command != null)
 						{
@@ -125,6 +126,23 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 						await _transport.Send(_jarvisRebusConfiguration.ErrorQueue, transportMessage, transactionContext).ConfigureAwait(false);
 					}
 				}
+			}
+
+			private static string GetErrorMessage(Exception exception)
+			{
+				if (exception is AggregateException)
+				{
+					var aggEx = (AggregateException)exception;
+					StringBuilder errorMessage = new StringBuilder();
+					errorMessage.AppendLine($"We have a total of {aggEx.InnerExceptions.Count} exceptions");
+					foreach (var e in aggEx.InnerExceptions)
+					{
+						errorMessage.AppendLine(e.ToString());
+						errorMessage.AppendLine("\n\n-------------------------------------------------------------\n\n");
+					}
+					return errorMessage.ToString();
+				}
+				return exception.Message;
 			}
 
 			private ICommand GetCommandFromMessage(TransportMessage message)
