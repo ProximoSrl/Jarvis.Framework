@@ -100,9 +100,15 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 										);
 
 								commandHandled.CopyHeaders(command);
+
+								Dictionary<String, String> headers = new Dictionary<string, string>();
+								headers.Add(Headers.MessageId, Guid.NewGuid().ToString());
+
+								//TODO: WIth new rebus I do not know how to resend header back. This will throw some unknown and obscure error in rebus.
 								await _lazyBus.Value.Advanced.Routing.Send(
-									transportMessage.Headers["rbs2-return-address"],
-								   commandHandled).ConfigureAwait(false);
+								   transportMessage.Headers["rbs2-return-address"],
+								   commandHandled,
+								   headers).ConfigureAwait(false);
 							}
 						}
 					}
@@ -137,7 +143,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 					errorMessage.AppendLine($"We have a total of {aggEx.InnerExceptions.Count} exceptions");
 					foreach (var e in aggEx.InnerExceptions)
 					{
-						errorMessage.AppendLine(e.ToString());
+						errorMessage.AppendLine(e.Message);
 						errorMessage.AppendLine("\n\n-------------------------------------------------------------\n\n");
 					}
 					return errorMessage.ToString();
