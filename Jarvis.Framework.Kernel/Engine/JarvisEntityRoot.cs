@@ -49,7 +49,6 @@ namespace Jarvis.Framework.Kernel.Engine
 		/// Init the entity root, giving access to specific part of owner
 		/// aggregate
 		/// </summary>
-		/// <param name="entityId">Id of this specific entity.</param>
 		/// <param name="raiseEventFunction"></param>
 		/// <param name="ownerId"></param>
 		/// <returns></returns>
