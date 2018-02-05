@@ -1,72 +1,47 @@
 ﻿using System;
 using Fasterflect;
 using Jarvis.Framework.Kernel.Engine;
-using Jarvis.NEventStoreEx.CommonDomainEx;
+using Jarvis.Framework.Shared.IdentitySupport;
+using NStore.Core.Snapshots;
 
 namespace Jarvis.Framework.TestHelpers
 {
-    public static class TestAggregateFactory
+	public static class TestAggregateFactory
     {
-        public static T Create<T, TState>(TState initialState, IIdentity identity, Int32 version) 
-            where T : AggregateRoot
-            where TState : AggregateState, new()
+        public static T Create<T, TId, TState>(TState initialState, IIdentity identity, Int32 version)
+            where T : AggregateRoot<TState, TId>
+            where TState : JarvisAggregateState, new()
+			where TId : EventStoreIdentity
         {
-            var ctor = typeof(T).Constructor(Flags.Default, new Type[] {  });
+            if (identity == null)
+                throw new ArgumentNullException(nameof(identity));
+
+            var ctor = typeof(T).Constructor(Flags.Default, new Type[] { });
             if (ctor == null)
                 throw new MissingMethodException(string.Format("{0} missing default ctor", typeof(T).FullName));
 
             var aggregate = (T)ctor.CreateInstance();
-            AggregateSnapshot<TState> snapshot = new AggregateSnapshot<TState>()
+
+            //To restore the state from the test we need to pass from the snapshot
+            if (version > 0)
             {
-                Id = identity,
-                State = initialState,
-                Version = version
-            };
+                SnapshotInfo snapshot = new SnapshotInfo(
+                    identity.ToString(),
+                    version,
+                    initialState,
+                    initialState.VersionSignature);
 
-            aggregate.AssignAggregateId(identity);
-            ((ISnapshotable)aggregate).Restore(snapshot);
-            return aggregate;
-        }
-
-        public static T Create<T, TState>(TState initialState, IIdentity identity)
-            where T : AggregateRoot
-            where TState : AggregateState, new()
-        {
-            return Create<T, TState>(initialState, identity, 0);
-        }
-
-        /// <summary>
-        /// Create a new aggregate for test
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <typeparam name="TState"></typeparam>
-        /// <param name="identity"></param>
-        /// <returns></returns>
-        public static T Create<T, TState>(IIdentity identity) 
-            where T : AggregateRoot
-            where TState : AggregateState, new()
-        {
-            return Create<T, TState>(new TState(), identity, 0);
-        }
-/*
-        public static T Create<T>() where T : AggregateRoot
-        {
-            var ctor = typeof(T).Constructor(Flags.Default, new Type[] { });
-            if (ctor == null)
-                throw new MissingMethodException(string.Format("{0} missing default ctor",typeof(T).FullName));
-            return (T)ctor.CreateInstance();
-        }
-        public static T Create<T>(IEnumerable<DomainEvent> events) where T : AggregateRoot
-        {
-            var aggregate = Create<T>();
-            var iagg = (IAggregateEx)aggregate;
-            foreach (var domainEvent in events)
-            {
-                iagg.ApplyEvent(domainEvent);
+                aggregate.Init(identity.ToString());
+                var restoreResult = ((ISnapshottable)aggregate).TryRestore(snapshot);
+                if (!restoreResult)
+                    throw new Machine.Specifications.SpecificationException("Unable to restore snapshot into the aggregate under test");
             }
-
+            else if (initialState != null)
+            {
+                throw new Machine.Specifications.SpecificationException("If you specify a not null initialState version should be greater than zero. Pass null as state if you want to create a new empty aggregate!!");
+            }
+            aggregate.Init(identity.AsString());
             return aggregate;
         }
-*/
     }
 }

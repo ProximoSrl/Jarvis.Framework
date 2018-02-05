@@ -1,60 +1,76 @@
 ﻿using Castle.Core.Logging;
 using Jarvis.Framework.Kernel.Engine;
+using Jarvis.Framework.Shared.Commands;
 using System;
+using System.Collections;
 
 namespace Jarvis.Framework.Tests.EngineTests.SagaTests
 {
-    public class DeliverPizzaSagaListener2 : AbstractProcessManagerListener<DeliverPizzaSaga2>
-    {
-        public DeliverPizzaSagaListener2()
-        {
-            Map<OrderPlaced>(m =>  m.OrderId);
-            Map<PizzaDelivered>(m => m.OrderId);
-            Map<BillPrinted>(m => m.OrderId);
-            Map<PaymentReceived>(m => m.OrderId);
-        }
+	public class DeliverPizzaSagaListener2 : AbstractProcessManagerListener<DeliverPizzaSaga2, DeliverPizzaSaga2State>
+	{
+		public DeliverPizzaSagaListener2()
+		{
+			Map<OrderPlaced>(m => m.OrderId);
+			Map<PizzaDelivered>(m => m.OrderId);
+			Map<BillPrinted>(m => m.OrderId);
+			Map<PaymentReceived>(m => m.OrderId);
+		}
 
-        public override string Prefix
-        {
-            get { return "DeliverPizzaSaga2_"; }
-        }
-    }
+		public override string Prefix
+		{
+			get { return "DeliverPizzaSaga2_"; }
+		}
+	}
 
-    public class DeliverPizzaSaga2 : AbstractProcessManager
-        , IObserveMessage<OrderPlaced>
-        , IObserveMessage<PizzaDelivered>
-        , IObserveMessage<BillPrinted>
-        , IObserveMessage<PaymentReceived>
-    {
-		private readonly ILogger _logger = new ConsoleLogger();
+	public class DeliverPizzaSaga2 : AbstractProcessManager<DeliverPizzaSaga2State>
+	{
+		public DeliverPizzaSaga2State AccessState => this.State;
+	}
 
-        public String PizzaActualStatus { get; set; }
+	public class DeliverPizzaSaga2State : AbstractProcessManagerState
+	{
+		public DeliverPizzaSaga2State()
+		{
+			Logger = NullLogger.Instance;
+		}
 
-        private void Log(String message)
-        {
-            _logger.Debug(message);
-            PizzaActualStatus = message;
-        }
+		public String PizzaActualStatus { get; set; }
+
+		internal ILogger Logger { get; set; }
+
+		private void Log(String message)
+		{
+			Logger.Debug(message);
+			PizzaActualStatus = message;
+		}
 
 		public void On(PaymentReceived paymentReceived)
 		{
-            Log("Payment received");
+			Log("Payment received");
 		}
 
-        public void On(BillPrinted billPrinted)
+		public void On(BillPrinted billPrinted)
 		{
-            Log("Bill printed");	
-
+			Log("Bill printed");
 		}
 
-        public void On(PizzaDelivered pizzaDelivered)
+		public void On(PizzaDelivered pizzaDelivered)
 		{
-			Log("Pizza delivered");	
+			Log("Pizza delivered");
 		}
 
-		public void On(OrderPlaced orderPlaced)
+		public ProcessPayment On(OrderPlaced orderPlaced)
 		{
-            Log("Order Placed");	
+			Log("Order Placed");
+			return new ProcessPayment()
+			{
+				PaymentId = $"Payment_{orderPlaced.OrderId}"
+			};
 		}
-    }
-}   
+
+		public class ProcessPayment : Command
+		{
+			public String PaymentId { get; set; }
+		}
+	}
+}

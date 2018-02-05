@@ -18,7 +18,7 @@
 //    public class ProjectionEnginePriorityTests : AbstractConcurrentProjectionEngineTests
 //    {
 
-//        [TestFixtureSetUp]
+//        [OneTimeSetUp]
 //        public override void TestFixtureSetUp()
 //        {
 //            base.TestFixtureSetUp();
@@ -36,7 +36,7 @@
 
 //        protected override IEnumerable<IProjection> BuildProjections()
 //        {
-//            var writer = new CollectionWrapper<SampleReadModel, string>(StorageFactory,new NotifyToNobody());
+//            var writer = new CollectionWrapper<SampleReadModel, string>(StorageFactory, new NotifyToNobody());
 //            var writer2 = new CollectionWrapper<SampleReadModel2, string>(StorageFactory, new NotifyToNobody());
 
 //            yield return new Projection(writer);
@@ -50,7 +50,7 @@
 //            var reader2 = new MongoReader<SampleReadModel2, string>(Database);
 //            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregateId(1));
 //            aggregate.Create();
-//            Repository.Save(aggregate, Guid.NewGuid(), h => { });
+//            Repository.Save(aggregate,Guid.NewGuid().ToString(), h => { }).Wait();
 //            Thread.Sleep(100);
 //            await Engine.UpdateAndWait();
 //            var rm = reader.AllUnsorted.Single();

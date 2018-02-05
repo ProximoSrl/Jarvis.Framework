@@ -1,4 +1,5 @@
-﻿using Jarvis.Framework.Shared.Events;
+﻿using Jarvis.Framework.Kernel.Events;
+using Jarvis.Framework.Shared.Events;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,7 +15,7 @@ namespace Jarvis.Framework.Kernel.Support
 
         public HashSet<Type> EventHandled { get; private set; }
 
-        private HashSet<Type> _eventTypes;
+        private readonly HashSet<Type> _eventTypes;
 
         public ProjectionEventInspector()
         {
@@ -44,7 +45,19 @@ namespace Jarvis.Framework.Kernel.Support
             {
                 AddDomainEventHandled(parameter);
             }
-        }
+
+			//Now scan the IHandleMessage
+			var typesExplicitlyHandled = type
+				.GetInterfaces()
+				.Where(i => i.IsGenericType && typeof(IEventHandler<>) == i.GetGenericTypeDefinition())
+				.Select(i => i.GetGenericArguments()[0])
+				.Where(i => !i.IsAbstract);
+
+			foreach (var typeExplicitlyHandled in typesExplicitlyHandled)
+			{
+				EventHandled.Add(typeExplicitlyHandled);
+			}
+		}
 
         private void AddDomainEventHandled(ParameterInfo[] parameter)
         {

@@ -16,12 +16,12 @@
 //    [TestFixture]
 //    public class ProjectionEngineTestsCheckpoints : AbstractConcurrentProjectionEngineTests
 //    {
-//        [TestFixtureSetUp]
+//        [OneTimeSetUp]
 //        public override void TestFixtureSetUp()
 //        {
 //            base.TestFixtureSetUp();
 //        }
-          
+
 //        protected override void RegisterIdentities(IdentityManager identityConverter)
 //        {
 //            identityConverter.RegisterIdentitiesFromAssembly(typeof(SampleAggregateId).Assembly);
@@ -34,7 +34,7 @@
 
 //        protected override IEnumerable<IProjection> BuildProjections()
 //        {
-//            var writer = new CollectionWrapper<SampleReadModel, string>(StorageFactory,new NotifyToNobody());
+//            var writer = new CollectionWrapper<SampleReadModel, string>(StorageFactory, new NotifyToNobody());
 //            yield return new Projection(writer);
 //            var writer3 = new CollectionWrapper<SampleReadModel3, string>(StorageFactory, new NotifyToNobody());
 //            if (returnProjection3) yield return new Projection3(writer3);
@@ -47,21 +47,21 @@
 //            var reader = new MongoReader<SampleReadModel, string>(Database);
 //            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregateId(1));
 //            aggregate.Create();
-//            Repository.Save(aggregate, Guid.NewGuid(), h => { });
+//            Repository.Save(aggregate,Guid.NewGuid().ToString(), h => { }).Wait();
 
 //            aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregateId(2));
 //            aggregate.Create();
-//            Repository.Save(aggregate, Guid.NewGuid(), h => { });
+//            Repository.Save(aggregate,Guid.NewGuid().ToString(), h => { }).Wait();
 
 //            var stream = _eventStore.Advanced.GetFrom("0");
 //            var lastCommit = stream.Last();
 
 //            Assert.That(_statusChecker.IsCheckpointProjectedByAllProjection(lastCommit.CheckpointToken), Is.False);
-             
+
 //            await Engine.UpdateAndWait();
 //            Assert.That(_statusChecker.IsCheckpointProjectedByAllProjection(lastCommit.CheckpointToken), Is.True);
 //        }
 
-    
+
 //    }
 //}

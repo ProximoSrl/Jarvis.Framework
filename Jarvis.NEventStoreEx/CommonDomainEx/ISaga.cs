@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 
 namespace Jarvis.NEventStoreEx.CommonDomainEx
@@ -20,5 +21,10 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx
         void ClearUndispatchedMessages();
 
         void SetReplayMode(bool replayOn);
+    }
+
+    public interface ISagaFactory
+    {
+        ISagaEx Build(Type sagaType, String id);
     }
 }

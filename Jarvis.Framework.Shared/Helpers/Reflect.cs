@@ -10,7 +10,7 @@ namespace Jarvis.Framework.Shared.Helpers
     /// <summary>
     /// Ported by the standard mongo driver to do static reflection.
     /// </summary>
-    public class Reflect
+    public static class Reflect
     {
         public static string Path<T>(Expression<Func<T, object>> expression)
         {
@@ -32,7 +32,7 @@ namespace Jarvis.Framework.Shared.Helpers
             return obj;
         }
 
-        static string GetPropertyName(Expression expression)
+		private static string GetPropertyName(Expression expression)
         {
             if (expression == null) return "";
 
@@ -73,5 +73,19 @@ namespace Jarvis.Framework.Shared.Helpers
 
             return "";
         }
-    }
+
+		public static bool IsSubclassOfRawGeneric(this Type generic, Type toCheck)
+		{
+			while (toCheck != null && toCheck != typeof(object))
+			{
+				var cur = toCheck.IsGenericType ? toCheck.GetGenericTypeDefinition() : toCheck;
+				if (generic == cur)
+				{
+					return true;
+				}
+				toCheck = toCheck.BaseType;
+			}
+			return false;
+		}
+	}
 }

@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using Castle.Core.Logging;
 using Jarvis.Framework.Kernel.Events;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
 {
@@ -20,18 +21,17 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             }
 
             _logger.Debug("----------------------------------");
-
         }
 
-        public void Init(bool drop)
+        public async Task InitAsync(bool drop)
         {
             foreach (var projection in _projections)
             {
                 if (drop)
                 {
-                    projection.Drop();
+                   await projection.DropAsync().ConfigureAwait(false);
                 }
-                projection.SetUp();
+                await projection.SetUpAsync().ConfigureAwait(false);
             }
         }
     }

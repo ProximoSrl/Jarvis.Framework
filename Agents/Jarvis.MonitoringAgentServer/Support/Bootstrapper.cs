@@ -15,11 +15,11 @@ namespace Jarvis.MonitoringAgentServer.Support
 {
     public class Bootstrapper
     {
-        private IWindsorContainer _container;
-        private ILogger _logger;
-        private MonitoringAgentServerConfiguration _configuration;
+        private readonly IWindsorContainer _container;
+        private readonly ILogger _logger;
+        private readonly MonitoringAgentServerConfiguration _configuration;
 
-        static IDisposable _app;
+        private IDisposable _app;
 
         public Bootstrapper(IWindsorContainer container, ILogger logger, MonitoringAgentServerConfiguration configuration)
         {
@@ -40,11 +40,7 @@ namespace Jarvis.MonitoringAgentServer.Support
                 hostControl.Stop();
                 return false;
             }
-
-            return true;
         }
-
-    
 
         private bool StartServer()
         {
@@ -73,7 +69,8 @@ namespace Jarvis.MonitoringAgentServer.Support
 
         public Boolean Stop(HostControl hostControl)
         {
-            _container.Dispose();
+            _container?.Dispose();
+            _app?.Dispose();
             return true;
         }
     }

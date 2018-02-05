@@ -14,7 +14,7 @@ namespace Jarvis.Framework.Tests.DomainTests
             GetClassMap().Remove(classType);
         }
 
-        static Dictionary<Type, BsonClassMap> GetClassMap()
+        private static Dictionary<Type, BsonClassMap> GetClassMap()
         {
             var cm = BsonClassMap.GetRegisteredClassMaps().FirstOrDefault();
             if (cm == null)
@@ -29,7 +29,9 @@ namespace Jarvis.Framework.Tests.DomainTests
         {
             var cm = GetClassMap();
             if(cm != null)
-                cm.Clear();
-        }
+			{
+				cm.Clear();
+			}
+		}
     }
 }

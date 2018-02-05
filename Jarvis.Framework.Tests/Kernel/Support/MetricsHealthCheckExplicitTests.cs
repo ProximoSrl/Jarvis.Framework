@@ -14,10 +14,11 @@ namespace Jarvis.Framework.Tests.Kernel.Support
     public class MetricsHealthCheckExplicitTests
     {
         [Test]
-        public void VerifyCountOfMsmq()
+        public void VerifyCountOfMsmqDoesNotThrow()
         {
+            //Just verify that we are able to call the api for MSMQ
             MsmqHealthCheck sut = new MsmqHealthCheck(".\\Private$\\jarvis.health", 100, new TestLogger());
-            var check = sut.Execute();
+            sut.Execute();
         }
     }
 }

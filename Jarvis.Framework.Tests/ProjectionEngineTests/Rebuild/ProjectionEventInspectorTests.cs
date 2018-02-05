@@ -14,11 +14,13 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
     [TestFixture]
     public class ProjectionEventInspectorTests
     {
+#pragma warning disable S1144 // Unused private types or members should be removed
+#pragma warning disable RCS1163 // Unused parameter.
         private class TestProjectionWithoutInterface
         {
             public void On(SampleAggregateCreated e)
             {
-               
+                // Method intentionally left empty.
             }
         }
 
@@ -26,7 +28,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         {
             public void On(DomainEvent e)
             {
-
+                // Method intentionally left empty.
             }
         }
 
@@ -34,7 +36,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         {
             public void On(SampleAggregateBaseEvent e)
             {
-
+                // Method intentionally left empty.
             }
         }
 
@@ -42,7 +44,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         {
             public void On(SampleAggregateCreated e)
             {
-
+                // Method intentionally left empty.
             }
         }
 
@@ -50,9 +52,12 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         {
             public void On(SampleAggregateTouched e)
             {
-
+                // Method intentionally left empty.
             }
         }
+
+#pragma warning restore RCS1163 // Unused parameter.
+#pragma warning restore S1144 // Unused private types or members should be remove
 
         [Test]
         public void verify_can_scan_all_domain_events()
@@ -69,10 +74,18 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             sut.AddAssembly(Assembly.GetExecutingAssembly());
             sut.InspectProjectionForEvents(typeof(Projection));
             Assert.That(sut.EventHandled, Is.EquivalentTo(new[] { typeof(SampleAggregateCreated) }));
-      
         }
 
-        [Test]
+		[Test]
+		public void verify_get_poco_event_handled()
+		{
+			ProjectionEventInspector sut = new ProjectionEventInspector();
+			sut.AddAssembly(Assembly.GetExecutingAssembly());
+			sut.InspectProjectionForEvents(typeof(ProjectionWithPoco));
+			Assert.That(sut.EventHandled, Is.EquivalentTo(new[] { typeof(SampleAggregateCreated), typeof(PocoPayloadObject) }));
+		}
+
+		[Test]
         public void verify_get_basic_event_handled_even_if_no_interface_is_declared()
         {
             ProjectionEventInspector sut = new ProjectionEventInspector();

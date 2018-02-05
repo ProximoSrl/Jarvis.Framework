@@ -3,16 +3,22 @@ using System.Configuration;
 using NUnit.Framework;
 using Jarvis.Framework.Kernel.Support;
 using Jarvis.Framework.Shared.IdentitySupport;
+using System.IO;
+using System.Reflection;
+using Jarvis.Framework.TestHelpers;
 
 namespace Jarvis.Framework.Tests
 {
     [SetUpFixture]
     public class GlobalSetup
     {
-        [SetUp]
+        [OneTimeSetUp]
         public void Global_initialization_of_all_tests()
         {
-            MongoRegistration.RegisterMongoConversions(
+            //Nunit3 fix for test adapter of visual studio, it uses visual studio test directory
+            Environment.CurrentDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+
+            MongoRegistration.ConfigureMongoForJarvisFramework(
                 "NEventStore.Persistence.MongoDB"
                 );
             MongoFlatMapper.EnableFlatMapping(true);
@@ -34,6 +40,8 @@ namespace Jarvis.Framework.Tests
 
             config.Save();
             ConfigurationManager.RefreshSection("connectionStrings");
+
+            TestLogger.GlobalEnabled = false;
         }
     }
 }

@@ -19,7 +19,6 @@ namespace Jarvis.Framework.Tests.SharedTests.Helpers
             public String Id { get; set; }
 
             public String Name { get; set; }
-
         }
 
         public class MongoDriverHelperTestsClassWithObjectId
@@ -27,11 +26,10 @@ namespace Jarvis.Framework.Tests.SharedTests.Helpers
             public ObjectId Id { get; set; }
 
             public String Name { get; set; }
-
         }
 
-        IMongoCollection<MongoDriverHelperTestsClass> _collection;
-        IMongoCollection<MongoDriverHelperTestsClassWithObjectId> _collectionObjectId;
+        private IMongoCollection<MongoDriverHelperTestsClass> _collection;
+        private IMongoCollection<MongoDriverHelperTestsClassWithObjectId> _collectionObjectId;
 
         [SetUp]
         public void SetUp()
@@ -71,7 +69,6 @@ namespace Jarvis.Framework.Tests.SharedTests.Helpers
             Assert.That(findOne.Name, Is.EqualTo("A"));
         }
 
-
         [Test]
         public void verify_object_id_is_generated()
         {
@@ -80,15 +77,14 @@ namespace Jarvis.Framework.Tests.SharedTests.Helpers
             Assert.That(obj.Id, Is.Not.EqualTo(ObjectId.Empty));
             var saved = _collectionObjectId.FindOneById(obj.Id);
             Assert.That(saved.Name, Is.EqualTo("A"));
-
         }
 
         [Test]
-        [ExpectedException(ExpectedMessage = "Cannot save with null objectId")]
         public void verify_save_with_empty_object_id_throws()
         {
             MongoDriverHelperTestsClassWithObjectId obj = new MongoDriverHelperTestsClassWithObjectId() { Name = "A" };
-            _collectionObjectId.Save(obj, obj.Id);
+            Assert.That(() =>_collectionObjectId.Save(obj, obj.Id),
+                Throws.Exception.With.Message.Contains("Cannot save with null objectId"));
         }
     }
 }

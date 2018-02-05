@@ -1,5 +1,6 @@
 using System;
-using NEventStore;
+using NStore.Aggregates;
+using NStore.SnapshotStore;
 
 namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence
 {
@@ -12,14 +13,19 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence
             Instance = new NullSnapshotManager();
         }
 
-        public ISnapshot Load(string streamId, int upToVersion, Type aggregateType)
+		public void Clear(string streamId, Type aggregateType)
+        {
+            // Method intentionally left empty.
+        }
+
+        public SnapshotInfo Load(string streamId, int upToVersion, Type aggregateType)
         {
             return null;
         }
 
-        public void Snapshot(IAggregateEx aggregate, String bucket, Int32 numberOfEventsSaved)
+        public void Snapshot(IAggregate aggregate, String bucket, Int32 numberOfEventsSaved)
         {
-
+            // Method intentionally left empty.
         }
     }
 }

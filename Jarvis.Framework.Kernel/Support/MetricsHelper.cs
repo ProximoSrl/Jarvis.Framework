@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 using Jarvis.Framework.Shared;
+using Jarvis.Framework.Kernel.Engine;
 
 namespace Jarvis.Framework.Kernel.Support
 {
@@ -26,7 +27,7 @@ namespace Jarvis.Framework.Kernel.Support
 
         public static void SetProjectionEngineCurrentDispatchCount(Func<double> valueProvider)
         {
-            Metric.Gauge(_projectionEngineCurrentDispatchCount, valueProvider, Unit.Custom("Commits"));
+            Metric.Gauge(_projectionEngineCurrentDispatchCount, valueProvider, Unit.Custom(EventStoreFactory.PartitionCollectionName));
         }
 
         public static void SetCheckpointCountToDispatch(String slotName, Func<double> valueProvider)
@@ -44,7 +45,7 @@ namespace Jarvis.Framework.Kernel.Support
             {
                 gaugeName = _checkpointToDispatchRebuildGaugeName;
             }
-            if (TenantContext.CurrentTenantId != null) 
+            if (TenantContext.CurrentTenantId != null)
             {
                 gaugeName = "t[" + TenantContext.CurrentTenantId + "]" + gaugeName;
             }
@@ -75,7 +76,7 @@ namespace Jarvis.Framework.Kernel.Support
         {
             if (!CommitDispatchIndex.ContainsKey(slotName))
             {
-                var meter = Metric.Meter("commit-dispatched-" + slotName, Unit.Items, TimeUnit.Seconds);
+                var meter = Metric.Meter("projection-chunk-dispatched-" + slotName, Unit.Items, TimeUnit.Seconds);
                 CommitDispatchIndex[slotName] = meter;
             }
         }
@@ -83,23 +84,30 @@ namespace Jarvis.Framework.Kernel.Support
         public static void MarkCommitDispatchedCount(String slotName, Int32 count)
         {
             CommitDispatchIndex[slotName].Mark(count);
-        }
-
+			projectionDispatchMeter.Mark(count);
+		}
 
         private static readonly Counter projectionCounter = Metric.Counter("prj-time", Unit.Custom("ticks"));
         private static readonly Counter projectionSlotCounter = Metric.Counter("prj-slot-time", Unit.Custom("ticks"));
         private static readonly Counter projectionEventCounter = Metric.Counter("prj-event-time", Unit.Custom("ticks"));
+		private static readonly Counter projectionSlowEventCounter = Metric.Counter("prj-slow-event", Unit.Custom("ms"));
 
-        private static readonly Counter projectionCounterRebuild = Metric.Counter("prj-time-rebuild", Unit.Custom("ticks"));
+		private static readonly Counter projectionCounterRebuild = Metric.Counter("prj-time-rebuild", Unit.Custom("ticks"));
         private static readonly Counter projectionSlotCounterRebuild = Metric.Counter("prj-slot-time-rebuild", Unit.Custom("ticks"));
         private static readonly Counter projectionEventCounterRebuild = Metric.Counter("prj-event-time-rebuild", Unit.Custom("ticks"));
 
-        public static void IncrementProjectionCounter(String projectionName, String slotName, String eventName, Int64 milliseconds)
+		private static readonly Meter projectionDispatchMeter = Metric.Meter("projection-chunk-dispatched-_TOTAL", Unit.Items, TimeUnit.Seconds);
+
+        public static void IncrementProjectionCounter(String projectionName, String slotName, String eventName, Int64 ticks, Int64 milliseconds)
         {
-            projectionCounter.Increment(projectionName, milliseconds);
-            projectionSlotCounter.Increment(slotName, milliseconds);
-            projectionEventCounter.Increment(eventName, milliseconds);
-        }
+            projectionCounter.Increment(projectionName, ticks);
+            projectionSlotCounter.Increment(slotName, ticks);
+            projectionEventCounter.Increment(eventName, ticks);
+			if (milliseconds > 50)
+			{
+				projectionSlowEventCounter.Increment($"{projectionName}/{eventName}", milliseconds);
+			}
+		}
 
         public static void IncrementProjectionCounterRebuild(String projectionName, String slotName, String eventName, Int64 milliseconds)
         {
@@ -120,5 +128,8 @@ namespace Jarvis.Framework.Kernel.Support
         {
             DomainExceptions.Increment();
         }
+
+        public static readonly Timer CommandTimer = Metric.Timer("Commands Execution", Unit.Commands);
+        public static readonly Counter CommandCounter = Metric.Counter("CommandsDuration", Unit.Custom("ms"));
     }
 }

@@ -9,10 +9,11 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Jarvis.NEventStoreEx</RootNamespace>
     <AssemblyName>Jarvis.NEventStoreEx</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -38,17 +39,28 @@
       <HintPath>..\packages\Metrics.NET.0.3.7\lib\net45\Metrics.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="NEventStore, Version=6.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NEventStore.6.0.0-beta0041\lib\net40\NEventStore.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="MongoDB.Bson, Version=2.4.4.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\MongoDB.Bson.2.4.4\lib\net45\MongoDB.Bson.dll</HintPath>
     </Reference>
-    <Reference Include="NEventStore.Domain, Version=6.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NEventStore.Domain.6.0.0-beta0016\lib\net40\NEventStore.Domain.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="MongoDB.Driver, Version=2.4.4.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\MongoDB.Driver.2.4.4\lib\net45\MongoDB.Driver.dll</HintPath>
+    </Reference>
+    <Reference Include="MongoDB.Driver.Core, Version=2.4.4.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\MongoDB.Driver.Core.2.4.4\lib\net45\MongoDB.Driver.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="NStore, Version=0.2.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\NStore.0.2.0-pre0027\lib\net461\NStore.dll</HintPath>
+    </Reference>
+    <Reference Include="NStore.Persistence.Mongo, Version=0.2.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\NStore.Persistence.Mongo.0.2.0-pre0027\lib\net461\NStore.Persistence.Mongo.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Runtime.Caching" />
+    <Reference Include="System.Runtime.InteropServices.RuntimeInformation">
+      <HintPath>..\packages\System.Runtime.InteropServices.RuntimeInformation.4.0.0\lib\net45\System.Runtime.InteropServices.RuntimeInformation.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -56,48 +68,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CommonDomainEx\Core\AlwaysConflict.cs" />
-    <Compile Include="CommonDomainEx\Core\ConventionEventRouterEx.cs" />
-    <Compile Include="CommonDomainEx\Core\AggregateBaseEx.cs" />
-    <Compile Include="CommonDomainEx\Core\DomainException.cs" />
-    <Compile Include="CommonDomainEx\Core\ExtensionMethods.cs" />
-    <Compile Include="CommonDomainEx\Core\InvariantNotSatifiedException.cs" />
-    <Compile Include="CommonDomainEx\IAggregateEx.cs" />
-    <Compile Include="CommonDomainEx\IMementoEx.cs" />
-    <Compile Include="CommonDomainEx\InvariantCheckResult.cs" />
-    <Compile Include="CommonDomainEx\IRouteEventsEx.cs" />
-    <Compile Include="CommonDomainEx\IIdentity.cs" />
-    <Compile Include="CommonDomainEx\IIdentityConverter.cs" />
-    <Compile Include="CommonDomainEx\IInvariantsChecker.cs" />
-    <Compile Include="CommonDomainEx\ISaga.cs" />
-    <Compile Include="CommonDomainEx\Persistence\BucketAttribute.cs" />
-    <Compile Include="CommonDomainEx\Persistence\CachedSnapshotManager.cs" />
-    <Compile Include="CommonDomainEx\Persistence\EventStore\CachableAggregateCachedRepository.cs" />
-    <Compile Include="CommonDomainEx\Persistence\EventStore\RepositorySingleAggregateFactory.cs" />
-    <Compile Include="CommonDomainEx\Persistence\EventStore\SagaEventStoreRepositoryEx.cs" />
-    <Compile Include="CommonDomainEx\Persistence\EventStore\AbstractRepository.cs" />
-    <Compile Include="CommonDomainEx\Persistence\EventStore\IConstructAggregatesEx.cs" />
-    <Compile Include="CommonDomainEx\Persistence\EventStore\RepositoryEx.cs" />
-    <Compile Include="CommonDomainEx\Persistence\EventStore\SingleUseAggregateCachedRepository.cs" />
-    <Compile Include="CommonDomainEx\Persistence\IAggregateCachedRepository.cs" />
-    <Compile Include="CommonDomainEx\Persistence\IRepositoryExFactory.cs" />
-    <Compile Include="CommonDomainEx\Persistence\ISagaFactory.cs" />
-    <Compile Include="CommonDomainEx\Persistence\ISagaRepositoryEx.cs" />
-    <Compile Include="CommonDomainEx\Persistence\IRepositoryEx.cs" />
-    <Compile Include="CommonDomainEx\Persistence\ISnapshotManager.cs" />
-    <Compile Include="CommonDomainEx\Persistence\ISnapshotPersistenceStrategy.cs" />
-    <Compile Include="CommonDomainEx\Persistence\ISnapshotPersister.cs" />
-    <Compile Include="CommonDomainEx\Persistence\NullSnapshotManager.cs" />
-    <Compile Include="CommonDomainEx\Persistence\NullSnapshotPersistenceStrategy.cs" />
-    <Compile Include="CommonDomainEx\Persistence\NullSnapshotPersister.cs" />
-    <Compile Include="CommonDomainEx\Persistence\NumberOfCommitsShapshotPersistenceStrategy.cs" />
-    <Compile Include="NeventStoreExGlobalConfiguration.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Support\NamedLocker.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

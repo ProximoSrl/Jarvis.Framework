@@ -2,19 +2,28 @@
 using System.Collections.Generic;
 using Jarvis.Framework.Shared.IdentitySupport;
 using Jarvis.Framework.Shared.Messages;
-using Jarvis.NEventStoreEx.CommonDomainEx;
 using Newtonsoft.Json;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Bson.Serialization.Options;
 
 namespace Jarvis.Framework.Shared.Commands
 {
+	/// <summary>
+	/// This is a generic interface for ICommand
+	/// </summary>
     public interface ICommand : IMessage
     {
+		/// <summary>
+		/// This method will set a string value in the command header. 
+		/// </summary>
+		/// <param name="key"></param>
+		/// <param name="value"></param>
         void SetContextData(string key, string value);
+
         string GetContextData(string key, string defaultValue = null);
+
         void InheritContextFrom(ICommand command);
-        
+
         [JsonIgnore]
         IEnumerable<string> AllContextKeys { get; }
     }
@@ -44,7 +53,6 @@ namespace Jarvis.Framework.Shared.Commands
             Context[key] = value;
         }
 
- 
         public void DisableSuccessReply()
         {
             SetContextData("disable-success-reply", "true");
@@ -57,7 +65,7 @@ namespace Jarvis.Framework.Shared.Commands
 
         public void InheritContextFrom(ICommand command)
         {
-            var sourceCommand = ((Command) command);
+            var sourceCommand = ((Command)command);
             foreach (string key in sourceCommand.Context.Keys)
             {
                 if (!Context.ContainsKey(key))
@@ -65,11 +73,12 @@ namespace Jarvis.Framework.Shared.Commands
             }
         }
 
-        public IEnumerable<string> AllContextKeys {
+        public IEnumerable<string> AllContextKeys
+        {
             get { return Context.Keys; }
         }
 
-	    public virtual string Describe()
+        public virtual string Describe()
         {
             return GetType().Name;
         }
@@ -79,7 +88,6 @@ namespace Jarvis.Framework.Shared.Commands
             return GetType().FullName + " id: " + MessageId + "\n";
         }
     }
-
 
     [Serializable]
     public abstract class Command<TIdentity> : Command, ICommand<TIdentity> where TIdentity : IIdentity

@@ -5,153 +5,225 @@ using Jarvis.Framework.Kernel.ProjectionEngine;
 using Jarvis.Framework.Tests.EngineTests;
 using Jarvis.Framework.Tests.SharedTests;
 using Jarvis.Framework.Tests.SharedTests.IdentitySupport;
+using System.Threading.Tasks;
+using Jarvis.Framework.Shared.Helpers;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests
 {
-    public class Projection : AbstractProjection,
-        IEventHandler<SampleAggregateCreated>
-    {
-        readonly ICollectionWrapper<SampleReadModel, string> _collection;
+	[ProjectionInfo("Projection")]
+	public class Projection : AbstractProjection,
+		IEventHandler<SampleAggregateCreated>
+	{
+		readonly ICollectionWrapper<SampleReadModel, string> _collection;
 
-        public Projection(ICollectionWrapper<SampleReadModel, string> collection)
-        {
-            _collection = collection;
-            _collection.Attach(this, false);
-        }
+		public Projection(ICollectionWrapper<SampleReadModel, string> collection)
+		{
+			_collection = collection;
+			_collection.Attach(this, false);
+		}
 
-        public override void Drop()
-        {
-            _collection.Drop();
-        }
+		public override Task DropAsync()
+		{
+			return _collection.DropAsync();
+		}
 
-        public override void SetUp()
-        {
-        }
+		public override Task SetUpAsync()
+		{
+			return Task.CompletedTask;
+		}		
 
-        public void On(SampleAggregateCreated e)
-        {
-            _collection.Insert(e, new SampleReadModel()
-            {
-                Id = e.AggregateId,
-                IsInRebuild = base.IsRebuilding,
-                Timestamp = DateTime.Now.Ticks
-            });
-        }
-    }
+		public Task On(SampleAggregateCreated e)
+		{
+			return _collection.InsertAsync(e, new SampleReadModel()
+			{
+				Id = e.AggregateId.AsString(),
+				IsInRebuild = base.IsRebuilding,
+				Timestamp = DateTime.Now.Ticks
+			});
+		}
+	}
 
+	[ProjectionInfo("ProjectionWithPoco")]
+	public class ProjectionWithPoco : AbstractProjection,
+		IEventHandler<SampleAggregateCreated>,
+		IEventHandler<PocoPayloadObject>
+	{
+		readonly ICollectionWrapper<SampleReadModel, string> _collection;
 
-    public class Projection2 : AbstractProjection,
-       IEventHandler<SampleAggregateCreated>
-    {
-        readonly ICollectionWrapper<SampleReadModel2, string> _collection;
+		public ProjectionWithPoco(ICollectionWrapper<SampleReadModel, string> collection)
+		{
+			_collection = collection;
+			_collection.Attach(this, false);
+		}
 
-        public Projection2(ICollectionWrapper<SampleReadModel2, string> collection)
-        {
-            _collection = collection;
-            _collection.Attach(this, false);
-        }
+		public override Task DropAsync()
+		{
+			return _collection.DropAsync();
+		}
 
-        public override string GetSignature()
-        {
-            return "V2";
-        }
+		public override Task SetUpAsync()
+		{
+			return Task.CompletedTask;
+		}
 
-        public override int Priority
-        {
-            get { return 3; } //higher priority than previous projection
-        }
+		public Task On(SampleAggregateCreated e)
+		{
+			return _collection.InsertAsync(e, new SampleReadModel()
+			{
+				Id = e.AggregateId.AsString(),
+				IsInRebuild = base.IsRebuilding,
+				Timestamp = DateTime.Now.Ticks
+			});
+		}
 
-        public override void Drop()
-        {
-            _collection.Drop();
-        }
+		public Task On(PocoPayloadObject e)
+		{
+			return Task.CompletedTask;
+		}
+	}
 
-        public override void SetUp()
-        {
-        }
+	[ProjectionInfo("Projection2", Signature = "V2")]
+	public class Projection2 : AbstractProjection,
+	   IEventHandler<SampleAggregateCreated>
+	{
+		readonly ICollectionWrapper<SampleReadModel2, string> _collection;
 
-        public void On(SampleAggregateCreated e)
-        {
-            _collection.Insert(e, new SampleReadModel2()
-            {
-                Id = e.AggregateId,
-                IsInRebuild = base.IsRebuilding,
-                Timestamp = DateTime.Now.Ticks
-            });
-            Thread.Sleep(10);
-        }
-    }
+		public Projection2(ICollectionWrapper<SampleReadModel2, string> collection)
+		{
+			_collection = collection;
+			_collection.Attach(this, false);
+		}
 
-    public class Projection3 : AbstractProjection,
-     IEventHandler<SampleAggregateCreated>
-    {
-        readonly ICollectionWrapper<SampleReadModel3, string> _collection;
+		public override int Priority
+		{
+			get { return 3; } //higher priority than previous projection
+		}
 
-        public Projection3(ICollectionWrapper<SampleReadModel3, string> collection)
-        {
-            _collection = collection;
-            _collection.Attach(this, false);
-            Signature = base.GetSignature();
-        }
+		public override Task DropAsync()
+		{
+			return _collection.DropAsync();
+		}
 
-        public override int Priority
-        {
-            get { return 3; } //higher priority than previous projection
-        }
+		public override Task SetUpAsync()
+		{
+			return Task.CompletedTask;
+		}
 
-        public override void Drop()
-        {
-            _collection.Drop();
-        }
+		public async Task On(SampleAggregateCreated e)
+		{
+			await _collection.InsertAsync(e, new SampleReadModel2()
+			{
+				Id = e.AggregateId.AsString(),
+				IsInRebuild = base.IsRebuilding,
+				Timestamp = DateTime.Now.Ticks
+			}).ConfigureAwait(false);
+			Thread.Sleep(10);
+		}
+	}
 
-        public String Signature { get; set; }
+	[ProjectionInfo("OtherSlotName", "v1", "Projection3")]
+	public class Projection3 : AbstractProjection,
+	 IEventHandler<SampleAggregateCreated>
+	{
+		readonly ICollectionWrapper<SampleReadModel3, string> _collection;
 
-        public override string GetSignature()
-        {
-            return Signature;
-        }
+		public Projection3(ICollectionWrapper<SampleReadModel3, string> collection)
+		{
+			_collection = collection;
+			_collection.Attach(this, false);
+			Signature = base.Info.Signature;
+		}
 
-        public override string GetSlotName()
-        {
-            return "OtherSlotName";
-        }
+		public override int Priority
+		{
+			get { return 3; } //higher priority than previous projection
+		}
 
-        public override void SetUp()
-        {
-        }
+		public override Task DropAsync()
+		{
+			return _collection.DropAsync();
+		}
 
-        public void On(SampleAggregateCreated e)
-        {
-            Console.WriteLine("Projected in thread {0} - {1}", 
-                Thread.CurrentThread.ManagedThreadId,
-                Thread.CurrentThread.Name);
-            Thread.Sleep(0);
-            _collection.Insert(e, new SampleReadModel3()
-            {
-                Id = e.AggregateId,
-                IsInRebuild = base.IsRebuilding,
-                Timestamp = DateTime.Now.Ticks
-            });
-        }
-    }
+		public override Task SetUpAsync()
+		{
+			return Task.CompletedTask;
+		}
 
-    public class ProjectionTypedId : AbstractProjection
-    {
-        readonly ICollectionWrapper<SampleReadModelTestId, TestId> _collection;
+		public String Signature
+		{
+			get { return _projectionInfoAttribute.Signature; }
+			set { _projectionInfoAttribute = new ProjectionInfoAttribute(_projectionInfoAttribute.SlotName, value, _projectionInfoAttribute.CommonName); }
+		}
 
-        public ProjectionTypedId(ICollectionWrapper<SampleReadModelTestId, TestId> collection)
-        {
-            _collection = collection;
-            _collection.Attach(this, false);
-        }
+		public async Task On(SampleAggregateCreated e)
+		{
+			Console.WriteLine("Projected in thread {0} - {1}",
+				Thread.CurrentThread.ManagedThreadId,
+				Thread.CurrentThread.Name);
+			Thread.Sleep(0);
+			await _collection.InsertAsync(e, new SampleReadModel3()
+			{
+				Id = e.AggregateId.AsString(),
+				IsInRebuild = base.IsRebuilding,
+				Timestamp = DateTime.Now.Ticks
+			}).ConfigureAwait(false);
+		}
+	}
 
-        public override void Drop()
-        {
-            _collection.Drop();
-        }
+	[ProjectionInfo("ProjectionTypedId")]
+	public class ProjectionTypedId : AbstractProjection
+	{
+		readonly ICollectionWrapper<SampleReadModelTest, String> _collection;
 
-        public override void SetUp()
-        {
-        }
-    }
+		public ProjectionTypedId(ICollectionWrapper<SampleReadModelTest, String> collection)
+		{
+			_collection = collection;
+			_collection.Attach(this, false);
+		}
+
+		public override Task DropAsync()
+		{
+			return _collection.DropAsync();
+		}
+
+		public override Task SetUpAsync()
+		{
+			return Task.CompletedTask;
+		}
+	}
+
+	[ProjectionInfo("ProjectionPollableReadmodel")]
+	public class ProjectionPollableReadmodel : AbstractProjection
+	{
+		readonly ICollectionWrapper<SampleReadModelPollableTest, TestId> _collection;
+
+		public ProjectionPollableReadmodel(ICollectionWrapper<SampleReadModelPollableTest, TestId> collection)
+		{
+			_collection = collection;
+			_collection.Attach(this, false);
+		}
+
+		public override Task DropAsync()
+		{
+			return _collection.DropAsync();
+		}
+
+		public override Task SetUpAsync()
+		{
+			return Task.CompletedTask;
+		}
+	}
+
+	public class PocoPayloadObject
+	{
+		public PocoPayloadObject(string propertyString, int propertyInt)
+		{
+			PropertyString = propertyString;
+			PropertyInt = propertyInt;
+		}
+
+		public String PropertyString { get; set; }
+
+		public Int32 PropertyInt { get; set; }
+	}
 }

@@ -5,7 +5,8 @@ using System.Text;
 using System.Threading.Tasks;
 using Fasterflect;
 using Jarvis.Framework.Shared.Events;
-using Jarvis.NEventStoreEx.CommonDomainEx;
+using Jarvis.Framework.Shared.Messages;
+using Jarvis.Framework.Shared.IdentitySupport;
 
 namespace Jarvis.Framework.TestHelpers
 {
@@ -22,7 +23,7 @@ namespace Jarvis.Framework.TestHelpers
             if (evt.Context == null)
                 evt.SetPropertyValue("Context", new Dictionary<String, Object>());
 
-            evt.Context.Add("user.id", issuedBy);
+            evt.Context.Add(MessagesConstants.UserId, issuedBy);
             return evt;
         }
     }

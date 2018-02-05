@@ -7,7 +7,6 @@ using Jarvis.Framework.TestHelpers;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using NUnit.Framework;
-using Jarvis.NEventStoreEx.CommonDomainEx;
 using Jarvis.Framework.Kernel.Support;
 
 namespace Jarvis.Framework.Tests.EngineTests
@@ -16,12 +15,12 @@ namespace Jarvis.Framework.Tests.EngineTests
     [Category("mongo_serialization")]
     public class BsonIdentitySerializationTests
     {
-        private SampleAggregateId _sampleAggregateId = new SampleAggregateId(1);
+        private readonly SampleAggregateId _sampleAggregateId = new SampleAggregateId(1);
 
-        const string Expected =
+		private const string Expected =
             "{ \"MessageId\" : \"fc3e5f0a-c4f0-47d5-91cf-a1c87fee600f\", \"AggregateId\" : \"SampleAggregate_1\" }";
 
-        [TestFixtureSetUp]
+        [OneTimeSetUp]
         public void TestFixtureSetUp()
         {
             try
@@ -33,18 +32,16 @@ namespace Jarvis.Framework.Tests.EngineTests
                 BsonClassMap.RegisterClassMap<DomainEvent>(map =>
                 {
                     map.AutoMap();
-                    map.MapProperty(x => x.AggregateId).SetSerializer(new TypedEventStoreIdentityBsonSerializer<EventStoreIdentity>());
+                    //map.MapProperty(x => x.AggregateId).SetSerializer(new TypedEventStoreIdentityBsonSerializer<EventStoreIdentity>());
                 });
             }
             catch (Exception ex)
             {
-
                 Console.WriteLine(ex.ToString());
                 throw;
             }
-         
         }
-           
+
         [Test]
         public void serialize_to_bson()
         {

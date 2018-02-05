@@ -7,6 +7,7 @@ namespace Jarvis.Framework.Shared.Domain.Serialization
     public class StringValueCustomBsonTypeMapper : ICustomBsonTypeMapper
     {
         private static HashSet<Type> _registrations = new HashSet<Type>();
+
         public bool TryMapToBsonValue(object value, out BsonValue bsonValue)
         {
             if (value is StringValue)

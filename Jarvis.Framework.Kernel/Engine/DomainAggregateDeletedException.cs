@@ -1,6 +1,6 @@
 ﻿using System;
-using Jarvis.NEventStoreEx.CommonDomainEx;
-using Jarvis.NEventStoreEx.CommonDomainEx.Core;
+using Jarvis.Framework.Shared.Exceptions;
+using Jarvis.Framework.Shared.IdentitySupport;
 
 namespace Jarvis.Framework.Kernel.Engine
 {

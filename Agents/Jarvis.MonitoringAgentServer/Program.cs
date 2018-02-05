@@ -10,35 +10,29 @@ using Topshelf;
 
 namespace Jarvis.MonitoringAgentServer
 {
-    public class Program
+    public static class Program
     {
-        static IWindsorContainer _container;
-        static ILogger _logger;
+        private static IWindsorContainer _container;
+        private static ILogger _logger;
         private static Bootstrapper _bootstrapper;
 
         static void Main(string[] args)
         {
             if (args.Length == 1 && (args[0] == "install" || args[0] == "uninstall"))
             {
-                var runAsSystem = "true".Equals(
-                   ConfigurationManager.AppSettings["runs-as-system"],
-                       StringComparison.OrdinalIgnoreCase);
-                var dependencies = ConfigurationManager.AppSettings["depends-on-services"] ?? "";
-
                 StartForInstallOrUninstall();
             }
             else
             {
                 StandardStart();
             }
-
         }
 
         private static void StartForInstallOrUninstall()
         {
             HostFactory.Run(x =>
             {
-                x.UseOldLog4Net("log4net.config");
+                x.UseLog4Net("log4net.config");
                 x.Service<Object>(s =>
                 {
                     s.ConstructUsing(() => new Object());
@@ -54,8 +48,6 @@ namespace Jarvis.MonitoringAgentServer
             });
         }
 
-
-
         private static void StandardStart()
         {
             if (Environment.UserInteractive)
@@ -70,7 +62,7 @@ namespace Jarvis.MonitoringAgentServer
             _container.Kernel.Resolver.AddSubResolver(new CollectionResolver(_container.Kernel, true));
             _container.Kernel.Resolver.AddSubResolver(new ArrayResolver(_container.Kernel, true));
             _container.AddFacility<LoggingFacility>(f =>
-                f.LogUsing(LoggerImplementation.ExtendedLog4net)
+                f.LogUsing(LoggerImplementation.Null)
                 .WithConfig("log4net.config"));
             _logger = _container.Resolve<ILogger>();
 
@@ -85,7 +77,7 @@ namespace Jarvis.MonitoringAgentServer
 
             HostFactory.Run(x =>
             {
-                x.UseOldLog4Net("log4net.config");
+                x.UseLog4Net("log4net.config");
                 x.Service<Bootstrapper>(s =>
                 {
                     s.ConstructUsing(name => _bootstrapper);

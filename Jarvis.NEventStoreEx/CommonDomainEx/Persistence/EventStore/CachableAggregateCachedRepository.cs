@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NStore.Aggregates;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,22 +7,25 @@ using System.Threading.Tasks;
 
 namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 {
+#pragma warning disable S3881 // "IDisposable" should be implemented correctly
+
     /// <summary>
     /// This class implement the <see cref="IAggregateCachedRepository{TAggregate}"/>
     /// interface that can be stored in cache. It does not dispose wrapped repository
     /// and let outer code to manage lifecycle of the wrapped repository to be reused.
     /// </summary>
     /// <typeparam name="TAggregate"></typeparam>
-    public class CachableAggregateCachedRepository<TAggregate> : IAggregateCachedRepository<TAggregate> where TAggregate : class, IAggregateEx
+    public class CachableAggregateCachedRepository<TAggregate> :
+#pragma warning restore S3881 // "IDisposable" should be implemented correctly
+        IAggregateCachedRepository<TAggregate> where TAggregate : class, IAggregate
     {
-        readonly IRepositoryEx _wrappedRepository;
-        readonly Action<IIdentity, IRepositoryEx> _disposeAction;
-        readonly Action<IIdentity, IRepositoryEx, IAggregateEx> _afterSaveAction;
-        readonly Action<IIdentity, IRepositoryEx> _onExceptionAction;
-        readonly TAggregate _aggregate;
+        private readonly IRepository _wrappedRepository;
+        private readonly Action<String, IRepository> _disposeAction;
+        private readonly Action<String, IRepository, IAggregate> _afterSaveAction;
+        private readonly Action<String, IRepository> _onExceptionAction;
 
         /// <summary>
-        /// 
+        /// Constructor
         /// </summary>
         /// <param name="wrappedRepository"></param>
         /// <param name="aggregate">When aggregate is not in cache this parameter is null and the 
@@ -31,27 +35,21 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
         /// <param name="onExceptionAction"></param>
         /// <param name="id"></param>
         public CachableAggregateCachedRepository(
-            IRepositoryEx wrappedRepository,
+            IRepository wrappedRepository,
             TAggregate aggregate,
-            Action<IIdentity, IRepositoryEx> disposeAction,
-            Action<IIdentity, IRepositoryEx, IAggregateEx> afterSaveAction,
-            Action<IIdentity, IRepositoryEx> onExceptionAction,
+            Action<String, IRepository> disposeAction,
+            Action<String, IRepository, IAggregate> afterSaveAction,
+            Action<String, IRepository> onExceptionAction,
             IIdentity id)
         {
             _wrappedRepository = wrappedRepository;
             _disposeAction = disposeAction;
             _afterSaveAction = afterSaveAction;
             _onExceptionAction = onExceptionAction;
-            _aggregate = aggregate ?? wrappedRepository.GetById<TAggregate>(id);
+            Aggregate = aggregate ?? wrappedRepository.GetById<TAggregate>(id.ToString()).Result;
         }
 
-        public TAggregate Aggregate
-        {
-            get
-            {
-                return _aggregate;
-            }
-        }
+        public TAggregate Aggregate { get; }
 
         /// <summary>
         /// Since the repository should be kept in cache, the dispose of this
@@ -61,19 +59,19 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
         public void Dispose()
         {
             //do not dispose the wrapped repository, it should be reused, call the callback instead
-            _disposeAction(_aggregate.Id, _wrappedRepository);
+            _disposeAction(Aggregate.Id, _wrappedRepository);
         }
 
-        public void Save(Guid commitId, Action<IDictionary<string, object>> updateHeaders)
+        public void Save(Guid commitId, Action<IHeadersAccessor> updateHeaders)
         {
             try
             {
-                _wrappedRepository.Save(_aggregate, commitId, updateHeaders);
-                _afterSaveAction(_aggregate.Id, _wrappedRepository, _aggregate);
+                _wrappedRepository.Save(Aggregate, commitId.ToString(), updateHeaders);
+                _afterSaveAction(Aggregate.Id, _wrappedRepository, Aggregate);
             }
             catch (Exception)
             {
-                _onExceptionAction(_aggregate.Id, _wrappedRepository);
+                _onExceptionAction(Aggregate.Id, _wrappedRepository);
                 throw;
             }
         }

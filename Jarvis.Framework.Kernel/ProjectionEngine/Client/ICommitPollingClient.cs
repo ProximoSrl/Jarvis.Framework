@@ -1,28 +1,23 @@
-﻿using System;
-using NEventStore;
+﻿using NStore.Core.Persistence;
+using NStore.Persistence;
+using System;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 {
     public interface ICommitPollingClient
     {
-        void StartAutomaticPolling(
+        void Configure(
             Int64 checkpointTokenFrom,
-            Int32 intervalInMilliseconds,
-            Int64 checkpointTokenSequenced,
-            Int32 bufferSize,
-            String pollerName);
+            Int32 bufferSize);
 
-        void Poll();
+        void Start();
 
-        void StartManualPolling(
-            Int64 checkpointTokenFrom,
-            Int32 intervalInMilliseconds,
-            Int32 bufferSize,
-            String pollerName);
+        void Stop(Boolean setToFaulted);
 
-        void AddConsumer(Action<ICommit> consumerAction);
+        Task PollAsync();
 
-        void StopPolling(Boolean setToFaulted);
+        void AddConsumer(Func<IChunk, Task> consumerAction);
     }
 
     public enum CommitPollingClientStatus

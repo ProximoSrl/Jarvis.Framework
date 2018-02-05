@@ -3,233 +3,299 @@ using System.Configuration;
 using System.Linq;
 using Castle.Core.Logging;
 using Jarvis.Framework.Kernel.Engine;
-using Jarvis.Framework.Kernel.Store;
-using Jarvis.NEventStoreEx.CommonDomainEx;
-using Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore;
-using MongoDB.Driver;
 using NSubstitute;
 using NUnit.Framework;
 using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Tests.Support;
-using NEventStore;
 using System.Threading.Tasks;
 using System.Threading;
+using NStore.Core.Logging;
+using NStore.Domain;
+using NStore.Core.Streams;
+using Castle.Windsor;
+using NStore.Core.Snapshots;
+using MongoDB.Driver;
+using Jarvis.Framework.Shared.Helpers;
+using NStore.Core.Persistence;
 
 namespace Jarvis.Framework.Tests.EngineTests.SagaTests
 {
-    [TestFixture]
-    public class SagaTests
-    {
-        private EventStoreFactory _factory;
-        string _connectionString;
+	[TestFixture]
+	public class SagaTests
+	{
+		private EventStoreFactory _factory;
+		private string _connectionString;
+		private WindsorContainer _container;
+		private IMongoDatabase _db;
 
-        [SetUp]
-        public void SetUp()
-        {
-            _connectionString = ConfigurationManager.ConnectionStrings["saga"].ConnectionString;
-            var db = TestHelper.CreateNew(_connectionString);
+		[OneTimeSetUp]
+		public void TestFixtureSetUp()
+		{
+			TestHelper.RegisterSerializerForFlatId<OrderId>();
+			_connectionString = ConfigurationManager.ConnectionStrings["saga"].ConnectionString;
+			var url = new MongoUrl(_connectionString);
+			var client = new MongoClient(url);
+			_db = client.GetDatabase(url.DatabaseName);
 
-            var loggerFactory = Substitute.For<ILoggerFactory>();
-            loggerFactory.Create(Arg.Any<Type>()).Returns(NullLogger.Instance);
-            _factory = new EventStoreFactory(loggerFactory);
-        }
+			var loggerFactory = Substitute.For<INStoreLoggerFactory>();
+			_factory = new EventStoreFactory(loggerFactory);
 
-        [Test]
-        public void Verify_that_saga_has_correct_number_of_uncommitted_events()
-        {
-            var orderId = new OrderId(1);
-            var sagaId = orderId;
+			_container = new WindsorContainer();
+		}
 
-            var eventStore = _factory.BuildEventStore(_connectionString);
-            var repo = new SagaEventStoreRepositoryEx(eventStore, new SagaFactory());
+		[SetUp]
+		public void Setup()
+		{
+			_db.Drop();
+		}
 
-            var saga = repo.GetById<DeliverPizzaSaga>(sagaId);
+		[Test]
+		public async Task Verify_that_saga_has_correct_number_of_uncommitted_events()
+		{
+			var orderId = new OrderId(1);
+			var sagaId = orderId;
 
-            saga.Transition(new OrderPlaced(orderId));
-            saga.Transition(new BillPrinted(orderId));
-            saga.Transition(new PaymentReceived(orderId, Guid.NewGuid()));
-            saga.Transition(new PizzaDelivered(orderId));
-            //check that uncommitted events are correctly transictioned.
-            var events = ((ISagaEx)saga).GetUncommittedEvents().ToArray();
+			var eventStore = await _factory.BuildEventStore(_connectionString).ConfigureAwait(false);
+			var streamsFactory = new StreamsFactory(eventStore);
+			var repo = new Repository(new AggregateFactoryEx(_container.Kernel), streamsFactory, new NullSnapshots());
 
-            repo.Save(saga, Guid.NewGuid(), null);
+			var saga = await repo.GetByIdAsync<DeliverPizzaSaga>(sagaId).ConfigureAwait(false);
 
-            Assert.AreEqual(4, events.Count());
-        }
+			saga.MessageReceived(new OrderPlaced(orderId));
+			saga.MessageReceived(new BillPrinted(orderId));
+			saga.MessageReceived(new PaymentReceived(orderId, Guid.NewGuid()));
+			saga.MessageReceived(new PizzaDelivered(orderId));
 
-        [Test]
-        public void Verify_that_saga_can_be_reloaded_and_have_no_uncommitted_events()
-        {
-            var orderId = new OrderId(1);
-            var sagaId = orderId;
+			//check that uncommitted events are correctly transictioned.
+			var events = ((IEventSourcedAggregate)saga).GetChangeSet();
 
-            var eventStore = _factory.BuildEventStore(_connectionString);
-            var repo = new SagaEventStoreRepositoryEx(eventStore, new SagaFactory());
+			//Verify that we can save the saga.
+			await repo.SaveAsync(saga, Guid.NewGuid().ToString(), null).ConfigureAwait(false);
 
-            var saga = repo.GetById<DeliverPizzaSaga>(sagaId);
+			Assert.AreEqual(4, events.Events.Length);
+		}
 
-            saga.Transition(new OrderPlaced(orderId));
-            saga.Transition(new BillPrinted(orderId));
-            saga.Transition(new PaymentReceived(orderId, Guid.NewGuid()));
-            saga.Transition(new PizzaDelivered(orderId));
+		[Test]
+		public async Task Verify_that_saga_can_be_reloaded_and_have_no_uncommitted_events()
+		{
+			var orderId = new OrderId(2);
+			var sagaId = orderId;
 
-            repo.Save(saga, Guid.NewGuid(), null);
+			var eventStore = await _factory.BuildEventStore(_connectionString).ConfigureAwait(false);
+			var streamsFactory = new StreamsFactory(eventStore);
+			var repo = new Repository(new AggregateFactoryEx(_container.Kernel), streamsFactory, new NullSnapshots());
 
-            var sagaReloaded = repo.GetById<DeliverPizzaSaga>(sagaId);
+			var saga = await repo.GetByIdAsync<DeliverPizzaSaga>(sagaId).ConfigureAwait(false);
 
-            Assert.That(sagaReloaded, Is.Not.Null);
-            var uncommittedevents = ((ISagaEx)saga).GetUncommittedEvents().ToArray();
-            Assert.AreEqual(0, uncommittedevents.Count());
-        }
+			saga.MessageReceived(new OrderPlaced(orderId));
+			saga.MessageReceived(new BillPrinted(orderId));
+			saga.MessageReceived(new PaymentReceived(orderId, Guid.NewGuid()));
+			saga.MessageReceived(new PizzaDelivered(orderId));
 
-        [Test]
-        public void repository_can_serialize_access_to_the_same_entity()
-        {
-            var orderId = new OrderId(1);
-            var sagaId = orderId;
+			await repo.SaveAsync(saga, Guid.NewGuid().ToString(), null).ConfigureAwait(false);
 
-            var eventStore = _factory.BuildEventStore(_connectionString);
+			var sagaReloaded = await repo.GetByIdAsync<DeliverPizzaSaga>(sagaId).ConfigureAwait(false);
 
-            using (var repo1 = new SagaEventStoreRepositoryEx(eventStore, new SagaFactory()))
-            using (var repo2 = new SagaEventStoreRepositoryEx(eventStore, new SagaFactory()))
-            {
-                var saga1 = repo1.GetById<DeliverPizzaSaga>(sagaId);
-                saga1.Transition(new OrderPlaced(orderId));
+			Assert.That(sagaReloaded, Is.Not.Null);
+			var events = ((IEventSourcedAggregate)saga).GetChangeSet();
+			Assert.AreEqual(0, events.Events.Length);
+		}
 
-                //now create another thread that loads and change the same entity
-                var task = Task<Boolean>.Factory.StartNew(() =>
-                {
-                    var saga2 = repo2.GetById<DeliverPizzaSaga>(sagaId);
-                    saga2.Transition(new OrderPlaced(orderId));
-                    repo2.Save(saga2, Guid.NewGuid(), null);
-                    return true;
-                });
+		[Test]
+		public async Task repository_does_not_serialize_access_to_the_same_entity()
+		{
+			var orderId = new OrderId(3);
+			var sagaId = orderId;
 
-                Thread.Sleep(100); //Let be sure the other task is started doing something.
-                repo1.Save(saga1, Guid.NewGuid(), null);
-                Assert.IsTrue(task.Result); //inner should not throw.
-            }
-        }
+			var eventStore = await _factory.BuildEventStore(_connectionString).ConfigureAwait(false);
+			var streamsFactory = new StreamsFactory(eventStore);
 
+			var repo1 = new Repository(new AggregateFactoryEx(_container.Kernel), streamsFactory, new NullSnapshots());
+			var repo2 = new Repository(new AggregateFactoryEx(_container.Kernel), streamsFactory, new NullSnapshots());
 
-        [Test]
-        public void listener_tests()
-        {
-            var listener = new DeliverPizzaSagaListener();
-            var orderId = new OrderId(1);
+			var saga1 = await repo1.GetByIdAsync<DeliverPizzaSaga>(sagaId).ConfigureAwait(false);
+			saga1.MessageReceived(new OrderPlaced(orderId));
 
-            var placed = new OrderPlaced(orderId);
-            var printed = new BillPrinted(orderId);
-            var received = new PaymentReceived(orderId, Guid.NewGuid());
-            var delivered = new PizzaDelivered(orderId);
-            var prefix = listener.Prefix;
-            Assert.AreEqual(prefix+(string)orderId, listener.GetCorrelationId(placed));
-            Assert.AreEqual(prefix + (string)orderId, listener.GetCorrelationId(printed));
-            Assert.AreEqual(prefix + (string)orderId, listener.GetCorrelationId(received));
-            Assert.AreEqual(prefix + (string)orderId, listener.GetCorrelationId(delivered));
-        }
+			//now create another thread that loads and change the same entity
+			var saga2 = repo2.GetByIdAsync<DeliverPizzaSaga>(sagaId).Result;
+			saga2.MessageReceived(new OrderPlaced(orderId));
+			repo2.SaveAsync(saga2, Guid.NewGuid().ToString(), null).Wait();
 
+			try
+			{
+				await repo1.SaveAsync(saga1, Guid.NewGuid().ToString(), null).ConfigureAwait(false);
+				Assert.Fail("this is supposed to throw due to concurrency exception");
+			}
+			catch (Exception)
+			{
+				//Good we are expecting to throw, 
+			}
+		}
 
-        [Test]
-        public void listener_tests_when_id_has_prefix()
-        {
-            var listener = new DeliverPizzaSagaListener2();
-            var orderId = new OrderId(1);
+		[Test]
+		public void listener_tests()
+		{
+			var listener = new DeliverPizzaSagaListener();
+			var orderId = new OrderId(4);
 
-            var placed = new OrderPlaced(orderId);
-            var printed = new BillPrinted(orderId);
-            var received = new PaymentReceived(orderId, Guid.NewGuid());
-            var delivered = new PizzaDelivered(orderId);
+			var placed = new OrderPlaced(orderId);
+			var printed = new BillPrinted(orderId);
+			var received = new PaymentReceived(orderId, Guid.NewGuid());
+			var delivered = new PizzaDelivered(orderId);
+			var prefix = listener.Prefix;
+			Assert.AreEqual(prefix + (string)orderId, listener.GetCorrelationId(placed));
+			Assert.AreEqual(prefix + (string)orderId, listener.GetCorrelationId(printed));
+			Assert.AreEqual(prefix + (string)orderId, listener.GetCorrelationId(received));
+			Assert.AreEqual(prefix + (string)orderId, listener.GetCorrelationId(delivered));
+		}
 
-            Assert.AreEqual("DeliverPizzaSaga2_" + (string)orderId, listener.GetCorrelationId(placed));
-            Assert.AreEqual("DeliverPizzaSaga2_" + (string)orderId, listener.GetCorrelationId(printed));
-            Assert.AreEqual("DeliverPizzaSaga2_" + (string)orderId, listener.GetCorrelationId(received));
-            Assert.AreEqual("DeliverPizzaSaga2_" + (string)orderId, listener.GetCorrelationId(delivered));
-        }
+		[Test]
+		public void listener_tests_when_id_has_prefix()
+		{
+			var listener = new DeliverPizzaSagaListener2();
+			var orderId = new OrderId(5);
 
-        
-    }
+			var placed = new OrderPlaced(orderId);
+			var printed = new BillPrinted(orderId);
+			var received = new PaymentReceived(orderId, Guid.NewGuid());
+			var delivered = new PizzaDelivered(orderId);
 
-    [TestFixture]
-    public class SagaTestsBase
-    {
-        private EventStoreFactory _factory;
-        string _connectionString;
-        protected IStoreEvents _eventStore;
-        SagaEventStoreRepositoryEx _repo;
-        DeliverPizzaSagaListener2 _listener;
+			Assert.AreEqual("DeliverPizzaSaga2_" + (string)orderId, listener.GetCorrelationId(placed));
+			Assert.AreEqual("DeliverPizzaSaga2_" + (string)orderId, listener.GetCorrelationId(printed));
+			Assert.AreEqual("DeliverPizzaSaga2_" + (string)orderId, listener.GetCorrelationId(received));
+			Assert.AreEqual("DeliverPizzaSaga2_" + (string)orderId, listener.GetCorrelationId(delivered));
+		}
+	}
 
-        [SetUp]
-        public void SetUp()
-        {
-            _connectionString = ConfigurationManager.ConnectionStrings["saga"].ConnectionString;
-            var db = TestHelper.CreateNew(_connectionString);
+	[TestFixture]
+	public class SagaTestsBase
+	{
+		private EventStoreFactory _factory;
+		private string _connectionString;
+		private WindsorContainer _container;
+		private IMongoDatabase _db;
+		private DeliverPizzaSagaListener2 _listener;
+		private Repository _repo;
+		private IPersistence _persistence;
 
-            var loggerFactory = Substitute.For<ILoggerFactory>();
-            loggerFactory.Create(Arg.Any<Type>()).Returns(NullLogger.Instance);
-            _factory = new EventStoreFactory(loggerFactory);
+		[OneTimeSetUp]
+		public void TestFixtureSetUp()
+		{
+			TestHelper.RegisterSerializerForFlatId<OrderId>();
+			_connectionString = ConfigurationManager.ConnectionStrings["saga"].ConnectionString;
+			var url = new MongoUrl(_connectionString);
+			var client = new MongoClient(url);
+			_db = client.GetDatabase(url.DatabaseName);
 
-            _eventStore = _factory.BuildEventStore(_connectionString);
-            _repo = new SagaEventStoreRepositoryEx(_eventStore, new SagaFactory());
-            _listener =  new DeliverPizzaSagaListener2(); 
-        }
+			var loggerFactory = Substitute.For<INStoreLoggerFactory>();
+			_factory = new EventStoreFactory(loggerFactory);
 
+			_container = new WindsorContainer();
+			_listener = new DeliverPizzaSagaListener2();
+		}
 
-        protected void ApplyEventOnSaga(DomainEvent evt)
-        {
-            var id = _listener.GetCorrelationId(evt);
-            var saga = _repo.GetById<DeliverPizzaSaga2>(id);
-            saga.Transition(evt);
-            _repo.Save(saga, Guid.NewGuid(), null);
-        }
+		[SetUp]
+		public async Task SetUp()
+		{
+			_db.Drop();
+			_persistence = await _factory.BuildEventStore(_connectionString).ConfigureAwait(false);
+			var streamsFactory = new StreamsFactory(_persistence);
+			_repo = new Repository(new AggregateFactoryEx(_container.Kernel), streamsFactory, new NullSnapshots());
+		}
 
-        [Test]
-        public void Verify_saga_reloaded_status()
-        {
-            var orderId = new OrderId(42);
-            var evt = new OrderPlaced(orderId);
+		protected async Task ApplyEventOnSaga(DomainEvent evt)
+		{
+			var id = _listener.GetCorrelationId(evt);
+			var saga = await _repo.GetByIdAsync<DeliverPizzaSaga2>(id).ConfigureAwait(false);
+			saga.MessageReceived(evt);
+			await _repo.SaveAsync(saga, Guid.NewGuid().ToString(), null).ConfigureAwait(false);
+		}
 
-            ApplyEventOnSaga(evt);
+		[Test]
+		public async Task Verify_saga_reloaded_status()
+		{
+			var orderId = new OrderId(100);
+			var evt = new OrderPlaced(orderId);
 
-            var sagaId = _listener.GetCorrelationId(evt);
-            var sagaReloaded = _repo.GetById<DeliverPizzaSaga2>(sagaId);
-            Assert.That(sagaReloaded.PizzaActualStatus, Is.EqualTo("Order Placed"));
-            Assert.That(sagaReloaded.Id, Is.EqualTo("DeliverPizzaSaga2_Order_42"));
-        }
+			await ApplyEventOnSaga(evt).ConfigureAwait(false);
 
-        [Test]
-        public void Verify_saga_reloaded_status_after_two_events()
-        {
-            var orderId = new OrderId(42);
-            var evt = new OrderPlaced(orderId);
+			var sagaId = _listener.GetCorrelationId(evt);
+			var sagaReloaded = await _repo.GetByIdAsync<DeliverPizzaSaga2>(sagaId).ConfigureAwait(false);
+			Assert.That(sagaReloaded.AccessState.PizzaActualStatus, Is.EqualTo("Order Placed"));
+			Assert.That(sagaReloaded.Id, Is.EqualTo("DeliverPizzaSaga2_Order_100"));
+		}
 
-            ApplyEventOnSaga(evt);
+		[Test]
+		public async Task Verify_saga_reloaded_status_after_two_events()
+		{
+			var orderId = new OrderId(101);
+			var evt = new OrderPlaced(orderId);
 
-            var evt2 = new BillPrinted(orderId);
-            ApplyEventOnSaga(evt2);
-            
-            var sagaId = _listener.GetCorrelationId(evt);
-            var sagaReloaded = _repo.GetById<DeliverPizzaSaga2>(sagaId);
-            Assert.That(sagaReloaded.PizzaActualStatus, Is.EqualTo("Bill printed"));
-        }
+			await ApplyEventOnSaga(evt).ConfigureAwait(false);
 
-        [Test]
-        public void Verify_saga_does_not_mix_events()
-        {
-            var orderId = new OrderId(42);
-            var evt = new OrderPlaced(orderId);
+			var evt2 = new BillPrinted(orderId);
+			await ApplyEventOnSaga(evt2).ConfigureAwait(false);
 
-            ApplyEventOnSaga(evt);
+			var sagaId = _listener.GetCorrelationId(evt);
+			var sagaReloaded = await _repo.GetByIdAsync<DeliverPizzaSaga2>(sagaId).ConfigureAwait(false);
+			Assert.That(sagaReloaded.AccessState.PizzaActualStatus, Is.EqualTo("Bill printed"));
+		}
 
-            var orderId2 = new OrderId(41);
-            var evt2 = new BillPrinted(orderId2);
-            ApplyEventOnSaga(evt2);
+		[Test]
+		public async Task Verify_saga_does_not_mix_events()
+		{
+			var orderId = new OrderId(102);
+			var evt = new OrderPlaced(orderId);
 
-            var sagaId = _listener.GetCorrelationId(evt);
-            var sagaReloaded = _repo.GetById<DeliverPizzaSaga2>(sagaId);
-            Assert.That(sagaReloaded.PizzaActualStatus, Is.EqualTo("Order Placed"));
-        }
-    }
+			await ApplyEventOnSaga(evt).ConfigureAwait(false);
 
-    
+			var orderId2 = new OrderId(103);
+			var evt2 = new BillPrinted(orderId2);
+			await ApplyEventOnSaga(evt2).ConfigureAwait(false);
+
+			var sagaId = _listener.GetCorrelationId(evt);
+			var sagaReloaded = await _repo.GetByIdAsync<DeliverPizzaSaga2>(sagaId).ConfigureAwait(false);
+			Assert.That(sagaReloaded.AccessState.PizzaActualStatus, Is.EqualTo("Order Placed"));
+		}
+
+		[Test]
+		public async Task Verify_emittingCommand()
+		{
+			var orderId = new OrderId(103);
+			var evt = new OrderPlaced(orderId);
+
+			await ApplyEventOnSaga(evt).ConfigureAwait(false);
+
+			var sagaId = _listener.GetCorrelationId(evt);
+			var changesets = await _persistence.EventStoreReadChangeset(sagaId).ConfigureAwait(false);
+			var changeset = changesets.Single();
+			Assert.That(changeset.Events.Length, Is.EqualTo(1));
+			var @event = changeset.Events.Single();
+			Assert.That(@event, Is.InstanceOf<MessageReaction>(), "We are expecting a messagereaction as payload");
+			MessageReaction reaction = (MessageReaction)@event;
+			Assert.That(reaction.MessagesOut.Length, Is.EqualTo(1), "We are expeting a messageout when order is placed");
+		}
+
+		[Test]
+		public async Task Verify_emittingCommand_on_reload()
+		{
+			var orderId = new OrderId(101);
+			var evt = new OrderPlaced(orderId);
+
+			await ApplyEventOnSaga(evt).ConfigureAwait(false);
+
+			var evt2 = new BillPrinted(orderId);
+			await ApplyEventOnSaga(evt2).ConfigureAwait(false);
+
+			var sagaId = _listener.GetCorrelationId(evt);
+
+			var changesets = await _persistence.EventStoreReadChangeset(sagaId).ConfigureAwait(false);
+			var changeset = changesets.Last();
+			Assert.That(changeset.Events.Length, Is.EqualTo(1), "Single event expected");
+			var @event = changeset.Events.Single();
+			Assert.That(@event, Is.InstanceOf<MessageReaction>(), "We are expecting a messagereaction as payload");
+			MessageReaction reaction = (MessageReaction)@event;
+			Assert.That(reaction.MessagesOut.Length, Is.EqualTo(0), "Bill printed does not have out events");
+		}
+	}
 }

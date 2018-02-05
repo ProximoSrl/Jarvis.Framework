@@ -3,19 +3,14 @@ using Castle.Facilities.Logging;
 using Castle.MicroKernel.Registration;
 using Castle.MicroKernel.Resolvers.SpecializedResolvers;
 using Castle.Windsor;
-using Castle.Windsor.Configuration.Interpreters;
 using Jarvis.MonitoringAgent.Support;
 using System;
-using System.Collections.Generic;
 using System.Configuration;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Topshelf;
 
 namespace Jarvis.MonitoringAgent
 {
-    public class Program
+	public static class Program
     {
         static IWindsorContainer _container;
         static ILogger _logger;
@@ -43,7 +38,7 @@ namespace Jarvis.MonitoringAgent
         {
             HostFactory.Run(x =>
             {
-                x.UseOldLog4Net("log4net.config");
+                x.UseLog4Net("log4net.config");
                 x.Service<Object>(s =>
                 {
                     s.ConstructUsing(() => new Object());
@@ -75,7 +70,7 @@ namespace Jarvis.MonitoringAgent
             _container.Kernel.Resolver.AddSubResolver(new CollectionResolver(_container.Kernel, true));
             _container.Kernel.Resolver.AddSubResolver(new ArrayResolver(_container.Kernel, true));
             _container.AddFacility<LoggingFacility>(f =>
-                f.LogUsing(LoggerImplementation.ExtendedLog4net)
+                f.LogUsing(LoggerImplementation.Null)
                 .WithConfig("log4net.config"));
             _logger = _container.Resolve<ILogger>();
 
@@ -90,7 +85,7 @@ namespace Jarvis.MonitoringAgent
 
             HostFactory.Run(x =>
             {
-                x.UseOldLog4Net("log4net.config");
+                x.UseLog4Net("log4net.config");
                 x.Service<Bootstrapper>(s =>
                 {
                     s.ConstructUsing(name => _bootstrapper);

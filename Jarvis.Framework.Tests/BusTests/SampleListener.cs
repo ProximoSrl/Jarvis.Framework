@@ -1,10 +1,11 @@
 using System;
 using Jarvis.Framework.Kernel.Engine;
 using Rebus;
+using Jarvis.Framework.Tests.BusTests.MessageFolder;
 
 namespace Jarvis.Framework.Tests.BusTests
 {
-    public class SampleListener : AbstractProcessManagerListener<SampleProcessManager>
+    public class SampleListener : AbstractProcessManagerListener<SampleProcessManager, SampleProcessManagerState>
     {
         public SampleListener()
         {
@@ -16,5 +17,4 @@ namespace Jarvis.Framework.Tests.BusTests
             get { return "SampleListener_"; }
         }
     }
-
 }

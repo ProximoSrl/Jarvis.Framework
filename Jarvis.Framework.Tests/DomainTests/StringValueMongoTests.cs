@@ -97,7 +97,7 @@ namespace Jarvis.Framework.Tests.DomainTests
     [Explicit]
     public class StringValueMongoTestsFlatMapper
     {
-        [TestFixtureSetUp]
+        [OneTimeSetUp]
         public void TestFixtureSetUp()
         {
             MongoFlatMapper.EnableFlatMapping(true);
@@ -149,7 +149,5 @@ namespace Jarvis.Framework.Tests.DomainTests
             var instance = BsonSerializer.Deserialize<ClassWithTypedStringValueLowerCaseWithoutAttribute>("{ Value: null}");
             Assert.IsNull(instance.Value);
         }
-
-
     }
 }

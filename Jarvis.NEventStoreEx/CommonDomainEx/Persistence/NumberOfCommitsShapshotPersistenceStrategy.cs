@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NStore.Aggregates;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -18,7 +19,7 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence
             _commitsThreshold = commitsThreshold;
         }
 
-        public bool ShouldSnapshot(IAggregateEx aggregate, int numberOfEventsSaved)
+        public bool ShouldSnapshot(IAggregate aggregate, int numberOfEventsSaved)
         {
             //we need to save the aggregate if one of the event number are a multiple of the commit threshold.
             var actualVersion = aggregate.Version;

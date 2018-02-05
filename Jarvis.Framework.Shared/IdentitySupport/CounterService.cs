@@ -1,12 +1,13 @@
 ﻿using System;
+using Jarvis.Framework.Shared.Exceptions;
 using Jarvis.Framework.Shared.MultitenantSupport;
 using MongoDB.Driver;
 
 namespace Jarvis.Framework.Shared.IdentitySupport
 {
-    public class CounterService : ICounterService
+    public class CounterService : IReservableCounterService
     {
-        readonly IMongoCollection<IdentityCounter> _counters;
+        protected readonly IMongoCollection<IdentityCounter> _counters;
 
         public class IdentityCounter
         {
@@ -45,11 +46,24 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                 }
             }
 
-            throw new ApplicationException("Unable to generate next number for serie " + serie);
+            throw new JarvisFrameworkEngineException("Unable to generate next number for serie " + serie);
+        }
+
+        public ReservationSlot Reserve(string serie, int amount)
+        {
+            var counter = _counters.FindOneAndUpdate(
+                                   Builders<IdentityCounter>.Filter.Eq(x => x.Id, serie),
+                                   Builders<IdentityCounter>.Update.Inc(x => x.Last, amount),
+                                   new FindOneAndUpdateOptions<IdentityCounter, IdentityCounter>()
+                                   {
+                                       ReturnDocument = ReturnDocument.After,
+                                       IsUpsert = true,
+                                   });
+            return new ReservationSlot(counter.Last - amount + 1, counter.Last);
         }
     }
 
-    public class InMemoryCounterService : ICounterService
+    public class InMemoryCounterService : IReservableCounterService
     {
         long _last = 0;
 
@@ -57,11 +71,19 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         {
             return ++_last;
         }
+
+        public ReservationSlot Reserve(string serie, int amount)
+        {
+            var low = _last + 1;
+            var high = low + amount;
+            _last = high + 1;
+            return new ReservationSlot(low, high);
+        }
     }
 
     public class MultitenantCounterService : ICounterService
     {
-        readonly ITenantAccessor _tenantAccessor;
+		private readonly ITenantAccessor _tenantAccessor;
 
         public MultitenantCounterService(ITenantAccessor tenantAccessor)
         {

@@ -28,14 +28,11 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
         private IMongoCollection<BsonDocument> _mappingFlatCollection;
         private IdentityManager _identityManager;
 
-        [TestFixtureSetUp]
+        [OneTimeSetUp]
         public void TestFixtureSetup()
         {
-
             TestHelper.RegisterSerializerForFlatId<TestId>();
-
             TestHelper.RegisterSerializerForFlatId<TestFlatId>();
-
         }
 
         [SetUp]

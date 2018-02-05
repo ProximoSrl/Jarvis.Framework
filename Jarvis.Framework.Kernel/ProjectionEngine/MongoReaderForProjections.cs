@@ -3,6 +3,8 @@ using System.Linq;
 using Jarvis.Framework.Shared.ReadModel;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using System.Threading.Tasks;
+using MongoDB.Driver.Linq;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
 {
@@ -24,14 +26,23 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             get { return _storage.All.OrderBy(x=>x.Id); }
         }
 
+        public Task<TModel> FindOneByIdAsync(TKey id)
+        {
+            return _storage.FindOneByIdAsync(id);
+        }
+
         public TModel FindOneById(TKey id)
         {
             return _storage.FindOneById(id);
         }
 
-
         public IMongoCollection<TModel> Collection {
             get { return _storage.Collection;  }
         }
-    }
+
+		public IMongoQueryable<TModel> MongoQueryable
+		{
+			get { return _storage.Collection.AsQueryable(); }
+		}
+	}
 }

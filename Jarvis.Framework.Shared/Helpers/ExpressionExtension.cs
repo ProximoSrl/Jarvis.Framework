@@ -1,14 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Fasterflect;
 using System.Linq.Expressions;
 
 namespace Jarvis.Framework.Shared.Helpers
 {
-    public static class ExpressionExtensions
+	public static class ExpressionExtensions
     {
         public static String GetMemberName<T>(this Expression<Func<T>> source)
         {
@@ -51,6 +49,9 @@ namespace Jarvis.Framework.Shared.Helpers
 
         private static MemberExpression GetMemberExpression<T, TProperty>(Expression<Func<T, TProperty>> source)
         {
+            if (source == null)
+                throw new ArgumentNullException(nameof(source));
+
             var expression = source.Body as MemberExpression;
             if (expression == null)
             {
@@ -63,7 +64,7 @@ namespace Jarvis.Framework.Shared.Helpers
             return expression;
         }
 
-        public static void SetPropertyValue<T, TProperty>(this T obj, Expression<Func<T, TProperty>> source, Object value) 
+        public static void SetPropertyValue<T, TProperty>(this T obj, Expression<Func<T, TProperty>> source, Object value)
         {
             obj.SetPropertyValue(GetMemberName(source), value);
         }

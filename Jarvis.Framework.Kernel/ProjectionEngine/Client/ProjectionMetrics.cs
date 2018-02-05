@@ -86,7 +86,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             _meters = new Dictionary<string, Meter>((int)(projections.Count() * 1.3));
             foreach (var projection in projections)
             {
-                _meters.Add(projection.GetCommonName(), new Meter());
+                _meters.Add(projection.Info.CommonName, new Meter());
             }
         }
 

@@ -9,31 +9,6 @@ using Jarvis.NEventStoreEx.Support;
 
 namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 {
-    public static class SnapshotsSettings
-    {
-        static readonly HashSet<Type> SnapshotOptOut = new HashSet<Type>();
-
-
-        static SnapshotsSettings()
-        {
-        }
-
-        public static void OptOut(Type type)
-        {
-            SnapshotOptOut.Add(type);
-        }
-
-        public static void ClearOptOut()
-        {
-            SnapshotOptOut.Clear();
-        }
-
-        public static bool HasOptedOut(Type type)
-        {
-            return SnapshotOptOut.Contains(type);
-        }
-    }
-
     public class RepositoryEx : AbstractRepository, IRepositoryEx
     {
 
@@ -115,5 +90,11 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 
             return SnapshotManager.Load(id.AsString(), version, typeof(TAggregate));
         }
-    }
+
+		protected override void SnapshotDischarded(IAggregateEx aggregate, ISnapshot snapshot)
+		{
+			base.SnapshotDischarded(aggregate, snapshot);
+			SnapshotManager.Clear(aggregate.Id.AsString(), aggregate.GetType());
+		}
+	}
 }

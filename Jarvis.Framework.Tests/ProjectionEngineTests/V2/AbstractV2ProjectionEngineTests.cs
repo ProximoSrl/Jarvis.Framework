@@ -2,18 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Castle.Core.Logging;
-using NEventStore.Domain.Core;
-using Jarvis.Framework.Kernel.Engine;
 using Jarvis.Framework.Kernel.Events;
 using Jarvis.Framework.Kernel.ProjectionEngine;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 using Jarvis.Framework.Shared.IdentitySupport;
 using Jarvis.Framework.Shared.MultitenantSupport;
 using Jarvis.Framework.Shared.ReadModel;
-using Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore;
 using MongoDB.Driver;
-using NEventStore;
-using NEventStore.Persistence;
 using NSubstitute;
 using NUnit.Framework;
 using Jarvis.Framework.Shared.Helpers;
@@ -22,53 +17,76 @@ using Castle.Facilities.TypedFactory;
 using Castle.MicroKernel.Registration;
 using Jarvis.Framework.Tests.Support;
 using Jarvis.Framework.Tests.EngineTests;
+using System.Threading.Tasks;
+using Jarvis.Framework.Kernel.Engine;
+using System.Threading;
+using Jarvis.Framework.Shared.Logging;
+using Castle.Facilities.Logging;
+using NStore.Domain;
+using NStore.Core.Logging;
+using NStore.Core.Streams;
+using NStore.Core.Persistence;
+using NStore.Persistence.Mongo;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
-
-    public abstract class AbstractV2ProjectionEngineTests
+	public abstract class AbstractV2ProjectionEngineTests
     {
+        private string _eventStoreConnectionString;
+        private IdentityManager _identityConverter;
+
         protected ProjectionEngine Engine;
-        string _eventStoreConnectionString;
-        IdentityManager _identityConverter;
-        protected RepositoryEx Repository;
-        protected IStoreEvents _eventStore;
+        protected Repository Repository;
+        protected IPersistence Persistence;
         protected IMongoDatabase Database;
-        RebuildContext _rebuildContext;
+
         protected MongoStorageFactory StorageFactory;
         protected IMongoCollection<Checkpoint> _checkpoints;
         protected ConcurrentCheckpointTracker _tracker;
-        protected ConcurrentCheckpointStatusChecker _statusChecker;
-		protected WindsorContainer _container;
+        protected MongoDirectConcurrentCheckpointStatusChecker _statusChecker;
+        protected WindsorContainer _container;
 
-		protected ICommitPollingClientFactory _pollingClientFactory;
-		public AbstractV2ProjectionEngineTests(String pollingClientVersion = "1")
+        protected ICommitPollingClientFactory _pollingClientFactory;
+
+        protected AbstractV2ProjectionEngineTests(String pollingClientVersion = "1")
         {
-			TestHelper.RegisterSerializerForFlatId<SampleAggregateId>();
-			_container = new WindsorContainer();
-			_container.AddFacility<TypedFactoryFacility>();
-			_container.Register(
-				Component
-					.For<ICommitPollingClient>()
-					.ImplementedBy<CommitPollingClient2>()
-					.LifestyleTransient(),
-				Component
-					.For<ICommitPollingClientFactory>()
-					.AsFactory(),
-				Component
-					.For<ICommitEnhancer>()
-					.UsingFactoryMethod(() => new CommitEnhancer(_identityConverter)),
-				Component
-					.For<ILogger>()
-					.Instance(NullLogger.Instance));
+            TestHelper.RegisterSerializerForFlatId<SampleAggregateId>();
+            _container = new WindsorContainer();
+            _container.AddFacility<TypedFactoryFacility>();
 
-			switch (pollingClientVersion)
+            _container.AddFacility<LoggingFacility>(f =>
+                f.LogUsing(LoggerImplementation.Null));
+
+            _container.Resolve<ILoggerFactory>();
+
+            _container.Register(
+                Component
+                    .For<ICommitPollingClient>()
+                    .ImplementedBy<CommitPollingClient2>()
+                    .LifestyleTransient(),
+                Component
+                    .For<ICommitPollingClientFactory>()
+                    .AsFactory(),
+                Component
+                    .For<ICommitEnhancer>()
+                    .UsingFactoryMethod(() => new CommitEnhancer(_identityConverter)),
+                Component
+                    .For<INStoreLoggerFactory>()
+                    .ImplementedBy< NStoreCastleLoggerFactory >(),
+				Component
+					.For< ILoggerThreadContextManager >()
+					.ImplementedBy<NullLoggerThreadContextManager>(),
+                Component
+                    .For<ILogger>()
+                    .Instance(NullLogger.Instance));
+
+            switch (pollingClientVersion)
             {
                 case "1":
                     throw new NotSupportedException("Version 1 of projection engine was removed due to migration to NES6");
 
                 case "2":
-					_pollingClientFactory = _container.Resolve<ICommitPollingClientFactory>();
+                    _pollingClientFactory = _container.Resolve<ICommitPollingClientFactory>();
                     break;
 
                 default:
@@ -76,26 +94,29 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             }
         }
 
-        [TestFixtureSetUp]
-        public virtual void TestFixtureSetUp()
+        [OneTimeSetUp]
+        public virtual void OneTimeSetUp()
         {
             _eventStoreConnectionString = GetConnectionString();
 
             DropDb();
+            TestHelper.ClearAllQueue("cqrs.rebus.test", "cqrs.rebus.errors");
 
             _identityConverter = new IdentityManager(new CounterService(Database));
             RegisterIdentities(_identityConverter);
+#pragma warning disable S2696 // Instance members should not write to "static" fields, this is a trick on test to customize collection names.
             CollectionNames.Customize = name => "rm." + name;
+#pragma warning restore S2696 // Instance members should not write to "static" fields
 
             ConfigureEventStore();
-            ConfigureProjectionEngine();
+            ConfigureProjectionEngineAsync().Wait();
         }
 
         protected abstract void RegisterIdentities(IdentityManager identityConverter);
 
         protected abstract string GetConnectionString();
 
-        void DropDb()
+        private void DropDb()
         {
             var url = new MongoUrl(_eventStoreConnectionString);
             var client = new MongoClient(url);
@@ -104,39 +125,30 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             client.DropDatabase(url.DatabaseName);
         }
 
-        [TestFixtureTearDown]
-        public virtual void TestFixtureTearDown()
+        [OneTimeTearDown]
+        public virtual void OneTimeTearDown()
         {
             Engine.Stop();
-            _eventStore.Dispose();
+#pragma warning disable S2696 // Instance members should not write to "static" fields
             CollectionNames.Customize = name => name;
+#pragma warning restore S2696 // Instance members should not write to "static" fields
         }
 
         protected void ConfigureEventStore()
         {
-            var loggerFactory = Substitute.For<ILoggerFactory>();
-            loggerFactory.Create(Arg.Any<Type>()).Returns(NullLogger.Instance);
+            var loggerFactory = Substitute.For<INStoreLoggerFactory>();
+            loggerFactory.CreateLogger(Arg.Any<String>()).Returns(NStoreNullLogger.Instance);
             var factory = new EventStoreFactory(loggerFactory);
-            _eventStore = factory.BuildEventStore(_eventStoreConnectionString);
-            Repository = new RepositoryEx(
-                _eventStore,
-                new AggregateFactory(),
-                new ConflictDetector(),
-                _identityConverter,
-                NSubstitute.Substitute.For<NEventStore.Logging.ILog>()
-                );
+            Persistence = factory.BuildEventStore(_eventStoreConnectionString).Result;
+            Repository = new Repository(new AggregateFactoryEx(null), new StreamsFactory(Persistence));
         }
 
-
-        protected void ConfigureProjectionEngine(Boolean dropCheckpoints = true)
+        protected async Task ConfigureProjectionEngineAsync(Boolean dropCheckpoints = true)
         {
-            if (Engine != null)
-            {
-                Engine.Stop();
-            }
+            Engine?.Stop();
             if (dropCheckpoints) _checkpoints.Drop();
             _tracker = new ConcurrentCheckpointTracker(Database);
-            _statusChecker = new ConcurrentCheckpointStatusChecker(Database);
+            _statusChecker = new MongoDirectConcurrentCheckpointStatusChecker(Database);
 
             var tenantId = new TenantId("engine");
 
@@ -153,21 +165,22 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 
             RebuildSettings.Init(OnShouldRebuild(), OnShouldUseNitro());
 
-            _rebuildContext = new RebuildContext(RebuildSettings.NitroMode);
-            StorageFactory = new MongoStorageFactory(Database, _rebuildContext);
-          
-            Engine = new ProjectionEngine(
-				_pollingClientFactory,
-                _tracker,
+            var rebuildContext = new RebuildContext(RebuildSettings.NitroMode);
+            StorageFactory = new MongoStorageFactory(Database, rebuildContext);
+
+			Engine = new ProjectionEngine(
+                _pollingClientFactory,
+				Persistence,
+				_tracker,
                 BuildProjections().ToArray(),
                 new NullHouseKeeper(),
-                _rebuildContext,
                 new NullNotifyCommitHandled(),
-                config
-                );
+                config,
+                NullLogger.Instance,
+				NullLoggerThreadContextManager.Instance);
             Engine.LoggerFactory = Substitute.For<ILoggerFactory>();
             Engine.LoggerFactory.Create(Arg.Any<Type>()).Returns(NullLogger.Instance);
-            OnStartPolling();
+            await OnStartPolling().ConfigureAwait(false);
         }
 
         protected virtual bool OnShouldUseNitro()
@@ -185,11 +198,16 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             return this.GetType().Name;
         }
 
-        protected virtual void OnStartPolling()
+        protected virtual Task OnStartPolling()
         {
-            Engine.StartWithManualPoll(false);
+            return Engine.StartWithManualPollAsync(false);
         }
 
         protected abstract IEnumerable<IProjection> BuildProjections();
+
+        protected Task<Int64> GetLastPositionAsync()
+        {
+            return Persistence.ReadLastPositionAsync(CancellationToken.None);
+        }
     }
 }

@@ -8,14 +8,12 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
 using NUnit.Framework;
-using Jarvis.NEventStoreEx.CommonDomainEx;
 using Jarvis.Framework.Kernel.Engine;
 using System.Collections.Generic;
 
-
 namespace Jarvis.Framework.Tests.DomainTests
 {
-    [TestFixture]
+	[TestFixture]
     [Category("mongo_serialization")]
     public class DomainEventIdentityBsonSerializationTests
     {
@@ -54,7 +52,7 @@ namespace Jarvis.Framework.Tests.DomainTests
             BsonClassMap.RegisterClassMap<DomainEvent>(map =>
             {
                 map.AutoMap();
-                map.MapProperty(x => x.AggregateId).SetSerializer(new TypedEventStoreIdentityBsonSerializer<EventStoreIdentity>());
+                //map.MapProperty(x => x.AggregateId).SetSerializer(new TypedEventStoreIdentityBsonSerializer<EventStoreIdentity>());
             });
         }
 
@@ -86,7 +84,7 @@ namespace Jarvis.Framework.Tests.DomainTests
             var json = "{ \"MessageId\" : \"cfbb68da-b598-417c-84c7-e951e8a36b8e\", \"AggregateId\" : \"Sample_1\", \"Value\" : \"this is a test\" }";
             var e = BsonSerializer.Deserialize<SampleEvent>(json);
 
-            Assert.AreEqual("Sample_1", e.AggregateId.FullyQualifiedId);
+            Assert.AreEqual(new SampleId("Sample_1"), e.AggregateId);
         }
     }
 
@@ -143,7 +141,7 @@ namespace Jarvis.Framework.Tests.DomainTests
             public EventStoreIdentity Value { get; set; }
         }
 
-        public class StateWithIdentity : AggregateState
+        public class StateWithIdentity : JarvisAggregateState
         {
             public SampleId Value { get; set; }
         }
@@ -161,7 +159,7 @@ namespace Jarvis.Framework.Tests.DomainTests
         }
 
 
-        [TestFixtureSetUp]
+        [OneTimeSetUp]
         public void SetUp()
         {
             var identityConverter = new IdentityManager(new InMemoryCounterService());
@@ -173,7 +171,7 @@ namespace Jarvis.Framework.Tests.DomainTests
             BsonSerializer.RegisterSerializationProvider(new StringValueSerializationProvider());
         }
 
-        [TestFixtureTearDown]
+        [OneTimeTearDown]
         public void TestFixtureTearDown()
         {
             MongoFlatIdSerializerHelper.IdentityConverter = null;
@@ -256,18 +254,19 @@ namespace Jarvis.Framework.Tests.DomainTests
             Assert.AreEqual("{ \"Value\" : null }", json);
         }
 
-        [Test]
-        public void should_serialize_flat_with_aggregateSnapshot()
-        {
-            var instance = new AggregateSnapshot<StateWithIdentity>()
-            {
-                Id = new SampleId(1),
-                Version = 1,
-                State = new StateWithIdentity() { Value = new SampleId(2) }
-            };
-            var json = instance.ToJson();
-            Assert.That(json.Contains("\"_t\""), Is.False);
-        }
+        //TODO NSTORE: Snapshot uses string identities, this test probably should be deleted.
+        //[Test]
+        //public void should_serialize_flat_with_aggregateSnapshot()
+        //{
+        //    var instance = new SnapshotInfo(new Sa)
+        //    {
+        //        Id = new SampleId(1),
+        //        Version = 1,
+        //        State = new StateWithIdentity() { Value = new SampleId(2) }
+        //    };
+        //    var json = instance.ToJson();
+        //    Assert.That(json.Contains("\"_t\""), Is.False);
+        //}
 
         [Test]
         public void should_deserialize_null()

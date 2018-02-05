@@ -14,7 +14,7 @@ using Jarvis.Framework.Tests.EngineTests;
 using NUnit.Framework;
 using Jarvis.Framework.Shared.Helpers;
 using MongoDB.Driver;
-
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
@@ -27,11 +27,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 
         }
 
-        [TestFixtureSetUp]
-        public override void TestFixtureSetUp()
-        {
-            base.TestFixtureSetUp();
-        }
+        private readonly Boolean returnProjection3 = true;
 
         protected override void RegisterIdentities(IdentityManager identityConverter)
         {
@@ -50,12 +46,10 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             var writer3 = new CollectionWrapper<SampleReadModel3, string>(StorageFactory, new NotifyToNobody());
             if (returnProjection3) yield return new Projection3(writer3);
         }
-        private Boolean returnProjection3 = true;
 
         [Test]
-        public async void run_poller()
+        public async Task run_poller()
         {
-
             var projected = _statusChecker.IsCheckpointProjectedByAllProjection(2);
             if (projected)
             {
@@ -67,26 +61,25 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
                 }
             }
             Console.WriteLine("FIRST CHECK DONE");
-            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregateId(1));
+            var aggregate = await Repository.GetByIdAsync<SampleAggregate>(new SampleAggregateId(1)).ConfigureAwait(false);
             aggregate.Create();
-            Repository.Save(aggregate, Guid.NewGuid(), h => { });
+            Repository.SaveAsync(aggregate, Guid.NewGuid().ToString(), h => { }).Wait();
 
-            aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregateId(2));
+            aggregate = await Repository.GetByIdAsync<SampleAggregate>(new SampleAggregateId(2)).ConfigureAwait(false);
             aggregate.Create();
-            Repository.Save(aggregate, Guid.NewGuid(), h => { });
+            await Repository.SaveAsync(aggregate, Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
 
-            var stream = _eventStore.Advanced.GetFrom(0);
-            var lastCommit = stream.Last();
+            var lastPosition = await GetLastPositionAsync().ConfigureAwait(false);
 
-            //need to wait for at least one checkpoint written to database.
-            DateTime startTime = DateTime.Now;
-            while (!_checkpoints.FindAll().Any() &&
-                DateTime.Now.Subtract(startTime).TotalMilliseconds < 2000) //2 seconds timeout is fine
+             //need to wait for at least one checkpoint written to database.
+             DateTime startTime = DateTime.Now;
+            while (!_checkpoints.FindAll().Any()
+                && DateTime.Now.Subtract(startTime).TotalMilliseconds < 2000) //2 seconds timeout is fine
             {
                 Thread.Sleep(100);
             }
 
-            projected = _statusChecker.IsCheckpointProjectedByAllProjection(lastCommit.CheckpointToken);
+            projected = _statusChecker.IsCheckpointProjectedByAllProjection(lastPosition);
             if (projected)
             {
                 var allProjected = _checkpoints.FindAll().ToList();
@@ -98,10 +91,8 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             }
             Assert.That(projected, Is.False);
 
-            await Engine.UpdateAndWait();
-            Assert.That(_statusChecker.IsCheckpointProjectedByAllProjection(lastCommit.CheckpointToken), Is.True);
+            await Engine.UpdateAndWaitAsync().ConfigureAwait(false);
+            Assert.That(_statusChecker.IsCheckpointProjectedByAllProjection(lastPosition), Is.True);
         }
-
-
     }
 }

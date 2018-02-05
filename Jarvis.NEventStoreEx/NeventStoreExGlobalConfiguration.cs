@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore;
 
 namespace Jarvis.NEventStoreEx
 {
@@ -13,14 +12,14 @@ namespace Jarvis.NEventStoreEx
         internal static Boolean MetricsEnabled { get; private set; }
 
         /// <summary>
-        /// When this parameter is true the <see cref="AbstractRepository"/> will try to 
+        /// When this parameter is true the <see cref="NStore.Aggregates.IRepository"/> will try to 
         /// serialize the access to aggregate to avoid unnecessary ConcurrencyException when 
         /// multiple threads are executing commands that call a very same aggregate.
         /// </summary>
         internal static Boolean RepositoryLockOnAggregateId { get; private set; }
 
         /// <summary>
-        /// When the <see cref="AbstractRepository"/> or the <see cref="AggregateCachedRepositoryFactory"/> 
+        /// When the <see cref="NStore.Aggregates.IRepository"/> or the <see cref="NStore.Aggregates.IRepository"/> 
         /// are trying to acquire lock it does a first fast SpinWait with the
         /// <see cref="Thread.SpinWait"/> method, then it start sleeping for a given number of time, waiting
         /// for the other thread to free. This value is the maximum number of sleep before the lock failed to 
@@ -59,6 +58,5 @@ namespace Jarvis.NEventStoreEx
         {
             LockThreadSleepCount = lockThreadSleepCount;
         }
-
     }
 }

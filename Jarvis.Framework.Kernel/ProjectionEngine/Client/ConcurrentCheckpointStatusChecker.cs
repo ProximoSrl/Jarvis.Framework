@@ -8,11 +8,16 @@ using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 {
-    public class ConcurrentCheckpointStatusChecker
+    /// <summary>
+    /// This status checker uses direct access to mongo database so it can 
+    /// be used not only from projection service, but from all process
+    /// that want to check the status of the projection.
+    /// </summary>
+    public class MongoDirectConcurrentCheckpointStatusChecker : IConcurrentCheckpointStatusChecker
     {
         private readonly IMongoCollection<Checkpoint> _checkpoints;
 
-        public ConcurrentCheckpointStatusChecker(IMongoDatabase readmodelDb)
+        public MongoDirectConcurrentCheckpointStatusChecker(IMongoDatabase readmodelDb)
         {
             _checkpoints = readmodelDb.GetCollection<Checkpoint>("checkpoints");
         }
@@ -34,8 +39,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                         Builders<Checkpoint>.Filter.Or(
                             Builders<Checkpoint>.Filter.Lt(x => x.Current, checkpointString),
                             Builders<Checkpoint>.Filter.Eq("Current", BsonNull.Value)
-                        )
-                        
+                        )  
                     )
                 )
                 .Project(Builders<Checkpoint>.Projection.Include("_id"));

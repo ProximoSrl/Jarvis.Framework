@@ -1,13 +1,10 @@
-﻿using Jarvis.NEventStoreEx.CommonDomainEx;
-
-namespace Jarvis.Framework.Shared.IdentitySupport
+﻿namespace Jarvis.Framework.Shared.IdentitySupport
 {
-    public interface IIdentityGenerator
+    public interface IIdentityConverter
     {
-        TIdentity New<TIdentity>();
-    }
-
-    public interface IIdentityManager : IIdentityConverter, IIdentityGenerator
-    {
+        string ToString(IIdentity identity);
+        IIdentity ToIdentity(string identityAsString);
+        TIdentity ToIdentity<TIdentity>(string identityAsString);
+        bool TryParse<T>(string id, out T typedIdentity) where T : class, IIdentity;
     }
 }

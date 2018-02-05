@@ -10,8 +10,8 @@ namespace Jarvis.Framework.Shared.Messages
     {
         public enum CommandResult
         {
-            Handled,
-            Failed
+            Handled = 0,
+            Failed = 1
         }
 
         public CommandResult Result { get; private set; }
@@ -29,7 +29,6 @@ namespace Jarvis.Framework.Shared.Messages
 
         private String GetContextData(String key, String defaultValue = "")
         {
-
             return (Context != null && Context.ContainsKey(key))
                 ? Context[key]
                 : defaultValue;
@@ -67,20 +66,27 @@ namespace Jarvis.Framework.Shared.Messages
         {
             return String.Format("Command {0} handled, result {1}!", CommandId, Result);
         }
-
     }
 
-    public class CommitProjected
-    {
-        public Guid CommitId { get; private set; }
-        public string ClientId { get; set; }
-        public string IssuedBy { get; private set; }
+	public class CommitProjected : IMessage
+	{
+		public Guid CommitId { get; private set; }
+		public string ClientId { get; set; }
+		public string IssuedBy { get; private set; }
 
-        public CommitProjected(string issuedBy, Guid commitId, string clientId)
+		public Guid MessageId {get; private set;}
+
+		public CommitProjected(string issuedBy, Guid commitId, string clientId)
         {
             IssuedBy = issuedBy;
             CommitId = commitId;
             ClientId = clientId;
+			MessageId = Guid.NewGuid();
         }
-    }
+
+		public string Describe()
+		{
+			return $"Projected commit {CommitId}";
+		}
+	}
 }

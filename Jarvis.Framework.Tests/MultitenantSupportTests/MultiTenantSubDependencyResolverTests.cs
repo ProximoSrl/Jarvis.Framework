@@ -16,13 +16,18 @@ namespace Jarvis.Framework.Tests.MultitenantSupportTests
 
         public class Service
         {
-            public ITenant  Tenant { get; set; }
+            public ITenant Tenant { get; set; }
         }
 
+#pragma warning disable S3881 // "IDisposable" should be implemented correctly
         public class DisposableService : Service, IDisposable
+#pragma warning restore S3881 // "IDisposable" should be implemented correctly
         {
+            public Boolean Disposed { get; set; }
+
             public void Dispose()
             {
+                Disposed = true;
             }
         }
 
@@ -39,7 +44,6 @@ namespace Jarvis.Framework.Tests.MultitenantSupportTests
             _container.Register(Component.For<DisposableService>().LifestyleTransient());
 
             _tenantManager = _container.Resolve<TenantManager>();
-
         }
 
         [TearDown]
@@ -62,8 +66,8 @@ namespace Jarvis.Framework.Tests.MultitenantSupportTests
             TenantContext.Enter(new TenantId("not_yet_registered_in_container"));
             var service = _container.Resolve<Service>();
             Assert.AreSame(NullTenant.Instance, service.Tenant);
-        }        
-        
+        }
+
         [Test]
         public void resolving_registered_tenant_should_inject_correct_tenant()
         {
@@ -75,8 +79,8 @@ namespace Jarvis.Framework.Tests.MultitenantSupportTests
             var service = _container.Resolve<Service>();
 
             Assert.AreSame(_tenantManager.GetTenant(tenantId), service.Tenant);
-        }     
-        
+        }
+
         [Test]
         public void should_resolve_two_tenants()
         {

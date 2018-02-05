@@ -7,7 +7,7 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using Jarvis.Framework.Shared.Helpers;
 using MongoDB.Driver.Linq;
-
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
 {
@@ -20,13 +20,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             _collection = collection;
         }
 
-        public bool IndexExists(string indexName)
+        public async Task<Boolean> IndexExistsAsync(string name)
         {
-            return _collection.Indexes.List().ToList()
-                .Any(i => i["name"].AsString == indexName);
+            using (var cursor = await _collection.Indexes.ListAsync().ConfigureAwait(false))
+            {
+                var list = await cursor.ToListAsync().ConfigureAwait(false);
+                return list.Any(i => i["name"].AsString == name);
+            }
         }
 
-        public void CreateIndex(String name, IndexKeysDefinition<TModel> keys, CreateIndexOptions options = null)
+        public async Task CreateIndexAsync(String name, IndexKeysDefinition<TModel> keys, CreateIndexOptions options = null)
         {
             options = options ?? new CreateIndexOptions();
             options.Name = name;
@@ -35,20 +38,20 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             //different options/keys is created
             try
             {
-                _collection.Indexes.CreateOne(keys, options);
+                await _collection.Indexes.CreateOneAsync(keys, options).ConfigureAwait(false);
             }
             catch (MongoCommandException)
             {
                 //probably index exists with different options, drop and recreate
                 String indexName = name;
-                _collection.Indexes.DropOne(indexName);
-                _collection.Indexes.CreateOne(keys, options);
+                await _collection.Indexes.DropOneAsync(indexName).ConfigureAwait(false);
+                await _collection.Indexes.CreateOneAsync(keys, options).ConfigureAwait(false);
             }
         }
 
-        public void InsertBatch(IEnumerable<TModel> values)
+        public async Task InsertBatchAsync(IEnumerable<TModel> values)
         {
-            _collection.InsertMany(values);
+            await _collection.InsertManyAsync(values).ConfigureAwait(false);
         }
 
         public IQueryable<TModel> All
@@ -56,32 +59,45 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             get { return _collection.AsQueryable(); }
         }
 
+        public Task<TModel> FindOneByIdAsync(TKey id)
+        {
+            return _collection.FindOneByIdAsync(id);
+        }
+
         public TModel FindOneById(TKey id)
         {
             return _collection.FindOneById(id);
         }
 
-        public IEnumerable<TModel> FindManyByProperty<TValue>(Expression<Func<TModel, TValue>> propertySelector, TValue value)
-        {
-            return _collection.Find(
-                Builders<TModel>.Filter.Eq<TValue>(propertySelector, value))
-                .Sort(Builders<TModel>.Sort.Ascending(m => m.Id))
-                .ToEnumerable();
-        }
+		public async Task FindByPropertyAsync<TValue>(Expression<Func<TModel, TValue>> propertySelector, TValue value, Func<TModel, Task> subscription)
+		{
+			using (var cursor = await _collection.FindAsync(
+				Builders<TModel>.Filter.Eq<TValue>(propertySelector, value),
+				new FindOptions<TModel>()
+				{
+					Sort = Builders<TModel>.Sort.Ascending(m => m.Id)
+				}).ConfigureAwait(false))
+			{
+				foreach (var item in cursor.ToEnumerable())
+				{
+					await subscription(item).ConfigureAwait(false);
+				}
+			}
+		}
 
-        public IQueryable<TModel> Where(Expression<Func<TModel, bool>> filter)
+		public IQueryable<TModel> Where(Expression<Func<TModel, bool>> filter)
         {
             return _collection.AsQueryable().Where(filter).OrderBy(x => x.Id);
         }
 
-        public bool Contains(Expression<Func<TModel, bool>> filter)
+        public Task<bool> ContainsAsync(Expression<Func<TModel, bool>> filter)
         {
-            return _collection.AsQueryable().Any(filter);
+            return _collection.AsQueryable().AnyAsync(filter);
         }
 
-        public InsertResult Insert(TModel model)
+        public async Task<InsertResult> InsertAsync(TModel model)
         {
-            _collection.InsertOne(model);
+            await _collection.InsertOneAsync(model).ConfigureAwait(false);
 
             return new InsertResult()
             {
@@ -90,9 +106,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             };
         }
 
-        public SaveResult SaveWithVersion(TModel model, int orignalVersion)
+        public async Task<SaveResult> SaveWithVersionAsync(TModel model, int orignalVersion)
         {
-            var result = _collection.FindOneAndReplace(
+            var result = await _collection.FindOneAndReplaceAsync(
                 Builders<TModel>.Filter.And(
                     Builders<TModel>.Filter.Eq(x => x.Id, model.Id),
                     Builders<TModel>.Filter.Eq(x => x.Version, orignalVersion)
@@ -101,7 +117,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 new FindOneAndReplaceOptions<TModel, TModel>()
                 {
                     Sort = Builders<TModel>.Sort.Ascending(s => s.Id)
-                });
+                }).ConfigureAwait(false);
 
             return new SaveResult()
             {
@@ -109,9 +125,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             };
         }
 
-        public DeleteResult Delete(TKey id)
+        public async Task<DeleteResult> DeleteAsync(TKey id)
         {
-            var result = _collection.RemoveById(id);
+            var result = await _collection.RemoveByIdAsync(id).ConfigureAwait(false);
 
             return new DeleteResult()
             {
@@ -120,9 +136,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             };
         }
 
-        public void Drop()
+        public async Task DropAsync()
         {
-            _collection.Drop();
+            await _collection.DropAsync().ConfigureAwait(false);
         }
 
         public IMongoCollection<TModel> Collection
@@ -130,15 +146,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             get { return _collection; }
         }
 
-        public void Flush()
+        public Task FlushAsync()
         {
-
+            return Task.CompletedTask;
         }
-
-        #region Helpers
-
-
-
-        #endregion
     }
 }

@@ -1,10 +1,11 @@
 using Jarvis.Framework.Kernel.Events;
 using Jarvis.Framework.Kernel.ProjectionEngine;
 using MongoDB.Driver;
-
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.ProjectionsTests
 {
+    [ProjectionInfo("MyProjection")]
     public class MyProjection :
         AbstractProjection,
         IEventHandler<InsertEvent>,
@@ -13,7 +14,9 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
     {
         readonly ICollectionWrapper<MyReadModel, string> _collection;
 
-        private IndexKeysDefinition<MyReadModel> IndexKeys = Builders<MyReadModel>.IndexKeys.Ascending(x => x.Text);
+        private readonly IndexKeysDefinition<MyReadModel> IndexKeys =
+            Builders<MyReadModel>.IndexKeys.Ascending(x => x.Text);
+
         public const string IndexName = "MyIndex";
 
         public MyProjection(ICollectionWrapper<MyReadModel, string> collection)
@@ -21,36 +24,36 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
             _collection = collection;
         }
 
-        public override void SetUp()
+        public override Task SetUpAsync()
         {
-            _collection.CreateIndex(IndexName, IndexKeys);
+            return _collection.CreateIndexAsync(IndexName, IndexKeys);
         }
 
-        public override void Drop ()
+        public override Task DropAsync()
         {
-            _collection.Drop();
+            return _collection.DropAsync();
         }
 
-        public void On(InsertEvent e)
+        public Task On(InsertEvent e)
         {
-            _collection.Insert(e, new MyReadModel()
+            return _collection.InsertAsync(e, new MyReadModel()
             {
-                Id = e.AggregateId,
+                Id = e.AggregateId.AsString(),
                 Text = e.Text
             });
         }
 
-        public void On(UpdateEvent e)
+        public Task On(UpdateEvent e)
         {
-            _collection.FindAndModify(e, x => x.Id == e.AggregateId, m =>
+            return _collection.FindAndModifyAsync(e, x => x.Id == e.AggregateId.AsString(), m =>
             {
                 m.Text = e.Text;
             });
         }
 
-        public void On(DeleteEvent delete)
+        public Task On(DeleteEvent delete)
         {
-            _collection.Delete(delete, delete.AggregateId);
+            return _collection.DeleteAsync(delete, delete.AggregateId.AsString());
         }
     }
 }

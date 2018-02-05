@@ -10,22 +10,16 @@ using Jarvis.Framework.Shared.ReadModel;
 using Jarvis.Framework.TestHelpers;
 using Jarvis.Framework.Tests.EngineTests;
 using NUnit.Framework;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
-
     [TestFixture("2")]
     public class ProjectionEngineTestsPoller : ProjectionEngineBasicTestBase
     {
         public ProjectionEngineTestsPoller(String pollingClientVersion) : base(pollingClientVersion)
         {
 
-        }
-
-        [TestFixtureSetUp]
-        public override void TestFixtureSetUp()
-        {
-            base.TestFixtureSetUp();
         }
 
         protected override void RegisterIdentities(IdentityManager identityConverter)
@@ -45,24 +39,23 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
         }
 
         [Test]
-        public async void run_poller()
+        public async Task run_poller()
         {
             var reader = new MongoReader<SampleReadModel, string>(Database);
-            var aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregateId(1));
+            var aggregate = await Repository.GetByIdAsync<SampleAggregate>(new SampleAggregateId(1)).ConfigureAwait(false);
             aggregate.Create();
-            Repository.Save(aggregate, Guid.NewGuid(), h => { });
+            await Repository.SaveAsync(aggregate,Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
 
-            await Engine.UpdateAndWait();
+            await Engine.UpdateAndWaitAsync().ConfigureAwait(false);
             Assert.AreEqual(1, reader.AllSortedById.Count());
 
-            aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregateId(2));
+            aggregate = await Repository.GetByIdAsync<SampleAggregate>(new SampleAggregateId(2)).ConfigureAwait(false);
             aggregate.Create();
-            Repository.Save(aggregate, Guid.NewGuid(), h => { });
+            await Repository.SaveAsync(aggregate,Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
 
-            await Engine.UpdateAndWait();
+            await Engine.UpdateAndWaitAsync().ConfigureAwait(false);
 
             Assert.AreEqual(2, reader.AllSortedById.Count());
         }
-
     }
 }

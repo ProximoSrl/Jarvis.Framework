@@ -90,7 +90,7 @@ namespace Jarvis.MonitoringAgent.Support
                 .Build();
             _scheduler.ScheduleJob(job, trigger);
 
-            job = JobBuilder.Create<LogUpdloaderJob>()
+            job = JobBuilder.Create<LogUploaderJob>()
                    .WithIdentity("LogUploader")
                    .Build();
 

@@ -1,8 +1,32 @@
-##Version 2.0
+# Version 3.0
 
-###Core
+The overall major change of version 3 is the migration to NStore, async and a major refactoring. There are many breaking changes with version 2.
 
-####Complete refactor of BusBootstrapper
+## Version 3.0
+
+**Migration to NSTORE, the whole framework was changed**
+
+- Invariant check on state is done with a function with signature *protected override InvariantsCheckResult OnCheckInvariants()*
+
+# Version 2.0
+
+## Version 2.1
+
+### Change to iconstruct aggregate
+
+Interface *IConstructAggregatesEx* has now two methods, one to create the Aggregate, and the other to restore snapshot to the Aggregate. All the call to Build() method should be changed as following.
+
+The third parameter (the instance of the snapshot) is removed. If the third parameter is different from null you need to call the ApplySnapshot method passing the instance of the Aggregate returned from call to Build and the instance of the snapshot.
+
+### Introduction of attribute for specifying projection information
+
+Now you need to use an attribute to specify Signature, Slot and common Name of projection. [Read how to migrate code here](BreakingChanges/2.1.0_ProjectionAttribute.md).
+
+## Version 2.0.0
+
+### Core
+
+#### Complete refactor of BusBootstrapper
 
 BusBoostrapper has only the duty of registering IBus but now implements IStartable, then you should register BusStarter if you want to automatically start the bus with the IStartable interface.
 
@@ -18,9 +42,82 @@ The typical usage pattern is to register both classes with this code. BusBootstr
 	Component
 	    .For<BusStarter>(),
 
-####Notification transformer for ICollectionWrapper
+#### Notification transformer for ICollectionWrapper
 
 ICollectionWrapper interface renamed property PrepareForNotification to TransformForNotification to reflect the fact that now the projection is able to change the notification object that is sent when a readamodel is updated.
 
 This is necessary for really big readmodel, where probably the UI is interested only in a very few set of property and not the entire object.
 
+### Message Tracking
+
+The message tracking Schema has been changed:
+
+- the field 'ErrorMessages' has been removed.
+- a 'Type' field has been added, must be set to '1' (Command) if the 'ExecutionCount' field is >= 1, otherwise set it to '2' (Event)
+- a 'MessageType' field has been added, must be set to string type name representation without the namespace (in the previous schema take the value from 'Message._t' stripping the last '_X' part added by mongo), this a good guess, to have the correct value we should deserialize the class.
+- a 'Completed' field has been added, this should be set to 'true' for completed commands (in the previos scheme every command that had a CompletedAt or FailedAt field)
+- a 'Success' field has been added, this should be set to 'true' for successfully completed commands (in the previous scheme every command that had a CompletedAt field)
+- the field 'FailedAt' has been removed, the information should be migrated over 'CompletedAt'
+
+run the following script to convert from the old format to the new one:
+
+	var requests = [];
+	db.messages.find({}).snapshot().forEach(function(document) { 
+		// we compose the $set object dynamically
+        var $set = {};
+
+		// MessageType typeof(Command)
+        var msgType = document.Message._t.split("_")[0];
+        $set.MessageType = msgType;
+
+        // Type: Command (1) or Event (2)
+        var type = null;
+        if (parseInt(document.ExecutionCount) >= NumberInt(1)) {
+        	type = NumberInt(1); // Command
+        } else {
+        	type = NumberInt(2); // Event
+        }
+		set.Type = type;
+		
+        // Completed (only for commands)
+        if (type == 1) {
+            var completed = document.CompletedAt != null || document.FailedAt != null;
+            $set.Completed = completed;
+        }
+        // Success (only for commands)
+        if (type == 1) {
+            var success = document.CompletedAt != undefined;
+            $set.Success = success;
+        }
+        // FailedAt has been removed
+        var completedAt = document.CompletedAt;
+        if (document.FailedAt != null && document.CompletedAt == null) {
+        	completedAt = document.FailedAt;
+        }
+        if (completedAt != null) {
+            $set.CompletedAt = completedAt;
+        }
+                
+		requests.push( { 
+			'updateOne': {
+				'filter': { '_id': document._id },
+				'update': { 
+                    '$unset': { 'ErrorMessages': 1},
+                    '$set': $set
+				}
+			}
+		});
+		if (requests.length === 1000) {
+			//Execute per 1000 operations and re-init
+			db.messages.bulkWrite(requests);
+			requests = [];
+		}
+	});
+	if(requests.length > 0) {
+		db.messages.bulkWrite(requests);
+	}
+	
+
+references:
+
+- to 'copy' the value of one field to another: http://stackoverflow.com/questions/2606657/update-field-with-another-fields-value-in-the-document

@@ -3,156 +3,188 @@ using System.Collections.Generic;
 using System.Linq;
 using Castle.Core.Logging;
 using Jarvis.Framework.Shared.Events;
-using Jarvis.NEventStoreEx.CommonDomainEx;
-using Jarvis.NEventStoreEx.CommonDomainEx.Core;
 using Jarvis.Framework.Shared.Helpers;
+using Jarvis.Framework.Shared.Exceptions;
+using Jarvis.Framework.Shared.IdentitySupport;
+using NStore.Domain;
+using NStore.Core.Processing;
+using NStore.Core.Snapshots;
+
 namespace Jarvis.Framework.Kernel.Engine
 {
-    public abstract class AggregateRoot : AggregateBaseEx
-    {
-        private ILogger _logger = NullLogger.Instance;
-        public ILogger Logger
+	/// <summary>
+	/// classe base per gli aggregati che gestiscono lo stato tramite un <c>AggregateState</c>
+	/// </summary>
+	/// <typeparam name="TState">Tipo dello stato</typeparam>
+	/// <typeparam name="TId"></typeparam>
+	public abstract class AggregateRoot<TState, TId> : Aggregate<TState>, IInvariantsChecker
+		where TState : JarvisAggregateState, new()
+		where TId : EventStoreIdentity
+	{
+		protected TState InternalState => State;
+
+		protected IPayloadProcessor payloadProcessor;
+
+		protected AggregateRoot() : base(AggregateStateEventPayloadProcessor.Instance)
+		{
+			payloadProcessor = AggregateStateEventPayloadProcessor.Instance;
+		}
+
+		private TId _jarvisId;
+
+		protected TId GetJarvisId()
+		{
+			return _jarvisId ?? (_jarvisId = (TId)Activator.CreateInstance(typeof(TId), this.Id));
+		}
+
+		protected void RaiseEvent(object @event)
+		{
+			var domainEvent = @event as DomainEvent;
+			if (domainEvent == null)
+				throw new JarvisFrameworkEngineException("Raised Events should inherits from DomainEvent class, invalid event type: " + @event.GetType().FullName);
+			domainEvent.SetPropertyValue(d => d.AggregateId, GetJarvisId());
+            OnBeforeEmitEvent(@event);
+			base.Emit(@event);
+			//Now dispatch event to all entities
+			foreach (var childStates in InternalState.EntityStates)
+			{
+				payloadProcessor.Process(childStates.Value, @event);
+			}
+		}
+
+        protected virtual void OnBeforeEmitEvent(object @event)
         {
-            get { return _logger; }
-            set { _logger = value; }
+            //do nothing, we left the ability to real aggregate to intercept every event emitted.
         }
-
-        /// <summary>
-        /// indica se l'aggregate ha stato (almeno 1 evento)
-        /// </summary>
-        public bool IsValid
-        {
-            get
-            {
-                return this.Version > 0;
-            }
-        }
-
-        /// <summary>
-        /// Verifica se un aggregato è valido (ha eventi) e scatena una eccezione in caso negativo
-        /// </summary>
-        /// <exception cref="DomainException"></exception>
-        public void CheckValid()
-        {
-            if (!IsValid)
-                throw new InvalidDomainException(this);
-        }
-
-        internal AggregateRoot(IRouteEventsEx handler)
-            : base(handler)
-        {
-        }
-
-        public void AssignAggregateId(IIdentity id)
-        {
-            if (Id != null)
-            {
-                throw new InvalidAggregateOperationException(string.Format(
-                    "{0} id already assigned {1}. Cannot assign {2}",
-                    GetType().FullName, Id, id
-                ));
-            }
-
-            if (id == null)
-                throw new InvalidAggregateIdException();
-
-            this.Id = id;
-        }
-    }
-
-    /// <summary>
-    /// classe base per gli aggregati che gestiscono lo stato tramite un <c>AggregateState</c>
-    /// </summary>
-    /// <typeparam name="TState">Tipo dello stato</typeparam>
-    public abstract class AggregateRoot<TState> : AggregateRoot, ISnapshotable, IInvariantsChecker
-        where TState : AggregateState, new()
-    {
-
-        private TState _internalState;
-        protected TState InternalState
-        {
-            get { return _internalState; }
-        }
-
-        protected AggregateRoot()
-            : base(new AggregateRootEventRouter<TState>())
-        {
-            ((AggregateRootEventRouter<TState>)RegisteredRoutes).AttachAggregateRoot(this);
-            _internalState = new TState();
-        }
-
-        protected override void RaiseEvent(object @event)
-        {
-            var domainEvent = @event as DomainEvent;
-            if (domainEvent == null)
-                throw new ApplicationException("Raised Events should inherits from DomainEvent class, invalid event type: " + @event.GetType().FullName);
-            domainEvent.SetPropertyValue(d => d.AggregateId, Id);
-            base.RaiseEvent(@event);
-        }
-
-        protected override IMementoEx GetSnapshot()
-        {
-            return Snapshot();
-        }
-
-        IMementoEx ISnapshotable.GetSnapshot()
-        {
-            return Snapshot();
-        }
-
-        public AggregateSnapshot<TState> Snapshot()
-        {
-            //to avoid any problem with multithread or external references, whenever
-            //the aggregate root creates a snapshot it cloned the state to avoid
-            //external code reference internal state.
-            return new AggregateSnapshot<TState>
-            {
-                Id = this.Id,
-                Version = this.Version,
-                State = (TState) _internalState.Clone()
-            };
-        }
-
-        public void Apply(DomainEvent evt)
-        {
-            InternalState.Apply(evt);
-        }
-
-        void ISnapshotable.Restore(IMementoEx snapshot)
-        {
-            var snap = (AggregateSnapshot<TState>)snapshot;
-            //it is important to clone to avoid external code reference internal state
-            this._internalState = (TState) snap.State.Clone(); 
-            this.SnapshotRestoreVersion = this.Version = snap.Version;
-            
-            if (!Id.Equals(snap.Id))
-                throw new AggregateException(String.Format("Error restoring snapshot: Id mismatch. Snapshot id: {0} aggregate id: {1} [snapshot version {2}] ", 
-                    snap.Id, Id, snap.Version));
-        }
-
 
         public bool HasBeenCreated
-        {
-            get
-            {
-                return this.Version > 0;
-            }
-        }
+		{
+			get
+			{
+				return this.Version > 0 || this.IsDirty;
+			}
+		}
 
-        public InvariantCheckResult CheckInvariants()
-        {
-            return _internalState.CheckInvariants();
-        }
+		public virtual InvariantsCheckResult CheckInvariants()
+		{
+			return State.CheckInvariants();
+		}
 
-        protected void ThrowDomainException(string format, params object[] p)
-        {
-            if (p.Any())
-            {
-                throw new DomainException(Id, string.Format(format, p));
-            }
-            throw new DomainException(Id, format);
-        }
+		protected void ThrowDomainException(string format, params object[] p)
+		{
+			if (p.Length > 0)
+			{
+				throw new DomainException(Id, string.Format(format, p));
+			}
+			throw new DomainException(Id, format);
+		}
 
+		protected override string StateSignature => InternalState.VersionSignature;
 
-    }
+		public bool IsValid
+		{
+			get
+			{
+				return this.Version > 0;
+			}
+		}
+
+		protected SnapshotInfo RestoreSnapshot { get; private set; }
+		protected Boolean WasRestoredFromSnapshot => RestoreSnapshot != null;
+
+		private List<IEntityRoot> snapshotRestoredEntities;
+
+		protected override SnapshotInfo PreprocessSnapshot(SnapshotInfo snapshotInfo)
+		{
+			var baseProcessing = base.PreprocessSnapshot(snapshotInfo);
+			if (baseProcessing == null)
+				return null;
+
+			//We are trying to restore a snapshot that has not the very same version of itnernal state of this aggregate
+			var emptyState = new TState();
+			if (snapshotInfo.SchemaVersion != emptyState.VersionSignature)
+				return null;
+
+			JarvisAggregateState state = snapshotInfo.Payload as JarvisAggregateState;
+			if (state == null)
+				return null;
+
+			//If we need to restore the aggregate we should restore all the entities
+			snapshotRestoredEntities = new List<IEntityRoot>();
+			foreach (var entity in CreateChildEntities(snapshotInfo.SourceId))
+			{
+				JarvisEntityState entityState;
+				if (!state.EntityStates.TryGetValue(entity.Id, out entityState))
+					return null; // one of the entity cannot be restored
+
+				//TODO: Need to change nstore to avoid this.
+				var info = new SnapshotInfo(snapshotInfo.SourceId, snapshotInfo.SourceVersion, entityState.Clone(), entityState.VersionSignature);
+				if (!entity.TryRestore(info))
+					return null; //This snapshot is not valid for the entity
+
+				snapshotRestoredEntities.Add(entity);
+			}
+
+			//Set restore snapshot and create a new payload with a clone of the state
+			RestoreSnapshot = snapshotInfo;
+			return new SnapshotInfo(snapshotInfo.SourceId, snapshotInfo.SourceVersion, state.Clone(), snapshotInfo.SchemaVersion);
+		}
+
+#pragma warning disable S2743 // Static fields should not be used in generic types
+		private static readonly IEntityRoot[] emptyListOfEntities = new IEntityRoot[0];
+#pragma warning restore S2743 // Static fields should not be used in generic types
+
+		/// <summary>
+		/// If an aggregate want to create child entities it should override this function.
+		/// </summary>
+		/// <param name="aggregateId">Needed because during a snapshot restore</param>
+		/// <returns></returns>
+		protected virtual IEnumerable<IEntityRoot> CreateChildEntities(String aggregateId)
+		{
+			return emptyListOfEntities;
+		}
+
+		protected override void AfterInit()
+		{
+			base.AfterInit();
+
+			//after we inited everything, we need to create entities if we are not restored from snapshot
+			if (!WasRestoredFromSnapshot)
+			{
+				foreach (var entity in CreateChildEntities(Id))
+				{
+					AddEntityToAggregate(entity);
+				}
+			}
+			else
+			{
+				//if we reach here entites were already restored from a snapshot, we simply need to add to the aggregate
+				foreach (var entity in snapshotRestoredEntities)
+				{
+					AddEntityToAggregate(entity);
+				}
+			}
+		}
+
+		#region entity management
+
+		private readonly Dictionary<String, IEntityRoot> childEntities = new Dictionary<String, IEntityRoot>();
+
+		private void AddEntityToAggregate(IEntityRoot entity)
+		{
+			if (entity == null)
+				throw new ArgumentNullException(nameof(entity));
+
+			entity.Init(RaiseEvent, Id);
+			childEntities.Add(entity.Id, entity);
+
+			//Entity states could already be restored from snapshot.
+			if (!State.EntityStates.ContainsKey(entity.Id))
+			{
+				State.EntityStates.Add(entity.Id, entity.GetState());
+			}
+		}
+
+		#endregion
+	}
 }

@@ -4,12 +4,11 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using Jarvis.Framework.Shared.Helpers;
-using MongoDB.Bson.Serialization;
-using Jarvis.Framework.Shared.IdentitySupport.Serialization;
+using Jarvis.Framework.Shared.Exceptions;
 
 namespace Jarvis.Framework.Shared.IdentitySupport
 {
-    public interface IIdentityTranslator
+	public interface IIdentityTranslator
     {
     }
 
@@ -45,28 +44,22 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             }
         }
 
-        //internal Boolean IsFlatMapping { get; private set; }
         protected AbstractIdentityTranslator(IMongoDatabase systemDB, IIdentityGenerator identityGenerator)
         {
             IdentityGenerator = identityGenerator;
             _collection = systemDB.GetCollection<MappedIdentity>("map_" + typeof(TKey).Name.ToLower());
-            //var serializer = BsonSerializer.LookupSerializer(typeof(TKey));
-            //if (serializer is EventStoreIdentityBsonSerializer)
-            //{
-            //    IsFlatMapping = true;
-            //}
         }
 
         protected void AddAlias(TKey key, string alias)
         {
-            if (alias == null) throw new ArgumentNullException("alias");
+            if (alias == null) throw new ArgumentNullException(nameof(alias));
             alias = alias.ToLowerInvariant();
 
             var mapped = _collection.FindOneById(alias);
             if (mapped != null)
             {
                 if (mapped.AggregateId != key)
-                    throw new Exception(string.Format("Alias {0} already mapped to {1}", alias, mapped.AggregateId));
+                    throw new JarvisFrameworkEngineException(string.Format("Alias {0} already mapped to {1}", alias, mapped.AggregateId));
 
                 return;
             }
@@ -76,17 +69,24 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
         protected void ReplaceAlias(TKey key, string alias)
         {
-            if (alias == null) throw new ArgumentNullException();
+            if (alias == null) throw new ArgumentNullException(nameof(alias));
             alias = alias.ToLowerInvariant();
             DeleteAliases(key);
             MapIdentity(alias, key);
         }
 
-        protected TKey Translate(string externalKey, bool createOnMissing = true)
-        {
-            if (IdentityGenerator == null) throw new Exception("Identity Generator not set");
+		protected String GetAlias(TKey key)
+		{
+			if (key == null) throw new ArgumentNullException(nameof(key));
+			var alias = _collection.Find(Builders<MappedIdentity>.Filter.Eq("AggregateId", key.AsString())).FirstOrDefault();
+			return alias?.ExternalKey;
+		}
 
-            if (externalKey == null) throw new ArgumentNullException("externalKey");
+		protected TKey Translate(string externalKey, bool createOnMissing = true)
+        {
+            if (IdentityGenerator == null) throw new JarvisFrameworkEngineException("Identity Generator not set");
+
+            if (externalKey == null) throw new ArgumentNullException(nameof(externalKey));
             externalKey = externalKey.ToLowerInvariant();
             var mapped = _collection.FindOneById(externalKey);
 
@@ -95,7 +95,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                 if (createOnMissing)
                     mapped = MapIdentity(externalKey, IdentityGenerator.New<TKey>());
                 else
-                    throw new Exception(string.Format("No mapping found for key {0}:{1}", typeof(TKey).FullName, externalKey));
+                    throw new JarvisFrameworkEngineException(string.Format("No mapping found for key {0}:{1}", typeof(TKey).FullName, externalKey));
             }
 
             return mapped.AggregateId;
@@ -103,9 +103,9 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
         protected TKey TryTranslate(string externalKey)
         {
-            if (IdentityGenerator == null) throw new Exception("Identity Generator not set");
+            if (IdentityGenerator == null) throw new JarvisFrameworkEngineException("Identity Generator not set");
 
-            if (externalKey == null) throw new ArgumentNullException("externalKey");
+            if (externalKey == null) throw new ArgumentNullException(nameof(externalKey));
 
             externalKey = externalKey.ToLowerInvariant();
             var mapped = _collection.FindOneById(externalKey);
@@ -141,7 +141,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                 throw;
             }
 
-            throw new Exception("Something went damn wrong...");
+            throw new JarvisFrameworkEngineException("Something went damn wrong...");
         }
 
         public void DeleteAliases(TKey key)

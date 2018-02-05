@@ -4,47 +4,49 @@ using Jarvis.Framework.Kernel.Commands;
 using Jarvis.Framework.Shared.Commands;
 using Rebus;
 using Castle.Core.Logging;
+using Jarvis.Framework.Shared.Messages;
+using Rebus.Bus;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
 {
 	public abstract class RebusCommandBus : ICommandBus
     {
-        private IBus _bus;
+        private readonly IBus _bus;
 
         public ILogger Logger { get; set; }
 
-        public RebusCommandBus(IBus bus)
+        protected RebusCommandBus(IBus bus)
         {
             _bus = bus;
             Logger = NullLogger.Instance;
         }
 
-        public ICommand Send(ICommand command, string impersonatingUser = null)
+        public async Task<ICommand> SendAsync(ICommand command, string impersonatingUser = null)
         {
             PrepareCommand(command, impersonatingUser);
-            _bus.Send(command);
+            await _bus.Send(command).ConfigureAwait(false);
             return command;
         }
 
-
-        public ICommand SendLocal(ICommand command, string impersonatingUser = null)
+        public async Task<ICommand> SendLocalAsync(ICommand command, string impersonatingUser = null)
         {
             PrepareCommand(command, impersonatingUser);
-            _bus.SendLocal(command);
+            await _bus.SendLocal(command).ConfigureAwait(false);
             return command;
         }
 
-        public ICommand Defer(TimeSpan delay, ICommand command, string impersonatingUser = null)
+        public async Task<ICommand> DeferAsync(TimeSpan delay, ICommand command, string impersonatingUser = null)
         {
             PrepareCommand(command, impersonatingUser);
 
             if (delay <= TimeSpan.Zero)
             {
-                _bus.Send(command);
+                await _bus.Send(command).ConfigureAwait(false);
             }
             else
             {
-                _bus.Defer(delay, command);
+                await _bus.Defer(delay, command).ConfigureAwait(false);
             }
 
             return command;
@@ -66,26 +68,18 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
 
         protected virtual void PrepareCommand(ICommand command, string impersonatingUser)
         {
-            var userId = command.GetContextData("user.id");
+            var userId = command.GetContextData(MessagesConstants.UserId);
 
             if (userId == null)
             {
                 userId = ImpersonateUser(command, impersonatingUser);
-                command.SetContextData("user.id", userId);
+                command.SetContextData(MessagesConstants.UserId, userId);
             }
 
             if (!UserIsAllowedToSendCommand(command, userId))
 		    {
 				throw new UserCannotSendCommandException();
 			}
-
-		    foreach (var key in command.AllContextKeys)
-            {
-                _bus.AttachHeader(command,key, command.GetContextData(key));
-            }
-
-            _bus.AttachHeader(command, "command.id", command.MessageId.ToString());
-            _bus.AttachHeader(command, "command.description", command.Describe());
         }
     }
 }

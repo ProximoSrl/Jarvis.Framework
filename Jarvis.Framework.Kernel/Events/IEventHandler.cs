@@ -1,17 +1,17 @@
-﻿namespace Jarvis.Framework.Kernel.Events
+﻿using System.Threading.Tasks;
+
+namespace Jarvis.Framework.Kernel.Events
 {
     public interface IEventHandler
     {
     }
 
-    public interface IEventHandler<T> : IEventHandler
+    /// <summary>
+    /// Interface used to handle events, it returns Task because it is now Async
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    public interface IEventHandler<in T> : IEventHandler
     {
-        void On(T e);
+        Task On(T e);
     }
-/*
-    public interface IEventToCommandHandler
-    {
-        string GetSlotName();
-    }
- */ 
 }

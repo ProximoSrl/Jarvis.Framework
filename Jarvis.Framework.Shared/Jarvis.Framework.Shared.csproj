@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -9,10 +9,11 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Jarvis.Framework.Shared</RootNamespace>
     <AssemblyName>Jarvis.Framework.Shared</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\Intranet\</SolutionDir>
     <RestorePackages>true</RestorePackages>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -34,15 +35,17 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Castle.Core, Version=3.3.0.0, Culture=neutral, PublicKeyToken=407dd0808d44fbdc, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Castle.Core.3.3.3\lib\net45\Castle.Core.dll</HintPath>
+    <Reference Include="Castle.Core, Version=4.1.1.0, Culture=neutral, PublicKeyToken=407dd0808d44fbdc, processorArchitecture=MSIL">
+      <HintPath>..\packages\Castle.Core.4.1.1\lib\net45\Castle.Core.dll</HintPath>
     </Reference>
-    <Reference Include="Castle.Facilities.Logging">
-      <HintPath>..\packages\Castle.LoggingFacility.3.3.0\lib\net45\Castle.Facilities.Logging.dll</HintPath>
+    <Reference Include="Castle.Facilities.Logging, Version=4.0.0.0, Culture=neutral, PublicKeyToken=407dd0808d44fbdc, processorArchitecture=MSIL">
+      <HintPath>..\packages\Castle.LoggingFacility.4.0.0\lib\net45\Castle.Facilities.Logging.dll</HintPath>
     </Reference>
-    <Reference Include="Castle.Windsor">
-      <HintPath>..\packages\Castle.Windsor.3.3.0\lib\net45\Castle.Windsor.dll</HintPath>
+    <Reference Include="Castle.Windsor, Version=4.0.0.0, Culture=neutral, PublicKeyToken=407dd0808d44fbdc, processorArchitecture=MSIL">
+      <HintPath>..\packages\Castle.Windsor.4.0.0\lib\net45\Castle.Windsor.dll</HintPath>
+    </Reference>
+    <Reference Include="DnsClient, Version=1.0.7.0, Culture=neutral, PublicKeyToken=4574bb5573c51424, processorArchitecture=MSIL">
+      <HintPath>..\packages\DnsClient.1.0.7\lib\net45\DnsClient.dll</HintPath>
     </Reference>
     <Reference Include="Fasterflect">
       <HintPath>..\packages\fasterflect.2.1.3\lib\net40\Fasterflect.dll</HintPath>
@@ -51,35 +54,36 @@
       <HintPath>..\packages\Metrics.NET.0.3.7\lib\net45\Metrics.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="MongoDB.Bson, Version=2.4.0.70, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\MongoDB.Bson.2.4.0\lib\net45\MongoDB.Bson.dll</HintPath>
+    <Reference Include="MongoDB.Bson, Version=2.5.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\MongoDB.Bson.2.5.0\lib\net45\MongoDB.Bson.dll</HintPath>
     </Reference>
-    <Reference Include="MongoDB.Driver, Version=2.4.0.70, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\MongoDB.Driver.2.4.0\lib\net45\MongoDB.Driver.dll</HintPath>
+    <Reference Include="MongoDB.Driver, Version=2.5.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\MongoDB.Driver.2.5.0\lib\net45\MongoDB.Driver.dll</HintPath>
     </Reference>
-    <Reference Include="MongoDB.Driver.Core, Version=2.4.0.70, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\MongoDB.Driver.Core.2.4.0\lib\net45\MongoDB.Driver.Core.dll</HintPath>
+    <Reference Include="MongoDB.Driver.Core, Version=2.5.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\MongoDB.Driver.Core.2.5.0\lib\net45\MongoDB.Driver.Core.dll</HintPath>
     </Reference>
-    <Reference Include="NEventStore, Version=6.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NEventStore.6.0.0-beta0041\lib\net40\NEventStore.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
-    <Reference Include="NEventStore.Domain, Version=6.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NEventStore.Domain.6.0.0-beta0016\lib\net40\NEventStore.Domain.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="NStore.Core, Version=0.4.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\NStore.Core.0.4.0\lib\net461\NStore.Core.dll</HintPath>
     </Reference>
-    <Reference Include="NEventStore.Persistence.MongoDB, Version=6.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NEventStore.Persistence.MongoDB.6.0.0-beta0090\lib\net40\NEventStore.Persistence.MongoDB.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="NStore.Domain, Version=0.4.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\NStore.Domain.0.4.0\lib\net461\NStore.Domain.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Newtonsoft.Json.6.0.8\lib\net45\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="NStore.Persistence.Mongo, Version=0.4.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\NStore.Persistence.Mongo.0.4.0\lib\net461\NStore.Persistence.Mongo.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.Buffers, Version=4.0.1.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Buffers.4.3.0\lib\netstandard1.1\System.Buffers.dll</HintPath>
+    </Reference>
     <Reference Include="System.Configuration" />
-    <Reference Include="System.Runtime.InteropServices.RuntimeInformation, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+    <Reference Include="System.Runtime.Caching" />
+    <Reference Include="System.Runtime.InteropServices.RuntimeInformation">
       <HintPath>..\packages\System.Runtime.InteropServices.RuntimeInformation.4.0.0\lib\net45\System.Runtime.InteropServices.RuntimeInformation.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -95,9 +99,22 @@
     <Compile Include="Claims\IClaimsMatcher.cs" />
     <Compile Include="Claims\RequiredClaimAttribute.cs" />
     <Compile Include="Claims\RequiredRoleAttribute.cs" />
-    <Compile Include="Commands\CommandsExtensions.cs" />
     <Compile Include="Commands\ICommand.cs" />
     <Compile Include="Commands\ICommandBus.cs" />
+    <Compile Include="Events\ChangesetCommonHeaders.cs" />
+    <Compile Include="Events\DomainEventHelpers.cs" />
+    <Compile Include="Exceptions\ExceptionHelper.cs" />
+    <Compile Include="Exceptions\InvalidAggregateIdException.cs" />
+    <Compile Include="GlobalSuppressions.cs" />
+    <Compile Include="Helpers\CommandExtensions.cs" />
+    <Compile Include="Helpers\DomainEventExtensions.cs" />
+    <Compile Include="Helpers\NStoreSequencer.cs" />
+    <Compile Include="IdentitySupport\IIdentityToAggregateManager.cs" />
+    <Compile Include="Messages\IMessageBus.cs" />
+    <Compile Include="NeventStoreExGlobalConfiguration.cs" />
+    <Compile Include="Persistence\EventStore\CachableAggregateCachedRepository.cs" />
+    <Compile Include="Persistence\EventStore\RepositorySingleAggregateFactory.cs" />
+    <Compile Include="Persistence\EventStore\SingleUseAggregateCachedRepository.cs" />
     <Compile Include="Domain\LowercaseStringValue.cs" />
     <Compile Include="Domain\Serialization\StringValueCustomBsonTypeMapper.cs" />
     <Compile Include="Domain\Serialization\StringValueJsonConverter.cs" />
@@ -107,21 +124,29 @@
     <Compile Include="Domain\UppercaseStringValue.cs" />
     <Compile Include="Events\DomainEvent.cs" />
     <Compile Include="Events\IDomainEvent.cs" />
-    <Compile Include="Factories\IFactory.cs" />
+    <Compile Include="Exceptions\DomainException.cs" />
+    <Compile Include="Exceptions\JarvisFrameworkEngineException.cs" />
     <Compile Include="Helpers\ExpressionExtension.cs" />
     <Compile Include="Helpers\JarvisStartableFacility.cs" />
     <Compile Include="Helpers\JarvisTypedFactoryFacility.cs" />
     <Compile Include="Helpers\MongoDriverHelper.cs" />
     <Compile Include="Helpers\Reflect.cs" />
     <Compile Include="Helpers\FastReflectionHelper.cs" />
+    <Compile Include="Helpers\TaskHelpers.cs" />
     <Compile Include="IdentitySupport\AbstractIdentity.cs" />
+    <Compile Include="IdentitySupport\IIdentity.cs" />
+    <Compile Include="IdentitySupport\IIdentityConverter.cs" />
+    <Compile Include="IdentitySupport\IIdentityManager.cs" />
+    <Compile Include="IdentitySupport\JarvisFrameworkIdentityException.cs" />
+    <Compile Include="IdentitySupport\OfflineCounterService.cs" />
+    <Compile Include="IdentitySupport\ReservationSlot.cs" />
     <Compile Include="IdentitySupport\StringToIdentityAssociator.cs" />
     <Compile Include="IdentitySupport\AbstractIdentityTranslator.cs" />
     <Compile Include="IdentitySupport\CounterService.cs" />
     <Compile Include="IdentitySupport\EventStoreIdentity.cs" />
     <Compile Include="IdentitySupport\ICounterService.cs" />
     <Compile Include="IdentitySupport\IdentityManager.cs" />
-    <Compile Include="IdentitySupport\IIdentityConverter.cs" />
+    <Compile Include="IdentitySupport\IIdentityGenerator.cs" />
     <Compile Include="IdentitySupport\MongoFlatMapper.cs" />
     <Compile Include="IdentitySupport\Serialization\EventStoreIdentityBsonSerializer.cs" />
     <Compile Include="IdentitySupport\Serialization\EventStoreIdentityCustomBsonTypeMapper.cs" />
@@ -129,9 +154,10 @@
     <Compile Include="JarvisFrameworkGlobalConfiguration.cs" />
     <Compile Include="Logging\LoggingConstants.cs" />
     <Compile Include="Logging\LoggingHelper.cs" />
-    <Compile Include="Logging\NEventStoreLog4NetLogger.cs" />
+    <Compile Include="Logging\NStoreCastleLogger.cs" />
+    <Compile Include="Logging\NStoreCastleLoggerFactory.cs" />
     <Compile Include="Messages\CommandHandled.cs" />
-    <Compile Include="Messages\Constants.cs" />
+    <Compile Include="Messages\MessagesConstants.cs" />
     <Compile Include="Messages\IMessage.cs" />
     <Compile Include="Messages\INotifyToSubscribers.cs" />
     <Compile Include="Messages\MessagesContractResolver.cs" />
@@ -140,9 +166,15 @@
     <Compile Include="MultitenantSupport\ITenant.cs" />
     <Compile Include="MultitenantSupport\ITenantAccessor.cs" />
     <Compile Include="MultitenantSupport\TenantId.cs" />
+    <Compile Include="Persistence\IAggregateCachedRepository.cs" />
+    <Compile Include="Persistence\IRepositoryFactory.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ReadModel\AbstractChildReadModel.cs" />
     <Compile Include="ReadModel\AbstractReadModel.cs" />
     <Compile Include="ReadModel\CollectionNames.cs" />
+    <Compile Include="ReadModel\NullMessageTracker.cs" />
+    <Compile Include="ReadModel\OfflineCommandMessageTracker.cs" />
+    <Compile Include="ReadModel\PollableReadModel.cs" />
     <Compile Include="ReadModel\TrackedMessageModel.cs" />
     <Compile Include="ReadModel\IMongoDbReader.cs" />
     <Compile Include="ReadModel\IReader.cs" />
@@ -150,18 +182,18 @@
     <Compile Include="ReadModel\IReadModelEx.cs" />
     <Compile Include="ReadModel\MongoReader.cs" />
     <Compile Include="Store\VersionInfoAttribute.cs" />
+    <Compile Include="Support\DisposableAction.cs" />
+    <Compile Include="Support\DisposableCollection.cs" />
+    <Compile Include="Support\DisposableStack.cs" />
+    <Compile Include="Support\IMongoPersistedPocoObject.cs" />
+    <Compile Include="Support\NamedLocker.cs" />
+    <Compile Include="Support\OfflineMode.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="app.config" />
     <None Include="packages.config">
       <SubType>Designer</SubType>
     </None>
-  </ItemGroup>
-  <ItemGroup />
-  <ItemGroup>
-    <ProjectReference Include="..\Jarvis.NEventStoreEx\Jarvis.NEventStoreEx.csproj">
-      <Project>{68A4D5D2-C860-48A5-9189-60BB2A9A7ED1}</Project>
-      <Name>Jarvis.NEventStoreEx</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />

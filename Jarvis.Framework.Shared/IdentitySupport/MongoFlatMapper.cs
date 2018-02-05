@@ -1,28 +1,14 @@
-﻿using Castle.Core.Logging;
-using Jarvis.Framework.Shared.Domain;
+﻿using Jarvis.Framework.Shared.Domain;
 using Jarvis.Framework.Shared.Domain.Serialization;
-using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.IdentitySupport.Serialization;
-using Jarvis.NEventStoreEx.CommonDomainEx;
 using MongoDB.Bson.Serialization;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.IdentitySupport
 {
     public static class MongoFlatMapper
     {
         private static Boolean _enabled = false;
-        private static ILogger _logger = NullLogger.Instance;
-
-        public static void SetLogger(ILogger logger)
-        {
-            _logger = logger;
-        }
 
         public static void EnableFlatMapping(
             Boolean enableForAllId = true)
@@ -47,8 +33,6 @@ namespace Jarvis.Framework.Shared.IdentitySupport
     {
         public IBsonSerializer GetSerializer(Type type)
         {
-            var typename = type.FullName;
-
             if (typeof(EventStoreIdentity).IsAssignableFrom(type))
             {
                 var serializerGeneric = typeof(TypedEventStoreIdentityBsonSerializer<>);
@@ -76,13 +60,13 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
         private Type GetGenericIdTypeFromAbstractIdentity(Type type)
         {
-            while (type.IsGenericType == false || type.GetGenericTypeDefinition() != typeof(AbstractIdentity<>))
+            while (!type.IsGenericType || type.GetGenericTypeDefinition() != typeof(AbstractIdentity<>))
                 type = type.BaseType;
 
             return type.GetGenericArguments()[0];
         }
 
-        static bool IsSubclassOfRawGeneric(Type generic, Type toCheck)
+        private static bool IsSubclassOfRawGeneric(Type generic, Type toCheck)
         {
             while (toCheck != null && toCheck != typeof(object))
             {
@@ -108,7 +92,6 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                 var serializerType = serializerStringGeneric.MakeGenericType(type);
                 var serializer = (IBsonSerializer)Activator.CreateInstance(serializerType);
                 return serializer;
-                //return new StringValueBsonSerializer(type);
             }
 
             return null;

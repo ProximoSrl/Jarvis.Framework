@@ -11,7 +11,7 @@ namespace Jarvis.Framework.Tests.EngineTests
 	{
 		private IdentityManager _manager;
 
-		[TestFixtureSetUp]
+		[OneTimeSetUp]
 		public void TestFixtureSetUp()
 		{
 			_manager = new IdentityManager(new InMemoryCounterService());

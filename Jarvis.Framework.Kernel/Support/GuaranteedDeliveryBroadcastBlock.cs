@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Jarvis.Framework.Shared.Exceptions;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -26,13 +27,12 @@ namespace Jarvis.Framework.Kernel.Support
                     foreach (var target in targets)
                     {
                         Int32 errorCount = 0;
-                        Boolean result;
-                        while (result = await target.SendAsync(item) == false)
+                        while (!(await target.SendAsync(item).ConfigureAwait(false)))
                         {
                             Thread.Sleep(1000); //give some time to free some resource.
                             if (errorCount > 2)
                             {
-                                throw new Exception("GuaranteedDeliveryBroadcastBlock: Unable to send message to a target id " + commitPollingClientId);
+                                throw new JarvisFrameworkEngineException("GuaranteedDeliveryBroadcastBlock: Unable to send message to a target id " + commitPollingClientId);
                             }
                             errorCount++;
                         }

@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -9,10 +9,11 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Jarvis.Framework.Kernel</RootNamespace>
     <AssemblyName>Jarvis.Framework.Kernel</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\Intranet\</SolutionDir>
     <RestorePackages>true</RestorePackages>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -34,15 +35,17 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Castle.Core">
-      <HintPath>..\packages\Castle.Core.3.3.3\lib\net45\Castle.Core.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Castle.Core, Version=4.1.1.0, Culture=neutral, PublicKeyToken=407dd0808d44fbdc, processorArchitecture=MSIL">
+      <HintPath>..\packages\Castle.Core.4.1.1\lib\net45\Castle.Core.dll</HintPath>
     </Reference>
-    <Reference Include="Castle.Facilities.Logging">
-      <HintPath>..\packages\Castle.LoggingFacility.3.3.0\lib\net45\Castle.Facilities.Logging.dll</HintPath>
+    <Reference Include="Castle.Facilities.Logging, Version=4.0.0.0, Culture=neutral, PublicKeyToken=407dd0808d44fbdc, processorArchitecture=MSIL">
+      <HintPath>..\packages\Castle.LoggingFacility.4.0.0\lib\net45\Castle.Facilities.Logging.dll</HintPath>
     </Reference>
-    <Reference Include="Castle.Windsor">
-      <HintPath>..\packages\Castle.Windsor.3.3.0\lib\net45\Castle.Windsor.dll</HintPath>
+    <Reference Include="Castle.Windsor, Version=4.0.0.0, Culture=neutral, PublicKeyToken=407dd0808d44fbdc, processorArchitecture=MSIL">
+      <HintPath>..\packages\Castle.Windsor.4.0.0\lib\net45\Castle.Windsor.dll</HintPath>
+    </Reference>
+    <Reference Include="DnsClient, Version=1.0.7.0, Culture=neutral, PublicKeyToken=4574bb5573c51424, processorArchitecture=MSIL">
+      <HintPath>..\packages\DnsClient.1.0.7\lib\net45\DnsClient.dll</HintPath>
     </Reference>
     <Reference Include="Fasterflect">
       <HintPath>..\packages\fasterflect.2.1.3\lib\net40\Fasterflect.dll</HintPath>
@@ -51,37 +54,38 @@
       <HintPath>..\packages\Metrics.NET.0.3.7\lib\net45\Metrics.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="MongoDB.Bson, Version=2.4.0.70, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\MongoDB.Bson.2.4.0\lib\net45\MongoDB.Bson.dll</HintPath>
+    <Reference Include="MongoDB.Bson, Version=2.5.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\MongoDB.Bson.2.5.0\lib\net45\MongoDB.Bson.dll</HintPath>
     </Reference>
-    <Reference Include="MongoDB.Driver, Version=2.4.0.70, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\MongoDB.Driver.2.4.0\lib\net45\MongoDB.Driver.dll</HintPath>
+    <Reference Include="MongoDB.Driver, Version=2.5.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\MongoDB.Driver.2.5.0\lib\net45\MongoDB.Driver.dll</HintPath>
     </Reference>
-    <Reference Include="MongoDB.Driver.Core, Version=2.4.0.70, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\MongoDB.Driver.Core.2.4.0\lib\net45\MongoDB.Driver.Core.dll</HintPath>
+    <Reference Include="MongoDB.Driver.Core, Version=2.5.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\MongoDB.Driver.Core.2.5.0\lib\net45\MongoDB.Driver.Core.dll</HintPath>
     </Reference>
-    <Reference Include="NEventStore, Version=6.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NEventStore.6.0.0-beta0041\lib\net40\NEventStore.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
-    <Reference Include="NEventStore.Domain, Version=6.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NEventStore.Domain.6.0.0-beta0016\lib\net40\NEventStore.Domain.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="NStore.Core, Version=0.4.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\NStore.Core.0.4.0\lib\net461\NStore.Core.dll</HintPath>
     </Reference>
-    <Reference Include="NEventStore.Persistence.MongoDB, Version=6.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NEventStore.Persistence.MongoDB.6.0.0-beta0090\lib\net40\NEventStore.Persistence.MongoDB.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="NStore.Domain, Version=0.4.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\NStore.Domain.0.4.0\lib\net461\NStore.Domain.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Newtonsoft.Json.6.0.8\lib\net45\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="NStore.Persistence.Mongo, Version=0.4.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\NStore.Persistence.Mongo.0.4.0\lib\net461\NStore.Persistence.Mongo.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.Buffers, Version=4.0.1.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Buffers.4.3.0\lib\netstandard1.1\System.Buffers.dll</HintPath>
+    </Reference>
+    <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Messaging" />
-    <Reference Include="System.Runtime.InteropServices.RuntimeInformation, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+    <Reference Include="System.Runtime.InteropServices.RuntimeInformation">
       <HintPath>..\packages\System.Runtime.InteropServices.RuntimeInformation.4.0.0\lib\net45\System.Runtime.InteropServices.RuntimeInformation.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System.Threading.Tasks.Dataflow, Version=4.5.24.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.Tpl.Dataflow.4.5.24\lib\portable-net45+win8+wpa81\System.Threading.Tasks.Dataflow.dll</HintPath>
@@ -96,37 +100,63 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Commands\AbstractCommandHandler.cs" />
+    <Compile Include="Commands\CommandsExecutorHelper.cs" />
+    <Compile Include="Commands\ExecuteCommandDto.cs" />
+    <Compile Include="Commands\ExecuteCommandResultDto.cs" />
     <Compile Include="Commands\ICommandHandler.cs" />
     <Compile Include="Commands\InProcessCommandBus.cs" />
+    <Compile Include="Commands\InvalidCommandException.cs" />
     <Compile Include="Commands\RepositoryCommandHandler.cs" />
+    <Compile Include="Commands\UserCannotSendCommandException.cs" />
     <Compile Include="DSL\ScaffoldAttribute.cs" />
     <Compile Include="Engine\AbstractProcessManager.cs" />
     <Compile Include="Engine\AccessControlList.cs" />
-    <Compile Include="Engine\AggregateFactory.cs" />
+    <Compile Include="Engine\AggregateFactoryEx.cs" />
+    <Compile Include="Engine\AggregateModifiedException.cs" />
     <Compile Include="Engine\AggregateRoot.cs" />
-    <Compile Include="Engine\AggregateRootEventRouter.cs" />
-    <Compile Include="Engine\AggregateSnapshot.cs" />
     <Compile Include="Engine\AggregateState.cs" />
+    <Compile Include="Engine\AggregateStateEventPayloadProcessor.cs" />
     <Compile Include="Engine\DomainAggregateDeletedException.cs" />
-    <Compile Include="Engine\ISnapshotPersister.cs" />
+    <Compile Include="Engine\EventStoreFactory.cs" />
+    <Compile Include="Engine\IEntityFactory.cs" />
+    <Compile Include="Engine\IEntityRoot.cs" />
+    <Compile Include="Engine\JarvisEntityRoot.cs" />
+    <Compile Include="Engine\JarvisEntityState.cs" />
+    <Compile Include="Engine\MissingDefaultCtorException.cs" />
+    <Compile Include="Engine\ProcessManagerDispatcher.cs" />
+    <Compile Include="Engine\Projections\IHousekeeper.cs" />
+    <Compile Include="Events\AbstractProjection.cs" />
+    <Compile Include="Events\CommitShortInfo.cs" />
+    <Compile Include="Events\DirectMongoEventStoreQueryManager.cs" />
+    <Compile Include="Events\IEventStoreQueryManager.cs" />
+    <Compile Include="Events\IObserveProjection.cs" />
+    <Compile Include="Events\IProjection.cs" />
+    <Compile Include="Events\ProjectionServiceSelector.cs" />
+    <Compile Include="Events\TenantProjections.cs" />
+    <Compile Include="GlobalSuppressions.cs" />
+    <Compile Include="ProjectionEngine\Client\CheckpointSlotStatus.cs" />
+    <Compile Include="ProjectionEngine\Client\CommitPollingClient2.cs" />
     <Compile Include="ProjectionEngine\Client\ICommitPollingClient.cs" />
     <Compile Include="ProjectionEngine\Client\ICommitPollingClientFactory.cs" />
-    <Compile Include="ProjectionEngine\Unfolder\Projector.cs" />
+    <Compile Include="ProjectionEngine\Client\IConcurrentCheckpointStatusChecker.cs" />
+    <Compile Include="Host\IOfflineProjectionSettings.cs" />
+    <Compile Include="Host\IEngineSettings.cs" />
+    <Compile Include="Host\IProjectionSettings.cs" />
+    <Compile Include="Events\ProjectionInfo.cs" />
+    <Compile Include="ProjectionEngine\Client\ISlotStatusManager.cs" />
+    <Compile Include="ProjectionEngine\Client\ProjectionChangeInfo.cs" />
+    <Compile Include="ProjectionEngine\Client\SlotStatusManager.cs" />
+    <Compile Include="ProjectionEngine\CollectionWrapperException.cs" />
+    <Compile Include="ProjectionEngine\CollectionWrapperExtensions.cs" />
     <Compile Include="Engine\InvalidAggregateOperationException.cs" />
     <Compile Include="Engine\SagaMessage.cs" />
-    <Compile Include="Engine\Snapshots\SnapshotClassMap.cs" />
     <Compile Include="Engine\UninitializedAggregateException.cs" />
-    <Compile Include="Events\CommitsReplayer.cs" />
-    <Compile Include="Events\DelegatingEventBus.cs" />
     <Compile Include="Engine\DomainValidationException.cs" />
-    <Compile Include="Engine\EventStoreFactory.cs" />
     <Compile Include="Engine\ICommandHandler.cs" />
     <Compile Include="Events\IEventBus.cs" />
     <Compile Include="Events\IEventHandler.cs" />
-    <Compile Include="Engine\InvalidAggregateIdException.cs" />
     <Compile Include="Engine\InvalidDomainException.cs" />
     <Compile Include="Engine\InvalidPrincipalException.cs" />
-    <Compile Include="Engine\ISnapshotable.cs" />
     <Compile Include="Events\InProcessEventBus.cs" />
     <Compile Include="Events\NullEventBus.cs" />
     <Compile Include="MultitenantSupport\NullTenant.cs" />
@@ -141,16 +171,14 @@
     <Compile Include="ProjectionEngine\Client\Checkpoint.cs" />
     <Compile Include="ProjectionEngine\Client\CheckPointReplayStatus.cs" />
     <Compile Include="ProjectionEngine\Client\CommitEnhancer.cs" />
-    <Compile Include="ProjectionEngine\Client\CommitPollingClient2.cs" />
     <Compile Include="ProjectionEngine\Client\ConcurrentCheckpointTracker.cs" />
     <Compile Include="ProjectionEngine\Client\IConcurrentCheckpointTracker.cs" />
     <Compile Include="ProjectionEngine\Client\INotifyCommitHandled.cs" />
     <Compile Include="ProjectionEngine\Client\ProjectionMetrics.cs" />
     <Compile Include="ProjectionEngine\Client\ConcurrentCheckpointStatusChecker.cs" />
     <Compile Include="ProjectionEngine\Client\RebuildSettings.cs" />
-    <Compile Include="ProjectionEngine\Client\TaskHelpers.cs" />
     <Compile Include="ProjectionEngine\CollectionWrapper.cs" />
-    <Compile Include="ProjectionEngine\ConcurrentProjectionsEngine.cs" />
+    <Compile Include="ProjectionEngine\ProjectionEngineConfig.cs" />
     <Compile Include="ProjectionEngine\DeleteResult.cs" />
     <Compile Include="ProjectionEngine\ICollectionWrapper.cs" />
     <Compile Include="ProjectionEngine\IHousekeeper.cs" />
@@ -171,15 +199,12 @@
     <Compile Include="ProjectionEngine\Rebuild\UnwindedDomainEvent.cs" />
     <Compile Include="ProjectionEngine\RecycleBin\RecycleBin.cs" />
     <Compile Include="ProjectionEngine\SaveResult.cs" />
-    <Compile Include="ProjectionEngine\Unfolder\QueryModelRepository.cs" />
-    <Compile Include="ProjectionEngine\Unfolder\IProjectorFactory.cs" />
-    <Compile Include="ProjectionEngine\Unfolder\IQueryModelRepository.cs" />
-    <Compile Include="ProjectionEngine\Unfolder\TReadModel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Store\SagaFactory.cs" />
     <Compile Include="Store\SnapshotsHelper.cs" />
     <Compile Include="Support\GuaranteedDeliveryBroadcastBlock.cs" />
+    <Compile Include="Support\IdentityToAggregateManager.cs" />
     <Compile Include="Support\IProjectionMetricsDotNetConfigurer.cs" />
+    <Compile Include="Support\IStreamProcessorManager.cs" />
     <Compile Include="Support\MetricsHealthCheck.cs" />
     <Compile Include="Support\MetricsHelper.cs" />
     <Compile Include="Support\MongoRegistration.cs" />
@@ -198,10 +223,6 @@
     <ProjectReference Include="..\Jarvis.Framework.Shared\Jarvis.Framework.Shared.csproj">
       <Project>{70b179ed-c419-4782-b080-0d1678c90279}</Project>
       <Name>Jarvis.Framework.Shared</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Jarvis.NEventStoreEx\Jarvis.NEventStoreEx.csproj">
-      <Project>{68a4d5d2-c860-48a5-9189-60bb2a9a7ed1}</Project>
-      <Name>Jarvis.NEventStoreEx</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup />

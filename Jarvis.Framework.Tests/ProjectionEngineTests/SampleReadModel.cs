@@ -30,10 +30,16 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         public String Name { get; set; }
 
         public Int32 Value { get; set; }
-
     }
 
-    public class SampleReadModelTestId : AbstractReadModel<TestId>
+    public class SampleReadModelTest : AbstractReadModel<String>
+    {
+        public String Value { get; set; }
+
+		public Int32 Counter { get; set; }
+	}
+
+    public class SampleReadModelPollableTest : PollableReadModel<TestId>
     {
         public String Value { get; set; }
     }

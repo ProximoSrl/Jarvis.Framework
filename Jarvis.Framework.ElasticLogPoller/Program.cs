@@ -2,20 +2,16 @@
 using log4net;
 using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
 using System.Configuration;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using Topshelf;
 
 namespace Jarvis.Framework.ElasticLogPoller
 {
     public class Program
     {
-        private ILog _logger;
+        private readonly ILog _logger;
 
         static void Main(string[] args)
         {
@@ -30,8 +26,7 @@ namespace Jarvis.Framework.ElasticLogPoller
 
             HostFactory.Run(x =>
             {
-               
-                x.UseOldLog4Net("log4net.config");
+                x.UseLog4Net("log4net.config");
                 x.Service<Program>(s =>
                 {
                     s.ConstructUsing(name => new Program());
@@ -39,14 +34,11 @@ namespace Jarvis.Framework.ElasticLogPoller
                     s.WhenStopped(tc => tc.Stop());
                 });
                 x.RunAsLocalSystem();
-                x.DependsOnMsmq();
 
                 x.SetDescription("Jarvis - Elastic Poller Service");
                 x.SetDisplayName("Jarvis - Elastic Poller Service");
                 x.SetServiceName("JarvisElasticPoller");
             });
-
-
         }
 
         public Program()
@@ -54,6 +46,7 @@ namespace Jarvis.Framework.ElasticLogPoller
             _logger = LogManager.GetLogger(this.GetType());
             _logger.Debug("Starting.....");
         }
+
         private static void Banner()
         {
             Console.WriteLine();
@@ -77,7 +70,7 @@ namespace Jarvis.Framework.ElasticLogPoller
 
         private Timer timer;
 
-        ImporterEngine importer;
+        private ImporterEngine importer;
 
         private void Start()
         {
@@ -100,7 +93,6 @@ namespace Jarvis.Framework.ElasticLogPoller
                     pollingIntervalInSeconds = 60;
                 }
                 timer = new Timer(Poll, null, 0, pollingIntervalInSeconds * 1000);
-
             }
             catch (Exception ex)
             {
@@ -109,10 +101,11 @@ namespace Jarvis.Framework.ElasticLogPoller
             }
         }
 
-        Boolean isPolling = false;
+        private Boolean isPolling = false;
+
         private void Poll(object state)
         {
-            if (!isPolling) 
+            if (!isPolling)
             {
                 isPolling = true;
                 try
@@ -128,9 +121,6 @@ namespace Jarvis.Framework.ElasticLogPoller
                     isPolling = false;
                 }
             }
-           
         }
-
-
     }
 }

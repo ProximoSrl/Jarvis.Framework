@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Runtime.Caching;
-using Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore;
 using Metrics;
-using NEventStore;
+using NStore.Aggregates;
 
 namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence
 {
@@ -22,8 +21,8 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence
         private static readonly Counter CacheMissCounter = Metric.Counter("CachedSnapshotManagerMisses", Unit.Calls);
 
         public CachedSnapshotManager(
-            ISnapshotPersister persister, 
-            ISnapshotPersistenceStrategy snapshotPersistenceStrategy, 
+            ISnapshotPersister persister,
+            ISnapshotPersistenceStrategy snapshotPersistenceStrategy,
             Boolean cacheEnabled = true,
             CacheItemPolicy cacheItemPolicy = null)
         {
@@ -58,7 +57,7 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence
             return persistedSnapshot;
         }
 
-        public void Snapshot(IAggregateEx aggregate, String bucket, Int32 numberOfEventsSaved)
+        public void Snapshot(IAggregate aggregate, String bucket, Int32 numberOfEventsSaved)
         {
             if (SnapshotsSettings.HasOptedOut(aggregate.GetType()))
                 return;
@@ -70,11 +69,18 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence
             {
                 _cache.Set(aggregate.Id.AsString(), snapshot, _standardCachePolicy);
             }
-            
+
             if (_snapshotPersistenceStrategy.ShouldSnapshot(aggregate, numberOfEventsSaved))
             {
                 _persister.Persist(snapshot, aggregate.GetType().FullName);
             }
+        }
+
+        public void Clear(string streamId, Type aggregateType)
+        {
+            if (_cacheEnabled)
+                _cache.Remove(streamId);
+            _persister.Clear(streamId, Int32.MaxValue, aggregateType.FullName);
         }
     }
 }

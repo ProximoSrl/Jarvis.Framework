@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Jarvis.Framework.Shared.IdentitySupport;
 using MongoDB.Bson.Serialization.Attributes;
 using Newtonsoft.Json;
+using Jarvis.Framework.Shared.Messages;
 
 namespace Jarvis.Framework.Shared.Events
 {
@@ -23,32 +24,32 @@ namespace Jarvis.Framework.Shared.Events
         /// Identificativo dell'utente che ha scatenato l'evento
         /// </summary>
         [BsonIgnore]
-        public string IssuedBy {
+        public string IssuedBy
+        {
             get
             {
-                if (this.Context != null && this.Context.ContainsKey("user.id"))
-                    return (string)this.Context["user.id"];
+                if (this.Context != null && this.Context.ContainsKey(MessagesConstants.UserId))
+                    return (string)this.Context[MessagesConstants.UserId];
 
                 return null;
-            } 
+            }
         }
 
-        /// <summary>
-        /// Indica il timestamp della commit associata all'evento
-        /// </summary>
-        [BsonIgnore]
-        public DateTime CommitStamp { get; private set; }
+		/// <summary>
+		/// Indica il timestamp della commit associata all'evento
+		/// </summary>
+		[BsonIgnore]
+		public DateTime CommitStamp { get; private set; }
 
-        /// <summary>
-        /// Identificativo della commit
-        /// </summary>
-        [BsonIgnore]
-        public Guid CommitId { get; private set; }
+		/// <summary>
+		/// Identificativo della commit
+		/// </summary>
+		[BsonIgnore]
+        public String CommitId { get; private set; }
 
         /// <summary>
         /// Identificativo dell'aggregato a cui appartiene l'evento
         /// </summary>
-        //[BsonIgnore]
         public EventStoreIdentity AggregateId { get; private set; }
 
         /// <summary>
@@ -61,7 +62,7 @@ namespace Jarvis.Framework.Shared.Events
         /// Versione dell'aggregato al momento del raise dell'evento
         /// </summary>
         [BsonIgnore]
-        public int Version { get; private set; }
+        public Int64 Version { get; private set; }
 
         /// <summary>
         /// Commit checkpoint

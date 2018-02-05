@@ -1,5 +1,5 @@
 using System;
-using NEventStore;
+using NStore.SnapshotStore;
 
 namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence
 {
@@ -14,17 +14,17 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence
 
         public void Clear(string streamId, Int32 versionUpTo, String type)
         {
-
+            // Method intentionally left empty.
         }
 
-        public ISnapshot Load(string streamId, Int32 versionUpTo, String type)
+        public SnapshotInfo Load(string streamId, Int32 versionUpTo, String type)
         {
             return null;
         }
 
-        public void Persist(ISnapshot snapshot, String type)
+        public void Persist(SnapshotInfo snapshot, String type)
         {
-
+            // Method intentionally left empty.
         }
     }
 }

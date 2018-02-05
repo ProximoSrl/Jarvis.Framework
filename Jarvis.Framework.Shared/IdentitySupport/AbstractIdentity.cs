@@ -1,6 +1,4 @@
 using System;
-using NEventStore.Domain;
-using Jarvis.NEventStoreEx.CommonDomainEx;
 using MongoDB.Bson.Serialization.Attributes;
 using Newtonsoft.Json;
 
@@ -71,7 +69,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             throw new InvalidOperationException("Abstract identity inheritors must provide stable hash. It is not supported for:  " + type);
         }
 
-        static int CalculateStringHash(string value)
+        private static int CalculateStringHash(string value)
         {
             if (value == null) return 42;
             unchecked
@@ -79,7 +77,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                 var hash = 23;
                 foreach (var c in value)
                 {
-                    hash = hash * 31 + c;
+                    hash = (hash * 31) + c;
                 }
                 return hash;
             }

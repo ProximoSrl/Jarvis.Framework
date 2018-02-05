@@ -13,28 +13,27 @@ namespace Jarvis.Framework.Shared.Helpers
     using Castle.Facilities.Startable;
     using global::Metrics;
     using Castle.Core.Logging;
+	using Jarvis.Framework.Shared.Exceptions;
 
-    /// <summary>
-    /// All these classes are copied from the original classes of Castle.Windsor and they 
-    /// were adapted to change the facility so we can have a delayed start.
-    /// 
-    /// This facility uses the same IStartable interface, but it does not start any component
-    /// automatically, instead it simply start everything when requested.
-    /// </summary>
-    public class JarvisStartableFacility
+	/// <summary>
+	/// All these classes are copied from the original classes of Castle.Windsor and they 
+	/// were adapted to change the facility so we can have a delayed start.
+	/// 
+	/// This facility uses the same IStartable interface, but it does not start any component
+	/// automatically, instead it simply start everything when requested.
+	/// </summary>
+	public class JarvisStartableFacility
         : AbstractFacility
     {
-        private ITypeConverter _converter;
-
-        private List<HandlerInfo> _handlersWithStartError;
+        private readonly List<HandlerInfo> _handlersWithStartError;
 
         public const String PriorityExtendedPropertyKey = "startable-priority";
 
-        private Int32 _timeoutInSecondsBeforeRetryRestartFailedServices;
+        private readonly Int32 _timeoutInSecondsBeforeRetryRestartFailedServices;
 
         private System.Threading.Timer _retryStartTimer;
 
-        private ILogger _logger;
+        private readonly ILogger _logger;
 
         public static class Priorities
         {
@@ -81,8 +80,8 @@ namespace Jarvis.Framework.Shared.Helpers
 
         protected override void Init()
         {
-            _converter = Kernel.GetConversionManager();
-            Kernel.ComponentModelBuilder.AddContributor(new StartableContributor(_converter));
+            var converter = Kernel.GetConversionManager();
+            Kernel.ComponentModelBuilder.AddContributor(new StartableContributor(converter));
         }
 
         public void StartAllIStartable()
@@ -94,12 +93,13 @@ namespace Jarvis.Framework.Shared.Helpers
             {
                 try
                 {
+					_logger.InfoFormat("JarvisStartable: Trying to resolve startable {0}[{1}] with priority {2}", handlerInfo.Handler.ComponentModel.Implementation.FullName, handlerInfo.Description, handlerInfo.Priority);
                     handlerInfo.Handler.Resolve(CreationContext.CreateEmpty());
-                    _logger.InfoFormat("Component {0} started correctly.", handlerInfo.Description);
+                    _logger.InfoFormat("JarvisStartable: Component {0} [priority {1}] started correctly.", handlerInfo.Description, handlerInfo.Priority);
                 }
                 catch (Exception ex)
                 {
-                    _logger.ErrorFormat(ex, "Cannot start component {0} because it raised exception. Retry in {1} seconds.", handlerInfo.Description, _timeoutInSecondsBeforeRetryRestartFailedServices);
+                    _logger.ErrorFormat(ex, "JarvisStartable: Cannot start component {0} [priority {2}] because it raised exception. Retry in {1} seconds.", handlerInfo.Description, _timeoutInSecondsBeforeRetryRestartFailedServices, handlerInfo.Priority);
                     handlerInfo.StartException = ex;
                     _handlersWithStartError.Add(handlerInfo);
                 }
@@ -115,6 +115,7 @@ namespace Jarvis.Framework.Shared.Helpers
 
         private Int32 _retryCount = 0;
         Boolean _executing = false;
+
         private void RetryStartTimerCallback(object state)
         {
             _retryCount++;
@@ -129,13 +130,12 @@ namespace Jarvis.Framework.Shared.Helpers
                         {
                             handlerInfo.Handler.Resolve(CreationContext.CreateEmpty());
                             _handlersWithStartError.Remove(handlerInfo);
-                            _logger.InfoFormat("Component {0} started correctly after {1} retries.", handlerInfo.Description, _retryCount);
+                            _logger.InfoFormat("JarvisStartable: Component {0} started correctly after {1} retries.", handlerInfo.Description, _retryCount);
                         }
                         catch (Exception ex)
                         {
                             //Handler still failed start, leave it into collection and will be restarted.
-                            _logger.ErrorFormat(ex, "Cannot start component {0} because it raised exception. Retry in {1} seconds.", handlerInfo.Description, _timeoutInSecondsBeforeRetryRestartFailedServices);
-
+                            _logger.ErrorFormat(ex, "JarvisStartable: Cannot start component {0} because it raised exception. Retry in {1} seconds.", handlerInfo.Description, _timeoutInSecondsBeforeRetryRestartFailedServices);
                         }
                     }
                 }
@@ -145,7 +145,6 @@ namespace Jarvis.Framework.Shared.Helpers
                     if (_handlersWithStartError.Count == 0) _retryStartTimer.Dispose();
                 }
             }
-
         }
 
         private HealthCheckResult StartableHealtCheck()
@@ -153,9 +152,9 @@ namespace Jarvis.Framework.Shared.Helpers
             if (_handlersWithStartError.Count == 0)
                 return HealthCheckResult.Healthy();
 
-            return HealthCheckResult.Unhealthy(
+			return HealthCheckResult.Unhealthy(
                 "The following startable object throw error on start: \n{0}",
-                    _handlersWithStartError.Select(h => h.Description + " Ex: " + h.StartException.Message)
+                    _handlersWithStartError.Select(h => h.Description + " Ex: " + h.StartException.GetExceptionDescription())
                         .Aggregate((s1, s2) => s1 + "\n" + s2));
         }
 
@@ -163,8 +162,8 @@ namespace Jarvis.Framework.Shared.Helpers
         {
             foreach (var handler in handlers)
             {
-                if (HasStartableWithExtendedProperty(handler) ||
-                    typeof(IStartable).IsAssignableFrom(handler.ComponentModel.Implementation))
+                if (HasStartableWithExtendedProperty(handler)
+					|| typeof(IStartable).IsAssignableFrom(handler.ComponentModel.Implementation))
                 {
                     //is startable
                     var priorityValue = handler.ComponentModel.ExtendedProperties[PriorityExtendedPropertyKey];
@@ -184,8 +183,6 @@ namespace Jarvis.Framework.Shared.Helpers
             var isStartable = (bool?)startable;
             return isStartable.GetValueOrDefault();
         }
-
-
     }
 
     public static class JarvisStartableHelper
@@ -201,7 +198,16 @@ namespace Jarvis.Framework.Shared.Helpers
             return registration;
         }
 
-        public static ComponentRegistration<T> WithStartablePriorityHighest<T>(this ComponentRegistration<T> registration)
+		public static ComponentRegistration<T> WithStartablePriorityNormal<T>(this ComponentRegistration<T> registration)
+		  where T : class
+		{
+			registration.ExtendedProperties(
+				new Property(JarvisStartableFacility.PriorityExtendedPropertyKey,
+				JarvisStartableFacility.Priorities.Normal));
+			return registration;
+		}
+
+		public static ComponentRegistration<T> WithStartablePriorityHighest<T>(this ComponentRegistration<T> registration)
             where T : class
         {
             registration.ExtendedProperties(
@@ -237,5 +243,4 @@ namespace Jarvis.Framework.Shared.Helpers
             return registration;
         }
     }
-
 }

@@ -1,15 +1,11 @@
-﻿using NEventStore;
+﻿using NStore.SnapshotStore;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence
 {
     /// <summary>
     /// This interface abstract the concept of a class that it is able to 
-    /// persist and load <see cref="ISnapshot"/> instances.
+    /// persist and load <see cref="SnapshotInfo"/> instances.
     /// </summary>
     public interface ISnapshotPersister
     {
@@ -19,7 +15,7 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence
         /// <param name="snapshot"></param>
         /// <param name="type">We can have different type of snapshot, for standard aggregate or for 
         /// event unfolder and this parameter allows the caller to specify a type that generates the snapshot</param>
-        void Persist(ISnapshot snapshot, String type);
+        void Persist(SnapshotInfo snapshot, String type);
 
         /// <summary>
         /// 
@@ -31,7 +27,7 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence
         /// <param name="type">To allow saving different type of snapshot for a single
         /// StreamId the type is used to distinguish aggregate type.</param>
         /// <returns></returns>
-        ISnapshot Load(String streamId, Int32 versionUpTo, String type);
+        SnapshotInfo Load(String streamId, Int32 versionUpTo, String type);
 
         /// <summary>
         /// Clear all checkpoints taken before a certain checkpoint. 

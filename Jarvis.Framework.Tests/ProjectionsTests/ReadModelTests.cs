@@ -1,4 +1,5 @@
 ﻿using System;
+using Jarvis.Framework.Shared.Exceptions;
 using Jarvis.Framework.Shared.ReadModel;
 using NUnit.Framework;
 
@@ -22,21 +23,21 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
         [Test]
         public void test_string()
         {
-            var ex = Assert.Throws<Exception>(() => new SampleReadModelWithStringKey().ThrowIfInvalidId());
+            var ex = Assert.Throws<InvalidAggregateIdException>(() => new SampleReadModelWithStringKey().ThrowIfInvalidId());
             Assert.AreEqual("Empty Id Value", ex.Message);
         }
 
         [Test]
         public void test_guid()
         {
-            var ex = Assert.Throws<Exception>(() => new SampleReadModelWithGuidKey().ThrowIfInvalidId());
+            var ex = Assert.Throws<InvalidAggregateIdException>(() => new SampleReadModelWithGuidKey().ThrowIfInvalidId());
             Assert.AreEqual("Empty Id Value", ex.Message);
         }
 
         [Test]
         public void test_int()
         {
-            var ex = Assert.Throws<Exception>(() => new SampleReadModelWithIntKey().ThrowIfInvalidId());
+            var ex = Assert.Throws<InvalidAggregateIdException>(() => new SampleReadModelWithIntKey().ThrowIfInvalidId());
             Assert.AreEqual("Empty Id Value", ex.Message);
         }
     }

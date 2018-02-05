@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using Jarvis.Framework.TestHelpers;
 using Fasterflect;
 using Jarvis.Framework.Shared.Helpers;
+using Jarvis.Framework.Shared.Logging;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 {
@@ -32,35 +33,27 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
                 "test",
                 config,
                 projections,
-                Substitute.For<IConcurrentCheckpointTracker>(),
-                4);
+                4,
+				NullLoggerThreadContextManager.Instance);
         }
 
         [Test]
-        public void verify_finished_with_consecutive_events()
+        public async Task verify_finished_with_marker_events()
         {
             InitSut();
-            DispatchEvent(1);
+            await DispatchEventAsync(1).ConfigureAwait(false);
             Assert.That(sut.Finished, Is.False);
-            DispatchEvent(2);
+            await DispatchEventAsync(2).ConfigureAwait(false);
             Assert.That(sut.Finished, Is.False);
-            DispatchEvent(3);
+            await DispatchEventAsync(3).ConfigureAwait(false);
             Assert.That(sut.Finished, Is.False);
-            DispatchEvent(4);
-            Assert.That(sut.Finished, Is.True);
-        }
+            await DispatchEventAsync(4).ConfigureAwait(false);
+            Assert.That(sut.Finished, Is.False);
+			await sut.DispatchEventAsync(UnwindedDomainEvent.LastEvent).ConfigureAwait(false);
+			Assert.That(sut.Finished, Is.True);
+		}
 
-        [Test]
-        public void verify_finished_with_no_consecutive_events()
-        {
-            InitSut();
-            DispatchEvent(1);
-            Assert.That(sut.Finished, Is.False);
-            DispatchEvent(4);
-            Assert.That(sut.Finished, Is.True);
-        }
-
-        private SampleAggregateCreated DispatchEvent(Int64 checkpointToken)
+        private async Task<SampleAggregateCreated> DispatchEventAsync(Int64 checkpointToken)
         {
             var evt = new SampleAggregateCreated()
             {
@@ -69,7 +62,14 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 
             evt.AssignIdForTest(new SampleAggregateId(1));
             evt.SetPropertyValue(d => d.CheckpointToken, checkpointToken);
-            sut.DispatchEvent(evt);
+
+			UnwindedDomainEvent uevt = new UnwindedDomainEvent();
+			uevt.PartitionId = evt.AggregateId;
+			uevt.CheckpointToken = checkpointToken;
+			uevt.Event = evt;
+			uevt.EventType = evt.GetType().Name;
+
+            await sut.DispatchEventAsync(uevt).ConfigureAwait(false);
             return evt;
         }
     }

@@ -1,54 +1,51 @@
 ﻿using Castle.Core.Logging;
+using Jarvis.Framework.Kernel.Support;
 using Jarvis.Framework.Shared;
 using Jarvis.Framework.Shared.Commands;
 using Jarvis.Framework.Shared.Logging;
+using Jarvis.Framework.Shared.Messages;
 using Metrics;
+using System;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.Commands
 {
-    public abstract class AbstractCommandHandler<TCommand> : ICommandHandler<TCommand> where TCommand : ICommand
-    {
-        private static readonly Timer timer = Metric.Timer("Commands Execution", Unit.Commands);
-        private static readonly Counter commandCounter = Metric.Counter("CommandsDuration", Unit.Custom("ms"));
+	public abstract class AbstractCommandHandler<TCommand> : ICommandHandler<TCommand> where TCommand : ICommand
+	{
+		public ILogger Logger { get; set; }
 
-        public IExtendedLogger Logger { get; set; }
+		public ILoggerThreadContextManager LoggerThreadContextManager { get; set; }
 
-        public AbstractCommandHandler()
-        {
-            Logger = NullLogger.Instance;
-        }
+		protected AbstractCommandHandler()
+		{
+			Logger = NullLogger.Instance;
+			LoggerThreadContextManager = NullLoggerThreadContextManager.Instance;
+		}
 
-        public virtual void Handle(TCommand cmd)
-        {
-            if (JarvisFrameworkGlobalConfiguration.MetricsEnabled)
-            {
-                using (var context = timer.NewContext(cmd.GetType().Name))
-                {
-                    Execute(cmd);
-                    commandCounter.Increment(cmd.GetType().Name, context.Elapsed.Milliseconds);
-                }
-            }
-            else
-            {
-                Execute(cmd);
-            }
-           
-        }
+		public virtual async Task HandleAsync(TCommand cmd)
+		{
+			if (JarvisFrameworkGlobalConfiguration.MetricsEnabled)
+			{
+				using (var context = MetricsHelper.CommandTimer.NewContext(cmd.GetType().Name))
+				{
+					await Execute(cmd).ConfigureAwait(false);
+					MetricsHelper.CommandCounter.Increment(cmd.GetType().Name, context.Elapsed.Milliseconds);
+				}
+			}
+			else
+			{
+				await Execute(cmd).ConfigureAwait(false);
+			}
+		}
 
-        protected abstract void Execute(TCommand cmd);
+		protected abstract Task Execute(TCommand cmd);
 
-        public void Handle(ICommand command)
-        {
-            try
-            {
-                Logger.MarkCommandExecution(command);
-                Handle((TCommand)command);
-            }
-            finally
-            {
-                Logger.ClearCommandExecution();
-            }
-
-        }
-    }
+		public async Task HandleAsync(ICommand command)
+		{
+			using (LoggerThreadContextManager.MarkCommandExecution(command))
+			{
+				await HandleAsync((TCommand)command).ConfigureAwait(false);
+			}
+		}
+	}
 }
