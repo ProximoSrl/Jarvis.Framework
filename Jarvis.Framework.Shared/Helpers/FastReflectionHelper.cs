@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.Helpers
 {
-    public class FastReflectionHelper
+    public static class FastReflectionHelper
     {
         /// <summary>
         /// http://rogeralsing.com/2008/02/28/linq-expressions-creating-objects/
@@ -17,7 +17,6 @@ namespace Jarvis.Framework.Shared.Helpers
         /// <returns></returns>
         public static ObjectActivator GetActivator(ConstructorInfo ctor)
         {
-            Type type = ctor.DeclaringType;
             ParameterInfo[] paramsInfo = ctor.GetParameters();
 
             //create a single param of type object[]

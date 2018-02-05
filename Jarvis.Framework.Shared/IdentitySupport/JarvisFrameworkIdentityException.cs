@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.IdentitySupport
 {
+	/// <summary>
+	/// Generic exception in identity managament
+	/// </summary>
     [Serializable]
     public class JarvisFrameworkIdentityException : Exception
     {

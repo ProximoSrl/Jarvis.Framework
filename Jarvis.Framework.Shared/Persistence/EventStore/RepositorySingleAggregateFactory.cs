@@ -67,7 +67,7 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
 			};
 		}
 
-        Int32 _isGettingCache = 0;
+		private Int32 _isGettingCache = 0;
 
         IAggregateCachedRepository<TAggregate> IAggregateCachedRepositoryFactory.Create<TAggregate>(IIdentity id)
         {

@@ -13,7 +13,6 @@ namespace Jarvis.Framework.Shared.ReadModel
 {
     public interface IMessagesTracker
     {
-
         /// <summary>
         /// A message (Command, Event, Something else) was sent to the bus,
         /// this is the first event that is raised.
@@ -317,7 +316,6 @@ namespace Jarvis.Framework.Shared.ReadModel
                                 queueTimer.Record((Int64)queueTime, TimeUnit.Milliseconds, messageType);
                                 queueCounter.Increment(messageType, (Int64)queueTime);
 
-                                //var executionTime = completedAt.Subtract(trackMessage.StartedAt);
                                 totalExecutionTimer.Record((Int64)queueTime, TimeUnit.Milliseconds, messageType);
                                 totalExecutionCounter.Increment(messageType, (Int64)queueTime);
                             }
@@ -390,7 +388,7 @@ namespace Jarvis.Framework.Shared.ReadModel
             }
             catch (Exception iex)
             {
-                Logger.ErrorFormat(iex, "Unable to track Failed event of Message {0} - {1}", command.MessageId, ex.Message);
+                Logger.ErrorFormat(iex, "Unable to track Failed event of Message {0} - {1}", command?.MessageId, ex?.Message);
             }
         }
 

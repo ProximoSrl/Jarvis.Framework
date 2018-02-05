@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 
 namespace Jarvis.Framework.Shared.Claims
 {
@@ -38,13 +39,22 @@ namespace Jarvis.Framework.Shared.Claims
 
 		public string Value { get; private set; }
 
-		public Claim(string id, string value = "True")
+		[JsonConstructor]
+		public Claim(string id, string value)
 		{
 			if (string.IsNullOrWhiteSpace(id))
 				throw new ArgumentNullException(nameof(id));
 
 			Id = id;
 			Value = value;
+		}
+
+		/// <summary>
+		/// Overload for default value of "value" parameter
+		/// </summary>
+		/// <param name="id"></param>
+		public Claim(string id) : this(id, "True")
+		{
 		}
 
 		static public Claim For(string id, string value)

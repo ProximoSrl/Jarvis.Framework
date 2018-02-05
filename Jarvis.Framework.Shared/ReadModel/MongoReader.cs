@@ -10,8 +10,8 @@ namespace Jarvis.Framework.Shared.ReadModel
 {
     public class MongoReader<TModel, TKey> : IMongoDbReader<TModel, TKey> where TModel : AbstractReadModel<TKey>
     {
-        readonly IMongoDatabase _readmodelDb;
-        IMongoCollection<TModel> _collection;
+        private readonly IMongoDatabase _readmodelDb;
+        private IMongoCollection<TModel> _collection;
 
         public MongoReader(IMongoDatabase readmodelDb)
         {

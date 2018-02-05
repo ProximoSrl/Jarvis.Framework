@@ -1,4 +1,5 @@
 ﻿using System;
+using Jarvis.Framework.Shared.Exceptions;
 using Jarvis.Framework.Shared.MultitenantSupport;
 using MongoDB.Driver;
 
@@ -45,7 +46,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                 }
             }
 
-            throw new ApplicationException("Unable to generate next number for serie " + serie);
+            throw new JarvisFrameworkEngineException("Unable to generate next number for serie " + serie);
         }
 
         public ReservationSlot Reserve(string serie, int amount)
@@ -82,7 +83,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
     public class MultitenantCounterService : ICounterService
     {
-        readonly ITenantAccessor _tenantAccessor;
+		private readonly ITenantAccessor _tenantAccessor;
 
         public MultitenantCounterService(ITenantAccessor tenantAccessor)
         {

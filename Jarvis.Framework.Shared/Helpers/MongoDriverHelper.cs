@@ -1,4 +1,5 @@
-﻿using MongoDB.Bson;
+﻿using Jarvis.Framework.Shared.Exceptions;
+using MongoDB.Bson;
 using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
@@ -42,13 +43,12 @@ namespace Jarvis.Framework.Shared.Helpers
             return await finder.SingleOrDefaultAsync().ConfigureAwait(false);
         }
 
-        public static T FindOneById<T, Tid>(this IMongoCollection<T> collection, BsonValue idValue)
+        public static T FindOneById<T>(this IMongoCollection<T> collection, BsonValue idValue)
         {
-
             var value = BsonTypeMapper.MapToDotNetValue(idValue);
             if (idValue == null)
             {
-                throw new ApplicationException("FindOneById wrapper needs not a BsonValue but a plain value to be specified");
+                throw new JarvisFrameworkEngineException("FindOneById wrapper needs not a BsonValue but a plain value to be specified");
             }
 
             return collection.Find(Builders<T>.Filter.Eq("_id", value)).SingleOrDefault();
@@ -94,9 +94,9 @@ namespace Jarvis.Framework.Shared.Helpers
             return collection.DeleteOne(Builders<T>.Filter.Eq("_id", idValue));
         }
 
-        public static async Task<DeleteResult> RemoveByIdAsync<T, Tid>(this IMongoCollection<T> collection, Tid idValue)
+        public static Task<DeleteResult> RemoveByIdAsync<T, Tid>(this IMongoCollection<T> collection, Tid idValue)
         {
-            return await collection.DeleteOneAsync(Builders<T>.Filter.Eq("_id", idValue)).ConfigureAwait(false);
+            return collection.DeleteOneAsync(Builders<T>.Filter.Eq("_id", idValue));
         }
 
         public static Dictionary<Tkey, Tvalue> AsDictionary<Tkey, Tvalue>(this BsonValue bsonValue)
@@ -115,5 +115,4 @@ namespace Jarvis.Framework.Shared.Helpers
             }
         }
     }
-
 }

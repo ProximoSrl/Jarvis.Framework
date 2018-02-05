@@ -3,6 +3,10 @@ using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
 using NStore.Domain;
+using System.Collections.Generic;
+using MongoDB.Bson.Serialization.Attributes;
+using MongoDB.Bson.Serialization.Options;
+using System.Linq;
 
 namespace Jarvis.Framework.Kernel.Engine
 {
@@ -16,29 +20,53 @@ namespace Jarvis.Framework.Kernel.Engine
         protected JarvisAggregateState()
         {
             VersionSignature = "default";
+			EntityStates = new Dictionary<string, JarvisEntityState>();
         }
 
-        /// <summary>
-        /// Clona lo stato con una copia secca dei valori. Va reimplementata nel caso di utilizzo di strutture o referenze ad oggetti
-        /// </summary>
-        /// <returns>copia dello stato</returns>
-        public object Clone()
+		/// <summary>
+		/// To transparently handle snapshots of child entities, we need to 
+		/// </summary>
+		[BsonDictionaryOptions(Representation = DictionaryRepresentation.ArrayOfDocuments)]
+		public Dictionary<String, JarvisEntityState> EntityStates { get; set; }
+
+		/// <summary>
+		/// Clona lo stato con una copia secca dei valori. Va reimplementata nel caso di utilizzo di strutture o referenze ad oggetti
+		/// </summary>
+		/// <returns>copia dello stato</returns>
+		public object Clone()
         {
-            return DeepCloneMe();
+            var cloned = (JarvisAggregateState) DeepCloneMe();
+			if (cloned.EntityStates == null || Object.ReferenceEquals(cloned.EntityStates, EntityStates))
+			{
+				cloned.EntityStates = this.EntityStates
+					.ToDictionary(_ => _.Key, _ => (JarvisEntityState) _.Value.Clone());
+			}
+			return cloned;
         }
 
-        public virtual InvariantsCheckResult CheckInvariants()
-        {
-            return InvariantsCheckResult.Ok;
-        }
+        public InvariantsCheckResult CheckInvariants()
+		{
+			foreach (var entityState in EntityStates)
+			{
+				var invariantCheck = entityState.Value.CheckInvariants();
+				if (invariantCheck.IsInvalid)
+					return invariantCheck;
+			}
+			return OnCheckInvariants();
+		}
 
-        /// <summary>
-        /// A string property that allows for change in state. If an object needs to
-        /// change state, all the snapshot should be deleted because they are obsolete. With
-        /// this property the object can declare when state change format and all 
-        /// snapshot should be invalidated.
-        /// </summary>
-        public String VersionSignature { get; protected set; }
+		protected virtual InvariantsCheckResult OnCheckInvariants()
+		{
+			return InvariantsCheckResult.Ok;
+		}
+
+		/// <summary>
+		/// A string property that allows for change in state. If an object needs to
+		/// change state, all the snapshot should be deleted because they are obsolete. With
+		/// this property the object can declare when state change format and all 
+		/// snapshot should be invalidated.
+		/// </summary>
+		public String VersionSignature { get; protected set; }
 
 		/// <summary>
 		/// Create a deep clone with Serialization. It can be overriden in derived

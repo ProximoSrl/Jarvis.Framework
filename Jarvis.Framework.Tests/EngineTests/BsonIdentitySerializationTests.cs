@@ -17,7 +17,7 @@ namespace Jarvis.Framework.Tests.EngineTests
     {
         private readonly SampleAggregateId _sampleAggregateId = new SampleAggregateId(1);
 
-        const string Expected =
+		private const string Expected =
             "{ \"MessageId\" : \"fc3e5f0a-c4f0-47d5-91cf-a1c87fee600f\", \"AggregateId\" : \"SampleAggregate_1\" }";
 
         [OneTimeSetUp]

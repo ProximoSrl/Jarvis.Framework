@@ -11,7 +11,6 @@ using System.Collections.Generic;
 
 namespace Jarvis.Framework.Shared.ReadModel
 {
-
     public class NullMessageTracker : IMessagesTracker
     {
         public static NullMessageTracker Instance { get; set; }

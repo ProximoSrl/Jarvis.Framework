@@ -66,14 +66,14 @@
     <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
-    <Reference Include="NStore.Core, Version=0.3.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NStore.Core.0.3.0\lib\net461\NStore.Core.dll</HintPath>
+    <Reference Include="NStore.Core, Version=0.4.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\NStore.Core.0.4.0\lib\net461\NStore.Core.dll</HintPath>
     </Reference>
-    <Reference Include="NStore.Domain, Version=0.3.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NStore.Domain.0.3.0\lib\net461\NStore.Domain.dll</HintPath>
+    <Reference Include="NStore.Domain, Version=0.4.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\NStore.Domain.0.4.0\lib\net461\NStore.Domain.dll</HintPath>
     </Reference>
-    <Reference Include="NStore.Persistence.Mongo, Version=0.3.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NStore.Persistence.Mongo.0.3.0\lib\net461\NStore.Persistence.Mongo.dll</HintPath>
+    <Reference Include="NStore.Persistence.Mongo, Version=0.4.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\NStore.Persistence.Mongo.0.4.0\lib\net461\NStore.Persistence.Mongo.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Buffers, Version=4.0.1.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
@@ -99,7 +99,6 @@
     <Compile Include="Claims\IClaimsMatcher.cs" />
     <Compile Include="Claims\RequiredClaimAttribute.cs" />
     <Compile Include="Claims\RequiredRoleAttribute.cs" />
-    <Compile Include="Commands\CommandsExtensions.cs" />
     <Compile Include="Commands\ICommand.cs" />
     <Compile Include="Commands\ICommandBus.cs" />
     <Compile Include="Events\ChangesetCommonHeaders.cs" />
@@ -110,6 +109,7 @@
     <Compile Include="Helpers\CommandExtensions.cs" />
     <Compile Include="Helpers\DomainEventExtensions.cs" />
     <Compile Include="Helpers\NStoreSequencer.cs" />
+    <Compile Include="IdentitySupport\IIdentityToAggregateManager.cs" />
     <Compile Include="Messages\IMessageBus.cs" />
     <Compile Include="NeventStoreExGlobalConfiguration.cs" />
     <Compile Include="Persistence\EventStore\CachableAggregateCachedRepository.cs" />
@@ -126,7 +126,6 @@
     <Compile Include="Events\IDomainEvent.cs" />
     <Compile Include="Exceptions\DomainException.cs" />
     <Compile Include="Exceptions\JarvisFrameworkEngineException.cs" />
-    <Compile Include="Factories\IFactory.cs" />
     <Compile Include="Helpers\ExpressionExtension.cs" />
     <Compile Include="Helpers\JarvisStartableFacility.cs" />
     <Compile Include="Helpers\JarvisTypedFactoryFacility.cs" />
@@ -185,7 +184,7 @@
     <Compile Include="Store\VersionInfoAttribute.cs" />
     <Compile Include="Support\DisposableAction.cs" />
     <Compile Include="Support\DisposableCollection.cs" />
-    <Compile Include="Support\DisposableList.cs" />
+    <Compile Include="Support\DisposableStack.cs" />
     <Compile Include="Support\IMongoPersistedPocoObject.cs" />
     <Compile Include="Support\NamedLocker.cs" />
     <Compile Include="Support\OfflineMode.cs" />

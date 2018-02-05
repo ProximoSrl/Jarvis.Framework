@@ -8,7 +8,7 @@ namespace Jarvis.Framework.Shared.Support
 {
 	/// <summary>
 	/// Needed for serilog, it will accumulate disposable object to 
-	/// dispose a list of object.
+	/// dispose a list of object in the reverse order of addition.
 	/// </summary>
 	public class DisposableStack : IDisposable
 	{

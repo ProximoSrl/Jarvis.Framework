@@ -127,7 +127,9 @@ namespace Jarvis.Framework.Kernel.Support
 				foreach (var t in types)
 				{
 					if (!BsonClassMap.IsClassMapRegistered(t))
+					{
 						BsonClassMap.RegisterClassMap(new AliasClassMap(t));
+					}
 				}
 			}
 			else
@@ -187,6 +189,14 @@ namespace Jarvis.Framework.Kernel.Support
 			).ToArray();
 
 			RegisterTypes(allAggregateStatesObjects);
+
+			var allEntityStatesObjects = assembly.GetTypes().Where(x =>
+				x.IsClass
+				&& !x.IsAbstract
+				&& typeof(JarvisEntityState).IsAssignableFrom(x)
+			).ToArray();
+
+			RegisterTypes(allEntityStatesObjects);
 		}
 #pragma warning restore S125 // Sections of code should not be "commented out"
 
@@ -245,7 +255,7 @@ namespace Jarvis.Framework.Kernel.Support
 				var representationConfigurableSerializer = serializer as IRepresentationConfigurable;
 				if (representationConfigurableSerializer != null)
 				{
-					BsonType _representation = BsonType.String;
+					var _representation = BsonType.String;
 					var reconfiguredSerializer = representationConfigurableSerializer.WithRepresentation(_representation);
 					memberMap.SetSerializer(reconfiguredSerializer);
 				}

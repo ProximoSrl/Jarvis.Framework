@@ -80,15 +80,6 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
 		    {
 				throw new UserCannotSendCommandException();
 			}
-
-            //TODOREBUS: No more attach header ... 
-		    //foreach (var key in command.AllContextKeys)
-      //      {
-      //          _bus.attach(command,key, command.GetContextData(key));
-      //      }
-
-      //      _bus.AttachHeader(command, "command.id", command.MessageId.ToString());
-      //      _bus.AttachHeader(command, "command.description", command.Describe());
         }
     }
 }

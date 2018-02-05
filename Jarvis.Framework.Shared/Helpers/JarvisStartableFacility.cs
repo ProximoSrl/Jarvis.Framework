@@ -115,6 +115,7 @@ namespace Jarvis.Framework.Shared.Helpers
 
         private Int32 _retryCount = 0;
         Boolean _executing = false;
+
         private void RetryStartTimerCallback(object state)
         {
             _retryCount++;
@@ -135,7 +136,6 @@ namespace Jarvis.Framework.Shared.Helpers
                         {
                             //Handler still failed start, leave it into collection and will be restarted.
                             _logger.ErrorFormat(ex, "JarvisStartable: Cannot start component {0} because it raised exception. Retry in {1} seconds.", handlerInfo.Description, _timeoutInSecondsBeforeRetryRestartFailedServices);
-
                         }
                     }
                 }
@@ -145,7 +145,6 @@ namespace Jarvis.Framework.Shared.Helpers
                     if (_handlersWithStartError.Count == 0) _retryStartTimer.Dispose();
                 }
             }
-
         }
 
         private HealthCheckResult StartableHealtCheck()
@@ -163,8 +162,8 @@ namespace Jarvis.Framework.Shared.Helpers
         {
             foreach (var handler in handlers)
             {
-                if (HasStartableWithExtendedProperty(handler) ||
-                    typeof(IStartable).IsAssignableFrom(handler.ComponentModel.Implementation))
+                if (HasStartableWithExtendedProperty(handler)
+					|| typeof(IStartable).IsAssignableFrom(handler.ComponentModel.Implementation))
                 {
                     //is startable
                     var priorityValue = handler.ComponentModel.ExtendedProperties[PriorityExtendedPropertyKey];

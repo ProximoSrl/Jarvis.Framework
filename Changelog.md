@@ -1,6 +1,12 @@
 J.A.R.V.I.S. Framework - Proximo srl (c)
 ====
 
+## 3.0.0
+
+- Migration to NStore
+- Migration to async.
+- Entity support.
+
 ## 2.1.0
 
 - Offline support for command execution

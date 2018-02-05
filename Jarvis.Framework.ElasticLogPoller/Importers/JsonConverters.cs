@@ -56,5 +56,4 @@ namespace Jarvis.Framework.ElasticLogPoller.Importers
             return typeof(BaseImporter).IsAssignableFrom(objectType);
         }
     }
-
 }

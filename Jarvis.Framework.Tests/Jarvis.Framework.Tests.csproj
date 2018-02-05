@@ -77,14 +77,14 @@
     <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
-    <Reference Include="NStore.Core, Version=0.3.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NStore.Core.0.3.0\lib\net461\NStore.Core.dll</HintPath>
+    <Reference Include="NStore.Core, Version=0.4.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\NStore.Core.0.4.0\lib\net461\NStore.Core.dll</HintPath>
     </Reference>
-    <Reference Include="NStore.Domain, Version=0.3.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NStore.Domain.0.3.0\lib\net461\NStore.Domain.dll</HintPath>
+    <Reference Include="NStore.Domain, Version=0.4.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\NStore.Domain.0.4.0\lib\net461\NStore.Domain.dll</HintPath>
     </Reference>
-    <Reference Include="NStore.Persistence.Mongo, Version=0.3.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NStore.Persistence.Mongo.0.3.0\lib\net461\NStore.Persistence.Mongo.dll</HintPath>
+    <Reference Include="NStore.Persistence.Mongo, Version=0.4.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\NStore.Persistence.Mongo.0.4.0\lib\net461\NStore.Persistence.Mongo.dll</HintPath>
     </Reference>
     <Reference Include="NSubstitute, Version=1.8.1.0, Culture=neutral, PublicKeyToken=92dd2e9066daa5ca, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -152,7 +152,10 @@
     <Compile Include="DomainTests\EventstoreIdentityBsonSerializationTests.cs" />
     <Compile Include="DomainTests\StringValueMongoTests.cs" />
     <Compile Include="DomainTests\TypedStringValue.cs" />
-    <Compile Include="EngineTests\AggregateTests.cs" />
+    <Compile Include="EngineTests\AggregateTests\AggregateRepositoryTests.cs" />
+    <Compile Include="EngineTests\AggregateTests\BasicEventRoutingTests.cs" />
+    <Compile Include="EngineTests\AggregateTests\SnapshotTests.cs" />
+    <Compile Include="EngineTests\AggregateTests\SupportClasses.cs" />
     <Compile Include="EngineTests\BsonIdentitySerializationTests.cs" />
     <Compile Include="EngineTests\EngineSetupTests.cs" />
     <Compile Include="EngineTests\EventsDispatcherTests.cs" />
@@ -163,9 +166,9 @@
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="Kernel\Commands\RepositoryCommandHandlerTests.cs" />
     <Compile Include="Kernel\Events\DirectMongoEventStoreQueryManagerTests.cs" />
+    <Compile Include="Kernel\Support\IdentityToAggregateManagerTests.cs" />
     <Compile Include="Kernel\Support\MetricsHealthCheckExplicitTests.cs" />
     <Compile Include="Kernel\Support\StreamProcessorManagerTests.cs" />
-    <Compile Include="NeventStoreExTests\Persistence\RepositoryTests.cs" />
     <Compile Include="EngineTests\SagaTests\BillPrinted.cs" />
     <Compile Include="EngineTests\SagaTests\DeliverPizzaSaga2.cs" />
     <Compile Include="EngineTests\SagaTests\DeliverPizzaSaga.cs" />
@@ -179,8 +182,6 @@
     <Compile Include="GlobalTestInit.cs" />
     <Compile Include="MultitenantSupportTests\MultiTenantSubDependencyResolverTests.cs" />
     <Compile Include="MultitenantSupportTests\TenantManagerTests.cs" />
-    <Compile Include="NeventStoreExTests\Persistence\ShapshotPersistenceStrategiesTests.cs" />
-    <Compile Include="NeventStoreExTests\Persistence\SnapshotManagerTests.cs" />
     <Compile Include="ProjectionEngineTests\CollectionWrapperForPollableEntitiesTests.cs" />
     <Compile Include="ProjectionEngineTests\CollectionWrapperResolveWithTypedFacilityTests.cs" />
     <Compile Include="ProjectionEngineTests\CollectionWrapperTests.cs" />

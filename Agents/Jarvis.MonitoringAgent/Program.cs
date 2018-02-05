@@ -3,19 +3,14 @@ using Castle.Facilities.Logging;
 using Castle.MicroKernel.Registration;
 using Castle.MicroKernel.Resolvers.SpecializedResolvers;
 using Castle.Windsor;
-using Castle.Windsor.Configuration.Interpreters;
 using Jarvis.MonitoringAgent.Support;
 using System;
-using System.Collections.Generic;
 using System.Configuration;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Topshelf;
 
 namespace Jarvis.MonitoringAgent
 {
-    public class Program
+	public static class Program
     {
         static IWindsorContainer _container;
         static ILogger _logger;
