@@ -15,13 +15,12 @@ namespace Jarvis.Framework.Tests.EngineTests.AggregateTests
 	{
 		private Repository sut;
 		private WindsorContainer container;
-		private InMemoryPersistence memoryPersistence;
 
 		[SetUp]
 		public void SetUp()
 		{
 			container = new WindsorContainer();
-			memoryPersistence = new InMemoryPersistence();
+			var memoryPersistence = new InMemoryPersistence();
 			sut = new Repository(new AggregateFactoryEx(container.Kernel), new StreamsFactory(memoryPersistence));
 		}
 
@@ -82,7 +81,7 @@ namespace Jarvis.Framework.Tests.EngineTests.AggregateTests
 			Type type = typeof(AggregateTestSampleAggregate1);
 			var aggregate = (AggregateTestSampleAggregate1)await sut.GetByIdAsync(type, "AggregateTestSampleAggregate1_42").ConfigureAwait(false);
 			aggregate.Touch();
-			await sut.SaveAsync(type, aggregate, Guid.NewGuid().ToString(), accessor => accessor.Add("HEADER", "VALUE")).ConfigureAwait(false);
+			await sut.SaveAsync(aggregate, Guid.NewGuid().ToString(), accessor => accessor.Add("HEADER", "VALUE")).ConfigureAwait(false);
 
 			var reloaded = (AggregateTestSampleAggregate1)await sut.GetByIdAsync(type, "AggregateTestSampleAggregate1_42").ConfigureAwait(false);
 			Assert.That(reloaded.InternalState.TouchCount, Is.EqualTo(1));

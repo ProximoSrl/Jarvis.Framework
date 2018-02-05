@@ -5,7 +5,7 @@ using System;
 
 namespace Jarvis.Framework.Kernel.Engine
 {
-	public class AggregateFactoryEx : IAggregateFactory
+    public class AggregateFactoryEx : IAggregateFactory
     {
         private readonly IKernel _kernel;
 
@@ -16,18 +16,23 @@ namespace Jarvis.Framework.Kernel.Engine
 
         public T Create<T>() where T : IAggregate
         {
-            if (_kernel?.HasComponent(typeof(T)) == true)
+            return (T)Create(typeof(T));
+        }
+
+        public IAggregate Create(Type aggregateType)
+        {
+            if (_kernel?.HasComponent(aggregateType) == true)
             {
-                return _kernel.Resolve<T>();
+                return (IAggregate)_kernel.Resolve(aggregateType);
             }
             else
             {
-                var ctor = typeof(T).Constructor(Flags.Default, new Type[] { });
+                var ctor = aggregateType.Constructor(Flags.Default, new Type[] { });
 
                 if (ctor == null)
-                    throw new MissingDefaultCtorException(typeof(T));
+                    throw new MissingDefaultCtorException(aggregateType);
 
-                return (T) ctor.CreateInstance();
+                return (IAggregate) ctor.CreateInstance();
             }
         }
     }
