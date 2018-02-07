@@ -99,6 +99,7 @@
     <Compile Include="Claims\IClaimsMatcher.cs" />
     <Compile Include="Claims\RequiredClaimAttribute.cs" />
     <Compile Include="Claims\RequiredRoleAttribute.cs" />
+    <Compile Include="Commands\CommandExecutionExceptionHelper.cs" />
     <Compile Include="Commands\ICommand.cs" />
     <Compile Include="Commands\ICommandBus.cs" />
     <Compile Include="Events\ChangesetCommonHeaders.cs" />
@@ -108,6 +109,7 @@
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="Helpers\CommandExtensions.cs" />
     <Compile Include="Helpers\DomainEventExtensions.cs" />
+    <Compile Include="Helpers\ExceptionHelpers.cs" />
     <Compile Include="Helpers\NStoreSequencer.cs" />
     <Compile Include="IdentitySupport\IIdentityToAggregateManager.cs" />
     <Compile Include="Messages\IMessageBus.cs" />
@@ -188,6 +190,7 @@
     <Compile Include="Support\IMongoPersistedPocoObject.cs" />
     <Compile Include="Support\NamedLocker.cs" />
     <Compile Include="Support\OfflineMode.cs" />
+    <Compile Include="Support\SharedMetricsHelper.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

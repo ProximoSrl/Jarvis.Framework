@@ -20,15 +20,20 @@ using System.Threading.Tasks;
 using Jarvis.Framework.Shared.Exceptions;
 using NStore.Core.Streams;
 using System.Collections.Generic;
+using Jarvis.Framework.Shared.Commands;
+using Castle.Core.Logging;
 
 namespace Jarvis.Framework.Tests.BusTests
 {
-	[TestFixture]
-    public class MessageTrackerFithFailureTests
+    /// <summary>
+    /// This tests the handler for the bus.
+    /// </summary>
+    [TestFixture]
+    public class MessageTrackerWithFailureTests
     {
+        private const int RebusMaxRetry = 3;
         private IBus _bus;
         private WindsorContainer _container;
-        private AnotherSampleCommandHandler _handler;
         private IMongoCollection<TrackedMessageModel> _messages;
 
         [OneTimeSetUp]
@@ -45,7 +50,7 @@ namespace Jarvis.Framework.Tests.BusTests
             {
                 ErrorQueue = "jarvistest-errors",
                 InputQueue = "jarvistest-input",
-                MaxRetry = 3,
+                MaxRetry = RebusMaxRetry,
                 NumOfWorkers = 1,
                 EndpointsMap = new System.Collections.Generic.Dictionary<string, string>()
                 {
@@ -53,12 +58,12 @@ namespace Jarvis.Framework.Tests.BusTests
                 }
             };
 
-			configuration.AssembliesWithMessages = new List<System.Reflection.Assembly>()
-			{
-				typeof(SampleMessage).Assembly,
-			};
+            configuration.AssembliesWithMessages = new List<System.Reflection.Assembly>()
+            {
+                typeof(SampleMessage).Assembly,
+            };
 
-			MongoDbMessagesTracker tracker = new MongoDbMessagesTracker(logDb);
+            MongoDbMessagesTracker tracker = new MongoDbMessagesTracker(logDb);
             BusBootstrapper bb = new BusBootstrapper(
                 _container,
                 configuration,
@@ -69,9 +74,11 @@ namespace Jarvis.Framework.Tests.BusTests
             rebusConfigurer.Start();
 
             _bus = _container.Resolve<IBus>();
-            _handler = new AnotherSampleCommandHandler();
+            var handler = new AnotherSampleCommandHandler();
+
+            var commandExecutionExceptionHelper = new JarvisDefaultCommandExecutionExceptionHelper( NullLogger.Instance, 20, 10);
             var handlerAdapter = new MessageHandlerToCommandHandlerAdapter<AnotherSampleTestCommand>(
-                _handler, tracker, _bus, 200);
+                handler, commandExecutionExceptionHelper, tracker, _bus);
 
             _container.Register(
                 Component
@@ -96,14 +103,20 @@ namespace Jarvis.Framework.Tests.BusTests
         /// <summary>
         /// When a domain exception is raised, we expect only one failure
         /// </summary>
-        [Test]
-        public async Task Verify_failure_tracking_for_domain_exception()
+        /// <param name="wrapInAggregateException"></param>
+        [TestCase(true)]
+        [TestCase(false)]
+        public async Task Verify_failure_tracking_for_domain_exception(Boolean wrapInAggregateException)
         {
             //We decide to fail only one time
             var sampleMessage = new AnotherSampleTestCommand(1, "verify_failure_tracking_for_domain_exception");
-            AnotherSampleCommandHandler.SetFixtureData(sampleMessage.MessageId, 1, new DomainException("TEST_1", "Test Exception for verify_failure_tracking_for_domain_exception test", null), true);
-            await _bus.Send(sampleMessage);
-            _handler.Reset.WaitOne(10000);
+            AnotherSampleCommandHandler.SetFixtureData(
+                sampleMessage.MessageId,
+                10,
+                new DomainException("TEST_1", "Test Exception for verify_failure_tracking_for_domain_exception test", null),
+                true,
+                wrapInAggregateException: wrapInAggregateException);
+            await _bus.Send(sampleMessage).ConfigureAwait(false);
 
             //cycle until we found handled message on tracking with specified condition
             TrackedMessageModel track;
@@ -112,9 +125,9 @@ namespace Jarvis.Framework.Tests.BusTests
             {
                 Thread.Sleep(200);
                 track = _messages.AsQueryable().SingleOrDefault(t => t.MessageId == sampleMessage.MessageId.ToString() &&
-                    t.ExecutionCount == 1 &&
-                    t.Completed == true &&
-                    t.Success == false);
+                    t.ExecutionCount == 1
+                    && t.Completed == true
+                    && t.Success == false);
             }
             while (
                     track == null &&
@@ -153,17 +166,28 @@ namespace Jarvis.Framework.Tests.BusTests
             Assert.That(track.ExecutionCount, Is.EqualTo(1));
         }
 
-        [Test]
-        public async Task Verify_retry_start_execution_tracking()
+        /// <summary>
+        /// Verify what happens when handle launch exception for two times, than execution suceeds.
+        /// </summary>
+        /// <param name="wrapInAggregateException"></param>
+        /// <returns></returns>
+        [TestCase(true)]
+        [TestCase(false)]
+        public async Task Verify_retry_start_execution_tracking(Boolean wrapInAggregateException)
         {
             var tracks = _messages.FindAll().ToList();
             Assert.That(tracks, Has.Count.EqualTo(0), "messages collection is not empty");
 
             var sampleMessage = new AnotherSampleTestCommand(2, "verify_retry_start_execution_tracking");
-            AnotherSampleCommandHandler.SetFixtureData(sampleMessage.MessageId, 2, new ConcurrencyException("TEST_1", null), true);
+            AnotherSampleCommandHandler.SetFixtureData(
+                sampleMessage.MessageId,
+                2,
+                new ConcurrencyException("TEST_1", null),
+                true,
+                wrapInAggregateException: wrapInAggregateException);
 
-            await _bus.Send(sampleMessage);
-            _handler.Reset.WaitOne(10000);
+            await _bus.Send(sampleMessage).ConfigureAwait(false);
+
             //cycle until we found handled message on tracking
             TrackedMessageModel track;
             DateTime startTime = DateTime.Now;
@@ -196,16 +220,23 @@ namespace Jarvis.Framework.Tests.BusTests
         }
 
         /// <summary>
-        /// This should be refactored to be quicker, to wait for all execution we need to wait
-        /// all the Thread random sleep.
+        /// Verify that after too many exception the execution will halt.
         /// </summary>
-        [Test]
-        public async Task Verify_exceeding_retry()
+        /// <param name="wrapInAggregateException"></param>
+        [TestCase(true)]
+        [TestCase(false)]
+        public async Task Verify_exceeding_retry(Boolean wrapInAggregateException)
         {
             var sampleMessage = new AnotherSampleTestCommand(3, "verify_exceeding_retry");
-            AnotherSampleCommandHandler.SetFixtureData(sampleMessage.MessageId, Int32.MaxValue, new ConcurrencyException("TEST_1", null), false);
+            AnotherSampleCommandHandler.SetFixtureData(
+                sampleMessage.MessageId,
+                Int32.MaxValue, 
+                new ConcurrencyException("TEST_1", null),
+                false,
+                wrapInAggregateException: wrapInAggregateException);
+
             await _bus.Send(sampleMessage).ConfigureAwait(false);
-            _handler.Reset.WaitOne(10000);
+
             //cycle until we found handled message on tracking
             TrackedMessageModel track;
             DateTime startTime = DateTime.Now;
@@ -213,7 +244,7 @@ namespace Jarvis.Framework.Tests.BusTests
             {
                 Thread.Sleep(200);
                 track = _messages.AsQueryable().SingleOrDefault(t => t.MessageId == sampleMessage.MessageId.ToString()
-                    && t.ExecutionCount == 100
+                    && t.ExecutionCount == 10
                     && t.Completed == true);
             }
             while (
@@ -238,7 +269,58 @@ namespace Jarvis.Framework.Tests.BusTests
             Assert.That(track.Completed, Is.True);
             Assert.That(track.Success, Is.False);
 
-            Assert.That(track.ExecutionCount, Is.EqualTo(100), "Execution retry for conflict should do for 100 times");
+            Assert.That(track.ExecutionCount, Is.EqualTo(10), "Execution retry for conflict should do for 10 times");
+        }
+
+        /// <summary>
+        /// Verify that after too many exception the execution will halt.
+        /// </summary>
+        /// <param name="wrapInAggregateException"></param>
+        [TestCase(true)]
+        [TestCase(false)]
+        public async Task Verify_generic_exception_does_not_force_retry(Boolean wrapInAggregateException)
+        {
+            var sampleMessage = new AnotherSampleTestCommand(3, "verify_exceeding_retry");
+            AnotherSampleCommandHandler.SetFixtureData(
+                sampleMessage.MessageId,
+                Int32.MaxValue, new JarvisFrameworkEngineException("TEST_1", null),
+                false,
+                wrapInAggregateException: wrapInAggregateException);
+
+            await _bus.Send(sampleMessage).ConfigureAwait(false);
+
+            //cycle until we found handled message on tracking
+            TrackedMessageModel track;
+            DateTime startTime = DateTime.Now;
+            do
+            {
+                Thread.Sleep(200);
+                track = _messages.AsQueryable().SingleOrDefault(t => t.MessageId == sampleMessage.MessageId.ToString()
+                    && t.Completed == true);
+            }
+            while (
+                    track == null && DateTime.Now.Subtract(startTime).TotalSeconds < 4 //TODO: find a better way to handle this test.
+            );
+
+            if (track == null)
+            {
+                //failure, try to recover the message id to verify what was wrong
+                track = _messages.AsQueryable().SingleOrDefault(t => t.MessageId == sampleMessage.MessageId.ToString());
+            }
+
+            if (track == null)
+            {
+                throw new AssertionException($"Message {sampleMessage.MessageId} did not generate tracking info");
+            }
+
+            Assert.That(track.MessageId, Is.EqualTo(sampleMessage.MessageId.ToString()));
+            Assert.That(track.Description, Is.EqualTo(sampleMessage.Describe()));
+            Assert.That(track.StartedAt, Is.Not.Null);
+            Assert.That(track.CompletedAt, Is.Not.Null);
+            Assert.That(track.Completed, Is.True);
+            Assert.That(track.Success, Is.False);
+
+            Assert.That(track.ExecutionCount, Is.EqualTo(RebusMaxRetry), "Execution Should retry RebusMaxRetry times");
         }
     }
 }
