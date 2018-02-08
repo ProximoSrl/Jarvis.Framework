@@ -8,6 +8,8 @@ using Metrics;
 using Jarvis.Framework.Shared.Helpers;
 using Castle.Core.Logging;
 using System.Collections.Generic;
+using NStore.Core.Streams;
+using Jarvis.Framework.Shared.Exceptions;
 
 namespace Jarvis.Framework.Shared.ReadModel
 {
@@ -371,6 +373,7 @@ namespace Jarvis.Framework.Shared.ReadModel
 
         public void Failed(ICommand command, DateTime failedAt, Exception ex)
         {
+            LogTypedException(command, ex);
             try
             {
                 var id = command.MessageId.ToString();
@@ -389,6 +392,20 @@ namespace Jarvis.Framework.Shared.ReadModel
             catch (Exception iex)
             {
                 Logger.ErrorFormat(iex, "Unable to track Failed event of Message {0} - {1}", command?.MessageId, ex?.Message);
+            }
+        }
+
+        private void LogTypedException(ICommand command, Exception ex)
+        {
+            var exception = ex?.ExtractException();
+            //We reached the maximum number of retry, the execution was not successful.
+            if (exception is ConcurrencyException)
+            {
+                Logger.ErrorFormat(exception, "Too many conflict on command {0} [MessageId: {1}] : {2}", command.GetType(), command.MessageId, command.Describe());
+            }
+            else if (exception is DomainException)
+            {
+                Logger.ErrorFormat(exception, "Domain exception on command {0} [MessageId: {1}] : {2}", command.GetType(), command.MessageId, command.Describe());
             }
         }
 

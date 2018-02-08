@@ -14,9 +14,9 @@ J.A.R.V.I.S. Framework - Proximo srl (c)
 
 #### Breaking changes
 
-- IMessagesTracker methods now accepts entire command and not only the commandid. 
+- IMessagesTracker methods now accepts entire command and not only the commandId. 
 - [Projection need to use attribute for signature/name/slot information](Wiki/BreakingChanges/2.1.0_ProjectionAttribute.md)
-- 
+
 ## 2.0
 
 First version of the changelog.

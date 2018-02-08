@@ -96,6 +96,7 @@
     <Compile Include="Importers\ImportException.cs" />
     <Compile Include="Importers\JsonConverters.cs" />
     <Compile Include="Importers\MongoImporter.cs" />
+    <Compile Include="Importers\MongoImporterSerilog.cs" />
     <Compile Include="Importers\PollResult.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -24,7 +24,11 @@ namespace Jarvis.Framework.ElasticLogPoller.Importers
                 case "mongo": 
                     retValue = new MongoImporter();
                     break;
-                   
+
+                case "mongo-serilog":
+                    retValue = new MongoImporterSerilog();
+                    break;
+
                 default:
                     throw new ConfigurationErrorsException("Unknown type " + jObject["Type"]);
             }
