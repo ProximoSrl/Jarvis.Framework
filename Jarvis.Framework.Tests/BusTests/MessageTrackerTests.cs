@@ -18,6 +18,8 @@ using Rebus.Handlers;
 using Jarvis.Framework.Tests.BusTests.Handlers;
 using Rebus.Config;
 using System.Threading.Tasks;
+using Jarvis.Framework.Shared.Commands;
+using Castle.Core.Logging;
 
 namespace Jarvis.Framework.Tests.BusTests
 {
@@ -28,6 +30,7 @@ namespace Jarvis.Framework.Tests.BusTests
         private WindsorContainer _container;
         private SampleCommandHandler _handler;
         private IMongoCollection<TrackedMessageModel> _messages;
+        private ICommandExecutionExceptionHelper _commandExecutionExceptionHelper;
 
         [OneTimeSetUp]
         public void TestFixtureSetUp()
@@ -53,12 +56,12 @@ namespace Jarvis.Framework.Tests.BusTests
                 }
             };
 
-			configuration.AssembliesWithMessages = new List<System.Reflection.Assembly>()
-			{
-				typeof(SampleMessage).Assembly,
-			};
+            configuration.AssembliesWithMessages = new List<System.Reflection.Assembly>()
+            {
+                typeof(SampleMessage).Assembly,
+            };
 
-			BusBootstrapper bb = new BusBootstrapper(
+            BusBootstrapper bb = new BusBootstrapper(
                 _container,
                 configuration,
                 tracker);
@@ -69,7 +72,8 @@ namespace Jarvis.Framework.Tests.BusTests
             _bus = _container.Resolve<IBus>();
 
             _handler = new SampleCommandHandler();
-            var handlerAdapter = new MessageHandlerToCommandHandlerAdapter<SampleTestCommand>(_handler, tracker, _bus);
+            _commandExecutionExceptionHelper = new JarvisDefaultCommandExecutionExceptionHelper(NullLogger.Instance, 20, 10);
+            var handlerAdapter = new MessageHandlerToCommandHandlerAdapter<SampleTestCommand>(_handler, _commandExecutionExceptionHelper, tracker, _bus);
 
             _container.Register(
                 Component
@@ -116,9 +120,8 @@ namespace Jarvis.Framework.Tests.BusTests
                 Assert.That(tracks, Has.Count.EqualTo(1));
                 track = tracks.Single();
             }
-            while (
-                    track.CompletedAt == null &&
-                    DateTime.Now.Subtract(startTime).TotalSeconds < 4
+            while (track.CompletedAt == null
+                  && DateTime.Now.Subtract(startTime).TotalSeconds < 4
             );
 
             Assert.That(track.MessageId, Is.EqualTo(sampleMessage.MessageId.ToString()));

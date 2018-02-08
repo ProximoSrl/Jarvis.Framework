@@ -4,6 +4,7 @@ using Jarvis.Framework.Shared;
 using Jarvis.Framework.Shared.Commands;
 using Jarvis.Framework.Shared.Logging;
 using Jarvis.Framework.Shared.Messages;
+using Jarvis.Framework.Shared.Support;
 using Metrics;
 using System;
 using System.Threading.Tasks;
@@ -26,10 +27,10 @@ namespace Jarvis.Framework.Kernel.Commands
 		{
 			if (JarvisFrameworkGlobalConfiguration.MetricsEnabled)
 			{
-				using (var context = MetricsHelper.CommandTimer.NewContext(cmd.GetType().Name))
+				using (var context = SharedMetricsHelper.CommandTimer.NewContext(cmd.GetType().Name))
 				{
 					await Execute(cmd).ConfigureAwait(false);
-					MetricsHelper.CommandCounter.Increment(cmd.GetType().Name, context.Elapsed.Milliseconds);
+					SharedMetricsHelper.CommandCounter.Increment(cmd.GetType().Name, context.Elapsed.Milliseconds);
 				}
 			}
 			else

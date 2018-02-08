@@ -115,21 +115,5 @@ namespace Jarvis.Framework.Kernel.Support
             projectionSlotCounterRebuild.Increment(slotName, milliseconds);
             projectionEventCounterRebuild.Increment(eventName, milliseconds);
         }
-
-        private static readonly Counter ConcurrencyExceptions = Metric.Counter("Concurrency Exceptions", Unit.Events);
-        private static readonly Counter DomainExceptions = Metric.Counter("Domain Exceptions", Unit.Events);
-
-        public static void MarkConcurrencyException()
-        {
-            ConcurrencyExceptions.Increment();
-        }
-
-        public static void MarkDomainException()
-        {
-            DomainExceptions.Increment();
-        }
-
-        public static readonly Timer CommandTimer = Metric.Timer("Commands Execution", Unit.Commands);
-        public static readonly Counter CommandCounter = Metric.Counter("CommandsDuration", Unit.Custom("ms"));
     }
 }

@@ -126,7 +126,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="BusTests\CustomTimeoutReplyHandlerTests.cs" />
     <Compile Include="BusTests\Handlers\AnotherSampleCommandHandler.cs" />
     <Compile Include="BusTests\Handlers\AnotherSampleMessageHandler.cs" />
     <Compile Include="BusTests\Handlers\SampleMessageHandler.cs" />
@@ -137,7 +136,7 @@
     <Compile Include="BusTests\MessageFolder\SampleMessage.cs" />
     <Compile Include="BusTests\MessageFolder\SampleMessageInFolder.cs" />
     <Compile Include="BusTests\MessageFolder\SampleTestCommand.cs" />
-    <Compile Include="BusTests\MessageTrackerFithFailureTests.cs" />
+    <Compile Include="BusTests\MessageTrackerWithFailureTests.cs" />
     <Compile Include="BusTests\MessageTrackerTests.cs" />
     <Compile Include="BusTests\MongoDbMessagesTrackerTests.cs" />
     <Compile Include="BusTests\Handlers\SampleCommandHandler.cs" />
@@ -164,6 +163,7 @@
     <Compile Include="External\MongoDriver\DictionariesSerializationTests.cs" />
     <Compile Include="External\NStoreTests\NStoreSerializationTests.cs" />
     <Compile Include="GlobalSuppressions.cs" />
+    <Compile Include="Kernel\Commands\InProcessCommandBusTests.cs" />
     <Compile Include="Kernel\Commands\RepositoryCommandHandlerTests.cs" />
     <Compile Include="Kernel\Events\DirectMongoEventStoreQueryManagerTests.cs" />
     <Compile Include="Kernel\Support\IdentityToAggregateManagerTests.cs" />
@@ -239,6 +239,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ServicesTests\CounterServiceTests.cs" />
     <Compile Include="ServicesTests\OfflineCounterServiceTest.cs" />
+    <Compile Include="SharedTests\Commands\JarvisDefaultCommandExecutionExceptionHelperTests.cs" />
     <Compile Include="SharedTests\Helpers\CastleUtilsTests.cs" />
     <Compile Include="SharedTests\Helpers\MongoDriverHelperTests.cs" />
     <Compile Include="SharedTests\IdentitySupport\AuxClasses.cs" />

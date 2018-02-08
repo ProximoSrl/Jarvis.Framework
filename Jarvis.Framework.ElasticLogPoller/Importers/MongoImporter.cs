@@ -1,13 +1,11 @@
 ﻿using MongoDB.Bson;
 using MongoDB.Driver;
-
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using MongoDB.Driver.Linq;
 using MongoDB.Bson.Serialization.Attributes;
 using System.Text.RegularExpressions;
@@ -15,7 +13,7 @@ using System.Globalization;
 
 namespace Jarvis.Framework.ElasticLogPoller.Importers
 {
-	public class MongoImporter : BaseImporter
+    public class MongoImporter : BaseImporter
 	{
 		public const String DateTimeFormatForNestQuery = "yyyy-MM-ddTHH:mm:ss.fff";
 

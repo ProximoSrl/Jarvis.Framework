@@ -18,9 +18,9 @@ namespace Jarvis.Framework.Tests.BusTests.Handlers
         /// <param name="numOfFailure"></param>
         /// <param name="exceptionToThrow"></param>
         /// <param name="setEventOnThrow"></param>
-        public static void SetFixtureData(Guid messageId, Int32 numOfFailure, Exception exceptionToThrow, Boolean setEventOnThrow)
+        public static void SetFixtureData(Guid messageId, Int32 numOfFailure, Exception exceptionToThrow, Boolean setEventOnThrow, Boolean wrapInAggregateException = false)
         {
-            commandRunDatas[messageId] = new RunData(numOfFailure, setEventOnThrow, exceptionToThrow);
+            commandRunDatas[messageId] = new RunData(numOfFailure, setEventOnThrow, exceptionToThrow, wrapInAggregateException);
         }
 
         private static Dictionary<Guid, RunData> commandRunDatas = new Dictionary<Guid, RunData>();
@@ -58,11 +58,16 @@ namespace Jarvis.Framework.Tests.BusTests.Handlers
 
         private class RunData
         {
-            public RunData(int numOfFailures, bool setEvent, Exception ex)
+            public RunData(
+                int numOfFailures,
+                bool setEvent,
+                Exception ex,
+                Boolean wrapInAggregateException)
             {
                 NumOfFailures = numOfFailures;
                 SetEvent = setEvent;
                 Ex = ex;
+                WrapInAggregateException = wrapInAggregateException;
                 _failCount = 0;
             }
 
@@ -72,6 +77,8 @@ namespace Jarvis.Framework.Tests.BusTests.Handlers
 
             public Exception Ex { get; private set; }
 
+            public Boolean WrapInAggregateException { get; private set; }
+
             private Int32 _failCount;
 
 #pragma warning disable S3242 // Method parameters should be declared with base types
@@ -80,6 +87,12 @@ namespace Jarvis.Framework.Tests.BusTests.Handlers
             {
                 _failCount++;
                 if (SetEvent) reset.Set();
+
+                if (WrapInAggregateException)
+                {
+                    throw new AggregateException("This is an aggreate for test", Ex);
+                }
+
                 throw Ex;
             }
 

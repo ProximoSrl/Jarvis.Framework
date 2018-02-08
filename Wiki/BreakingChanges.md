@@ -2,11 +2,14 @@
 
 The overall major change of version 3 is the migration to NStore, async and a major refactoring. There are many breaking changes with version 2.
 
-## Version 3.0
 
 **Migration to NSTORE, the whole framework was changed**
 
 - Invariant check on state is done with a function with signature *protected override InvariantsCheckResult OnCheckInvariants()*
+
+## Version 3.0.1
+
+- Changed retry for command handler, needs to register **ICommandExecutionExceptionHelper** interface
 
 # Version 2.0
 
