@@ -13,10 +13,10 @@
 
     {
       "Connection": "mongodb://admin:123456##@localhost/jarvis-log?authSource=admin",
-      "Collection": "logs",
+      "Collection": "log",
       "EsIndex": "logs",
       "EsServer": "http://localhost:9200",
-      "Type": "mongo"
+      "Type": "mongo-serilog"
     }
   ]
 }
