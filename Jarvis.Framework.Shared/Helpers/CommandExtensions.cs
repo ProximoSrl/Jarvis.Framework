@@ -25,7 +25,7 @@ namespace Jarvis.Framework.Shared.Helpers
 
 		static CommandExtensions()
 		{
-			EnableDiagnostics = false;
+			EnableDiagnostics = true;
 		}
 
 		public static void SetContextData(this ICommand command, String key, Object objectValue)
