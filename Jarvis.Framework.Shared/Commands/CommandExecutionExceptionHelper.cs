@@ -44,6 +44,16 @@ namespace Jarvis.Framework.Shared.Commands
             Int32 maxRetryOnConcurrencyException)
         {
             _logger = logger;
+            if (numberOfConcurrencyExceptionBeforeRandomSleeping <= 0)
+                throw new ArgumentException(
+                    $"Value {numberOfConcurrencyExceptionBeforeRandomSleeping} is not valid, we should have a value greater than 0",
+                    nameof(numberOfConcurrencyExceptionBeforeRandomSleeping));
+
+            if (maxRetryOnConcurrencyException <= 0)
+                throw new ArgumentException(
+                    $"Value {maxRetryOnConcurrencyException} is not valid, we should have a value greater than 0",
+                    nameof(maxRetryOnConcurrencyException));
+
             _numberOfConcurrencyExceptionBeforeRandomSleeping = numberOfConcurrencyExceptionBeforeRandomSleeping;
             _maxRetryOnConcurrencyException = maxRetryOnConcurrencyException;
         }
@@ -52,7 +62,7 @@ namespace Jarvis.Framework.Shared.Commands
         {
             retry = false;
             replyCommand = null;
- 
+
             switch (ex)
             {
                 case AggregateException aex:
@@ -116,7 +126,7 @@ namespace Jarvis.Framework.Shared.Commands
                             CommandHandled.CommandResult.Failed,
                             command.Describe(),
                             ex.Message,
-                            isDomainException : true
+                            isDomainException: true
                         );
                         replyCommand.CopyHeaders(command);
                     }
