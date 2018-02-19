@@ -43,7 +43,7 @@ namespace Jarvis.Framework.Kernel.Engine
 			if (domainEvent == null)
 				throw new JarvisFrameworkEngineException("Raised Events should inherits from DomainEvent class, invalid event type: " + @event.GetType().FullName);
 			domainEvent.SetPropertyValue(d => d.AggregateId, GetJarvisId());
-            OnBeforeEmitEvent(@event);
+            BeforeEmitEvent(@event);
 			base.Emit(@event);
 			//Now dispatch event to all entities
 			foreach (var childStates in InternalState.EntityStates)
@@ -52,9 +52,22 @@ namespace Jarvis.Framework.Kernel.Engine
 			}
 		}
 
+        private void BeforeEmitEvent(object @event)
+        {
+            //Give the entityes the ability to do something before emitting events.
+            if (childEntities?.Count > 0)
+            {
+                foreach (var entity in childEntities.Values)
+                {
+                    entity.EventEmitting(@event);
+                }
+            }
+            OnBeforeEmitEvent(@event);
+        }
+
         protected virtual void OnBeforeEmitEvent(object @event)
         {
-            //do nothing, we left the ability to real aggregate to intercept every event emitted.
+            //Do nothing, let concrete class do something if they want to.
         }
 
         public bool HasBeenCreated

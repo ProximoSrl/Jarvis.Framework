@@ -5,25 +5,22 @@ using NStore.Domain;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.EngineTests.AggregateTests
 {
-	public class AggregateTestSampleAggregate1 :
+    public class AggregateTestSampleAggregate1 :
 		AggregateRoot<AggregateTestSampleAggregate1State, AggregateTestSampleAggregate1Id>
 	{
 		private AggregateTestSampleEntity sample;
 
 		public AggregateTestSampleEntity SampleEntity => sample;
 
-		protected override void AfterInit()
+        protected override void AfterInit()
 		{
 			base.AfterInit();
 		}
 
-		protected override IEnumerable<IEntityRoot> CreateChildEntities(String aggregateId)
+        protected override IEnumerable<IEntityRoot> CreateChildEntities(String aggregateId)
 		{
 			yield return sample = new AggregateTestSampleEntity($"{aggregateId}/childEntity");
 		}
@@ -127,11 +124,20 @@ namespace Jarvis.Framework.Tests.EngineTests.AggregateTests
 	{
 		public AggregateTestSampleEntity(String id) : base(id)
 		{
-		}
+            AggregateEvents = new List<Object>();
+        }
 
-		public AggregateTestSampleEntityState InternalState => base.InternalState;
+        public List<Object> AggregateEvents { get; set; }
 
-		public void AddValue(Int32 value)
+        public AggregateTestSampleEntityState InternalState => base.InternalState;
+
+        protected override void OnEventEmitting(object @event)
+        {
+            AggregateEvents.Add(@event);
+            base.OnEventEmitting(@event);
+        }
+
+        public void AddValue(Int32 value)
 		{
 			if (base.InternalState.Accumulator > 100)
 				ThrowDomainException("Cannot add when accumulator greater than 100");

@@ -27,5 +27,13 @@ namespace Jarvis.Framework.Kernel.Engine
 		/// </summary>
 		/// <returns></returns>
 		JarvisEntityState GetState();
-	}
+
+        /// <summary>
+        /// This is called by owner aggregate to signal to the entity that the
+        /// father Aggregate is about to raise an event. This allows the aggregate
+        /// to do some custom logic.
+        /// </summary>
+        /// <param name="event"></param>
+        void EventEmitting(object @event);
+    }
 }

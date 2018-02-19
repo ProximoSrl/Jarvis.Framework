@@ -46,5 +46,12 @@ namespace Jarvis.Framework.Tests.EngineTests.AggregateTests
 			sut.SampleEntity.AddValue(10);
 			Assert.That(sut.SampleEntity.InternalState.Accumulator, Is.EqualTo(10), "Missing update of entity internal state");
 		}
-	}
+
+        [Test]
+        public void Events_raised_from_aggregate_should_be_dispatched_to_entity()
+        {
+            sut.DoubleTouch();
+            Assert.That(sut.SampleEntity.AggregateEvents.Count, Is.EqualTo(2), "Event of aggregate was not routed to the entity");
+        }
+    }
 }
