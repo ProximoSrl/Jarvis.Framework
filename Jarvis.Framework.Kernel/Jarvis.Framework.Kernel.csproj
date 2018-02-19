@@ -114,7 +114,7 @@
     <Compile Include="Engine\AggregateFactoryEx.cs" />
     <Compile Include="Engine\AggregateModifiedException.cs" />
     <Compile Include="Engine\AggregateRoot.cs" />
-    <Compile Include="Engine\AggregateState.cs" />
+    <Compile Include="Engine\JarvisAggregateState.cs" />
     <Compile Include="Engine\AggregateStateEventPayloadProcessor.cs" />
     <Compile Include="Engine\DomainAggregateDeletedException.cs" />
     <Compile Include="Engine\EventStoreFactory.cs" />
