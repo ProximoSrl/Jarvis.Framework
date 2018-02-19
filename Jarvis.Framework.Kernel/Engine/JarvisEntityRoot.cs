@@ -105,5 +105,15 @@ namespace Jarvis.Framework.Kernel.Engine
 			}
 			throw new DomainException(_ownerId, format);
 		}
-	}
+
+        public void EventEmitting(object @event)
+        {
+            OnEventEmitting(@event);
+        }
+
+        protected virtual void OnEventEmitting(object @event)
+        {
+            //Leave to inherited object the ability to intercept and handle the event.
+        }
+    }
 }
