@@ -15,12 +15,13 @@ namespace Jarvis.Framework.Tests.EngineTests.AggregateTests
 	{
 		private Repository sut;
 		private WindsorContainer container;
+        private InMemoryPersistence memoryPersistence;
 
-		[SetUp]
+        [SetUp]
 		public void SetUp()
 		{
 			container = new WindsorContainer();
-			var memoryPersistence = new InMemoryPersistence();
+			memoryPersistence = new InMemoryPersistence();
 			sut = new Repository(new AggregateFactoryEx(container.Kernel), new StreamsFactory(memoryPersistence));
 		}
 
@@ -38,7 +39,9 @@ namespace Jarvis.Framework.Tests.EngineTests.AggregateTests
 			aggregate.SampleEntity.AddValue(10);
 			await sut.SaveAsync(aggregate, Guid.NewGuid().ToString()).ConfigureAwait(false);
 
-			var reloaded = await sut.GetByIdAsync<AggregateTestSampleAggregate1>("AggregateTestSampleAggregate1_42").ConfigureAwait(false);
+            //Real test should use another repository to verify re-hydratation of internal state.
+            var otherRepo = new Repository(new AggregateFactoryEx(container.Kernel), new StreamsFactory(memoryPersistence));
+            var reloaded = await otherRepo.GetByIdAsync<AggregateTestSampleAggregate1>("AggregateTestSampleAggregate1_42").ConfigureAwait(false);
 			Assert.That(reloaded.SampleEntity.InternalState.Accumulator, Is.EqualTo(10));
 		}
 
