@@ -45,11 +45,6 @@ namespace Jarvis.Framework.Kernel.Engine
 			domainEvent.SetPropertyValue(d => d.AggregateId, GetJarvisId());
             BeforeEmitEvent(@event);
 			base.Emit(@event);
-			//Now dispatch event to all entities
-			foreach (var childStates in InternalState.EntityStates)
-			{
-				payloadProcessor.Process(childStates.Value, @event);
-			}
 		}
 
         private void BeforeEmitEvent(object @event)
