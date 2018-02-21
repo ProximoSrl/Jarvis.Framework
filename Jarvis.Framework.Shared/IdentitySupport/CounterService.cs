@@ -1,11 +1,12 @@
 ﻿using System;
 using Jarvis.Framework.Shared.Exceptions;
+using Jarvis.Framework.Shared.Helpers;
 using Jarvis.Framework.Shared.MultitenantSupport;
 using MongoDB.Driver;
 
 namespace Jarvis.Framework.Shared.IdentitySupport
 {
-    public class CounterService : IReservableCounterService
+    public class CounterService : IReservableCounterService, ICounterServiceWithOffset
     {
         protected readonly IMongoCollection<IdentityCounter> _counters;
 
@@ -60,6 +61,29 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                                        IsUpsert = true,
                                    });
             return new ReservationSlot(counter.Last - amount + 1, counter.Last);
+        }
+
+        public void EnsureMinimumValue(String serie, Int64 minValue)
+        {
+            if (minValue <= 0) return; //Nothing to be done.
+
+            var actualIndex = _counters.FindOneById(serie);
+            if (actualIndex == null)
+            {
+                _counters.InsertOne(new IdentityCounter()
+                {
+                    Id = serie,
+                    Last = minValue - 1
+                });
+            }
+            else
+            {
+                if (actualIndex.Last < minValue)
+                {
+                    actualIndex.Last = minValue - 1;
+                    _counters.Save(actualIndex, actualIndex.Id);
+                }
+            }
         }
     }
 

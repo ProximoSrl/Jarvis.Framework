@@ -13,6 +13,21 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         long GetNext(string serie);
     }
 
+    /// <summary>
+    /// Counter service that can setup a starting value for each sequence.
+    /// </summary>
+    public interface ICounterServiceWithOffset : ICounterService
+    {
+        /// <summary>
+        /// Ensure that the next value is not less than given value. It is sometimes
+        /// necessary when you need a sequence that does not collide with some other 
+        /// already existing value (ex. when you import data from other systems.)
+        /// </summary>
+        /// <param name="serie"></param>
+        /// <param name="minValue"></param>
+        void EnsureMinimumValue(String serie, Int64 minValue);
+    }
+
     public interface IReservableCounterService : ICounterService
     {
         /// <summary>

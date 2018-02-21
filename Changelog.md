@@ -7,6 +7,10 @@ J.A.R.V.I.S. Framework - Proximo srl (c)
 - Migration to async.
 - Entity support.
 
+### 3.1.0
+
+- Introduced interface ICounterServiceWithOffset
+
 ## 2.1.0
 
 - Offline support for command execution
