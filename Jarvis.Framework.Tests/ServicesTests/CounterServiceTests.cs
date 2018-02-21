@@ -37,14 +37,23 @@ namespace Jarvis.Framework.Tests.ServicesTests
         }
 
         [Test]
-        public void create_first()
+        public void Create_first()
         {
             var first = _service.GetNext("test");
             Assert.AreEqual(1, first);
         }
 
         [Test]
-        public void create_second()
+        public void Ensure_Minimum_value()
+        {
+            var serie = Guid.NewGuid().ToString();
+            _service.EnsureMinimumValue(serie, 1023);
+            var generated = _service.GetNext(serie);
+            Assert.AreEqual(1023, generated);
+        }
+
+        [Test]
+        public void Create_second()
         {
             _service.GetNext("test");
             var second = _service.GetNext("test");
@@ -56,29 +65,27 @@ namespace Jarvis.Framework.Tests.ServicesTests
         /// it fails to insert the very first element for a sequence.
         /// </summary>
         [Test]
-        public void parallel_test()
+        public void Parallel_test()
         {
             for (int j = 0; j < 100; j++)
             {
-                //System.Console.WriteLine("Iteration " + j);
                 _collection.Drop();
                 Parallel.ForEach(Enumerable.Range(1, 5), i => _service.GetNext("parallel"));
-                var last = _service.GetNext("parallel");
+                _service.GetNext("parallel");
             }
-
         }
 
         [Test]
-        public void reserve_slot_return_correct_reservation()
+        public void Reserve_slot_return_correct_reservation()
         {
-            var first = _service.GetNext("test");
+             _service.GetNext("test");
             var reservation = _service.Reserve("test", 100);
             Assert.That(reservation.StartIndex, Is.EqualTo(2));
             Assert.That(reservation.EndIndex, Is.EqualTo(101));
         }
 
         [Test]
-        public void reserve_slot_as_first_call()
+        public void Reserve_slot_as_first_call()
         {
             var reservation = _service.Reserve("test", 100);
             Assert.That(reservation.StartIndex, Is.EqualTo(1));
@@ -86,10 +93,10 @@ namespace Jarvis.Framework.Tests.ServicesTests
         }
 
         [Test]
-        public void reserve_slot_does_not_generate_duplicate()
+        public void Reserve_slot_does_not_generate_duplicate()
         {
-            var first = _service.GetNext("test");
-            var reservation = _service.Reserve("test", 100);
+            _service.GetNext("test");
+            _service.Reserve("test", 100);
             var second = _service.GetNext("test");
             Assert.That(second, Is.EqualTo(102));
         }
@@ -99,7 +106,7 @@ namespace Jarvis.Framework.Tests.ServicesTests
         /// it fails to insert the very first element for a sequence.
         /// </summary>
         [Test]
-        public void parallel_reservation_test()
+        public void Parallel_reservation_test()
         {
             for (int j = 0; j < 10; j++)
             {
@@ -120,7 +127,6 @@ namespace Jarvis.Framework.Tests.ServicesTests
                     }
                 }
             }
-
         }
     }
 }
