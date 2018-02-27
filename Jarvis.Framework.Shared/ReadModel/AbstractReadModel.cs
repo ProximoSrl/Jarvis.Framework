@@ -29,15 +29,13 @@ namespace Jarvis.Framework.Shared.ReadModel
 		}
 
 		/// <summary>
-		/// Need to check both the standard MessageId and also if the readmodel was managed
-		/// by one of the id of corresponding offline messages.
+		/// Check if this readmodel was build from this specific event.
 		/// </summary>
 		/// <param name="evt"></param>
 		/// <returns></returns>
 		public bool BuiltFromEvent(DomainEvent evt)
 		{
-			return BuiltFromMessage(evt.MessageId)
-				|| evt.GetOfflineEventIdList().Intersect(ProcessedEvents).Any();
+			return BuiltFromMessage(evt.MessageId);
 		}
 
 		/// <summary>

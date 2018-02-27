@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using Jarvis.Framework.Kernel.Engine;
 using Jarvis.Framework.Shared.Commands;
 using Jarvis.Framework.Shared.IdentitySupport;
@@ -15,7 +13,7 @@ using NStore.Domain;
 
 namespace Jarvis.Framework.Kernel.Commands
 {
-	public abstract class RepositoryCommandHandler<TAggregate, TCommand> : AbstractCommandHandler<TCommand>
+    public abstract class RepositoryCommandHandler<TAggregate, TCommand> : AbstractCommandHandler<TCommand>
 		where TAggregate : class, IAggregate
 		where TCommand : ICommand
 	{
