@@ -246,9 +246,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 			return 0;
 		}
 
-		public CheckPointReplayStatus GetCheckpointStatus(string id, Int64 checkpoint)
+		public CheckPointReplayStatus GetCheckpointStatus(string projectionName, Int64 checkpoint)
         {
-            Int64 lastDispatched = _checkpointTracker[id];
+            Int64 lastDispatched = _checkpointTracker[projectionName];
 
             var currentCheckpointValue = checkpoint;
             long lastDispatchedValue = lastDispatched;
@@ -257,7 +257,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             bool isLast = currentCheckpointValue == lastDispatchedValue && !RebuildSettings.ContinuousRebuild;
             //is replay is always true if we are in Continuous rebuild.
             bool isReplay = currentCheckpointValue <= lastDispatchedValue || RebuildSettings.ContinuousRebuild;
-            _checkpointSlotTracker[_projectionToSlot[id]] = _higherCheckpointToDispatchInRebuild - currentCheckpointValue;
+            _checkpointSlotTracker[_projectionToSlot[projectionName]] = _higherCheckpointToDispatchInRebuild - currentCheckpointValue;
             return new CheckPointReplayStatus(isLast, isReplay);
         }
     }
