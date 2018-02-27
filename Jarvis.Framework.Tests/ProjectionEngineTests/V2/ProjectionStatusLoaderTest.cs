@@ -58,6 +58,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             await Repository.SaveAsync(aggregate,Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
 
             await Engine.UpdateAndWaitAsync().ConfigureAwait(false);
+            await FlushCheckpointCollectionAsync().ConfigureAwait(false);
 
             var result = sut.GetSlotMetrics();
             Assert.That(result.Count(), Is.EqualTo(2));

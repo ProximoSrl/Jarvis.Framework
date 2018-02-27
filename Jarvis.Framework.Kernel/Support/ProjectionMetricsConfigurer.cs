@@ -1,8 +1,8 @@
-﻿using Castle.Core;
+﻿using System;
+using System.Linq;
+using Castle.Core;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 using Metrics;
-using System;
-using System.Linq;
 
 namespace Jarvis.Framework.Kernel.Support
 {
@@ -12,7 +12,7 @@ namespace Jarvis.Framework.Kernel.Support
         private readonly int _maxSkewForSlot;
 
         /// <summary>
-        /// 
+        /// Construct the metric configurer
         /// </summary>
         /// <param name="loader"></param>
         /// <param name="maxSkewForSlot">Maximum value tolerated for a slot 
@@ -80,7 +80,7 @@ namespace Jarvis.Framework.Kernel.Support
 
         public void Stop()
         {
-
+            // Method intentionally left empty.
         }
     }
 }

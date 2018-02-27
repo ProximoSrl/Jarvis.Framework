@@ -1,6 +1,4 @@
-﻿using Fasterflect;
-using Jarvis.Framework.Kernel.ProjectionEngine;
-using Jarvis.Framework.Shared.Events;
+﻿using Jarvis.Framework.Kernel.ProjectionEngine;
 using Jarvis.Framework.Shared.Messages;
 using Jarvis.Framework.Tests.EngineTests;
 using Jarvis.Framework.Tests.SharedTests.IdentitySupport;
@@ -8,7 +6,6 @@ using Jarvis.Framework.Tests.Support;
 using MongoDB.Driver;
 using NUnit.Framework;
 using System;
-using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
 using System.Threading.Tasks;
@@ -77,10 +74,14 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
                 Id = new TestId(1),
                 Value = "test"
             };
-            SampleAggregateCreated e1 = new SampleAggregateCreated();
+            SampleAggregateCreated e1 = new SampleAggregateCreated()
+                .AssignPositionValues(1, 1, 1);
             await sut.InsertAsync(e1, rm).ConfigureAwait(false);
 
-            SampleAggregateCreated e2 = new SampleAggregateCreated();
+            //Be sure that this is another event with other position values.
+            SampleAggregateCreated e2 = new SampleAggregateCreated()
+                .AssignPositionValues(2, 1, 1);
+
             //check we are not able to create a readmodel with two different source events.
             Assert.ThrowsAsync<CollectionWrapperException>(() => sut.InsertAsync(e2, rm));
         }
@@ -144,7 +145,8 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             await sut.InsertAsync(new SampleAggregateCreated(), rm).ConfigureAwait(false);
 
             //now try to update counter with an event
-            SampleAggregateTouched e = new SampleAggregateTouched();
+            SampleAggregateTouched e = new SampleAggregateTouched()
+                .AssignPositionValues(1, 1, 1); 
 
             await sut.FindAndModifyAsync(e, rm.Id, _ => _.Counter++).ConfigureAwait(false);
             var reloaded = await sut.FindOneByIdAsync(rm.Id).ConfigureAwait(false);

@@ -45,7 +45,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
         private Boolean returnProjection3 = true;
 
         [Test]
-        public async Task verify_projection_removed()
+        public async Task Verify_projection_removed()
         {
             var aggregate = await Repository.GetByIdAsync<SampleAggregate>(new SampleAggregateId(1)).ConfigureAwait(false);
             aggregate.Create();
@@ -58,7 +58,9 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             var lastPosition = await GetLastPositionAsync().ConfigureAwait(false);
 
             await Engine.UpdateAndWaitAsync().ConfigureAwait(false);
-            Assert.That(_statusChecker.IsCheckpointProjectedByAllProjection(lastPosition), Is.True);
+            await FlushCheckpointCollectionAsync().ConfigureAwait(false);
+
+            Assert.That(await _statusChecker.IsCheckpointProjectedByAllProjectionAsync(lastPosition).ConfigureAwait(false), Is.True);
 
             //now projection 3 is not returned anymore, it simulates a projection that is no more active
             returnProjection3 = false;
@@ -67,11 +69,11 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 
             aggregate = await Repository.GetByIdAsync<SampleAggregate>(new SampleAggregateId(3)).ConfigureAwait(false);
             aggregate.Create();
-            await Repository.SaveAsync(aggregate,Guid.NewGuid().ToString(), h => { });
+            await Repository.SaveAsync(aggregate,Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
 
             lastPosition = await GetLastPositionAsync().ConfigureAwait(false);
             await Engine.UpdateAndWaitAsync().ConfigureAwait(false);
-            Assert.That(_statusChecker.IsCheckpointProjectedByAllProjection(lastPosition), Is.True);
+            Assert.That(await _statusChecker.IsCheckpointProjectedByAllProjectionAsync(lastPosition).ConfigureAwait(false), Is.True);
         }
     }
 }

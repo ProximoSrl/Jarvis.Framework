@@ -65,10 +65,23 @@ namespace Jarvis.Framework.Shared.Events
         public IDictionary<string, object> Context { get; internal set; }
 
         /// <summary>
-        /// Versione dell'aggregato al momento del raise dell'evento
+        /// This is version of the aggregate, remember that in a single changeset
+        /// all the events share the same version after migration to NStore.
         /// </summary>
         [BsonIgnore]
         public Int64 Version { get; internal set; }
+
+        /// <summary>
+        /// This is populated by the ICommitEnhancer interface.
+        /// </summary>
+        [BsonIgnore]
+        public Int32 EventPosition { get; private set; }
+
+        /// <summary>
+        /// Useful to know if this is the last event projected for a given <see cref="Changeset"/>
+        /// </summary>
+        [BsonIgnore]
+        public Boolean IsLastEventOfCommit { get; set; }
 
         /// <summary>
         /// With migration to NStore this is the position of the

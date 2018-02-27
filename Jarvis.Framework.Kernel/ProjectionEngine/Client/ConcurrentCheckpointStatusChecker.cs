@@ -13,20 +13,23 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
     public class MongoDirectConcurrentCheckpointStatusChecker : IConcurrentCheckpointStatusChecker
     {
         private readonly IMongoCollection<Checkpoint> _checkpoints;
+        private readonly ConcurrentCheckpointTracker _tracker;
 
-        public MongoDirectConcurrentCheckpointStatusChecker(IMongoDatabase readmodelDb)
+        public MongoDirectConcurrentCheckpointStatusChecker(IMongoDatabase readmodelDb, ConcurrentCheckpointTracker tracker)
         {
             _checkpoints = readmodelDb.GetCollection<Checkpoint>("checkpoints");
+            _tracker = tracker;
         }
 
-        public bool IsCheckpointProjectedByAllProjection(Int64 checkpointToken)
+        public Task<bool> IsCheckpointProjectedByAllProjectionAsync(Int64 checkpointToken)
         {
-            return ProjectionsPassedCheckpoint(checkpointToken);
+            return ProjectionsPassedCheckpointAsync(checkpointToken);
         }
 
-        private bool ProjectionsPassedCheckpoint(long checkpointToken)
+        private async Task<bool> ProjectionsPassedCheckpointAsync(Int64 checkpointToken)
         {
             // Extracts all the projections that have not passed the checkpoint yet.
+            await _tracker.FlushCheckpointCollectionAsync().ConfigureAwait(false);
             var checkpointString = checkpointToken;
             var behindProjections = _checkpoints
                 .Find(
@@ -41,7 +44,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                 )
                 .Project(Builders<Checkpoint>.Projection.Include("_id"));
 
-            return behindProjections.Any() == false;
+            return !behindProjections.Any();
         }
     }
 }

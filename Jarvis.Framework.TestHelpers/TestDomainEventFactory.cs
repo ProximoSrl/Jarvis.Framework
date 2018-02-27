@@ -15,6 +15,19 @@ namespace Jarvis.Framework.TestHelpers
             return evt;
         }
 
+        public static T AssignPositionValues<T>(
+            this T evt,
+            Int64 checkpointToken,
+            Int64 aggregateVersion,
+            Int32 eventPosition) where T : DomainEvent
+        {
+            evt.SetPropertyValue("CheckpointToken", checkpointToken);
+            evt.SetPropertyValue("EventPosition", eventPosition);
+            evt.SetPropertyValue("Version", aggregateVersion);
+
+            return evt;
+        }
+
         public static T AssignIssuedByForTest<T>(this T evt, String issuedBy) where T : DomainEvent
         {
             if (evt.Context == null)

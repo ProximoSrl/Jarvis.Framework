@@ -2,23 +2,15 @@
 using Jarvis.Framework.Kernel.Events;
 using Jarvis.Framework.Kernel.MultitenantSupport;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
+using MongoDB.Driver;
+using MongoDB.Driver.Linq;
 using Jarvis.Framework.Kernel.Support;
+using System.Collections.Concurrent;
+using Metrics;
 using Jarvis.Framework.Shared.Exceptions;
 using Jarvis.Framework.Shared.Logging;
 using Jarvis.Framework.Shared.Messages;
-using Jarvis.Framework.Shared.Support;
-using Metrics;
-using MongoDB.Driver;
-using MongoDB.Driver.Linq;
-using NStore.Core.Persistence;
-using NStore.Domain;
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+using Jarvis.Framework.Shared.Helpers;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
 {
@@ -56,6 +48,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         private readonly ConcurrentBag<String> _engineFatalErrors;
 
         public Boolean Initialized { get; private set; }
+
+        private System.Timers.Timer _flushTimer;
 
         /// <summary>
         /// This is the basic constructor for the projection engine.
@@ -100,11 +94,18 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
             if (persistence == null)
                 throw new ArgumentNullException(nameof(persistence));
+            if (projections == null)
+                throw new ArgumentNullException(nameof(projections));
+            if (config == null)
+                throw new ArgumentNullException(nameof(config));
 
-            _persistence = persistence;
-
-            _logger = logger;
-            _loggerThreadContextManager = loggerThreadContextManager;
+            _persistence = persistence ?? throw new ArgumentNullException(nameof(persistence));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _loggerThreadContextManager = loggerThreadContextManager ?? throw new ArgumentNullException(nameof(loggerThreadContextManager));
+            _pollingClientFactory = pollingClientFactory ?? throw new ArgumentNullException(nameof(pollingClientFactory));
+            _checkpointTracker = checkpointTracker ?? throw new ArgumentNullException(nameof(checkpointTracker));
+            _housekeeper = housekeeper ?? throw new ArgumentNullException(nameof(housekeeper));
+            _notifyCommitHandled = notifyCommitHandled ?? throw new ArgumentNullException(nameof(notifyCommitHandled));
 
             var configErrors = config.Validate();
             if (!String.IsNullOrEmpty(configErrors))
@@ -145,6 +146,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 .ToDictionary(x => x.Key, x => x.OrderByDescending(p => p.Priority).ToArray());
 
             _bucketToClient = new Dictionary<BucketInfo, ICommitPollingClient>();
+
+            _flushTimer = new System.Timers.Timer
+            {
+                Interval = 10000
+            };
+            _flushTimer.Elapsed += FlushTimerElapsed;
 
             RegisterHealthCheck();
         }
@@ -232,6 +239,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             {
                 bucket.Value.Start();
             }
+            _flushTimer.Start();
         }
 
         private async Task InitAsync()
@@ -259,14 +267,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 var client = _pollingClientFactory.Create(_persistence, pollerId);
                 allClients.Add(client);
                 _bucketToClient.Add(bucket, client);
-                client.Configure(GetStartGlobalCheckpoint(bucket.Slots), 4000);
+                client.Configure(GetStartGlobalCheckpoint(), 4000);
             }
 
             _clients = allClients.ToArray();
 
             foreach (var slotName in allSlots)
             {
-                KernelMetricsHelper.CreateMeterForDispatcherCountSlot(slotName);
+                MetricsHelper.CreateMeterForDispatcherCountSlot(slotName);
                 var startCheckpoint = GetStartCheckpointForSlot(slotName);
                 _logger.InfoFormat("Slot {0} starts from {1}", slotName, startCheckpoint);
 
@@ -276,11 +284,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                     b.Slots.Any(s => s.Equals(slotName, StringComparison.OrdinalIgnoreCase))) ??
                     _config.BucketInfo.Single(b => b.Slots[0] == "*");
                 var client = _bucketToClient[slotBucket];
-                client.AddConsumer($"SLOT: {slotName}", commit => DispatchCommitAsync(commit, name, startCheckpoint));
+                client.AddConsumer(commit => DispatchCommitAsync(commit, name, startCheckpoint));
             }
 
             Initialized = true;
-            KernelMetricsHelper.SetProjectionEngineCurrentDispatchCount(() => _countOfConcurrentDispatchingCommit);
+            MetricsHelper.SetProjectionEngineCurrentDispatchCount(() => _countOfConcurrentDispatchingCommit);
         }
 
         private Int64 GetStartGlobalCheckpoint(String[] slots)
@@ -337,6 +345,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 _clients = null;
             }
             _bucketToClient.Clear();
+            _flushTimer.Stop();
         }
 
         private readonly ConcurrentDictionary<String, Int64> lastCheckpointDispatched =
@@ -461,12 +470,15 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                     _loggerThreadContextManager.ClearContextProperty("prj");
                 }
 
-                projection.CheckpointProjected(chunk.Position);
+                    projection.CheckpointProjected(chunk.Position);
+                    flushNeeded = true;
 
-                //TODO: Evaluate if it is needed to update single projection checkpoint
-                //Update this projection, set all events of this checkpoint as dispatched.
-                //await _checkpointTracker.UpdateProjectionCheckpointAsync(cname, chunk.Position).ConfigureAwait(false);
-            } //End of projection cycle.
+#pragma warning disable S125 // Sections of code should not be "commented out"
+                    //TODO: Evaluate if it is needed to update single projection checkpoint
+                    //Update this projection, set all events of this checkpoint as dispatched.
+                    //await _checkpointTracker.UpdateProjectionCheckpointAsync(cname, chunk.Position).ConfigureAwait(false);
+#pragma warning restore S125 // Sections of code should not be "commented out"
+                } //End of projection cycle.
 
             await _checkpointTracker.UpdateSlotAndSetCheckpointAsync(
                 slotName,
@@ -492,10 +504,28 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             Interlocked.Decrement(ref _countOfConcurrentDispatchingCommit);
         }
 
+        /// <summary>
+        /// Simple optimization to avoid calling flush if the projection service
+        /// is idle.
+        /// </summary>
+        private Boolean flushNeeded;
         private static object[] GetArrayOfObjectFromChunk(IChunk chunk)
         {
             Object[] events;
 
+        /// <summary>
+        /// Simply ask to the checkpoint collection tracker to flush everything.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void FlushTimerElapsed(object sender, System.Timers.ElapsedEventArgs e)
+        {
+            if (flushNeeded)
+            {
+                flushNeeded = false;
+                _checkpointTracker?.FlushCheckpointCollectionAsync().Wait();
+            }
+        }
             if (chunk.Payload is Changeset)
             {
                 events = ((Changeset)chunk.Payload).Events;

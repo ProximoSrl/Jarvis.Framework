@@ -24,27 +24,30 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
     /// from header information of the whole <see cref="Changeset"/>.
     /// </summary>
     public class CommitEnhancer : ICommitEnhancer
-    {
-        public void Enhance(IChunk chunk)
-        {
+	{
+		public void Enhance(IChunk chunk)
+		{
+			Changeset commit;
             if (chunk.Payload is Changeset commit)
             {
+                Int32 eventPosition = 1;
                 DomainEvent evt = null;
-                foreach (var eventMessage in commit.Events.Where(m => m is DomainEvent))
-                {
-                    evt = (DomainEvent)eventMessage;
-                    var headers = commit.Headers;
+				foreach (var eventMessage in commit.Events.Where(m => m is DomainEvent))
+				{
+					evt = (DomainEvent)eventMessage;
+					var headers = commit.Headers;
                     evt.CommitId = chunk.OperationId;
-                    evt.CommitStamp = commit.GetTimestamp();
-                    evt.Version = commit.AggregateVersion;
-                    evt.Context = headers;
-                    evt.CheckpointToken = chunk.Position;
-                }
+					evt.CommitStamp= commit.GetTimestamp();
+					evt.Version= commit.AggregateVersion;
+					evt.Context= headers;
+					evt.CheckpointToken= chunk.Position;
+                    evt.EventPosition = eventPosition++;
+				}
 
                 evt?.SetPropertyValue(d => d.IsLastEventOfCommit, true);
-            }
-        }
-    }
+			}
+		}
+	}
 
     /// <summary>
     /// A <see cref="ICommitEnhancer"/> implementation that does not

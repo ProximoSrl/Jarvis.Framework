@@ -9,6 +9,8 @@ using Jarvis.Framework.Shared.IdentitySupport;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using NStore.Domain;
+using Jarvis.Framework.TestHelpers;
+using Fasterflect;
 
 namespace Jarvis.Framework.Tests.EngineTests
 {
@@ -96,7 +98,7 @@ namespace Jarvis.Framework.Tests.EngineTests
 
 	public class SampleAggregateCreated : DomainEvent
 	{
-	}
+    }
 
 	public class SampleAggregateTouched : DomainEvent
 	{

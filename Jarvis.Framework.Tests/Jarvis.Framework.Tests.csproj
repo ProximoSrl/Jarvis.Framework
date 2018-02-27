@@ -246,6 +246,9 @@
     <Compile Include="ProjectionEngineTests\CollectionWrapperForPollableEntitiesTests.cs" />
     <Compile Include="ProjectionEngineTests\CollectionWrapperResolveWithTypedFacilityTests.cs" />
     <Compile Include="ProjectionEngineTests\CollectionWrapperTests.cs" />
+    <Compile Include="ProjectionEngineTests\CommitEnhancerTests.cs" />
+    <Compile Include="ProjectionEngineTests\ConcurrentCheckpointTrackerTests.cs" />
+    <Compile Include="ProjectionEngineTests\SlotStatusManagerTests.cs" />
     <Compile Include="ProjectionEngineTests\Rebuild\EventUnwinderTests.cs" />
     <Compile Include="ProjectionEngineTests\Rebuild\ProjectionEventInspectorTests.cs" />
     <Compile Include="ProjectionEngineTests\Rebuild\RebuildProjectionEngineTest.cs" />
@@ -268,7 +271,6 @@
     <Compile Include="ProjectionsTests\Atomic\Support\SimpleTestAtomicReadModelWrong.cs" />
     <Compile Include="ProjectionsTests\Atomic\Support\SimpleTestAtomicReadModel.cs" />
     <Compile Include="ProjectionsTests\CachedMongoStorageTests.cs" />
-    <Compile Include="ProjectionEngineTests\ConcurrentCheckpointTrackerTests.cs" />
     <Compile Include="ProjectionEngineTests\Concurrent\AbstractConcurrentProjectionEngineTests.cs">
       <SubType>Code</SubType>
     </Compile>

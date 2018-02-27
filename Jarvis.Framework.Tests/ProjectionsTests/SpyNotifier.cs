@@ -6,7 +6,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
 {
     public class SpyNotifier : INotifyToSubscribers
     {
-        public static int Counter = 0;
+        public int Counter { get; set; } = 0;
 
         public Task Send(object msg)
         {

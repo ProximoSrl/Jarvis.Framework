@@ -30,5 +30,28 @@ namespace Jarvis.Framework.Shared.Helpers
 
             return evt.AggregateId;
         }
+
+        /// <summary>
+        /// Given a <see cref="IChunk"/> it will return a list of object representing
+        /// events. This is needed because we can have payload of type <see cref="Changeset"/>
+        /// or simple objects (for component that does stream processing).
+        /// </summary>
+        /// <param name="chunk"></param>
+        /// <returns>Array of object to dispatch, never return null.</returns>
+        public static object[] GetDispatchList(this IChunk chunk)
+        {
+            if (chunk.Payload is Changeset changeset)
+            {
+                return changeset.Events;
+            }
+            else if (chunk.Payload != null)
+            {
+                return new Object[] { chunk.Payload };
+            }
+            else
+            {
+                return EmptyCommitEvents;
+            }
+        }
     }
 }

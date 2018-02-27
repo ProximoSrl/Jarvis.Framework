@@ -33,7 +33,7 @@ using Jarvis.Framework.Tests.Support;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 {
-	[TestFixture]
+    [TestFixture]
     public abstract class RebuildProjectionEngineBaseTests
     {
         private string _eventStoreConnectionString;
@@ -114,6 +114,11 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 
         protected abstract IEnumerable<IProjection> BuildProjections();
 
+        protected Task FlushCheckpointCollectionAsync()
+        {
+            return _tracker.FlushCheckpointCollectionAsync();
+        }
+
         protected void WaitForFinish(RebuildStatus status, Int32 timeoutInSeconds = 5)
         {
             DateTime startWait = DateTime.Now;
@@ -170,8 +175,9 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
     [TestFixture]
     public class Basic_dispatching_tests : RebuildProjectionEngineBaseTests
     {
-        CollectionWrapper<SampleReadModel, string> _writer;
-        IProjection _projection;
+        private CollectionWrapper<SampleReadModel, string> _writer;
+        private IProjection _projection;
+
         protected override IEnumerable<IProjection> BuildProjections()
         {
             _writer = new CollectionWrapper<SampleReadModel, string>(_storageFactory, new NotifyToNobody());
@@ -179,7 +185,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         }
 
         [Test]
-        public async Task dispatch_only_until_maximum_checkpoint_already_dispatched()
+        public async Task Dispatch_only_until_maximum_checkpoint_already_dispatched()
         {
             await CreateAggregate(1).ConfigureAwait(false);
             await CreateAggregate(2).ConfigureAwait(false);
@@ -188,7 +194,13 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             //prepare the tracker
             ConcurrentCheckpointTracker thisTracker = new ConcurrentCheckpointTracker(_db);
             thisTracker.SetUp(new[] { _projection }, 1, false);
-			await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection.Info.SlotName, new[] { _projection.Info.CommonName }, 2); //Set the projection as dispatched
+            await thisTracker.UpdateSlotAndSetCheckpointAsync
+                (_projection.Info.SlotName,
+                new[] { _projection.Info.CommonName },
+                2 //this is important, we dispatched only up this specific checkpoint.
+                ).ConfigureAwait(false); //Set the projection as dispatched
+            //DO NOT FORGET TO FLUSH THE TRACKER.
+            await thisTracker.FlushCheckpointCollectionAsync().ConfigureAwait(false);
 
             var status = await sut.RebuildAsync().ConfigureAwait(false);
             WaitForFinish(status);
@@ -218,8 +230,9 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 
             ConcurrentCheckpointTracker thisTracker = new ConcurrentCheckpointTracker(_db);
             thisTracker.SetUp(new[] { _projection1, _projection3 }, 1, false);
-            await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection1.Info.SlotName, new[] { _projection1.Info.CommonName }, 1);
-            await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection3.Info.SlotName, new[] { _projection3.Info.CommonName }, 1);
+            await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection1.Info.SlotName, new[] { _projection1.Info.CommonName }, 1).ConfigureAwait(false);
+            await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection3.Info.SlotName, new[] { _projection3.Info.CommonName }, 1).ConfigureAwait(false);
+            await thisTracker.FlushCheckpointCollectionAsync().ConfigureAwait(false);
 
             var status = await sut.RebuildAsync().ConfigureAwait(false);
             WaitForFinish(status);
@@ -228,7 +241,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         }
 
         [Test]
-        public async Task max_dispatched_is_handled_per_distinct_slot()
+        public async Task Max_dispatched_is_handled_per_distinct_slot()
         {
             await CreateAggregate(1).ConfigureAwait(false);
             await CreateAggregate(2).ConfigureAwait(false);
@@ -237,14 +250,16 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             //prepare the tracker
             ConcurrentCheckpointTracker thisTracker = new ConcurrentCheckpointTracker(_db);
             thisTracker.SetUp(new[] { _projection1, _projection3 }, 1, false);
-			await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection1.Info.SlotName, new[] { _projection1.Info.CommonName }, 2);
-			await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection3.Info.SlotName, new[] { _projection3.Info.CommonName }, 1);
+            await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection1.Info.SlotName, new[] { _projection1.Info.CommonName }, 2).ConfigureAwait(false);
+            await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection3.Info.SlotName, new[] { _projection3.Info.CommonName }, 1).ConfigureAwait(false);
+            await thisTracker.FlushCheckpointCollectionAsync().ConfigureAwait(false);
 
             var status = await sut.RebuildAsync().ConfigureAwait(false);
             WaitForFinish(status);
             Assert.That(_writer1.All.Count(), Is.EqualTo(2));
             Assert.That(_writer3.All.Count(), Is.EqualTo(1));
 
+            await thisTracker.FlushCheckpointCollectionAsync().ConfigureAwait(false);
             var allCheckpoints = _checkpointCollection.FindAll().ToList();
             var projection1 = allCheckpoints.Single(c => c.Id == _projection1.Info.CommonName);
             Assert.That(projection1.Current, Is.EqualTo(2));
@@ -281,8 +296,9 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 
             ConcurrentCheckpointTracker thisTracker = new ConcurrentCheckpointTracker(_db);
             thisTracker.SetUp(new IProjection[] { _projection1, _projection3 }, 1, false);
-			await thisTracker.UpdateSlotAndSetCheckpointAsync(((IProjection)_projection1).Info.SlotName, new[] { ((IProjection)_projection1).Info.CommonName }, 1);
-			await thisTracker.UpdateSlotAndSetCheckpointAsync(((IProjection)_projection3).Info.SlotName, new[] { ((IProjection)_projection3).Info.CommonName }, 1);
+            await thisTracker.UpdateSlotAndSetCheckpointAsync(((IProjection)_projection1).Info.SlotName, new[] { ((IProjection)_projection1).Info.CommonName }, 1).ConfigureAwait(false);
+            await thisTracker.UpdateSlotAndSetCheckpointAsync(((IProjection)_projection3).Info.SlotName, new[] { ((IProjection)_projection3).Info.CommonName }, 1).ConfigureAwait(false);
+            await thisTracker.FlushCheckpointCollectionAsync().ConfigureAwait(false);
 
             //now change signature.
             _projection3.Signature = "Modified";
@@ -304,29 +320,28 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             }
         }
 
-        private CollectionWrapper<SampleReadModel, string> _writer1;
-        private CollectionWrapper<SampleReadModel3, string> _writer3;
         private IProjection _projection1, _projection3;
 
         protected override IEnumerable<IProjection> BuildProjections()
         {
-            _writer1 = new CollectionWrapper<SampleReadModel, string>(_storageFactory, new NotifyToNobody());
-            yield return _projection1 = new Projection(_writer1);
-            _writer3 = new CollectionWrapper<SampleReadModel3, string>(_storageFactory, new NotifyToNobody());
-            yield return _projection3 = new Projection3(_writer3); //projection3 has a different slot
+            var writer1 = new CollectionWrapper<SampleReadModel, string>(_storageFactory, new NotifyToNobody());
+            yield return _projection1 = new Projection(writer1);
+            var writer3 = new CollectionWrapper<SampleReadModel3, string>(_storageFactory, new NotifyToNobody());
+            yield return _projection3 = new Projection3(writer3); //projection3 has a different slot
         }
 
         [Test]
-        public async Task event_is_dispatched()
+        public async Task Event_is_dispatched()
         {
             await CreateAggregate().ConfigureAwait(false);
 
             ConcurrentCheckpointTracker thisTracker = new ConcurrentCheckpointTracker(_db);
             thisTracker.SetUp(new[] { _projection1, _projection3 }, 1, false);
-            await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection1.Info.SlotName, new[] { _projection1.Info.CommonName }, 1);
-			await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection3.Info.SlotName, new[] { _projection3.Info.CommonName }, 1);
+            await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection1.Info.SlotName, new[] { _projection1.Info.CommonName }, 1).ConfigureAwait(false);
+            await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection3.Info.SlotName, new[] { _projection3.Info.CommonName }, 1).ConfigureAwait(false);
+            await thisTracker.FlushCheckpointCollectionAsync().ConfigureAwait(false);
 
-            RebuildStatus status = await sut.RebuildAsync();
+            RebuildStatus status = await sut.RebuildAsync().ConfigureAwait(false);
             WaitForFinish(status);
             var coll = _db.GetCollection<BsonDocument>("Sample");
             var allRecord = coll.FindAll().ToList();

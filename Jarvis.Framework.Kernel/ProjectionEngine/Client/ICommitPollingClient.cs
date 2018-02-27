@@ -1,11 +1,13 @@
 ﻿using NStore.Core.Persistence;
+using NStore.Domain;
 using System;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 {
     /// <summary>
-    /// An abstractio nof a 
+    /// This  interface abstract the concept of a poller that is capable of
+    /// continuously polling some event source to feed a projection engine.
     /// </summary>
     public interface ICommitPollingClient
     {
@@ -19,6 +21,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         Task PollAsync();
 
+        /// <summary>
+        /// Add a consumer function that will be used to dispatch the
+        /// chunk read from the storage
+        /// </summary>
+        /// <param name="consumerAction"></param>
         void AddConsumer(String consumerId, Func<IChunk, Task> consumerAction);
     }
 

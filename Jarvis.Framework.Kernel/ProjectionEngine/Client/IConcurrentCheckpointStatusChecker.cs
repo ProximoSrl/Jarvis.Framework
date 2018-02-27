@@ -14,6 +14,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         /// </summary>
         /// <param name="checkpointToken">The checkpoint to check</param>
         /// <returns></returns>
-        Boolean IsCheckpointProjectedByAllProjection(Int64 checkpointToken);
+        Task<Boolean> IsCheckpointProjectedByAllProjectionAsync(Int64 checkpointToken);
     }
 }

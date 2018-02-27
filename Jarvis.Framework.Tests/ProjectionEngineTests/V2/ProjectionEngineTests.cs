@@ -76,15 +76,17 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
         }
 
         [Test]
-        public async Task start_with_rebuild_then_stop_rebuild()
+        public async Task Start_with_rebuild_then_stop_rebuild()
         {
             var reader = new MongoReader<SampleReadModel, string>(Database);
             var aggregate = await Repository.GetByIdAsync<SampleAggregate>(new SampleAggregateId(1)).ConfigureAwait(false);
             aggregate.Create();
-           await Repository.SaveAsync(aggregate,Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
+            await Repository.SaveAsync(aggregate,Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
             Thread.Sleep(50);
             await Engine.UpdateAndWaitAsync().ConfigureAwait(false);
             Assert.AreEqual(1, reader.AllSortedById.Count());
+            await FlushCheckpointCollectionAsync().ConfigureAwait(false);
+
             var checkpoint = _checkpoints.FindOneById("Projection");
             Assert.That(checkpoint.Value, Is.EqualTo(1), "Checkpoint is written after rebuild.");
         }

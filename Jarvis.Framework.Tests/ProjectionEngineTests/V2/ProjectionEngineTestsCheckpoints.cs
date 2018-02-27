@@ -50,7 +50,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
         [Test]
         public async Task run_poller()
         {
-            var projected = _statusChecker.IsCheckpointProjectedByAllProjection(2);
+            var projected = await _statusChecker.IsCheckpointProjectedByAllProjectionAsync(2).ConfigureAwait(false);
             if (projected)
             {
                 var allProjected = _checkpoints.FindAll().ToList();
@@ -79,7 +79,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
                 Thread.Sleep(100);
             }
 
-            projected = _statusChecker.IsCheckpointProjectedByAllProjection(lastPosition);
+            projected = await _statusChecker.IsCheckpointProjectedByAllProjectionAsync(lastPosition).ConfigureAwait(false);
             if (projected)
             {
                 var allProjected = _checkpoints.FindAll().ToList();
@@ -92,7 +92,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             Assert.That(projected, Is.False);
 
             await Engine.UpdateAndWaitAsync().ConfigureAwait(false);
-            Assert.That(_statusChecker.IsCheckpointProjectedByAllProjection(lastPosition), Is.True);
+            Assert.That(await _statusChecker.IsCheckpointProjectedByAllProjectionAsync(lastPosition).ConfigureAwait(false), Is.True);
         }
     }
 }

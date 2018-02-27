@@ -46,13 +46,14 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
         }
 
         [Test]
-        public async Task stop_and_restart_polling_should_work()
+        public async Task Stop_and_restart_polling_should_work()
         {
             var aggregate = await Repository.GetByIdAsync < SampleAggregate>(new SampleAggregateId(1)).ConfigureAwait(false);
             aggregate.Create();
             await Repository.SaveAsync(aggregate,Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
+            await FlushCheckpointCollectionAsync().ConfigureAwait(false);
 
-            Boolean checkpointPassed = WaitForCheckpoint(1);
+            Boolean checkpointPassed = await WaitForCheckpoint(1).ConfigureAwait(false);
             Assert.IsTrue(checkpointPassed, "Automatic poller does not work.");
 
             Engine.Stop();
@@ -61,21 +62,21 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             aggregate.Create();
             await Repository.SaveAsync(aggregate,Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
 
-            checkpointPassed = WaitForCheckpoint(2);
+            checkpointPassed = await WaitForCheckpoint(2).ConfigureAwait(false);
             Assert.IsFalse(checkpointPassed, "Automatic poller is still working after stop.");
 
             await Engine.StartAsync().ConfigureAwait(false);
 
-            checkpointPassed = WaitForCheckpoint(2);
+            checkpointPassed = await WaitForCheckpoint(2).ConfigureAwait(false);
             Assert.IsTrue(checkpointPassed, "Automatic poller is not restarted correctly.");
         }
 
-        private Boolean WaitForCheckpoint(Int64 checkpointToken)
+        private async Task<Boolean> WaitForCheckpoint(Int64 checkpointToken)
         {
             DateTime startTime = DateTime.Now;
             Boolean passed = false;
             while (
-                !(passed = _statusChecker.IsCheckpointProjectedByAllProjection(checkpointToken))
+                !(passed = await _statusChecker.IsCheckpointProjectedByAllProjectionAsync(checkpointToken).ConfigureAwait(false))
                 && DateTime.Now.Subtract(startTime).TotalMilliseconds < 7000)
 
             {

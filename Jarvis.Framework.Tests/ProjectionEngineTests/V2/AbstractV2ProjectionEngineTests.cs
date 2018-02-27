@@ -30,7 +30,7 @@ using NStore.Persistence.Mongo;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
-	public abstract class AbstractV2ProjectionEngineTests
+    public abstract class AbstractV2ProjectionEngineTests
     {
         private string _eventStoreConnectionString;
         private IdentityManager _identityConverter;
@@ -72,10 +72,10 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
                     .UsingFactoryMethod(() => new CommitEnhancer()),
                 Component
                     .For<INStoreLoggerFactory>()
-                    .ImplementedBy< NStoreCastleLoggerFactory >(),
-				Component
-					.For< ILoggerThreadContextManager >()
-					.ImplementedBy<NullLoggerThreadContextManager>(),
+                    .ImplementedBy<NStoreCastleLoggerFactory>(),
+                Component
+                    .For<ILoggerThreadContextManager>()
+                    .ImplementedBy<NullLoggerThreadContextManager>(),
                 Component
                     .For<ILogger>()
                     .Instance(NullLogger.Instance));
@@ -135,6 +135,11 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 #pragma warning restore S2696 // Instance members should not write to "static" fields
         }
 
+        protected Task FlushCheckpointCollectionAsync()
+        {
+            return _tracker.FlushCheckpointCollectionAsync();
+        }
+
         protected void ConfigureEventStore()
         {
             var loggerFactory = Substitute.For<INStoreLoggerFactory>();
@@ -149,7 +154,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             Engine?.Stop();
             if (dropCheckpoints) _checkpoints.Drop();
             _tracker = new ConcurrentCheckpointTracker(Database);
-            _statusChecker = new MongoDirectConcurrentCheckpointStatusChecker(Database);
+            _statusChecker = new MongoDirectConcurrentCheckpointStatusChecker(Database, _tracker);
 
             var tenantId = new TenantId("engine");
 
@@ -169,16 +174,16 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             var rebuildContext = new RebuildContext(RebuildSettings.NitroMode);
             StorageFactory = new MongoStorageFactory(Database, rebuildContext);
 
-			Engine = new ProjectionEngine(
+            Engine = new ProjectionEngine(
                 _pollingClientFactory,
-				Persistence,
-				_tracker,
+                Persistence,
+                _tracker,
                 BuildProjections().ToArray(),
                 new NullHouseKeeper(),
                 new NullNotifyCommitHandled(),
                 config,
                 NullLogger.Instance,
-				NullLoggerThreadContextManager.Instance);
+                NullLoggerThreadContextManager.Instance);
             Engine.LoggerFactory = Substitute.For<ILoggerFactory>();
             Engine.LoggerFactory.Create(Arg.Any<Type>()).Returns(NullLogger.Instance);
             await OnStartPolling().ConfigureAwait(false);

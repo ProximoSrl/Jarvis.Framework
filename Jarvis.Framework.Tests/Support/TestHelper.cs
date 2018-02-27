@@ -100,5 +100,21 @@ namespace Jarvis.Framework.Tests.Support
             }
         }
 #endif
+
+        private static Int32 seed = 1;
+
+        internal static IMongoDatabase GetTestDb()
+        {
+            var connectionStringBuilder = new MongoUrlBuilder(ConfigurationManager.ConnectionStrings["engine"].ConnectionString);
+            connectionStringBuilder.DatabaseName += seed++.ToString();
+            return connectionStringBuilder.ToString().CreateMongoDb();
+        }
+
+        public static IMongoDatabase CreateMongoDb(this String connectionString)
+        {
+            MongoUrl url = new MongoUrl(connectionString);
+            var client = new MongoClient(url);
+            return client.GetDatabase(url.DatabaseName);
+        }
     }
 }
