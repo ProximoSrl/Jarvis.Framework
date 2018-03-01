@@ -3,15 +3,12 @@ using Jarvis.Framework.Shared.Helpers;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.IdentitySupport
 {
-	public interface IStringToIdentityAssociator<TId> where TId : EventStoreIdentity
+    public interface IStringToIdentityAssociator<TId> where TId : EventStoreIdentity
 	{
 		/// <summary>
 		/// Create an association between key and id, it fails if key was already 
@@ -280,6 +277,11 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 			return (Int32)deleteResult.DeletedCount;
 		}
 
+        /// <summary>
+        /// Return the number of association deleted.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
 		public Int32 DeleteAssociationWithKey(String key)
 		{
 			if (String.IsNullOrEmpty(key))

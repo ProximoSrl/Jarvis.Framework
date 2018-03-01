@@ -17,6 +17,7 @@ using System.Collections.Concurrent;
 using System.Threading.Tasks.Dataflow;
 using Jarvis.Framework.Kernel.Engine;
 using Jarvis.Framework.Shared.Logging;
+using Metrics;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 {
@@ -68,9 +69,20 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 
 			_metrics = new ProjectionMetrics(_allProjections);
 			_loggerThreadContextManager = loggerThreadContextManager;
-		}
 
-		private void DumpProjections()
+            HealthChecks.RegisterHealthCheck("RebuildProjectionEngine", (Func<HealthCheckResult>)HealthCheck);
+        }
+
+        private HealthCheckResult HealthCheck()
+        {
+            if (String.IsNullOrEmpty(_pollError))
+            {
+                return HealthCheckResult.Healthy();
+            }
+            return HealthCheckResult.Unhealthy(_pollError);
+        }
+
+        private void DumpProjections()
 		{
 			if (Logger.IsDebugEnabled)
 			{
@@ -184,7 +196,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 			return _status;
 		}
 
-		private async Task StartPoll(
+        private String _pollError = null;
+
+        private async Task StartPoll(
 			BufferBlock<UnwindedDomainEvent> buffer,
 			ActionBlock<UnwindedDomainEvent> broadcaster,
 			String bucketInfo,
@@ -242,7 +256,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 						.Sort(Builders<UnwindedDomainEvent>.Sort.Ascending(e => e.CheckpointToken).Ascending(e => e.EventSequence));
 					foreach (var eventUnwinded in query.ToEnumerable())
 					{
-						if (Logger.IsDebugEnabled) Logger.DebugFormat("TPL queued event {0}/{1} for bucket {2}", eventUnwinded.CheckpointToken, eventUnwinded.EventSequence, bucketInfo);
+                        _pollError = null;
+
+                        if (Logger.IsDebugEnabled) Logger.DebugFormat("TPL queued event {0}/{1} for bucket {2}", eventUnwinded.CheckpointToken, eventUnwinded.EventSequence, bucketInfo);
 						//rehydrate the event before dispatching
 						eventUnwinded.EnhanceEvent();
 						await buffer.SendAsync(eventUnwinded).ConfigureAwait(false);
@@ -258,12 +274,15 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 				}
 				catch (MongoException ex)
 				{
-					Logger.WarnFormat(ex, "Unable to poll event from UnwindedCollection: {0} - Last good checkpoint dispatched {1}", ex.Message, lastCheckpointTokenDispatched);
+                    _pollError = $"Unable to poll event from UnwindedCollection: {ex.Message} - Last good checkpoint dispatched { lastCheckpointTokenDispatched }";
+                    Logger.WarnFormat(ex, "Unable to poll event from UnwindedCollection: {0} - Last good checkpoint dispatched {1}", ex.Message, lastCheckpointTokenDispatched);
 				}
 				catch (Exception ex)
 				{
-					Logger.FatalFormat(ex, "Unable to poll event from UnwindedCollection: {0} - Last good checkpoint dispatched {1}", ex.Message, lastCheckpointTokenDispatched);
-				}
+                    _pollError = $"Unable to poll event from UnwindedCollection: {ex.Message} - Last good checkpoint dispatched { lastCheckpointTokenDispatched }";
+                    Logger.FatalFormat(ex, "Unable to poll event from UnwindedCollection: {0} - Last good checkpoint dispatched {1}", ex.Message, lastCheckpointTokenDispatched);
+                    throw;
+                }
 			}
 
 			try
