@@ -10,6 +10,7 @@ using NStore.Core.Persistence;
 using NStore.Domain;
 using Jarvis.Framework.Shared.Helpers;
 using System.Threading;
+using Jarvis.Framework.Shared.Exceptions;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 {
@@ -117,6 +118,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 				//Reload from the last position where the sequencer stopped.
 				await _persistence.ReadAllAsync(sequencer.Position + 1, sequencer).ConfigureAwait(false);
 			} while (sequencer.RetriesOnHole > 0);
+
+            if (subscription.Failed)
+            {
+                throw new JarvisFrameworkEngineException("Error unwinding commits", subscription.LastError);
+            }
 
 			//Flush last batch.
 			if (batchEventUnwind.Count > 0)
