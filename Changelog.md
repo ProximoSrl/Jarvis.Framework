@@ -11,6 +11,10 @@ J.A.R.V.I.S. Framework - Proximo srl (c)
 
 - Introduced interface ICounterServiceWithOffset
 
+### 3.2.0
+
+- Classes that inhertis from Repository command handler can add custom headers on che changeset.
+
 ## 2.1.0
 
 - Offline support for command execution
