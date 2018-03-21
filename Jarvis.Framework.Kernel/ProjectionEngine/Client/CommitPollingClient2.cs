@@ -110,18 +110,18 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         #endregion
 
-        #region polling
+        #region Polling
 
-        private Int64 _checkpointTokenCurrent;
+        private Int64 _lastDispatchedPosition;
 
         private readonly CancellationTokenSource _stopRequested = new CancellationTokenSource();
 
         public void Configure(
-                   Int64 checkpointTokenFrom,
-                   Int32 bufferSize)
+            Int64 checkpointTokenFrom,
+            Int32 bufferSize)
         {
             _bufferSize = bufferSize;
-            _checkpointTokenCurrent = checkpointTokenFrom;
+            _lastDispatchedPosition = checkpointTokenFrom - 1;
             LastException = null;
             //prepare single poller thread.
             CreateTplChain();
@@ -162,16 +162,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                     //poller is stopped, system healty
                     var exceptionText = (LastException != null ? LastException.ToString() : "");
                     exceptionText = exceptionText.Replace("{", "{{").Replace("}", "}}");
-                    return HealthCheckResult.Unhealthy("Faulted (exception in consumer): " + exceptionText);
+                    return HealthCheckResult.Unhealthy("[LastDispatchedPosition: {_lastDispatchedPosition}] - Faulted (exception in consumer):" + exceptionText);
                 }
-
-                //TODO NSTORE: Verify to insert in NStore poller some diagnostics.
-                //var elapsed = DateTime.UtcNow - _innerClient.LastActivityTimestamp;
-                //if (elapsed.TotalMilliseconds > 5000)
-                //{
-                //    //more than 5 seconds without a poll, polling probably is stopped
-                //    return HealthCheckResult.Unhealthy(String.Format("poller stuck, last polling {0} ms ago", elapsed));
-                //}
 
                 return HealthCheckResult.Healthy("Poller alive");
             });
@@ -181,7 +173,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             {
                 if (_innerSubscription?.LastError != null)
                 {
-                    return HealthCheckResult.Unhealthy($"Inner NStore poller has error: {_innerSubscription?.LastError}");
+                    return HealthCheckResult.Unhealthy($"[LastDispatchedPosition: {_lastDispatchedPosition}] - Inner NStore poller has error: {_innerSubscription?.LastError}");
                 }
                 return HealthCheckResult.Healthy("Inner NES Poller Ok");
             });
@@ -274,7 +266,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                     return Task.FromResult(false); //stop polling.
                 }
 
-                _checkpointTokenCurrent = chunk.Position;
+                _lastDispatchedPosition = chunk.Position;
                 return Task.FromResult(true);
             }
             catch (Exception ex)
