@@ -4,43 +4,87 @@ using Metrics;
 using Metrics.Core;
 using MongoDB.Driver;
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Messaging;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.Support
 {
     public class DatabaseHealthCheck : HealthCheck
     {
-        private readonly MongoClient client;
         private readonly String _dbDescription;
+        private readonly String _serverUrl;
 
-        public DatabaseHealthCheck(String dbDescription, String serverUrl)
+        public DatabaseHealthCheck(
+            String dbDescription,
+            String serverUrl)
            : base("MongoDatabaseCheck: " + dbDescription)
         {
-            var url = new MongoUrl(serverUrl);
-            client = new MongoClient(url);
             _dbDescription = dbDescription;
             HealthChecks.RegisterHealthCheck(this);
+            _serverUrl = serverUrl;
         }
 
+        private string _lastError = null;
+        DateTime _lastQuestionTime = DateTime.MinValue;
         protected override HealthCheckResult Check()
         {
-            var state = this.client.Cluster.Description.State;
-            if (state == MongoDB.Driver.Core.Clusters.ClusterState.Connected)
-                return HealthCheckResult.Healthy();
+            if (DateTime.Now.Subtract(_lastQuestionTime).TotalSeconds > 20)
+            {
+                _lastQuestionTime = DateTime.Now;
+                Task.Factory.StartNew(() => PerformCheck());
+            }
 
-            return HealthCheckResult.Unhealthy("Unable to connect to Mongo Db Instance {0}!", _dbDescription);
+            if (!String.IsNullOrEmpty(_lastError))
+                return HealthCheckResult.Unhealthy(_lastError.Replace("{", "{{").Replace("}", "}}"));
+
+            return HealthCheckResult.Healthy();
+        }
+
+        private void PerformCheck()
+        {
+            try
+            {
+                var url = new MongoUrl(_serverUrl);
+                var client = new MongoClient(url);
+                client.ListDatabases();
+
+                var state = client.Cluster.Description.State;
+                if (state == MongoDB.Driver.Core.Clusters.ClusterState.Connected)
+                {
+                    //Connection ok, but replicaset???
+                    var disconnectedNodes = client.Cluster
+                       .Description
+                       .Servers
+                       .Where(_ => _.State == MongoDB.Driver.Core.Servers.ServerState.Disconnected)
+                       .ToList();
+                    if (disconnectedNodes.Count > 0)
+                    {
+                        _lastError = String.Format("Replica set is on but these members are down: {0}!",
+                             String.Join(", ", disconnectedNodes.Select(_ => _.ServerId?.ToString())));
+                    }
+                    else
+                    {
+                        _lastError = null;
+                    }
+                }
+                else
+                {
+                    _lastError = String.Format("Unable to connect to Mongo Db Instance {0}!", _dbDescription);
+                }
+            }
+            catch (Exception ex)
+            {
+                _lastError = String.Format("Exception in connection {0}", ex.Message);
+            }
         }
     }
 
 #pragma warning disable S101 // Types should be named in camel case
 
-	public class MsmqHealthCheck : HealthCheck
+    public class MsmqHealthCheck : HealthCheck
     {
         private readonly String _queueName;
         private readonly Int32 _messageLimit;
@@ -149,8 +193,8 @@ namespace Jarvis.Framework.Kernel.Support
 
             //size must be 16
             [StructLayout(LayoutKind.Sequential)]
-			internal struct MQPROPVariant
-			{
+            internal struct MQPROPVariant
+            {
                 public byte vt;       //0
                 public byte spacer;   //1
                 public short spacer2; //2
