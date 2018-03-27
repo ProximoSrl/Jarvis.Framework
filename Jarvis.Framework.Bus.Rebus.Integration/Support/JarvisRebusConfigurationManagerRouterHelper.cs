@@ -6,6 +6,7 @@ using Jarvis.Framework.Shared.Messages;
 using MongoDB.Driver;
 using Rebus.Routing.TypeBased;
 using System.Configuration;
+using Jarvis.Framework.Shared.Exceptions;
 
 namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 {
@@ -61,7 +62,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 		{
 			if (_configuration.AssembliesWithMessages?.Any() != true)
 			{
-				throw new ConfigurationErrorsException("JarvisRebusConfiguration has no  AssembliesWithMessages configured. This is not permitted because no assembly will be scanned for commands to create routing.");
+				throw new JarvisFrameworkEngineException("JarvisRebusConfiguration has no  AssembliesWithMessages configured. This is not permitted because no assembly will be scanned for commands to create routing.");
 			}
 			foreach (var assembly in _configuration.AssembliesWithMessages)
 			{

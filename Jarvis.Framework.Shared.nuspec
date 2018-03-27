@@ -29,8 +29,10 @@
   </metadata>
 
   <files>
-    <file src="publish\Jarvis.Framework.Shared.dll" target="lib" />
-    <file src="publish\Jarvis.Framework.Shared.pdb" target="lib" />
+    <file src="publish\net461\Jarvis.Framework.Shared.dll" target="lib\net461" />
+    <file src="publish\net461\Jarvis.Framework.Shared.pdb" target="lib\net461" />
+    <file src="publish\netstandard2.0\Jarvis.Framework.Shared.dll" target="lib\netstandard2.0" />
+    <file src="publish\netstandard2.0\Jarvis.Framework.Shared.pdb" target="lib\netstandard2.0" />
     <file src="Jarvis.Framework.Shared\**\*.cs" target="src\Jarvis.Framework.Shared" />
   </files>
 

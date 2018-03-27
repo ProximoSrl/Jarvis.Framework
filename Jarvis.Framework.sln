@@ -3,27 +3,15 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27130.2024
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jarvis.Framework.Shared", "Jarvis.Framework.Shared\Jarvis.Framework.Shared.csproj", "{70B179ED-C419-4782-B080-0D1678C90279}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jarvis.Framework.Shared", "Jarvis.Framework.Shared\Jarvis.Framework.Shared.csproj", "{70B179ED-C419-4782-B080-0D1678C90279}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jarvis.Framework.Kernel", "Jarvis.Framework.Kernel\Jarvis.Framework.Kernel.csproj", "{203AD69F-E839-46CF-A25A-0ED22EA1ABF8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jarvis.Framework.Kernel", "Jarvis.Framework.Kernel\Jarvis.Framework.Kernel.csproj", "{203AD69F-E839-46CF-A25A-0ED22EA1ABF8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jarvis.Framework.Bus.Rebus.Integration", "Jarvis.Framework.Bus.Rebus.Integration\Jarvis.Framework.Bus.Rebus.Integration.csproj", "{804D09EF-0E40-4C7C-8064-ADD92B7DE03F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jarvis.Framework.Bus.Rebus.Integration", "Jarvis.Framework.Bus.Rebus.Integration\Jarvis.Framework.Bus.Rebus.Integration.csproj", "{804D09EF-0E40-4C7C-8064-ADD92B7DE03F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jarvis.Framework.TestHelpers", "Jarvis.Framework.TestHelpers\Jarvis.Framework.TestHelpers.csproj", "{DF7EF8CC-CDA7-4299-8769-62FDD1654FB9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jarvis.Framework.TestHelpers", "Jarvis.Framework.TestHelpers\Jarvis.Framework.TestHelpers.csproj", "{DF7EF8CC-CDA7-4299-8769-62FDD1654FB9}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jarvis.Framework.Tests", "Jarvis.Framework.Tests\Jarvis.Framework.Tests.csproj", "{D5D90909-CFEF-443E-BDDE-318FE638E5C0}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{9870ACBB-CEEB-4C95-9A2F-A0C475F24D27}"
-	ProjectSection(SolutionItems) = preProject
-		Jarvis.Framework.nuspec = Jarvis.Framework.nuspec
-		Jarvis.Framework.Rebus.nuspec = Jarvis.Framework.Rebus.nuspec
-		Jarvis.Framework.TestHelpers.nuspec = Jarvis.Framework.TestHelpers.nuspec
-		.nuget\packages.config = .nuget\packages.config
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Logging", "Logging", "{1478AFD6-4740-4E37-9A4D-61B2151AF663}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jarvis.Framework.ElasticLogPoller", "Jarvis.Framework.ElasticLogPoller\Jarvis.Framework.ElasticLogPoller.csproj", "{A3A2F347-F91A-4C31-BE79-4D6132B57812}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -51,18 +39,11 @@ Global
 		{D5D90909-CFEF-443E-BDDE-318FE638E5C0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D5D90909-CFEF-443E-BDDE-318FE638E5C0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D5D90909-CFEF-443E-BDDE-318FE638E5C0}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A3A2F347-F91A-4C31-BE79-4D6132B57812}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A3A2F347-F91A-4C31-BE79-4D6132B57812}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A3A2F347-F91A-4C31-BE79-4D6132B57812}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A3A2F347-F91A-4C31-BE79-4D6132B57812}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
-		{A3A2F347-F91A-4C31-BE79-4D6132B57812} = {1478AFD6-4740-4E37-9A4D-61B2151AF663}
-	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {C9ECE16F-FCD2-40D4-9FFA-C471F9FAE9B8}
+		SolutionGuid = {B4F12D3B-4FD8-4690-81BA-53398905A577}
 	EndGlobalSection
 EndGlobal

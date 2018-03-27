@@ -9,8 +9,8 @@ namespace Jarvis.Framework.Kernel.MultitenantSupport
     public class TenantManager : IDisposable, ITenantAccessor
     {
         private readonly IKernel _kernel;
-        private object _lockRoot = new object();
-        
+        private readonly object _lockRoot = new object();
+
         public TenantManager(IKernel kernel)
         {
             _kernel = kernel;
@@ -24,7 +24,7 @@ namespace Jarvis.Framework.Kernel.MultitenantSupport
         public ITenant GetTenant(TenantId id)
         {
             var key = MakeTenantKey(id);
-            if(_kernel.HasComponent(key))
+            if (_kernel.HasComponent(key))
                 return _kernel.Resolve<ITenant>(key);
 
             return NullTenant.Instance;
@@ -56,14 +56,19 @@ namespace Jarvis.Framework.Kernel.MultitenantSupport
 
         }
 
-        public ITenant Current {
+        public ITenant Current
+        {
             get
             {
+#if NETFULL
                 var tenantId = TenantContext.CurrentTenantId;
                 if (tenantId == null)
                     return null;
 
                 return GetTenant(tenantId);
+#else
+                throw new NotImplementedException("Still not implemented in .NET CORE");
+#endif
             }
         }
 

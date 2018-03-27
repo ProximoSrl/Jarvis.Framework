@@ -1,210 +1,41 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{70B179ED-C419-4782-B080-0D1678C90279}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Jarvis.Framework.Shared</RootNamespace>
-    <AssemblyName>Jarvis.Framework.Shared</AssemblyName>
-    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\Intranet\</SolutionDir>
-    <RestorePackages>true</RestorePackages>
-    <TargetFrameworkProfile />
+    <TargetFrameworks Condition="'$(DOTNETMULTITARGET)' == 'false'">netstandard2.0</TargetFrameworks>
+    <TargetFrameworks Condition="'$(DOTNETMULTITARGET)' == 'true'">netstandard2.0;net461</TargetFrameworks>
+    <TargetFrameworks Condition="'$(DOTNETMULTITARGET)' == ''">netstandard2.0;net461</TargetFrameworks>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <DocumentationFile>bin\Debug\Jarvis.Framework.Shared.XML</DocumentationFile>
-    <NoWarn>1591</NoWarn>
+
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard2.0'">
+    <DefineConstants>NETCORE;NETSTANDARD;NETSTANDARD2_0</DefineConstants>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
+
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'net461'">
+    <DefineConstants>NET45;NETFULL</DefineConstants>
   </PropertyGroup>
+
   <ItemGroup>
-    <Reference Include="Castle.Core, Version=4.1.1.0, Culture=neutral, PublicKeyToken=407dd0808d44fbdc, processorArchitecture=MSIL">
-      <HintPath>..\packages\Castle.Core.4.1.1\lib\net45\Castle.Core.dll</HintPath>
-    </Reference>
-    <Reference Include="Castle.Facilities.Logging, Version=4.0.0.0, Culture=neutral, PublicKeyToken=407dd0808d44fbdc, processorArchitecture=MSIL">
-      <HintPath>..\packages\Castle.LoggingFacility.4.0.0\lib\net45\Castle.Facilities.Logging.dll</HintPath>
-    </Reference>
-    <Reference Include="Castle.Windsor, Version=4.0.0.0, Culture=neutral, PublicKeyToken=407dd0808d44fbdc, processorArchitecture=MSIL">
-      <HintPath>..\packages\Castle.Windsor.4.0.0\lib\net45\Castle.Windsor.dll</HintPath>
-    </Reference>
-    <Reference Include="DnsClient, Version=1.0.7.0, Culture=neutral, PublicKeyToken=4574bb5573c51424, processorArchitecture=MSIL">
-      <HintPath>..\packages\DnsClient.1.0.7\lib\net45\DnsClient.dll</HintPath>
-    </Reference>
-    <Reference Include="Fasterflect">
-      <HintPath>..\packages\fasterflect.2.1.3\lib\net40\Fasterflect.dll</HintPath>
-    </Reference>
-    <Reference Include="Metrics, Version=0.3.7.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Metrics.NET.0.3.7\lib\net45\Metrics.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="MongoDB.Bson, Version=2.5.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\MongoDB.Bson.2.5.0\lib\net45\MongoDB.Bson.dll</HintPath>
-    </Reference>
-    <Reference Include="MongoDB.Driver, Version=2.5.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\MongoDB.Driver.2.5.0\lib\net45\MongoDB.Driver.dll</HintPath>
-    </Reference>
-    <Reference Include="MongoDB.Driver.Core, Version=2.5.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\MongoDB.Driver.Core.2.5.0\lib\net45\MongoDB.Driver.Core.dll</HintPath>
-    </Reference>
-    <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
-    </Reference>
-    <Reference Include="NStore.Core, Version=0.4.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NStore.Core.0.4.0\lib\net461\NStore.Core.dll</HintPath>
-    </Reference>
-    <Reference Include="NStore.Domain, Version=0.4.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NStore.Domain.0.4.0\lib\net461\NStore.Domain.dll</HintPath>
-    </Reference>
-    <Reference Include="NStore.Persistence.Mongo, Version=0.4.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NStore.Persistence.Mongo.0.4.0\lib\net461\NStore.Persistence.Mongo.dll</HintPath>
-    </Reference>
-    <Reference Include="System" />
-    <Reference Include="System.Buffers, Version=4.0.1.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Buffers.4.3.0\lib\netstandard1.1\System.Buffers.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Configuration" />
+    <PackageReference Include="Castle.Core" Version="4.2.1" />
+    <PackageReference Include="Castle.LoggingFacility" Version="4.1.0" />
+    <PackageReference Include="Castle.Windsor" Version="4.1.0" />
+    <PackageReference Include="Metrics" Version="0.5.0.1000" />
+    <PackageReference Include="Microsoft.CSharp" Version="4.4.1" />
+    <PackageReference Include="MongoDB.Driver" Version="2.5.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
+    <PackageReference Include="NStore.Core" Version="0.4.0" />
+    <PackageReference Include="NStore.Domain" Version="0.4.0" />
+    <PackageReference Include="NStore.Persistence.Mongo" Version="0.4.0" />
+    <PackageReference Include="NStore.Tpl" Version="0.4.0" />
+  </ItemGroup>
+
+   <ItemGroup Condition=" '$(TargetFramework)' == 'net461' ">
+    <PackageReference Include="fasterflect" Version="2.1.3" />
+    <PackageReference Include="Metrics.NET" Version="0.3.7" />
     <Reference Include="System.Runtime.Caching" />
-    <Reference Include="System.Runtime.InteropServices.RuntimeInformation">
-      <HintPath>..\packages\System.Runtime.InteropServices.RuntimeInformation.4.0.0\lib\net45\System.Runtime.InteropServices.RuntimeInformation.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
   </ItemGroup>
-  <ItemGroup>
-    <Compile Include="Claims\Claim.cs" />
-    <Compile Include="Claims\ClaimAttribute.cs" />
-    <Compile Include="Claims\ClaimsMatcher.cs" />
-    <Compile Include="Claims\ExcludeClaim.cs" />
-    <Compile Include="Claims\IClaimsMatcher.cs" />
-    <Compile Include="Claims\RequiredClaimAttribute.cs" />
-    <Compile Include="Claims\RequiredRoleAttribute.cs" />
-    <Compile Include="Commands\CommandExecutionExceptionHelper.cs" />
-    <Compile Include="Commands\ICommand.cs" />
-    <Compile Include="Commands\ICommandBus.cs" />
-    <Compile Include="Events\ChangesetCommonHeaders.cs" />
-    <Compile Include="Events\DomainEventHelpers.cs" />
-    <Compile Include="Exceptions\ExceptionHelper.cs" />
-    <Compile Include="Exceptions\InvalidAggregateIdException.cs" />
-    <Compile Include="GlobalSuppressions.cs" />
-    <Compile Include="Helpers\CommandExtensions.cs" />
-    <Compile Include="Helpers\DomainEventExtensions.cs" />
-    <Compile Include="Helpers\ExceptionHelpers.cs" />
-    <Compile Include="Helpers\NStoreSequencer.cs" />
-    <Compile Include="IdentitySupport\IIdentityToAggregateManager.cs" />
-    <Compile Include="Messages\IMessageBus.cs" />
-    <Compile Include="NeventStoreExGlobalConfiguration.cs" />
-    <Compile Include="Persistence\EventStore\CachableAggregateCachedRepository.cs" />
-    <Compile Include="Persistence\EventStore\RepositorySingleAggregateFactory.cs" />
-    <Compile Include="Persistence\EventStore\SingleUseAggregateCachedRepository.cs" />
-    <Compile Include="Domain\LowercaseStringValue.cs" />
-    <Compile Include="Domain\Serialization\StringValueCustomBsonTypeMapper.cs" />
-    <Compile Include="Domain\Serialization\StringValueJsonConverter.cs" />
-    <Compile Include="Domain\Serialization\StringValueBsonSerializer.cs" />
-    <Compile Include="Domain\Serialization\StringValueTypeConverter.cs" />
-    <Compile Include="Domain\StringValue.cs" />
-    <Compile Include="Domain\UppercaseStringValue.cs" />
-    <Compile Include="Events\DomainEvent.cs" />
-    <Compile Include="Events\IDomainEvent.cs" />
-    <Compile Include="Exceptions\DomainException.cs" />
-    <Compile Include="Exceptions\JarvisFrameworkEngineException.cs" />
-    <Compile Include="Helpers\ExpressionExtension.cs" />
-    <Compile Include="Helpers\JarvisStartableFacility.cs" />
-    <Compile Include="Helpers\JarvisTypedFactoryFacility.cs" />
-    <Compile Include="Helpers\MongoDriverHelper.cs" />
-    <Compile Include="Helpers\Reflect.cs" />
-    <Compile Include="Helpers\FastReflectionHelper.cs" />
-    <Compile Include="Helpers\TaskHelpers.cs" />
-    <Compile Include="IdentitySupport\AbstractIdentity.cs" />
-    <Compile Include="IdentitySupport\IIdentity.cs" />
-    <Compile Include="IdentitySupport\IIdentityConverter.cs" />
-    <Compile Include="IdentitySupport\IIdentityManager.cs" />
-    <Compile Include="IdentitySupport\JarvisFrameworkIdentityException.cs" />
-    <Compile Include="IdentitySupport\OfflineCounterService.cs" />
-    <Compile Include="IdentitySupport\ReservationSlot.cs" />
-    <Compile Include="IdentitySupport\StringToIdentityAssociator.cs" />
-    <Compile Include="IdentitySupport\AbstractIdentityTranslator.cs" />
-    <Compile Include="IdentitySupport\CounterService.cs" />
-    <Compile Include="IdentitySupport\EventStoreIdentity.cs" />
-    <Compile Include="IdentitySupport\ICounterService.cs" />
-    <Compile Include="IdentitySupport\IdentityManager.cs" />
-    <Compile Include="IdentitySupport\IIdentityGenerator.cs" />
-    <Compile Include="IdentitySupport\MongoFlatMapper.cs" />
-    <Compile Include="IdentitySupport\Serialization\EventStoreIdentityBsonSerializer.cs" />
-    <Compile Include="IdentitySupport\Serialization\EventStoreIdentityCustomBsonTypeMapper.cs" />
-    <Compile Include="IoC\TransientNotTrackingLifestyle.cs" />
-    <Compile Include="JarvisFrameworkGlobalConfiguration.cs" />
-    <Compile Include="Logging\LoggingConstants.cs" />
-    <Compile Include="Logging\LoggingHelper.cs" />
-    <Compile Include="Logging\NStoreCastleLogger.cs" />
-    <Compile Include="Logging\NStoreCastleLoggerFactory.cs" />
-    <Compile Include="Messages\CommandHandled.cs" />
-    <Compile Include="Messages\MessagesConstants.cs" />
-    <Compile Include="Messages\IMessage.cs" />
-    <Compile Include="Messages\INotifyToSubscribers.cs" />
-    <Compile Include="Messages\MessagesContractResolver.cs" />
-    <Compile Include="Messages\ReadModelUpdatedMessage.cs" />
-    <Compile Include="Messages\TimeToBeReceivedAttribute.cs" />
-    <Compile Include="MultitenantSupport\ITenant.cs" />
-    <Compile Include="MultitenantSupport\ITenantAccessor.cs" />
-    <Compile Include="MultitenantSupport\TenantId.cs" />
-    <Compile Include="Persistence\IAggregateCachedRepository.cs" />
-    <Compile Include="Persistence\IRepositoryFactory.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ReadModel\AbstractChildReadModel.cs" />
-    <Compile Include="ReadModel\AbstractReadModel.cs" />
-    <Compile Include="ReadModel\CollectionNames.cs" />
-    <Compile Include="ReadModel\NullMessageTracker.cs" />
-    <Compile Include="ReadModel\OfflineCommandMessageTracker.cs" />
-    <Compile Include="ReadModel\PollableReadModel.cs" />
-    <Compile Include="ReadModel\TrackedMessageModel.cs" />
-    <Compile Include="ReadModel\IMongoDbReader.cs" />
-    <Compile Include="ReadModel\IReader.cs" />
-    <Compile Include="ReadModel\IReadModel.cs" />
-    <Compile Include="ReadModel\IReadModelEx.cs" />
-    <Compile Include="ReadModel\MongoReader.cs" />
-    <Compile Include="Store\VersionInfoAttribute.cs" />
-    <Compile Include="Support\DisposableAction.cs" />
-    <Compile Include="Support\DisposableCollection.cs" />
-    <Compile Include="Support\DisposableStack.cs" />
-    <Compile Include="Support\IMongoPersistedPocoObject.cs" />
-    <Compile Include="Support\NamedLocker.cs" />
-    <Compile Include="Support\OfflineMode.cs" />
-    <Compile Include="Support\SharedMetricsHelper.cs" />
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
+    <PackageReference Include="Fasterflect.Netstandard" Version="1.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="2.0.1" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include="app.config" />
-    <None Include="packages.config">
-      <SubType>Designer</SubType>
-    </None>
-  </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
 </Project>

@@ -1,4 +1,5 @@
-﻿using Castle.MicroKernel.Registration;
+﻿#if NETFULL
+using Castle.MicroKernel.Registration;
 using Castle.Windsor;
 using Jarvis.Framework.Bus.Rebus.Integration.Support;
 using Jarvis.Framework.Shared.Helpers;
@@ -191,7 +192,7 @@ namespace Jarvis.Framework.Tests.BusTests
 
 				if (useJarvisConfiguration)
 				{
-					_busBootstrapper = new BusBootstrapper(
+					_busBootstrapper = new JarvisTestBusBootstrapper(
 						_container,
 						configuration,
 						tracker);
@@ -275,3 +276,4 @@ namespace Jarvis.Framework.Tests.BusTests
 		}
 	}
 }
+#endif 

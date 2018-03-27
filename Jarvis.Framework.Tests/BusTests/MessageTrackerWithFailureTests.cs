@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if NETFULL
+using System;
 using System.Threading;
 using Castle.MicroKernel.Registration;
 using Castle.Windsor;
@@ -64,7 +65,7 @@ namespace Jarvis.Framework.Tests.BusTests
             };
 
             MongoDbMessagesTracker tracker = new MongoDbMessagesTracker(logDb);
-            BusBootstrapper bb = new BusBootstrapper(
+            JarvisTestBusBootstrapper bb = new JarvisTestBusBootstrapper(
                 _container,
                 configuration,
                 tracker);
@@ -324,3 +325,4 @@ namespace Jarvis.Framework.Tests.BusTests
         }
     }
 }
+#endif

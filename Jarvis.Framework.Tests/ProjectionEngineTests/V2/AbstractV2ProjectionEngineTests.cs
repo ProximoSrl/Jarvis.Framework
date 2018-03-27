@@ -100,8 +100,9 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             _eventStoreConnectionString = GetConnectionString();
 
             DropDb();
+#if NETFULL
             TestHelper.ClearAllQueue("cqrs.rebus.test", "cqrs.rebus.errors");
-
+#endif
             _identityConverter = new IdentityManager(new CounterService(Database));
             RegisterIdentities(_identityConverter);
 #pragma warning disable S2696 // Instance members should not write to "static" fields, this is a trick on test to customize collection names.

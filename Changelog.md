@@ -1,6 +1,10 @@
 J.A.R.V.I.S. Framework - Proximo srl (c)
 ====
 
+## 3.1.0
+
+- DotNetCore support.
+
 ## 3.0.0
 
 - Migration to NStore

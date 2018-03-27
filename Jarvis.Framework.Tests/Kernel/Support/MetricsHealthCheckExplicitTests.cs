@@ -1,4 +1,5 @@
-﻿using Jarvis.Framework.Kernel.Support;
+﻿#if NETFULL
+using Jarvis.Framework.Kernel.Support;
 using Jarvis.Framework.TestHelpers;
 using NUnit.Framework;
 using System;
@@ -22,3 +23,4 @@ namespace Jarvis.Framework.Tests.Kernel.Support
         }
     }
 }
+#endif

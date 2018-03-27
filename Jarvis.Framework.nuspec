@@ -33,8 +33,10 @@
   </metadata>
 
   <files>
-    <file src="publish\Jarvis.Framework.Kernel.dll" target="lib" />
-    <file src="publish\Jarvis.Framework.Kernel.pdb" target="lib" />
+    <file src="publish\net461\Jarvis.Framework.Kernel.dll" target="lib\net461" />
+    <file src="publish\net461\Jarvis.Framework.Kernel.pdb" target="lib\net461" />
+    <file src="publish\netstandard2.0\Jarvis.Framework.Kernel.dll" target="lib\netstandard2.0" />
+    <file src="publish\netstandard2.0\Jarvis.Framework.Kernel.pdb" target="lib\netstandard2.0" />
     <file src="Jarvis.Framework.Kernel\**\*.cs" target="src\Jarvis.Framework.Kernel" />  
   </files>
 
