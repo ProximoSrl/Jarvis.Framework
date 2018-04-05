@@ -108,5 +108,10 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         {
             return null;
         }
+
+        IMongoStorage<TModel, TKey> IMongoStorageFactory.GetCollectionWithoutCache<TModel, TKey>()
+        {
+            return null;
+        }
     }
 }

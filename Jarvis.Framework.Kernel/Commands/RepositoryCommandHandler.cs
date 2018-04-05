@@ -142,6 +142,12 @@ namespace Jarvis.Framework.Kernel.Commands
 			}
 			headersAccessor.Add(ChangesetCommonHeaders.Command, _currentCommand);
 			headersAccessor.Add(ChangesetCommonHeaders.Timestamp, DateTime.UtcNow);
+            OnStoreCommandHeaders(headersAccessor);
 		}
-	}
+
+        protected virtual void OnStoreCommandHeaders(IHeadersAccessor headersAccessor)
+        {
+            //Do nothing, give the ability to the concrete handler to add headers to this changeset.
+        }
+    }
 }
