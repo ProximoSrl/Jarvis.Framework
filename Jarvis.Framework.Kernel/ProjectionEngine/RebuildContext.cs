@@ -22,7 +22,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
     public class DuplicatedElementException : Exception
     {
         public DuplicatedElementException(string id)
-            :base(string.Format("Duplicated element with id {0}", id))
+            : base(string.Format("Duplicated element with id {0}", id))
         {
         }
 
@@ -51,7 +51,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             return default(TModel);
         }
 
-        public void Save(TModel model) 
+        public void Save(TModel model)
         {
             model.ThrowIfInvalidId();
             _cache[model.Id] = model;
@@ -97,7 +97,15 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
     public interface IRebuildContext
     {
-        IInmemoryCollection<TModel, TKey> GetCollection<TModel, TKey>(string collectionName) where TModel : IReadModelEx<TKey>;
+        /// <summary>
+        /// Create an in memory collection
+        /// </summary>
+        /// <typeparam name="TModel"></typeparam>
+        /// <typeparam name="TKey"></typeparam>
+        /// <param name="collectionName"></param>
+        /// <param name="disableCache">If true, the collection will not be activated.</param>
+        /// <returns></returns>
+        IInmemoryCollection<TModel, TKey> GetCollection<TModel, TKey>(string collectionName, Boolean disableCache) where TModel : IReadModelEx<TKey>;
     }
 
     public class RebuildContext : IRebuildContext
@@ -110,15 +118,15 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             _cacheEnabled = cacheEnabled;
         }
 
-        public IInmemoryCollection<TModel, TKey> GetCollection<TModel, TKey>(string collectionName) where TModel : IReadModelEx<TKey>
+        public IInmemoryCollection<TModel, TKey> GetCollection<TModel, TKey>(string collectionName, Boolean disableCache) where TModel : IReadModelEx<TKey>
         {
             object untypedCollection;
             if (!_context.TryGetValue(collectionName, out untypedCollection))
             {
                 var typedCollection = new InmemoryCollection<TModel, TKey>();
                 _context[collectionName] = typedCollection;
-                
-                if (_cacheEnabled)
+
+                if (_cacheEnabled && !disableCache)
                     typedCollection.Activate();
 
                 return typedCollection;

@@ -17,11 +17,22 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         public IMongoStorage<TModel, TKey> GetCollection<TModel, TKey>() where TModel : class, IReadModelEx<TKey>
         {
             string collectionName = CollectionNames.GetCollectionName<TModel>();
-            var cache = _rebuildContext.GetCollection<TModel, TKey>(collectionName);
+            var cache = _rebuildContext.GetCollection<TModel, TKey>(collectionName, false);
 
             return new CachedMongoStorage<TModel, TKey>(
                 _db.GetCollection<TModel>(collectionName),
-                cache 
+                cache
+            );
+        }
+
+        public IMongoStorage<TModel, TKey> GetCollectionWithoutCache<TModel, TKey>() where TModel : class, IReadModelEx<TKey>
+        {
+            string collectionName = CollectionNames.GetCollectionName<TModel>();
+            var cache = _rebuildContext.GetCollection<TModel, TKey>(collectionName, true);
+
+            return new CachedMongoStorage<TModel, TKey>(
+                _db.GetCollection<TModel>(collectionName),
+                cache
             );
         }
     }

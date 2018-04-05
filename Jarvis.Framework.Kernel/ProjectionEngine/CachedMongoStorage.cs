@@ -146,7 +146,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             return _storage.IndexExistsAsync(name);
         }
 
-        void ThrowIfOperatingInMemory()
+        private void ThrowIfOperatingInMemory()
         {
             if (_inmemoryCollection.IsActive)
                 throw new JarvisFrameworkEngineException("Unsupported operation while operating in memory");

@@ -19,7 +19,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
         public void SetUp()
         {
             _context = new RebuildContext(false);
-            _inmemoryCollection = _context.GetCollection<SampleReadModelWithStringKey, string>("sample");
+            _inmemoryCollection = _context.GetCollection<SampleReadModelWithStringKey, string>("sample", false);
         }
 
         [Test]

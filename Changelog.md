@@ -6,6 +6,10 @@ J.A.R.V.I.S. Framework - Proximo srl (c)
 - Migration to NStore
 - Migration to async.
 - Entity support.
+- 
+### 3.2.0
+
+- Ability to create MongoCollection wrapper disabling nitro.
 
 ### 3.1.0
 
