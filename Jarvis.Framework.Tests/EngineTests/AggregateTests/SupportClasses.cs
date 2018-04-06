@@ -1,6 +1,7 @@
 ﻿using Jarvis.Framework.Kernel.Engine;
 using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.IdentitySupport;
+using NStore.Core.Snapshots;
 using NStore.Domain;
 using NUnit.Framework;
 using System;
@@ -14,6 +15,9 @@ namespace Jarvis.Framework.Tests.EngineTests.AggregateTests
 		private AggregateTestSampleEntity sample;
 
 		public AggregateTestSampleEntity SampleEntity => sample;
+
+        public new SnapshotInfo RestoreSnapshot => base.RestoreSnapshot;
+        public new Boolean WasRestoredFromSnapshot => base.RestoreSnapshot != null;
 
         protected override void AfterInit()
 		{
@@ -129,7 +133,7 @@ namespace Jarvis.Framework.Tests.EngineTests.AggregateTests
 
         public List<Object> AggregateEvents { get; set; }
 
-        public AggregateTestSampleEntityState InternalState => base.InternalState;
+        public new AggregateTestSampleEntityState InternalState => base.InternalState;
 
         protected override void OnEventEmitting(object @event)
         {
