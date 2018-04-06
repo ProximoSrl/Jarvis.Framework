@@ -174,7 +174,7 @@ namespace Jarvis.Framework.Kernel.Engine
 			}
 		}
 
-		#region entity management
+		#region Entity management
 
 		private readonly Dictionary<String, IEntityRoot> childEntities = new Dictionary<String, IEntityRoot>();
 
@@ -186,11 +186,10 @@ namespace Jarvis.Framework.Kernel.Engine
 			entity.Init(RaiseEvent, Id);
 			childEntities.Add(entity.Id, entity);
 
-			//Entity states could already be restored from snapshot.
-			if (!State.EntityStates.ContainsKey(entity.Id))
-			{
-				State.EntityStates.Add(entity.Id, entity.GetState());
-			}
+            //Entity states could already be restored from snapshot, we absolutely need to be 100% sure that the states
+            //contained in the EntityStates of AggregateRoot are the very same of those one of the Entities.
+            //TODO: Consider introducing the concept of entities in NStore directly
+            State.EntityStates[entity.Id] = entity.GetState();
 		}
 
 		#endregion

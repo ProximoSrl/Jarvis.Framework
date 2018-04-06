@@ -3,14 +3,10 @@ using NStore.Core.Snapshots;
 using NStore.Domain;
 using NUnit.Framework;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.EngineTests.AggregateTests
 {
-	[TestFixture]
+    [TestFixture]
 	public class SnapshotTests
 	{
 		private AggregateTestSampleAggregate1 sut;

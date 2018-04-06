@@ -32,7 +32,9 @@ namespace Jarvis.Framework.Kernel.Engine
         {
             var method = state.GetType().Method("When", new[] { payload.GetType() }, Flags.InstanceAnyVisibility);
             if (method != null)
+            {
                 method.Call(state, new object[] { payload });
+            }
         }
     }
 }
