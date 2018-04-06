@@ -57,6 +57,26 @@ namespace Jarvis.Framework.Tests.SharedTests.Helpers
         }
 
         [Test]
+        public async Task verify_index_exists_when_index_not_exists()
+        {
+            var result = await _collection.IndexExistsAsync("TestIndex").ConfigureAwait(false);
+            Assert.That(result, Is.False);
+        }
+
+        [Test]
+        public async Task verify_index_exists()
+        {
+            await _collection.Indexes.CreateOneAsync(
+                Builders<MongoDriverHelperTestsClass>.IndexKeys.Ascending(_ => _.Name),
+                new CreateIndexOptions()
+                {
+                    Name = "TestIndex"
+                }).ConfigureAwait(false);
+            var result = await _collection.IndexExistsAsync("TestIndex").ConfigureAwait(false);
+            Assert.That(result, Is.True);
+        }
+
+        [Test]
         public void Verify_find_one_by_id_bsonValue()
         {
             _collection.InsertMany(new MongoDriverHelperTestsClass[] {

@@ -4,13 +4,9 @@ using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
-using MongoDB.Driver.Core.Operations;
-using MongoDB.Driver.Core.WireProtocol.Messages.Encoders;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.Helpers
@@ -113,6 +109,13 @@ namespace Jarvis.Framework.Shared.Helpers
                 );
                 return (Dictionary<Tkey, Tvalue>)result;
             }
+        }
+
+        public static async Task< Boolean> IndexExistsAsync<T>(this IMongoCollection<T> collection, String indexName)
+        {
+            var indexesQuery = await collection.Indexes.ListAsync().ConfigureAwait(false);
+            var indexes = await indexesQuery.ToListAsync().ConfigureAwait(false);
+            return indexes.Any(x => x["name"].AsString == indexName);
         }
     }
 }
