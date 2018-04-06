@@ -6,6 +6,7 @@ using NStore.Core.Streams;
 using NStore.Domain;
 using NUnit.Framework;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.EngineTests.AggregateTests
@@ -64,6 +65,10 @@ namespace Jarvis.Framework.Tests.EngineTests.AggregateTests
             Assert.That(reloaded.SampleEntity.InternalState.Accumulator, Is.EqualTo(10));
         }
 
+        /// <summary>
+        /// We need to be sure that events are correctly dispatched if restored from an old snapshot.
+        /// </summary>
+        /// <returns></returns>
         [Test]
         public async Task Verify_repository_dispatch_extra_events_when_restored_with_snapshot()
         {
@@ -86,6 +91,8 @@ namespace Jarvis.Framework.Tests.EngineTests.AggregateTests
             Assert.That(reloaded.Version, Is.EqualTo(2));
             Assert.That(reloaded.WasRestoredFromSnapshot);
             Assert.That(reloaded.RestoreSnapshot.SourceVersion, Is.EqualTo(1), "Entity should be restored from snapshot 20");
+
+            Assert.That(Object.ReferenceEquals(reloaded.InternalState.EntityStates.Single().Value, reloaded.SampleEntity.InternalState), "Entity state mismatch, entity state in parent state is not the same instance of the state of entity");
 
             Assert.That(reloaded.SampleEntity.InternalState.Accumulator, Is.EqualTo(20));
             Assert.That(reloaded.InternalState.TouchCount, Is.EqualTo(2));

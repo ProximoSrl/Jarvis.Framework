@@ -106,7 +106,7 @@ namespace Jarvis.Framework.Tests.EngineTests.AggregateTests
 
 		protected override object DeepCloneMe()
 		{
-			return new AggregateTestSampleAggregate1State() { TouchCount = this.TouchCount };
+            return MemberwiseClone();
 		}
 	}
 
