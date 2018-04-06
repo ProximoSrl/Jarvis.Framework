@@ -8,6 +8,7 @@ using MongoDB.Driver;
 using Jarvis.Framework.Shared.Helpers;
 using MongoDB.Driver.Linq;
 using System.Threading.Tasks;
+using Castle.Core.Logging;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
 {
@@ -15,9 +16,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
     {
         private readonly IMongoCollection<TModel> _collection;
 
+        public ILogger Logger { get; set; }
+
         public MongoStorage(IMongoCollection<TModel> collection)
         {
             _collection = collection;
+            Logger = NullLogger.Instance;
         }
 
         public async Task<Boolean> IndexExistsAsync(string name)
@@ -29,6 +33,15 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             }
         }
 
+        /// <summary>
+        /// Creates an index, but ignore any error (it will only log them) to be used in projections.
+        /// If a projections failed to create an index it will stop and this is not the best approach,
+        /// we prefer to ignore indexing and log the error.
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="keys"></param>
+        /// <param name="options"></param>
+        /// <returns></returns>
         public async Task CreateIndexAsync(String name, IndexKeysDefinition<TModel> keys, CreateIndexOptions options = null)
         {
             options = options ?? new CreateIndexOptions();
@@ -36,17 +49,44 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
             //there is the possibility that create index trow if an index with same name and 
             //different options/keys is created
+            Boolean indexCreated = await InnerCreateIndexAsync(name, keys, options).ConfigureAwait(false);
+
+            if (!indexCreated)
+            {
+                try
+                {
+                    //if we reach here, index was not created, probably it is existing and with different keys.
+                    var indexExists = await _collection.IndexExistsAsync(name).ConfigureAwait(false);
+                    if (indexExists)
+                    {
+                        await _collection.Indexes.DropOneAsync(name).ConfigureAwait(false);
+                        await InnerCreateIndexAsync(name, keys, options).ConfigureAwait(false);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.ErrorFormat(ex, "Unable to create index {0}", name);
+                }
+            }
+            else
+            {
+                Logger.ErrorFormat("Unable to create index {0}", name);
+            }
+        }
+
+        private async Task<bool> InnerCreateIndexAsync(string name, IndexKeysDefinition<TModel> keys, CreateIndexOptions options)
+        {
             try
             {
                 await _collection.Indexes.CreateOneAsync(keys, options).ConfigureAwait(false);
+                return true;
             }
-            catch (MongoCommandException)
+            catch (MongoCommandException ex)
             {
-                //probably index exists with different options, drop and recreate
-                String indexName = name;
-                await _collection.Indexes.DropOneAsync(indexName).ConfigureAwait(false);
-                await _collection.Indexes.CreateOneAsync(keys, options).ConfigureAwait(false);
+                Logger.ErrorFormat(ex, "Error creating index {0} - {1}", name, ex.Message);
             }
+
+            return false;
         }
 
         public async Task InsertBatchAsync(IEnumerable<TModel> values)
@@ -69,23 +109,23 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             return _collection.FindOneById(id);
         }
 
-		public async Task FindByPropertyAsync<TValue>(Expression<Func<TModel, TValue>> propertySelector, TValue value, Func<TModel, Task> subscription)
-		{
-			using (var cursor = await _collection.FindAsync(
-				Builders<TModel>.Filter.Eq<TValue>(propertySelector, value),
-				new FindOptions<TModel>()
-				{
-					Sort = Builders<TModel>.Sort.Ascending(m => m.Id)
-				}).ConfigureAwait(false))
-			{
-				foreach (var item in cursor.ToEnumerable())
-				{
-					await subscription(item).ConfigureAwait(false);
-				}
-			}
-		}
+        public async Task FindByPropertyAsync<TValue>(Expression<Func<TModel, TValue>> propertySelector, TValue value, Func<TModel, Task> subscription)
+        {
+            using (var cursor = await _collection.FindAsync(
+                Builders<TModel>.Filter.Eq<TValue>(propertySelector, value),
+                new FindOptions<TModel>()
+                {
+                    Sort = Builders<TModel>.Sort.Ascending(m => m.Id)
+                }).ConfigureAwait(false))
+            {
+                foreach (var item in cursor.ToEnumerable())
+                {
+                    await subscription(item).ConfigureAwait(false);
+                }
+            }
+        }
 
-		public IQueryable<TModel> Where(Expression<Func<TModel, bool>> filter)
+        public IQueryable<TModel> Where(Expression<Func<TModel, bool>> filter)
         {
             return _collection.AsQueryable().Where(filter).OrderBy(x => x.Id);
         }
