@@ -19,24 +19,21 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
     {
         private readonly IRepository _wrappedRepository;
         private readonly Action<String, IRepository> _disposeAction;
-        private readonly Action<String, IRepository, IAggregate> _afterSaveAction;
+        private readonly Action<String, IRepository> _afterSaveAction;
         private readonly Action<String, IRepository> _onExceptionAction;
 
         /// <summary>
         /// Constructor
         /// </summary>
         /// <param name="wrappedRepository"></param>
-        /// <param name="aggregate">When aggregate is not in cache this parameter is null and the 
-        /// instance of the aggregate is taken from the repository. </param>
         /// <param name="disposeAction"></param>
         /// <param name="afterSaveAction"></param>
         /// <param name="onExceptionAction"></param>
         /// <param name="id"></param>
         public CachableAggregateCachedRepository(
             IRepository wrappedRepository,
-            TAggregate aggregate,
             Action<String, IRepository> disposeAction,
-            Action<String, IRepository, IAggregate> afterSaveAction,
+            Action<String, IRepository> afterSaveAction,
             Action<String, IRepository> onExceptionAction,
             IIdentity id)
         {
@@ -44,7 +41,7 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
             _disposeAction = disposeAction;
             _afterSaveAction = afterSaveAction;
             _onExceptionAction = onExceptionAction;
-            Aggregate = aggregate ?? wrappedRepository.GetByIdAsync<TAggregate>(id.ToString()).Result;
+            Aggregate = wrappedRepository.GetByIdAsync<TAggregate>(id.ToString()).Result;
         }
 
         public TAggregate Aggregate { get; }
@@ -65,7 +62,7 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
             try
             {
                 await _wrappedRepository.SaveAsync(Aggregate, commitId.ToString(), updateHeaders).ConfigureAwait(false);
-                _afterSaveAction(Aggregate.Id, _wrappedRepository, Aggregate);
+                _afterSaveAction(Aggregate.Id, _wrappedRepository);
             }
             catch (Exception)
             {
