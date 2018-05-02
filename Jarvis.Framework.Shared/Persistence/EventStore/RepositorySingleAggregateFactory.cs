@@ -9,28 +9,23 @@ using NStore.Domain;
 
 namespace Jarvis.Framework.Shared.Persistence.EventStore
 {
-	public class AggregateCachedRepositoryFactory : IAggregateCachedRepositoryFactory
+    public class AggregateCachedRepositoryFactory : IAggregateCachedRepositoryFactory
     {
-        private static readonly MemoryCache Cache = new MemoryCache(new MemoryCacheOptions()
-        {
-        });
+        private static readonly MemoryCache Cache = new MemoryCache(new MemoryCacheOptions());
 
         private static readonly Counter CacheHitCounter = Metric.Counter("RepositorySingleEntityCacheHits", Unit.Calls);
         private static readonly Counter CacheMissCounter = Metric.Counter("RepositorySingleEntityCacheMisses", Unit.Calls);
-        private MemoryCacheEntryOptions _memoryCacheEntryOptions;
-    
+        private readonly MemoryCacheEntryOptions _memoryCacheEntryOptions;
+
         private class CacheEntry
         {
             public IRepository RepositoryEx { get; }
 
-            public IAggregate Aggregate { get;}
-
             public Boolean InUse { get; set; }
 
-            public CacheEntry(IRepository repositoryEx, IAggregate aggregate)
+            public CacheEntry(IRepository repositoryEx)
             {
                 RepositoryEx = repositoryEx;
-                Aggregate = aggregate;
             }
         }
 
@@ -67,14 +62,14 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
         /// it does not prevent two thread to execute at the same moment on the same aggregateId.
         /// </param>
         public AggregateCachedRepositoryFactory(
-			IRepositoryFactory repositoryFactory,
+            IRepositoryFactory repositoryFactory,
             Boolean cacheDisabled = false)
         {
             _repositoryFactory = repositoryFactory;
             _cacheDisabled = cacheDisabled;
-		}
+        }
 
-		private Int32 _isGettingCache = 0;
+        private Int32 _isGettingCache = 0;
 
         public IList<PostEvictionCallbackRegistration> EvictCallback { get; private set; }
 
@@ -92,7 +87,6 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
                 {
                     CacheHitCounter.Increment();
                     innerRepository = cached.RepositoryEx;
-                    aggregate = cached.Aggregate as TAggregate;
                 }
                 else
                 {
@@ -102,16 +96,12 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
                     innerRepository = _repositoryFactory.Create();
                 }
 
-                var repoSingleEntity = new CachableAggregateCachedRepository<TAggregate>(
+                return new CachableAggregateCachedRepository<TAggregate>(
                     innerRepository,
-                    aggregate,
                     DisposeRepository,
                     AfterSave,
                     OnException,
                     id);
-
-                return repoSingleEntity;
-
             }
             return new SingleUseAggregateCachedRepository<TAggregate>(_repositoryFactory, id);
         }
@@ -145,18 +135,18 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
             ReleaseAggregateId(id);
         }
 
-        private void AfterSave(String id, IRepository repositoryEx, IAggregate aggregate)
+        private void AfterSave(String id, IRepository repositoryEx)
         {
             //store the repository on the cache, actually we are keeping the very
             //same entity that was disposed by the caller.
-            var cacheEntry = new CacheEntry(repositoryEx, aggregate);
+            var cacheEntry = new CacheEntry(repositoryEx);
             Cache.Set(id, cacheEntry, _memoryCacheEntryOptions);
         }
 
         private void OnException(String id, IRepository repositoryEx)
         {
-			//remove the repository from cache, this will really dispose wrapped repository
-			_repositoryFactory.Release(repositoryEx);
+            //remove the repository from cache, this will really dispose wrapped repository
+            _repositoryFactory.Release(repositoryEx);
             Cache.Remove(id);
         }
 
