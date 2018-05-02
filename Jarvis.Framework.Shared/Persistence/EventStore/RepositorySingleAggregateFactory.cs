@@ -20,14 +20,11 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
         {
             public IRepository RepositoryEx { get; }
 
-            public IAggregate Aggregate { get;}
-
             public Boolean InUse { get; set; }
 
-            public CacheEntry(IRepository repositoryEx, IAggregate aggregate)
+            public CacheEntry(IRepository repositoryEx)
             {
                 RepositoryEx = repositoryEx;
-                Aggregate = aggregate;
             }
         }
 
@@ -83,7 +80,6 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
                 {
                     CacheHitCounter.Increment();
                     innerRepository = cached.RepositoryEx;
-                    aggregate = cached.Aggregate as TAggregate;
                 }
                 else
                 {
@@ -93,16 +89,12 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
                     innerRepository = _repositoryFactory.Create();
                 }
 
-                var repoSingleEntity = new CachableAggregateCachedRepository<TAggregate>(
+                return new CachableAggregateCachedRepository<TAggregate>(
                     innerRepository,
-                    aggregate,
                     DisposeRepository,
                     AfterSave,
                     OnException,
                     id);
-
-                return repoSingleEntity;
-
             }
             return new SingleUseAggregateCachedRepository<TAggregate>(_repositoryFactory, id);
         }
@@ -136,11 +128,11 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
             ReleaseAggregateId(id);
         }
 
-        private void AfterSave(String id, IRepository repositoryEx, IAggregate aggregate)
+        private void AfterSave(String id, IRepository repositoryEx)
         {
             //store the repository on the cache, actually we are keeping the very
             //same entity that was disposed by the caller.
-            var cacheEntry = new CacheEntry(repositoryEx, aggregate);
+            var cacheEntry = new CacheEntry(repositoryEx);
             Cache.Add(id, cacheEntry, _cachePolicy);
         }
 
