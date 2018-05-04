@@ -137,6 +137,15 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                 Int64 maximumDispatchedValue = projectionsForThisSlot
                     .Select(p => _checkpointTracker.GetCheckpoint(p))
                     .Max();
+
+                //rember that not all commits are events, they could not be dispatched.
+                var maxEventUnwinded = _eventUnwinder.GetMaxEventUnwinded();
+
+                if (maxEventUnwinded < maximumDispatchedValue)
+                {
+                    maximumDispatchedValue = maxEventUnwinded;
+                    _logger.InfoFormat("Maximum checkpoint set to {0} because last commits are not domain events.", maximumDispatchedValue);
+                }
                 var dispatcher = new RebuildProjectionSlotDispatcher(_logger, slotName, _config, projectionsForThisSlot, _checkpointTracker, maximumDispatchedValue);
                 MetricsHelper.SetCheckpointCountToDispatch(slotName, () => dispatcher.CheckpointToDispatch);
                 _rebuildDispatchers.Add(dispatcher);

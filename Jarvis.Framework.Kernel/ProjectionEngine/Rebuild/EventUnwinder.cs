@@ -14,6 +14,7 @@ using Fasterflect;
 using Castle.Core.Logging;
 using Jarvis.Framework.Shared.Logging;
 using NEventStore.Serialization;
+using MongoDB.Driver.Linq;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 {
@@ -113,6 +114,15 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
             }
             
             _logger.InfoFormat("Unwind events ends, started from commit {0} and ended with commit {1}", startToken, checkpointToken);
+        }
+
+        public Int64 GetMaxEventUnwinded()
+        {
+            var  lastUnwinded = _unwindedEventCollection.AsQueryable()
+                .OrderByDescending(_ => _.CheckpointToken)
+                .FirstOrDefault();
+
+            return lastUnwinded?.CheckpointToken ?? 0;
         }
 
         private IEnumerable<UnwindedDomainEvent> UnwindCommit(ICommit commit)
