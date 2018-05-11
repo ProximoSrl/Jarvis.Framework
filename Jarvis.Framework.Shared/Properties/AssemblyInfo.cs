@@ -37,4 +37,5 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyInformationalVersion("LocalCompiled")]
 
 [assembly: InternalsVisibleTo("Jarvis.Framework.Tests")]
+[assembly: InternalsVisibleTo("Jarvis.Framework.Kernel")]
 [assembly: InternalsVisibleTo("Jarvis.Framework.Tests-core")]

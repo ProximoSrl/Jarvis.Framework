@@ -1,28 +1,26 @@
 ﻿using Castle.Core.Logging;
 using Jarvis.Framework.Kernel.Events;
 using Jarvis.Framework.Kernel.ProjectionEngine;
-using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 using Jarvis.Framework.Kernel.ProjectionEngine.Rebuild;
 using Jarvis.Framework.Tests.EngineTests;
 using NSubstitute;
 using NUnit.Framework;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Jarvis.Framework.TestHelpers;
 using Fasterflect;
 using Jarvis.Framework.Shared.Helpers;
 using Jarvis.Framework.Shared.Logging;
+using Jarvis.Framework.Kernel.Support;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 {
     [TestFixture]
     public class RebuildProjectionSlotDispatcherTests
     {
-        RebuildProjectionSlotDispatcher sut;
-        IProjection[] projections;
+        private RebuildProjectionSlotDispatcher sut;
+        private IProjection[] projections;
+        private const String slotName = "test";
 
         public void InitSut()
         {
@@ -30,11 +28,14 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             projections = new []{ new Projection(Substitute.For<ICollectionWrapper<SampleReadModel, String>>()) };
             sut = new RebuildProjectionSlotDispatcher(
                 NullLogger.Instance,
-                "test",
+                slotName,
                 config,
                 projections,
                 4,
 				NullLoggerThreadContextManager.Instance);
+
+            //Needed to avoid crash on wrong metrics dispatch.
+            KernelMetricsHelper.CreateMeterForRebuildDispatcherBuffer(slotName, () => 0);
         }
 
         [Test]

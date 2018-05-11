@@ -66,22 +66,64 @@ namespace Jarvis.Framework.Kernel.Support
             Metric.Gauge(gaugeName, valueProvider, Unit.Items);
         }
 
-        private static readonly Dictionary<string, Meter> CommitDispatchIndex = new Dictionary<string, Meter>();
+        private static readonly Dictionary<string, Meter> CommitDispatchedBySlot = new Dictionary<string, Meter>();
+        private static readonly Dictionary<string, Meter> RebuildCommitDispatchedBySlot = new Dictionary<string, Meter>();
+        private static readonly Dictionary<string, Meter> RebuildEventDispatchedByBucket = new Dictionary<string, Meter>();
 
         public static void CreateMeterForDispatcherCountSlot(String slotName)
         {
-            if (!CommitDispatchIndex.ContainsKey(slotName))
+            if (!CommitDispatchedBySlot.ContainsKey(slotName))
             {
-                var meter = Metric.Meter("projection-chunk-dispatched-" + slotName, Unit.Items, TimeUnit.Seconds);
-                CommitDispatchIndex[slotName] = meter;
+                var meter = Metric.Meter("projection-chunk-dispatched-" + slotName, Unit.Items);
+                CommitDispatchedBySlot[slotName] = meter;
+            }
+        }
+
+        public static void CreateMeterForRebuildDispatcherBuffer(string slotName, Func<Double> getBufferDispatchCount)
+        {
+            if (!RebuildCommitDispatchedBySlot.ContainsKey(slotName))
+            {
+                var meter = Metric.Meter("projection-rebuild-event-dispatched-" + slotName, Unit.Items);
+                RebuildCommitDispatchedBySlot[slotName] = meter;
+            }
+            Metric.Gauge("rebuild-slot-input-buffer-" + slotName, getBufferDispatchCount, Unit.Items);
+        }
+
+        public static void CreateGaugeForRebuildBucketDBroadcasterBuffer(string bucketKey, Func<Double> provider)
+        {
+            Metric.Gauge("rebuild-buffer-broadcaster-" + bucketKey, provider, Unit.Items);
+        }
+
+        public static void CreateGaugeForRebuildFirstBuffer(string bucketKey, Func<Double> provider)
+        {
+            Metric.Gauge("rebuild-firstbuffer-" + bucketKey, provider, Unit.Items);
+        }
+
+        public static void CreateMeterForRebuildEventCompleted(string bucketKey)
+        {
+            if (!RebuildEventDispatchedByBucket.ContainsKey(bucketKey))
+            {
+                var meter = Metric.Meter("rebuild-event-processed-" + bucketKey, Unit.Items);
+                CommitDispatchedBySlot[bucketKey] = meter;
             }
         }
 
         public static void MarkCommitDispatchedCount(String slotName, Int32 count)
         {
-            CommitDispatchIndex[slotName].Mark(count);
+            CommitDispatchedBySlot[slotName].Mark(count);
 			projectionDispatchMeter.Mark(count);
 		}
+
+        public static void MarkEventInRebuildDispatchedCount(String slotName, Int32 count)
+        {
+            RebuildCommitDispatchedBySlot[slotName].Mark(count);
+            projectionRebuildDispatchMeter.Mark(count);
+        }
+
+        public static void MarkRebuildEventProcessedCount(String bucketName, Int32 count)
+        {
+            RebuildEventDispatchedByBucket[bucketName].Mark(count);
+        }
 
         private static readonly Counter projectionCounter = Metric.Counter("prj-time", Unit.Custom("ticks"));
         private static readonly Counter projectionSlotCounter = Metric.Counter("prj-slot-time", Unit.Custom("ticks"));
@@ -92,7 +134,12 @@ namespace Jarvis.Framework.Kernel.Support
         private static readonly Counter projectionSlotCounterRebuild = Metric.Counter("prj-slot-time-rebuild", Unit.Custom("ticks"));
         private static readonly Counter projectionEventCounterRebuild = Metric.Counter("prj-event-time-rebuild", Unit.Custom("ticks"));
 
-		private static readonly Meter projectionDispatchMeter = Metric.Meter("projection-chunk-dispatched-_TOTAL", Unit.Items, TimeUnit.Seconds);
+		private static readonly Meter projectionDispatchMeter = Metric.Meter("projection-chunk-dispatched-TOTAL", Unit.Items, TimeUnit.Seconds);
+
+        /// <summary>
+        /// During rebuild, this is the count of ALL Slot dispatched event, each event is counted multiple times.
+        /// </summary>
+        private static readonly Meter projectionRebuildDispatchMeter = Metric.Meter("projection-rebuild-event-dispatched-TOTAL", Unit.Items, TimeUnit.Seconds);
 
         public static void IncrementProjectionCounter(String projectionName, String slotName, String eventName, Int64 ticks, Int64 milliseconds)
         {

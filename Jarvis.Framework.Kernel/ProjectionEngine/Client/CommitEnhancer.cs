@@ -31,23 +31,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 				{
                     evt = (DomainEvent)eventMessage;
 					var headers = commit.Headers;
-#pragma warning disable S125 // Sections of code should not be "commented out"
-					//if (eventMessage.Headers.Count > 0)
-					//{
-					//    headers = chunk.Headers.ToDictionary(k => k.Key, k => k.Value);
-					//    foreach (var eventHeader in eventMessage.Headers)
-					//    {
-					//        headers[eventHeader.Key] = eventHeader.Value;
-					//    }
-					//}
-					//evt.SetPropertyValue(d => d.CommitStamp, commit.CommitStamp);
-					evt.SetPropertyValue(d => d.CommitId, chunk.OperationId);
-					evt.SetPropertyValue(d => d.CommitStamp, commit.GetTimestamp());
-#pragma warning restore S125 // Sections of code should not be "commented out"
-					evt.SetPropertyValue(d => d.Version, commit.AggregateVersion);
-					evt.SetPropertyValue(d => d.Context, headers);
-					evt.SetPropertyValue(d => d.CheckpointToken, chunk.Position);
-                }
+                    evt.CommitId = chunk.OperationId;
+					evt.CommitStamp= commit.GetTimestamp();
+					evt.Version= commit.AggregateVersion;
+					evt.Context= headers;
+					evt.CheckpointToken= chunk.Position;
+				}
 
                 evt?.SetPropertyValue(d => d.IsLastEventOfCommit, true);
             }

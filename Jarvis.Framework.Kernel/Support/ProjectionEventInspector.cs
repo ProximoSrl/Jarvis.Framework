@@ -34,8 +34,15 @@ namespace Jarvis.Framework.Kernel.Support
             }
         }
 
-        public void InspectProjectionForEvents(Type type)
+        /// <summary>
+        /// Inspect a projection type, add into an internal buffer the list of every
+        /// domain that is handled with an On function, and returns this lists to the caller.
+        /// </summary>
+        /// <param name="type"></param>
+        /// <returns></returns>
+        public HashSet<Type> InspectProjectionForEvents(Type type)
         {
+            HashSet<Type> retValue = new HashSet<Type>();
             var allMethods = type.GetMethods(BindingFlags.Instance | BindingFlags.FlattenHierarchy | BindingFlags.Public | BindingFlags.NonPublic);
             var handlingMethods = allMethods
                 .Where(m => m.Name == "On" & m.IsAbstract == false)
@@ -43,7 +50,11 @@ namespace Jarvis.Framework.Kernel.Support
                 .Where(p => p.Length == 1 && typeof(DomainEvent).IsAssignableFrom(p[0].ParameterType));
             foreach (var parameter in handlingMethods)
             {
-                AddDomainEventHandled(parameter);
+                foreach (var eventHandled in  ScanForDomainEvent(parameter))
+                {
+                    retValue.Add(eventHandled);
+                    EventHandled.Add(eventHandled);
+                }
             }
 
 			//Now scan the IHandleMessage
@@ -55,18 +66,20 @@ namespace Jarvis.Framework.Kernel.Support
 
 			foreach (var typeExplicitlyHandled in typesExplicitlyHandled)
 			{
-				EventHandled.Add(typeExplicitlyHandled);
+                retValue.Add(typeExplicitlyHandled);
+                EventHandled.Add(typeExplicitlyHandled);
 			}
+            return retValue;
 		}
 
-        private void AddDomainEventHandled(ParameterInfo[] parameter)
+        private IEnumerable<Type> ScanForDomainEvent(ParameterInfo[] parameter)
         {
             var eventType = parameter[0].ParameterType;
-            if (!eventType.IsAbstract) EventHandled.Add(eventType);
+            if (!eventType.IsAbstract) yield return eventType;
             var inheritedEvents = _eventTypes.Where(eventType.IsAssignableFrom);
             foreach (var inheritedEvent in inheritedEvents)
             {
-                if (!inheritedEvent.IsAbstract) EventHandled.Add(inheritedEvent);
+                if (!inheritedEvent.IsAbstract) yield return inheritedEvent;
             }
         }
 

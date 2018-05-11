@@ -56,6 +56,14 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             }
         }
 
+        private class TestProjectionTouched 
+        {
+            public void On(SampleAggregateTouched e)
+            {
+                // Method intentionally left empty.
+            }
+        }
+
 #pragma warning restore RCS1163 // Unused parameter.
 #pragma warning restore S1144 // Unused private types or members should be remove
 
@@ -76,7 +84,22 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             Assert.That(sut.EventHandled, Is.EquivalentTo(new[] { typeof(SampleAggregateCreated) }));
         }
 
-		[Test]
+        [Test]
+        public void verify_get_each_call_return_correct_number_of_event()
+        {
+            ProjectionEventInspector sut = new ProjectionEventInspector();
+            sut.AddAssembly(Assembly.GetExecutingAssembly());
+            var result = sut.InspectProjectionForEvents(typeof(Projection));
+            Assert.That(result, Is.EquivalentTo(new[] { typeof(SampleAggregateCreated) }));
+
+            result = sut.InspectProjectionForEvents(typeof(TestProjectionTouched));
+            Assert.That(result, Is.EquivalentTo(new[] { typeof(SampleAggregateTouched) }));
+
+            //Combine the two projection events togheter.
+            Assert.That(sut.EventHandled, Is.EquivalentTo(new[] { typeof(SampleAggregateCreated), typeof(SampleAggregateTouched) }));
+        }
+
+        [Test]
 		public void verify_get_poco_event_handled()
 		{
 			ProjectionEventInspector sut = new ProjectionEventInspector();
