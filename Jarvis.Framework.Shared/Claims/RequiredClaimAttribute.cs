@@ -5,7 +5,7 @@ namespace Jarvis.Framework.Shared.Claims
 	[AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = true)]
 	public class RequiredClaimAttribute : ClaimAttribute
 	{
-		readonly IClaimsMatcher _matcher;
+		private readonly IClaimsMatcher _matcher;
 
 		public RequiredClaimAttribute(string claim, string value)
 		{
@@ -15,7 +15,11 @@ namespace Jarvis.Framework.Shared.Claims
 			_matcher = ClaimsMatcher.Require(claim, value);
 		}
 
-		public RequiredClaimAttribute(string claim, bool value = true) : this(claim, value.ToString())
+        public RequiredClaimAttribute(string claim, bool value) : this(claim, value.ToString())
+        {
+        }
+
+        public RequiredClaimAttribute(string claim) : this(claim, "true")
 		{
 		}
 

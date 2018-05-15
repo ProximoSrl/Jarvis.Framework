@@ -10,8 +10,12 @@ namespace Jarvis.Framework.Shared.IdentitySupport
     {
         private static Boolean _enabled = false;
 
-        public static void EnableFlatMapping(
-            Boolean enableForAllId = true)
+        public static void EnableFlatMapping()
+        {
+            EnableFlatMapping(true);
+        }
+
+        public static void EnableFlatMapping(Boolean enableForAllId)
         {
             if (_enabled) return;
 
