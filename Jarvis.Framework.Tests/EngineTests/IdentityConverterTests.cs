@@ -6,38 +6,37 @@ using System.Collections.Generic;
 
 namespace Jarvis.Framework.Tests.EngineTests
 {
-	[TestFixture]
-	public class IdentityConverterTests 
-	{
-		private IdentityManager _manager;
+    [TestFixture]
+    public class IdentityConverterTests
+    {
+        private IdentityManager _manager;
 
-		[OneTimeSetUp]
-		public void TestFixtureSetUp()
-		{
-			_manager = new IdentityManager(new InMemoryCounterService());
-			_manager.RegisterIdentitiesFromAssembly(GetType().Assembly);
-		}
+        [OneTimeSetUp]
+        public void TestFixtureSetUp()
+        {
+            _manager = new IdentityManager(new InMemoryCounterService());
+            _manager.RegisterIdentitiesFromAssembly(GetType().Assembly);
+        }
 
-		[Test]
-		public void convert_to_string()
-		{
-			var id = new SampleAggregateId(1);
-			var asString = _manager.ToString(id);
+        [Test]
+        public void convert_to_string()
+        {
+            var id = new SampleAggregateId(1);
+            var asString = _manager.ToString(id);
 
-			Assert.AreEqual("SampleAggregate_1", asString);
-		}
+            Assert.AreEqual("SampleAggregate_1", asString);
+        }
 
-		[Test]
-		public void convert_to_identity()
-		{
-			var asString = EventStoreIdentity.Format(typeof(SampleAggregateId), 1L);
-			var identity = (EventStoreIdentity)_manager.ToIdentity(asString);
+        [Test]
+        public void convert_to_identity()
+        {
+            var asString = EventStoreIdentity.Format(typeof(SampleAggregateId), 1L);
+            var identity = (EventStoreIdentity)_manager.ToIdentity(asString);
 
-			Assert.IsTrue(identity is SampleAggregateId);
-			Assert.AreEqual("SampleAggregate", identity.GetTag());
-			Assert.AreEqual(1L, identity.Id);
-		}
-
+            Assert.IsTrue(identity is SampleAggregateId);
+            Assert.AreEqual("SampleAggregate", identity.GetTag());
+            Assert.AreEqual(1L, identity.Id);
+        }
 
         [Test, Explicit]
         public void Conver_lots_of_identities()
@@ -58,47 +57,58 @@ namespace Jarvis.Framework.Tests.EngineTests
             Console.WriteLine("Elapsed: {0}", timer.ElapsedMilliseconds);
         }
 
-	    [Test]
-	    public void as_string_and_to_string_are_equal()
-	    {
-	        var id = new SampleAggregateId(555);
+        [Test]
+        public void as_string_and_to_string_are_equal()
+        {
+            var id = new SampleAggregateId(555);
 
-	        var asString = id.AsString();
-	        var toString = id.ToString();
+            var asString = id.AsString();
+            var toString = id.ToString();
 
             Assert.AreEqual(asString, toString);
-	    }
+        }
 
-	    [Test]
-	    public void null_string_should_be_transalted_to_null_identity()
-	    {
-	        var identity = _manager.ToIdentity(null);
-
-            Assert.IsNull(identity);
-	    } 
-        
         [Test]
-	    public void empty_string_should_be_transalted_to_null_identity()
-	    {
-	        var identity = _manager.ToIdentity(String.Empty);
+        public void null_string_should_be_transalted_to_null_identity()
+        {
+            var identity = _manager.ToIdentity(null);
 
             Assert.IsNull(identity);
-	    }
+        }
 
-	    [Test]
-	    public void whitespace_identity_should_throw_exception()
-	    {
-	        var ex = Assert.Catch<Exception>(() => _manager.ToIdentity(" "));
+        [Test]
+        public void empty_string_should_be_transalted_to_null_identity()
+        {
+            var identity = _manager.ToIdentity(String.Empty);
+
+            Assert.IsNull(identity);
+        }
+
+        [Test]
+        public void whitespace_identity_should_throw_exception()
+        {
+            var ex = Assert.Catch<Exception>(() => _manager.ToIdentity(" "));
 
             Assert.AreEqual("invalid identity value  ", ex.Message);
         }
 
         [Test]
-	    public void unknown_identity_should_throw_exception()
-	    {
-	        var ex = Assert.Catch<Exception>(() => _manager.ToIdentity("pluto_1"));
+        public void unknown_identity_should_throw_exception()
+        {
+            var ex = Assert.Catch<Exception>(() => _manager.ToIdentity("pluto_1"));
 
             Assert.AreEqual("pluto not registered in IdentityManager", ex.Message);
         }
-	}
+
+        [TestCase("SampleAggregate_1")]
+        [TestCase("sampleaggregate_1")]
+        [TestCase("samPLeaggrEGate_1")]
+        [TestCase("SAMPLEAGGREGATE_1")]
+        public void Verify_to_identity_is_case_insensitive(String aggregateIdString)
+        {
+            var identity = _manager.ToIdentity(aggregateIdString);
+
+            Assert.That(identity, Is.EqualTo(new SampleAggregateId(1)));
+        }
+    }
 }
