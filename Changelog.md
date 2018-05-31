@@ -10,10 +10,6 @@ J.A.R.V.I.S. Framework - Proximo srl (c)
 - Migration to NStore
 - Migration to async.
 - Entity support.
-- 
-### 3.2.0
-
-- Ability to create MongoCollection wrapper disabling nitro.
 
 ### 3.1.0
 
@@ -22,6 +18,8 @@ J.A.R.V.I.S. Framework - Proximo srl (c)
 ### 3.2.0
 
 - Classes that inhertis from Repository command handler can add custom headers on che changeset.
+- Ability to create MongoCollection wrapper disabling nitro.
+- IdentityManager now is case insensitive (3.2.8)
 
 ## 2.1.0
 
