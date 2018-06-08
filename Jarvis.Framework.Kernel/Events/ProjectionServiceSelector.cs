@@ -23,7 +23,13 @@ namespace Jarvis.Framework.Kernel.Events
 		{
 			var projectionInfoAttribute = type.GetCustomAttribute<ProjectionInfoAttribute>();
 
-			if (projectionInfoAttribute?.OfflineProjection == true && !OfflineMode.Enabled)
+            //This condition is used to avoid register in castle projections given some specifics
+            //conditions. We have currently two condition why a projection should not run
+            //1) is an offline projection and offline is not enabled
+            //2) was disabled.
+			if ((
+                projectionInfoAttribute?.OfflineProjection == true && !OfflineMode.Enabled)
+                || projectionInfoAttribute?.Disabled == true)    
 			{
 				//avoid register this object with any interface, register as self
 				return new Type[] { type };

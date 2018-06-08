@@ -53,5 +53,10 @@ namespace Jarvis.Framework.Kernel.Events
 		/// is used if we have a projection that need to be different when it is run offline.
 		/// </summary>
 		public Boolean OfflineProjection { get; set; }
-	}
+
+        /// <summary>
+        /// It is convenient to have the ability to disable a projection.
+        /// </summary>
+        public Boolean Disabled { get; set; }
+    }
 }
