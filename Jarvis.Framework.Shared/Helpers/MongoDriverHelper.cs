@@ -4,9 +4,11 @@ using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
+using MongoDB.Driver.Core.Clusters;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.Helpers
@@ -116,6 +118,32 @@ namespace Jarvis.Framework.Shared.Helpers
             var indexesQuery = await collection.Indexes.ListAsync().ConfigureAwait(false);
             var indexes = await indexesQuery.ToListAsync().ConfigureAwait(false);
             return indexes.Any(x => x["name"].AsString == indexName);
+        }
+
+        /// <summary>
+        /// Check connection and returns true if the instance of mongodb is operational.
+        /// </summary>
+        /// <param name="connection"></param>
+        /// <returns></returns>
+        public static Boolean CheckConnection(String connection)
+        {
+            var url = new MongoUrl(connection);
+            var client = new MongoClient(url);
+            return CheckConnection(client);
+        }
+
+        public static bool CheckConnection(IMongoClient client)
+        {
+            Task.Factory.StartNew(() => client.ListDatabases()); //forces a database connection
+            Int32 spinCount = 0;
+            ClusterState clusterState;
+
+            while ((clusterState = client.Cluster.Description.State) != ClusterState.Connected &&
+                spinCount++ < 100)
+            {
+                Thread.Sleep(20);
+            }
+            return clusterState == ClusterState.Connected;
         }
     }
 }

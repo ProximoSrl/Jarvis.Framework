@@ -40,16 +40,16 @@ namespace Jarvis.Framework.Shared.ReadModel
         /// <param name="completedAt"></param>
         void Completed(ICommand command, DateTime completedAt);
 
-		/// <summary>
-		/// Dispatched is the status when the event related to the command is 
-		/// dispatched by the INotifyCommitHandled in projection engine. This means
-		/// that the command is executed then dispatched to the bus and if there
-		/// is a Reply-to a reply command is sent.
-		/// </summary>
-		/// <param name="messageId"></param>
-		/// <param name="dispatchedAt"></param>
-		/// <returns></returns>
-		bool Dispatched(Guid messageId, DateTime dispatchedAt);
+        /// <summary>
+        /// Dispatched is the status when the event related to the command is 
+        /// dispatched by the INotifyCommitHandled in projection engine. This means
+        /// that the command is executed then dispatched to the bus and if there
+        /// is a Reply-to a reply command is sent.
+        /// </summary>
+        /// <param name="messageId"></param>
+        /// <param name="dispatchedAt"></param>
+        /// <returns></returns>
+        bool Dispatched(Guid messageId, DateTime dispatchedAt);
 
         /// <summary>
         /// Drop the entire collection.
@@ -213,16 +213,13 @@ namespace Jarvis.Framework.Shared.ReadModel
 
         private IMongoCollection<TrackedMessageModel> GetCollection()
         {
-            var state = _db.Client.Cluster.Description.State;
-            //Check if db is operational.
-            if (state == MongoDB.Driver.Core.Clusters.ClusterState.Connected)
-            {
-                var collection = _db.GetCollection<TrackedMessageModel>("messages");
-                collection.Indexes.CreateOne(Builders<TrackedMessageModel>.IndexKeys.Ascending(x => x.MessageId));
-                collection.Indexes.CreateOne(Builders<TrackedMessageModel>.IndexKeys.Ascending(x => x.IssuedBy));
-                return collection;
-            }
-            return null;
+            if (!MongoDriverHelper.CheckConnection(_db.Client))
+                return null;
+
+            var collection = _db.GetCollection<TrackedMessageModel>("messages");
+            collection.Indexes.CreateOne(Builders<TrackedMessageModel>.IndexKeys.Ascending(x => x.MessageId));
+            collection.Indexes.CreateOne(Builders<TrackedMessageModel>.IndexKeys.Ascending(x => x.IssuedBy));
+            return collection;
         }
 
         public void Started(IMessage msg)
@@ -309,7 +306,7 @@ namespace Jarvis.Framework.Shared.ReadModel
                         if (trackMessage.StartedAt > DateTime.MinValue)
                         {
                             if (trackMessage.ExecutionStartTimeList != null
-								&& trackMessage.ExecutionStartTimeList.Length > 0)
+                                && trackMessage.ExecutionStartTimeList.Length > 0)
                             {
                                 var firstExecutionValue = trackMessage.ExecutionStartTimeList[0];
                                 var queueTime = firstExecutionValue.Subtract(trackMessage.StartedAt).TotalMilliseconds;
@@ -368,7 +365,7 @@ namespace Jarvis.Framework.Shared.ReadModel
 
         public void Drop()
         {
-            Commands.Drop();
+            Commands?.Drop();
         }
 
         public void Failed(ICommand command, DateTime failedAt, Exception ex)
