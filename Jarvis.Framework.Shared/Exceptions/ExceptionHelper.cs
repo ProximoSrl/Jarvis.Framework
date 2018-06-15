@@ -18,9 +18,9 @@ namespace Jarvis.Framework.Shared.Exceptions
 			if (ex == null)
 				return "";
 
-			if (ex is AggregateException)
+			if (ex is AggregateException aggregateException)
 			{
-				var flattened = ((AggregateException)ex).Flatten();
+				var flattened = (aggregateException).Flatten();
 				StringBuilder sb = new StringBuilder();
 				sb.Append($"Aggregate Exception: {flattened.Message}");
 				foreach (var exception in flattened.InnerExceptions)
