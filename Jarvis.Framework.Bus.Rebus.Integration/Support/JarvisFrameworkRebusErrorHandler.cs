@@ -14,6 +14,7 @@ using Rebus.Retry;
 using Rebus.Transport;
 using System.Threading.Tasks;
 using System.Net.Mime;
+using Jarvis.Framework.Shared.Exceptions;
 
 namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 {
@@ -136,14 +137,13 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 
 			private static string GetErrorMessage(Exception exception)
 			{
-				if (exception is AggregateException)
+				if (exception is AggregateException aggEx)
 				{
-					var aggEx = (AggregateException)exception;
 					StringBuilder errorMessage = new StringBuilder();
 					errorMessage.AppendLine($"We have a total of {aggEx.InnerExceptions.Count} exceptions");
 					foreach (var e in aggEx.InnerExceptions)
 					{
-						errorMessage.AppendLine(e.Message);
+						errorMessage.AppendLine(e.GetExceptionDescription());
 						errorMessage.AppendLine("\n\n-------------------------------------------------------------\n\n");
 					}
 					return errorMessage.ToString();
