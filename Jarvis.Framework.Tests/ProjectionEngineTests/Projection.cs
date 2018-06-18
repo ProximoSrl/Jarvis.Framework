@@ -171,11 +171,11 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
 	}
 
 	[ProjectionInfo("ProjectionTypedId")]
-	public class ProjectionTypedId : AbstractProjection
+	public class TypedIdProjection : AbstractProjection
 	{
-		readonly ICollectionWrapper<SampleReadModelTest, String> _collection;
+		private readonly ICollectionWrapper<SampleReadModelTest, String> _collection;
 
-		public ProjectionTypedId(ICollectionWrapper<SampleReadModelTest, String> collection)
+		public TypedIdProjection(ICollectionWrapper<SampleReadModelTest, String> collection)
 		{
 			_collection = collection;
 			_collection.Attach(this, false);

@@ -40,14 +40,21 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         /// Attach a projection to the collection wrapper.
         /// </summary>
         /// <param name="projection"></param>
-        /// <param name="bEnableNotifications"></param>
-        public void Attach(IProjection projection, bool bEnableNotifications = true)
+        /// <param name="enableNotifications">If true the wrapper will automatically send a notification
+        /// for each Readmodel update. If false the caller can choose event per event if the notification
+        /// shoudl be sent.</param>
+        /// <param name="notifyOnlyLastEventOfCommit">This allow the collection wrapper to generate
+        /// notification only if the event is the last event of the commit.</param>
+        public void Attach(IProjection projection,
+            bool enableNotifications = true,
+            bool notifyOnlyLastEventOfCommit = false)
         {
             if (this.Projection != null)
                 throw new CollectionWrapperException(FormatCollectionWrapperExceptionMessage("already attached to projection."));
 
-            this.Projection = projection;
-            this.NotifySubscribers = bEnableNotifications;
+            Projection = projection;
+            NotifySubscribers = enableNotifications;
+            NotifyOnlyLastEventOfCommit = notifyOnlyLastEventOfCommit;
             projection.Observe(this);
         }
 
@@ -94,12 +101,21 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             get { return _storage.All; }
         }
 
+        /// <summary>
+        /// True if we want to notify automatically ALL modification of readmodel.
+        /// </summary>
         protected bool NotifySubscribers { get; set; }
 
-		/// <summary>
-		/// This is an action that can be subscribed from the user to intercept
-		/// when we update the readmodel with a save operation
-		/// </summary>
+        /// <summary>
+        /// If this property is true, collection wrapper automatically dispatch
+        /// notification only if the domain event is the last one of a commit
+        /// </summary>
+        protected bool NotifyOnlyLastEventOfCommit { get; set; }
+
+        /// <summary>
+        /// This is an action that can be subscribed from the user to intercept
+        /// when we update the readmodel with a save operation
+        /// </summary>
         public Action<TModel, DomainEvent, CollectionWrapperOperationType> OnSave { get; set; } = (model, e, operationType) => { };
 
         public async Task InsertAsync(DomainEvent e, TModel model, bool notify = false)
@@ -131,9 +147,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 throw new CollectionWrapperException(FormatCollectionWrapperExceptionMessage("Readmodel created by two different events!"));
             }
 
-            if (!IsReplay && (notify || NotifySubscribers))
+            if (ShouldSendNotification(e, notify))
             {
-                Object notificationPayload = TransformForNotification(model);
+                Object notificationPayload = TransformForNotification(e, model);
                 await _notifyToSubscribers.Send(ReadModelUpdatedMessage.Created<TModel, TKey>(model.Id, notificationPayload)).ConfigureAwait(false);
             }
         }
@@ -172,9 +188,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             if (!result.Ok)
                 throw new CollectionWrapperException(FormatCollectionWrapperExceptionMessage("Concurency exception"));
 
-            if (!IsReplay && (notify || NotifySubscribers))
+            if (ShouldSendNotification(e, notify))
             {
-                Object notificationPayload = TransformForNotification(model);
+                Object notificationPayload = TransformForNotification(e, model);
                 await _notifyToSubscribers.Send(ReadModelUpdatedMessage.Updated<TModel, TKey>(model.Id, notificationPayload)).ConfigureAwait(false);
             }
         }
@@ -233,7 +249,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         /// <param name="notify"></param>
         public async Task DeleteAsync(DomainEvent e, TKey id, bool notify = false)
         {
-			string[] topics = null;
+            string[] topics = null;
 
             if (NotifySubscribers && typeof(ITopicsProvider).IsAssignableFrom(typeof(TModel)))
             {
@@ -248,7 +264,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             if (!result.Ok)
                 throw new CollectionWrapperException(FormatCollectionWrapperExceptionMessage(string.Format("Delete error on {0} :: {1}", typeof(TModel).FullName, id)));
 
-            if (result.DocumentsAffected == 1 && !IsReplay && (notify || NotifySubscribers))
+            if (result.DocumentsAffected == 1 && ShouldSendNotification(e, notify))
             {
                 await _notifyToSubscribers.Send(ReadModelUpdatedMessage.Deleted<TModel, TKey>(id, topics)).ConfigureAwait(false);
             }
@@ -271,6 +287,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         #endregion
 
+        private bool ShouldSendNotification(DomainEvent e, bool notify)
+        {
+            return !IsReplay //Avoid notification on rebuild
+                && (notify || NotifySubscribers) //notification global enabled or request for this specific update
+                && (e.IsLastEventOfCommit || !NotifyOnlyLastEventOfCommit); //event is last or we want to notification for all commit events
+        }
+
         private bool IsReplay
         {
             get
@@ -280,7 +303,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             }
         }
 
-        public Func<TModel, Object> TransformForNotification { get; set; } = (model) => model;
+        /// <summary>
+        /// This is the transformation function that receives the event that generates the 
+        /// modification, the new model and then can transform everything to send another
+        /// type of notification. 
+        /// Default function simply emit the whole readmodel as a single notification event.
+        /// </summary>
+        public Func<DomainEvent, TModel, Object> TransformForNotification { get; set; } = (domainEvent, model) => model;
 
         public Task RebuildStartedAsync()
         {

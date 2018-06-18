@@ -11,6 +11,10 @@ The overall major change of version 3 is the migration to NStore, async and a ma
 
 - Changed retry for command handler, needs to register **ICommandExecutionExceptionHelper** interface
 
+## Version 3.3.0
+
+- Changed TransformForNotification in CollectionWrapper to use also the event that generates change in the readmodel.
+ 
 # Version 2.0
 
 ## Version 2.1

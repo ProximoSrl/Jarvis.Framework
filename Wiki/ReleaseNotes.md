@@ -3,15 +3,31 @@ J.A.R.V.I.S. Framework - Proximo srl (c)
 
 ## Version 3:
 
+### 3.3.0
+
+- Various bugfixes.
+- Changed Notification manipulation for CollectionWrapper including event.
+- Added a property to mark last event of a specific commit during projection
+- Added a filter in CollectionWrapper to generate notification only for last event of a commit.
+
+### 3.2.0
+
+- Classes that inhertis from Repository command handler can add custom headers on che changeset.
+- Ability to create MongoCollection wrapper disabling nitro.
+- IdentityManager now is case insensitive (3.2.8)
+
+### 3.1.0
+
+- Introduced interface ICounterServiceWithOffset
+- DotNetCore support.
+
+
 ## 3.0.0
 
 - Migration to NStore
 - Migration to async.
 - Entity support.
 
-### 3.0.1
-
-- Changed retry for command handler, needs to register **ICommandExecutionExceptionHelper** interface
 
 ## Version 2:
 
