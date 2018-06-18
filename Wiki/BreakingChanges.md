@@ -1,4 +1,12 @@
-# Version 3.0
+# Version 4
+
+Main modification is: Moved framework to .NETStandard. 
+
+## Version 4.0.0
+
+- Changed TransformForNotification in CollectionWrapper to use also the event that generates change in the readmodel.
+ 
+# Version 3
 
 The overall major change of version 3 is the migration to NStore, async and a major refactoring. There are many breaking changes with version 2.
 
@@ -11,9 +19,9 @@ The overall major change of version 3 is the migration to NStore, async and a ma
 
 - Changed retry for command handler, needs to register **ICommandExecutionExceptionHelper** interface
 
-## Version 3.3.0
+## Version 3.2
 
-- Changed TransformForNotification in CollectionWrapper to use also the event that generates change in the readmodel.
+- Bugfix and added ability to create mongo collection without nitro.
  
 # Version 2.0
 
