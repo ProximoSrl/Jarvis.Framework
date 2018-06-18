@@ -96,8 +96,8 @@
     <Reference Include="Rebus, Version=4.2.1.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\Rebus.4.2.1\lib\net45\Rebus.dll</HintPath>
     </Reference>
-    <Reference Include="Rebus.CastleWindsor, Version=4.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Rebus.CastleWindsor.4.0.0\lib\net45\Rebus.CastleWindsor.dll</HintPath>
+    <Reference Include="Rebus.CastleWindsor, Version=4.1.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Rebus.Castle.Windsor.4.1.0\lib\net45\Rebus.CastleWindsor.dll</HintPath>
     </Reference>
     <Reference Include="Rebus.Events, Version=4.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\Rebus.Events.4.0.0\lib\net45\Rebus.Events.dll</HintPath>

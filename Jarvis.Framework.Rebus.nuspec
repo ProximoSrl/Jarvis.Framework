@@ -22,14 +22,15 @@
         <dependency id="NStore.Persistence.Mongo" version="0.2.0" />
         
         <dependency id="MongoDB.Driver" version="2.5.0" />
-        <dependency id="Rebus" version="4.0.0" />
+        <dependency id="Rebus" version="4.2.1" />
         <dependency id="Rebus.Events" version="4.0.0" />
         <dependency id="Rebus.MongoDb" version="4.0.0" />
-        <dependency id="Rebus.CastleWindsor" version="4.0.0" />
+        <dependency id="Rebus.Castle.Windsor" version="4.1.0" />
         <dependency id="Newtonsoft.Json" version="9.0.1" />
 
-        <dependency id="Castle.Core" version="4.1.1" />
-        <dependency id="Castle.Windsor" version="4.0.0" />
+        <dependency id="Castle.Core" version="4.2.1" />
+        <dependency id="Castle.LoggingFacility" version="4.1.0" />
+        <dependency id="Castle.Windsor" version="4.1.0" />
 
         <dependency id="Metrics" version="0.5.0.1000" />
       </group>
