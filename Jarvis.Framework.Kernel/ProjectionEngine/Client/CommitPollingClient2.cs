@@ -162,7 +162,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                     //poller is stopped, system healty
                     var exceptionText = (LastException != null ? LastException.ToString() : "");
                     exceptionText = exceptionText.Replace("{", "{{").Replace("}", "}}");
-                    return HealthCheckResult.Unhealthy("[LastDispatchedPosition: {_lastDispatchedPosition}] - Faulted (exception in consumer):" + exceptionText);
+                    return HealthCheckResult.Unhealthy(
+                        "[LastDispatchedPosition: {0}] - Faulted (exception in consumer): {1}",
+                        _lastDispatchedPosition,
+                        exceptionText);
                 }
 
                 return HealthCheckResult.Healthy("Poller alive");
@@ -173,7 +176,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             {
                 if (_innerSubscription?.LastError != null)
                 {
-                    return HealthCheckResult.Unhealthy($"[LastDispatchedPosition: {_lastDispatchedPosition}] - Inner NStore poller has error: {_innerSubscription?.LastError}");
+                    return HealthCheckResult.Unhealthy("[LastDispatchedPosition: {0}] - Inner NStore poller has error: {1}",
+                        _lastDispatchedPosition,
+                        _innerSubscription?.LastError);
                 }
                 return HealthCheckResult.Healthy("Inner NES Poller Ok");
             });

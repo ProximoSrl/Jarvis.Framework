@@ -439,7 +439,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 										slotName,
 										cname);
 									_logger.Fatal(error, ex);
-									_engineFatalErrors.Add(error);
+									_engineFatalErrors.Add(String.Format("{0}\n{1}", error, ex));
 									throw;
 								}
 							}
