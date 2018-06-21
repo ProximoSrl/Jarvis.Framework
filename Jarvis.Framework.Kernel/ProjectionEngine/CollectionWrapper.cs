@@ -290,8 +290,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         private bool ShouldSendNotification(DomainEvent e, bool notify)
         {
             return !IsReplay //Avoid notification on rebuild
-                && (notify || NotifySubscribers) //notification global enabled or request for this specific update
-                && (e.IsLastEventOfCommit || !NotifyOnlyLastEventOfCommit); //event is last or we want to notification for all commit events
+                && (
+                    notify
+                    || (NotifySubscribers && (e.IsLastEventOfCommit || !NotifyOnlyLastEventOfCommit))
+                ); //event is last or we want to notification for all commit events
         }
 
         private bool IsReplay
@@ -309,7 +311,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         /// type of notification. 
         /// Default function simply emit the whole readmodel as a single notification event.
         /// </summary>
-        public Func<DomainEvent, TModel, Object> TransformForNotification { get; set; } = (domainEvent, model) => model;
+        public Func<DomainEvent, TModel, Object> TransformForNotification { get; set; } = (_, model) => model;
 
         public Task RebuildStartedAsync()
         {

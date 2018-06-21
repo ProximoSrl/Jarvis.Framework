@@ -185,6 +185,29 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         }
 
         [Test]
+        public async Task Verify_generate_notification_on_last_event_can_be_overridden_by_explicit_call()
+        {
+            var rm = new SampleReadModelTest();
+            rm.Id = new TestId(1);
+            rm.Value = "test";
+            await sut.InsertAsync(new SampleAggregateCreated(), rm).ConfigureAwait(false);
+
+            //Access property with reflection to set notification
+            sut.SetPropertyValue("NotifySubscribers", true);
+            sut.SetPropertyValue("NotifyOnlyLastEventOfCommit", true);
+
+            SampleAggregateCreated e = new SampleAggregateCreated();
+            e.SetPropertyValue(_ => _.IsLastEventOfCommit, false);
+
+            await sut.SaveAsync(e, rm, true).ConfigureAwait(false); //explicitly ask for generation of event
+
+            //No notification should be sent, because this is not the last event.
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+            _notifyToSubscribersDouble.ReceivedWithAnyArgs().Send(null);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+        }
+
+        [Test]
         public async Task Verify_generate_notification_on_last_event_generates_notification_on_intermediate_events()
         {
             var rm = new SampleReadModelTest();
