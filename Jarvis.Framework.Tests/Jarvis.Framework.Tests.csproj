@@ -174,6 +174,7 @@
     <Compile Include="External\MongoDriver\DictionariesSerializationTests.cs" />
     <Compile Include="External\NStoreTests\NStoreSerializationTests.cs" />
     <Compile Include="GlobalSuppressions.cs" />
+    <Compile Include="Kernel\Commands\AbstractCommandHandlerSecurityTests.cs" />
     <Compile Include="Kernel\Commands\InProcessCommandBusTests.cs" />
     <Compile Include="Kernel\Commands\RepositoryCommandHandlerTests.cs" />
     <Compile Include="Kernel\Events\DirectMongoEventStoreQueryManagerTests.cs" />

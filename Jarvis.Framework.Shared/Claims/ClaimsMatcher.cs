@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace Jarvis.Framework.Shared.Claims
 {
@@ -7,7 +8,12 @@ namespace Jarvis.Framework.Shared.Claims
     {
         public class AlwaysMatcher : IClaimsMatcher
         {
-			public bool Matches(params Claim[] claims)
+            public bool Matches(params Claim[] claims)
+            {
+                return Matches((IEnumerable<Claim>)claims);
+            }
+
+            public bool Matches(IEnumerable<Claim> claims)
 			{
                 return true;
             }
@@ -15,7 +21,7 @@ namespace Jarvis.Framework.Shared.Claims
 
         public class RequireMatcher : IClaimsMatcher
         {
-            readonly Claim _claim;
+            private readonly Claim _claim;
 
             public RequireMatcher(Claim claim)
             {
@@ -24,20 +30,31 @@ namespace Jarvis.Framework.Shared.Claims
 
             public bool Matches(Claim[] claims)
             {
+                return Matches((IEnumerable<Claim>)claims);
+            }
+
+            public bool Matches(IEnumerable<Claim> claims)
+            {
                 return claims.Any(x => x == _claim);
             }
         }
 
         public class NotMatcher : IClaimsMatcher
         {
-            readonly IClaimsMatcher _matcher;
+            private readonly IClaimsMatcher _matcher;
 
             public NotMatcher(IClaimsMatcher matcher)
             {
                 _matcher = matcher;
             }
 
-            public bool Matches(Claim[] claims)
+            public bool Matches(params Claim[] claims)
+            {
+                return Matches((IEnumerable<Claim>)claims);
+            }
+
+
+            public bool Matches(IEnumerable<Claim> claims)
             {
                 return !_matcher.Matches(claims);
             }
@@ -45,14 +62,20 @@ namespace Jarvis.Framework.Shared.Claims
 
         public class AndMatcher : IClaimsMatcher
         {
-            readonly IClaimsMatcher[] _matchers;
+            private readonly IClaimsMatcher[] _matchers;
 
             public AndMatcher(IClaimsMatcher[] matchers)
             {
                 _matchers = matchers;
             }
 
-            public bool Matches(Claim[] claims)
+            public bool Matches(params Claim[] claims)
+            {
+                return Matches((IEnumerable<Claim>)claims);
+            }
+
+
+            public bool Matches(IEnumerable<Claim> claims)
             {
                 return _matchers.All(x => x.Matches(claims));
             }
@@ -67,7 +90,12 @@ namespace Jarvis.Framework.Shared.Claims
                 _matchers = matchers;
             }
 
-            public bool Matches(Claim[] claims)
+            public bool Matches(params Claim[] claims)
+            {
+                return Matches((IEnumerable<Claim>)claims);
+            }
+
+            public bool Matches(IEnumerable<Claim> claims)
             {
                 return _matchers.Any(x => x.Matches(claims));
             }

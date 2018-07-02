@@ -1,7 +1,7 @@
 ﻿using Castle.Core.Logging;
 using System;
-using Jarvis.Framework.Shared.Support.Jarvis.Common.Shared.Utils;
 using NStore.Core.Logging;
+using Jarvis.Framework.Shared.Support;
 
 namespace Jarvis.Framework.Shared.Logging
 {
