@@ -18,13 +18,13 @@
     <PackageReference Include="Castle.Core" Version="4.2.1" />
     <PackageReference Include="Castle.LoggingFacility" Version="4.1.0" />
     <PackageReference Include="Castle.Windsor" Version="4.1.0" />
-    <PackageReference Include="MongoDB.Driver" Version="2.5.1" />
-    <PackageReference Include="NStore.Core" Version="0.4.3" />
-    <PackageReference Include="NStore.Domain" Version="0.4.3" />
-    <PackageReference Include="NStore.Persistence.Mongo" Version="0.4.3" />
-    <PackageReference Include="NStore.Tpl" Version="0.4.3" />
+    <PackageReference Include="MongoDB.Driver" Version="2.7.0" />
+    <PackageReference Include="NStore.Core" Version="0.4.6" />
+    <PackageReference Include="NStore.Domain" Version="0.4.6" />
+    <PackageReference Include="NStore.Persistence.Mongo" Version="0.4.6" />
+    <PackageReference Include="NStore.Tpl" Version="0.4.6" />
     <PackageReference Include="Rebus" Version="4.2.1" />
-    <PackageReference Include="Rebus.Castle.Windsor" Version="4.0.0" />
+    <PackageReference Include="Rebus.Castle.Windsor" Version="4.1.0" />
     <PackageReference Include="Rebus.Events" Version="4.0.0" />
     <PackageReference Include="Rebus.MongoDb" Version="4.0.0" />
   </ItemGroup>

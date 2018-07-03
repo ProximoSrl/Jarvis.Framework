@@ -1,6 +1,15 @@
 J.A.R.V.I.S. Framework - Proximo srl (c)
 ====
 
+## Version 4
+
+Main modification is: Moved framework to .NETStandard. 
+
+## Version 4.0.0
+
+- Upgraded project for .NET standard
+- Changed TransformForNotification in CollectionWrapper to use also the event that generates change in the readmodel.
+
 ## Version 3:
 
 ### 3.3.0

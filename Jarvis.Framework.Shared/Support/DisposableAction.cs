@@ -3,29 +3,26 @@ using System.Threading;
 
 namespace Jarvis.Framework.Shared.Support
 {
-    namespace Jarvis.Common.Shared.Utils
+    internal sealed class DisposableAction : IDisposable
     {
-        internal sealed class DisposableAction : IDisposable
+        public static readonly DisposableAction Empty = new DisposableAction(null);
+
+        private Action _disposeAction;
+        private Boolean _disposed;
+
+        public DisposableAction(Action disposeAction)
         {
-            public static readonly DisposableAction Empty = new DisposableAction(null);
+            _disposeAction = disposeAction;
+        }
 
-            private Action _disposeAction;
-            private Boolean _disposed;
-
-            public DisposableAction(Action disposeAction)
+        public void Dispose()
+        {
+            // Interlocked allows the continuation to be executed only once
+            Action dispose = Interlocked.Exchange(ref _disposeAction, null);
+            if (dispose != null && !_disposed)
             {
-                _disposeAction = disposeAction;
-            }
-
-            public void Dispose()
-            {
-                // Interlocked allows the continuation to be executed only once
-                Action dispose = Interlocked.Exchange(ref _disposeAction, null);
-                if (dispose != null && !_disposed)
-                {
-                    _disposed = true;
-                    dispose();
-                }
+                _disposed = true;
+                dispose();
             }
         }
     }

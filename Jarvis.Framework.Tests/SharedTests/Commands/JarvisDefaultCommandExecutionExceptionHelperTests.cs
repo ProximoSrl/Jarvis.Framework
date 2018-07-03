@@ -10,6 +10,7 @@ using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -46,7 +47,7 @@ namespace Jarvis.Framework.Tests.SharedTests.Commands
         [TestCase(false)]
         public void Retry_when_too_manyconcurrency_exception_is_thrown(Boolean wrapInAggregateException)
         {
-            ConcurrencyException cex = new ConcurrencyException("TEST");
+            Exception cex = PrepareConcurrencyException(wrapInAggregateException);
             var result = sut.Handle(cex, command, MaximumNumberOfRetry +1, out retry, out replyCommand);
             Assert.IsTrue(result, "Concurrency exception is handled, no need to rethrow");
             Assert.IsFalse(retry, "Too many retry, we should stop retrying execution.");
@@ -61,6 +62,19 @@ namespace Jarvis.Framework.Tests.SharedTests.Commands
             var result = sut.Handle(dex, command, 5, out retry, out replyCommand);
             Assert.IsTrue(result, "DomainException is handled, no need to rethrow");
             Assert.IsFalse(retry, "We should not retry execution, a domain exception will always fail upon retrying.");
+            Assert.IsNotNull(replyCommand, "Domain exception should reply notification");
+        }
+
+        [TestCase(true)]
+        [TestCase(false)]
+        public void Security_exception_should_continue_executing_without_retrying(Boolean wrapInAggregateException)
+        {
+            Exception dex = PrepareSecurityException(wrapInAggregateException);
+
+            var result = sut.Handle(dex, command, 5, out retry, out replyCommand);
+            Assert.IsTrue(result, "Security is handled, no need to rethrow");
+            Assert.IsFalse(retry, "We should not retry execution, a Security exception will always fail upon retrying.");
+            Assert.IsNotNull(replyCommand, "Security exception should reply notification");
         }
 
         [TestCase(true)]
@@ -96,6 +110,14 @@ namespace Jarvis.Framework.Tests.SharedTests.Commands
             if (wrapInAggregateException)
                 cex = new AggregateException(cex);
             return cex;
+        }
+
+        private static Exception PrepareSecurityException(bool wrapInAggregateException)
+        {
+            Exception sex = new SecurityException("TEST");
+            if (wrapInAggregateException)
+                sex = new AggregateException(sex);
+            return sex;
         }
     }
 }

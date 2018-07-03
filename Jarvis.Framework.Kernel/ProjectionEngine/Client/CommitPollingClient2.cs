@@ -1,6 +1,7 @@
 ﻿using Castle.Core.Logging;
 using Jarvis.Framework.Kernel.Support;
 using Jarvis.Framework.Shared.Exceptions;
+using Jarvis.Framework.Shared.Store;
 using Metrics;
 using NStore.Core.Logging;
 using NStore.Core.Persistence;
@@ -29,7 +30,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         public Exception LastException { get; private set; }
 
         private PollingClient _innerClient;
-        private LambdaSubscription _innerSubscription;
+        private JarvisFrameworkLambdaSubscription _innerSubscription;
         private readonly IPersistence _persistence;
 
         public CommitPollingClient2(
@@ -126,7 +127,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             //prepare single poller thread.
             CreateTplChain();
 
-            _innerSubscription = new LambdaSubscription(DispatchChunk);
+            _innerSubscription = new JarvisFrameworkLambdaSubscription(DispatchChunk);
 
             _innerClient = new PollingClient(
                 _persistence,
@@ -162,7 +163,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                     //poller is stopped, system healty
                     var exceptionText = (LastException != null ? LastException.ToString() : "");
                     exceptionText = exceptionText.Replace("{", "{{").Replace("}", "}}");
-                    return HealthCheckResult.Unhealthy("[LastDispatchedPosition: {_lastDispatchedPosition}] - Faulted (exception in consumer):" + exceptionText);
+                    return HealthCheckResult.Unhealthy(
+                        "[LastDispatchedPosition: {0}] - Faulted (exception in consumer): {1}",
+                        _lastDispatchedPosition,
+                        exceptionText);
                 }
 
                 return HealthCheckResult.Healthy("Poller alive");
@@ -171,9 +175,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             //Now register health check for the internal NES poller, to diagnose errors in polling.
             HealthChecks.RegisterHealthCheck("Polling internal errors: ", () =>
             {
-                if (_innerSubscription?.LastError != null)
+                if (_innerSubscription?.LastException != null)
                 {
-                    return HealthCheckResult.Unhealthy($"[LastDispatchedPosition: {_lastDispatchedPosition}] - Inner NStore poller has error: {_innerSubscription?.LastError}");
+                    return HealthCheckResult.Unhealthy("[LastDispatchedPosition: {0}] - Inner NStore poller has error: {1}",
+                        _lastDispatchedPosition,
+                        _innerSubscription?.LastException);
                 }
                 return HealthCheckResult.Healthy("Inner NES Poller Ok");
             });
