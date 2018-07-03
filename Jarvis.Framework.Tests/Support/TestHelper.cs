@@ -7,7 +7,6 @@ using Jarvis.Framework.Shared.IdentitySupport;
 using System.Reflection;
 using Jarvis.Framework.Shared.IdentitySupport.Serialization;
 using MongoDB.Bson.Serialization;
-using System.Messaging;
 using NSubstitute;
 using Jarvis.Framework.Kernel.Engine;
 using NStore.Domain;
@@ -74,14 +73,14 @@ namespace Jarvis.Framework.Tests.Support
                 EventStoreIdentityCustomBsonTypeMapper.Register<T>();
             }
         }
-
+#if NETFULL
         public static void ClearAllQueue(params String[] queueList)
         {
             foreach (var queueName in queueList)
             {
                 try
                 {
-                    var queue = new MessageQueue(queueName);
+                    var queue = new System.Messaging.MessageQueue(queueName);
                     queue.Purge();
                 }
                 catch
@@ -90,5 +89,6 @@ namespace Jarvis.Framework.Tests.Support
                 }
             }
         }
+#endif
     }
 }

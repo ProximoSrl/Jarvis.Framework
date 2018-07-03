@@ -20,7 +20,9 @@ namespace Jarvis.Framework.Shared.Commands
 		/// <param name="value"></param>
         void SetContextData(string key, string value);
 
-        string GetContextData(string key, string defaultValue = null);
+        string GetContextData(string key, string defaultValue);
+
+        string GetContextData(string key);
 
         void InheritContextFrom(ICommand command);
 
@@ -58,7 +60,12 @@ namespace Jarvis.Framework.Shared.Commands
             SetContextData("disable-success-reply", "true");
         }
 
-        public string GetContextData(string key, string defaultValue = null)
+        public string GetContextData(string key)
+        {
+            return GetContextData(key, null);
+        }
+
+        public string GetContextData(string key, string defaultValue)
         {
             return Context.ContainsKey(key) ? Context[key] : defaultValue;
         }

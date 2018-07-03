@@ -18,20 +18,19 @@ using Rebus.Pipeline;
 using Rebus.Retry;
 using Rebus.Transport;
 using Rebus.Retry.Simple;
-using Rebus.Persistence.InMem;
 using Rebus.Routing.TypeBased;
-using Rebus.Retry.PoisonQueues;
 
 namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 {
-	public partial class BusBootstrapper : IStartable
+    public abstract partial class BusBootstrapper : IStartable
 	{
 		private readonly IWindsorContainer _container;
-		private readonly JarvisRebusConfiguration _configuration;
 		private readonly IMongoDatabase _mongoDatabase;
 		private readonly IMessagesTracker _messagesTracker;
 
-		public ILogger Logger { get; set; } = NullLogger.Instance;
+        protected JarvisRebusConfiguration JarvisRebusConfiguration { get; private set; }
+
+        public ILogger Logger { get; set; } = NullLogger.Instance;
 
 		public ILoggerFactory LoggerFactory { get; set; }
 
@@ -69,7 +68,7 @@ at least configure one assembly with messages to be dispatched.";
 			}
 
 			_container = container;
-			_configuration = configuration;
+            JarvisRebusConfiguration = configuration;
 			var mongoUrl = new MongoUrl(configuration.ConnectionString);
 			var mongoClient = new MongoClient(mongoUrl);
 			_mongoDatabase = mongoClient.GetDatabase(mongoUrl.DatabaseName);
@@ -109,16 +108,16 @@ at least configure one assembly with messages to be dispatched.";
 
 		private RebusConfigurer CreateDefaultBusConfiguration()
 		{
-			var router = new JarvisRebusConfigurationManagerRouterHelper(_configuration);
+			var router = new JarvisRebusConfigurationManagerRouterHelper(JarvisRebusConfiguration);
 
 			var busConfiguration = global::Rebus.Config.Configure.With(new CastleWindsorContainerAdapter(_container))
 				.Serialization(c => c.UseNewtonsoftJson(JsonSerializerSettingsForRebus))
-				.Timeouts(t => t.StoreInMongoDb(_mongoDatabase, _configuration.Prefix + "-timeouts"))
-				.Subscriptions(s => s.StoreInMongoDb(_mongoDatabase, _configuration.Prefix + "-subscriptions", isCentralized: _configuration.CentralizedConfiguration))
+				.Timeouts(t => t.StoreInMongoDb(_mongoDatabase, JarvisRebusConfiguration.Prefix + "-timeouts"))
+				.Subscriptions(s => s.StoreInMongoDb(_mongoDatabase, JarvisRebusConfiguration.Prefix + "-subscriptions", isCentralized: JarvisRebusConfiguration.CentralizedConfiguration))
 				.Events(e => e.BeforeMessageSent += BeforeMessageSent);
 
 			var errorHandlerLogger = LoggerFactory?.Create("RebusErrorHandlerLogger") ?? Logger;
-			var errorHandler = new JarvisFrameworkErrorHandler(_configuration, JsonSerializerSettingsForRebus, _container, errorHandlerLogger);
+			var errorHandler = new JarvisFrameworkErrorHandler(JarvisRebusConfiguration, JsonSerializerSettingsForRebus, _container, errorHandlerLogger);
 
 			//Important, register IErrorHandler before RetryStrategy or it will register default one.
 			busConfiguration = busConfiguration
@@ -127,21 +126,22 @@ at least configure one assembly with messages to be dispatched.";
 			busConfiguration
 				.Options(o =>
 				{
-					o.SetNumberOfWorkers(_configuration.NumOfWorkers);
+					o.SetNumberOfWorkers(JarvisRebusConfiguration.NumOfWorkers);
 					o.Decorate<ITransport>(c =>
 					{
 						var transport = c.Get<ITransport>();
-						_configuration.TransportAddress = transport.Address;
+                        JarvisRebusConfiguration.TransportAddress = transport.Address;
 						errorHandler.SetTransport(transport);
 						return transport;
 					});
 				});
 
 			busConfiguration = busConfiguration
-				.Transport(t => t.UseMsmq(_configuration.InputQueue))
+				//DOTNETCORE does not support msmq, simple let the caller configure everything.
+                //.Transport(t => t.UseMsmq(_configuration.InputQueue))
 				.Options(o => o.SimpleRetryStrategy(
-					errorQueueAddress: _configuration.ErrorQueue,
-					maxDeliveryAttempts: _configuration.MaxRetry
+					errorQueueAddress: JarvisRebusConfiguration.ErrorQueue,
+					maxDeliveryAttempts: JarvisRebusConfiguration.MaxRetry
 				 ))
 				.Routing(r => router.Configure(r.TypeBased()));
 

@@ -1,17 +1,11 @@
-﻿using Castle.Core.Logging;
-using Jarvis.Framework.Shared.Commands;
+﻿using Jarvis.Framework.Shared.Commands;
 using Jarvis.Framework.Shared.Messages;
 using Jarvis.Framework.Shared.Support;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Jarvis.Framework.Shared.Support.Jarvis.Common.Shared.Utils;
 
 namespace Jarvis.Framework.Shared.Logging
 {
-	public static class LoggingHelper
+    public static class LoggingHelper
 	{
 		public static IDisposable MarkCommandExecution(this ILoggerThreadContextManager loggerThreadContextManager, ICommand command)
 		{

@@ -1,13 +1,8 @@
 ﻿using Castle.MicroKernel.Registration;
 using Jarvis.Framework.Kernel.Support;
 using Jarvis.Framework.Shared.IdentitySupport;
-using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.Host
 {
@@ -50,7 +45,6 @@ namespace Jarvis.Framework.Kernel.Host
         IEnumerable<IWindsorInstaller> GetAdditionalWindsorInstallers();
     }
 
-    [InheritedExport(typeof(IEngineSettings))]
     public abstract class EngineSettingsBase : IEngineSettings
     {
         public IEnumerable<Assembly> GetCommandHandlerAssemblies()

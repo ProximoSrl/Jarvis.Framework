@@ -32,9 +32,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 			Changeset commit;
 			if ((commit = chunk.Payload as Changeset) != null)
 			{
+                DomainEvent evt = null;
 				foreach (var eventMessage in commit.Events.Where(m => m is DomainEvent))
 				{
-					var evt = (DomainEvent)eventMessage;
+					evt = (DomainEvent)eventMessage;
 					var headers = commit.Headers;
 #pragma warning disable S125 // Sections of code should not be "commented out"
 					//if (eventMessage.Headers.Count > 0)
@@ -53,7 +54,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 					evt.SetPropertyValue(d => d.Context, headers);
 					evt.SetPropertyValue(d => d.CheckpointToken, chunk.Position);
 				}
-			}
+
+                evt?.SetPropertyValue(d => d.IsLastEventOfCommit, true);
+            }
 		}
 	}
 

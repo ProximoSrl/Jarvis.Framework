@@ -52,7 +52,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             Assert.That(c.TransformForNotification.Target.ToString().Contains("Castle.Proxies"));
             Assert.Throws<ComponentNotFoundException>(() =>
             {
-                c.TransformForNotification(null);
+                c.TransformForNotification(null, null);
             });
         }
     }
@@ -97,7 +97,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             Assert.That(c.TransformForNotification.Target == null || !c.TransformForNotification.Target.ToString().Contains("Castle.Proxies"));
             Assert.DoesNotThrow(() =>
             {
-                c.TransformForNotification(null);
+                c.TransformForNotification(null, null);
             });
         }
     }

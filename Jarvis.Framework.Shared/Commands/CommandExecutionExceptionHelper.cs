@@ -5,6 +5,7 @@ using Jarvis.Framework.Shared.ReadModel;
 using Jarvis.Framework.Shared.Support;
 using NStore.Core.Streams;
 using System;
+using System.Security;
 using System.Threading;
 
 namespace Jarvis.Framework.Shared.Commands
@@ -132,6 +133,26 @@ namespace Jarvis.Framework.Shared.Commands
                     }
                     _logger.ErrorFormat(ex, "DomainException on command {0} [MessageId: {1}] : {2} : {3}", command.GetType(), command.MessageId, command.Describe(), ex.Message);
                     shouldContinue = true; //exception was handled, can proceed to the execution but retry is false
+                    break;
+
+                case SecurityException sex:
+
+                    SharedMetricsHelper.MarkDomainException();
+                    var notifySexTo = command.GetContextData(MessagesConstants.ReplyToHeader);
+                    if (notifySexTo != null)
+                    {
+                        replyCommand = new CommandHandled(
+                            notifySexTo,
+                            command.MessageId,
+                            CommandHandled.CommandResult.Failed,
+                            command.Describe(),
+                            $"Security exception: {ex.Message}",
+                            isDomainException: false
+                        );
+                        replyCommand.CopyHeaders(command);
+                    }
+                    _logger.ErrorFormat(ex, "SecurityException on command {0} [MessageId: {1}] : {2} : {3}", command.GetType(), command.MessageId, command.Describe(), ex.Message);
+                    shouldContinue = true; //exception was handled, can proceed to the execution but retry is false because security should not retry
                     break;
 
                 case Exception gex:

@@ -23,12 +23,19 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
 		public static void Init(
 			bool shouldRebuild,
-			bool nitroMode,
-			bool continuousRebuild = false)
+			bool nitroMode)
 		{
-			ShouldRebuild = shouldRebuild;
-			NitroMode = shouldRebuild && nitroMode;
-			ContinuousRebuild = continuousRebuild;
+            Init(shouldRebuild, nitroMode, false);
 		}
-	}
+
+        public static void Init(
+            bool shouldRebuild,
+            bool nitroMode,
+            bool continuousRebuild)
+        {
+            ShouldRebuild = shouldRebuild;
+            NitroMode = shouldRebuild && nitroMode;
+            ContinuousRebuild = continuousRebuild;
+        }
+    }
 }

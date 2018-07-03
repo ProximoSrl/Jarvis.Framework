@@ -53,6 +53,12 @@ namespace Jarvis.Framework.Shared.Events
         public EventStoreIdentity AggregateId { get; private set; }
 
         /// <summary>
+        /// This is true if this is the last event of a commit
+        /// </summary>
+        [BsonIgnore]
+        public Boolean IsLastEventOfCommit { get; set; }
+
+        /// <summary>
         /// Contesto dell'evento
         /// </summary>
         [BsonIgnore]

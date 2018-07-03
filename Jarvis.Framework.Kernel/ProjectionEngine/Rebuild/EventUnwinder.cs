@@ -11,6 +11,7 @@ using NStore.Domain;
 using Jarvis.Framework.Shared.Helpers;
 using System.Threading;
 using Jarvis.Framework.Shared.Exceptions;
+using Jarvis.Framework.Shared.Store;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 {
@@ -84,7 +85,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 			Int64 count = 0;
 			List<UnwindedDomainEvent> batchEventUnwind = new List<UnwindedDomainEvent>(550);
 
-			LambdaSubscription subscription = new LambdaSubscription(async data =>
+            var subscription = new JarvisFrameworkLambdaSubscription(async data =>
 			{
 				foreach (var evt in UnwindChunk(data))
 				{
@@ -121,7 +122,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 
             if (subscription.Failed)
             {
-                throw new JarvisFrameworkEngineException("Error unwinding commits", subscription.LastError);
+                throw new JarvisFrameworkEngineException("Error unwinding commits", subscription.LastException);
             }
 
 			//Flush last batch.

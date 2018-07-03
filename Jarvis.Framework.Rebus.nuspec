@@ -12,32 +12,46 @@
     <tags>Jarvis,Framework</tags>
 
     <dependencies>
-      <dependency id="Jarvis.Framework.Shared" version="[$version$]" />
-      <dependency id="Jarvis.Framework" version="[$version$]" />
+    
+      <group>
+        <dependency id="Jarvis.Framework.Shared" version="[$version$]" />
+        <dependency id="Jarvis.Framework" version="[$version$]" />
 
-      <dependency id="NStore.Core" version="0.2.0" />
-      <dependency id="NStore.Domain" version="0.2.0" />
-      <dependency id="NStore.Persistence.Mongo" version="0.2.0" />
-      
-      <dependency id="MongoDB.Driver" version="2.5.0" />
-      <dependency id="Rebus" version="4.0.0" />
-      <dependency id="Rebus.Events" version="4.0.0" />
-      <dependency id="Rebus.MongoDb" version="4.0.0" />
-      <dependency id="Rebus.CastleWindsor" version="4.0.0" />
-      <dependency id="Rebus.Msmq" version="4.0.0" />
-      <dependency id="Newtonsoft.Json" version="9.0.1" />
+        <dependency id="NStore.Core" version="0.2.0" />
+        <dependency id="NStore.Domain" version="0.2.0" />
+        <dependency id="NStore.Persistence.Mongo" version="0.2.0" />
+        
+        <dependency id="MongoDB.Driver" version="2.5.0" />
+        <dependency id="Rebus" version="4.2.1" />
+        <dependency id="Rebus.Events" version="4.0.0" />
+        <dependency id="Rebus.MongoDb" version="4.0.0" />
+        <dependency id="Rebus.Castle.Windsor" version="4.1.0" />
+        <dependency id="Newtonsoft.Json" version="9.0.1" />
 
-      <dependency id="Castle.Core" version="4.1.1" />
-      <dependency id="Castle.Windsor" version="4.0.0" />
+        <dependency id="Castle.Core" version="4.2.1" />
+        <dependency id="Castle.LoggingFacility" version="4.1.0" />
+        <dependency id="Castle.Windsor" version="4.1.0" />
 
-      <dependency id="Metrics.NET" version="0.3.7" />
+        <dependency id="Metrics" version="0.5.0.1000" />
+      </group>
+    
+      <group targetFramework="net461">
+       
+      </group>
+
+      <group targetFramework="netstandard2.0">
+
+      </group>
+
     </dependencies>
   </metadata>
 
   <files>
-    <file src="publish\Jarvis.Framework.Bus.Rebus.Integration.dll" target="lib" />
-	<file src="publish\Jarvis.Framework.Bus.Rebus.Integration.pdb" target="lib" />
-	<file src="Jarvis.Framework.Bus.Rebus.Integration\**\*.cs" target="src" />
+    <file src="publish\net461\Jarvis.Framework.Bus.Rebus.Integration.dll" target="lib\net461" />
+    <file src="publish\net461\Jarvis.Framework.Bus.Rebus.Integration.pdb" target="lib\net461" />
+    <file src="publish\netstandard2.0\Jarvis.Framework.Bus.Rebus.Integration.dll" target="lib\netstandard2.0" />
+    <file src="publish\netstandard2.0\Jarvis.Framework.Bus.Rebus.Integration.pdb" target="lib\netstandard2.0" />
+    <file src="Jarvis.Framework.Bus.Rebus.Integration\**\*.cs" target="src" />
   </files>
 
 </package>
