@@ -17,7 +17,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         Task PollAsync();
 
-        void AddConsumer(Func<IChunk, Task> consumerAction);
+        void AddConsumer(String consumerId, Func<IChunk, Task> consumerAction);
     }
 
     public enum CommitPollingClientStatus
