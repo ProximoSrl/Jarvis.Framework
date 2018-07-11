@@ -48,7 +48,7 @@ namespace Jarvis.Framework.Kernel.Engine
 			Logger = NullLogger.Instance;
 
 			_client = pollingClientFactory.Create(persistence, "ProcessManager");
-			_client.AddConsumer(Dispatch);
+			_client.AddConsumer("ProcessManager", Dispatch);
 			_messageBus = messageBus;
 		}
 

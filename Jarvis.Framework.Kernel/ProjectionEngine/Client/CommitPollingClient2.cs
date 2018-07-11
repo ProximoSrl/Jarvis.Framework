@@ -13,10 +13,10 @@ using System.Threading.Tasks.Dataflow;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 {
-	/// <summary>
-	/// Based on the new polling client of NEventStore.
-	/// </summary>
-	public class CommitPollingClient2 : ICommitPollingClient
+    /// <summary>
+    /// Based on the new polling client of NEventStore.
+    /// </summary>
+    public class CommitPollingClient2 : ICommitPollingClient
     {
         private int _bufferSize = 4000;
 
@@ -58,11 +58,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             _factory = factory;
         }
 
-        public void AddConsumer(Func<IChunk, Task> consumerAction)
+        public void AddConsumer(String consumerId, Func<IChunk, Task> consumerAction)
         {
             ExecutionDataflowBlockOptions consumerOptions = new ExecutionDataflowBlockOptions();
             consumerOptions.BoundedCapacity = _bufferSize;
-            ConsumerActionWrapper wrapper = new ConsumerActionWrapper(consumerAction, this);
+            ConsumerActionWrapper wrapper = new ConsumerActionWrapper(consumerId, consumerAction, this);
             var actionBlock = new ActionBlock<IChunk>((Func<IChunk, Task>)wrapper.Consume, consumerOptions);
 
             _consumers.Add(actionBlock);
@@ -79,12 +79,24 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             private String _error;
 
             private readonly CommitPollingClient2 _owner;
+            private readonly String _consumerId;
 
-            public ConsumerActionWrapper(Func<IChunk, Task> consumerAction, CommitPollingClient2 owner)
+            public ConsumerActionWrapper(String consumerId, Func<IChunk, Task> consumerAction, CommitPollingClient2 owner)
             {
                 _consumerAction = consumerAction;
                 _active = true;
                 _owner = owner;
+                _consumerId = consumerId;
+
+                HealthChecks.RegisterHealthCheck("PollingConsumer-" + consumerId, () =>
+                {
+                    if (string.IsNullOrEmpty(_error))
+                    {
+                        return HealthCheckResult.Healthy($"Consumer {_consumerId} healthy");
+                    }
+
+                    return HealthCheckResult.Unhealthy($"Consumer {_consumerId} error: " + _error);
+                });
             }
 
             public string Error { get { return _error; } }
@@ -92,18 +104,20 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
             public async Task Consume(IChunk commit)
             {
-                if (Active == false) return; //consumer failed.
+                if (!Active) return; //consumer failed, we need to stop dispatching further commits.
                 try
                 {
                     await _consumerAction(commit).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
-                    _owner._logger.ErrorFormat(ex, "CommitPollingClient {0}: Error during Commit consumer {1} ", _owner._id, ex.Message);
+                    _owner._logger.ErrorFormat(ex, "CommitPollingClient {0}: Error during Commit consumer {1}: {2} ",
+                        _owner._id,
+                        _consumerId,
+                        ex.Message);
                     _active = false; //no more dispatch to this consumer.
-                    _error = ex.ToString();
-                    _owner.LastException = ex;
-                    _owner.Status = CommitPollingClientStatus.Faulted;
+                    _error = $"Error dispatching {commit.Position}: {ex.ToString()}";
+
                     //it does not throw, simply stops dispatching commit to this consumer that will be blocked
                 }
             }
