@@ -10,6 +10,10 @@ Main modification is: Moved framework to .NETStandard.
 - Upgraded project for .NET standard
 - Changed TransformForNotification in CollectionWrapper to use also the event that generates change in the readmodel.
 
+## Version 4.1.0
+
+- Added reverse translation of array of Ids in AbstractIdentityTranslator.
+
 ## Version 3:
 
 ### 3.3.0
