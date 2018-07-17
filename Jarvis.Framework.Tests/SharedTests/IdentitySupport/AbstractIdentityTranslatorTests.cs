@@ -50,6 +50,35 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
         }
 
         [Test]
+        public void Verify_translation_multiple()
+        {
+            TestMapper sut = new TestMapper(_db, _identityManager);
+            String key1 = Guid.NewGuid().ToString();
+            String key2 = Guid.NewGuid().ToString();
+            String key3 = Guid.NewGuid().ToString();
+
+            var id1 = sut.MapWithAutCreate(key1);
+            var id2 = sut.MapWithAutCreate(key2);
+
+            var multimap = sut.          GetMultipleMapWithoutAutoCreation(key1, key2);
+            Assert.That(multimap[key1], Is.EqualTo(id1));
+            Assert.That(multimap[key2], Is.EqualTo(id2));
+            Assert.That(multimap.ContainsKey(key3), Is.False);
+        }
+
+        [Test]
+        public void Verify_translation_multiple_resilient_to_null()
+        {
+            TestMapper sut = new TestMapper(_db, _identityManager);
+
+            var multimap = sut.GetMultipleMapWithoutAutoCreation(new string[] { });
+            Assert.That(multimap.Count, Is.EqualTo(0));
+
+            multimap = sut.GetMultipleMapWithoutAutoCreation((string[])null);
+            Assert.That(multimap.Count, Is.EqualTo(0));
+        }
+
+        [Test]
         public void Verify_reverse_translation_multiple()
         {
             TestMapper sut = new TestMapper(_db, _identityManager);
@@ -104,6 +133,11 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             public SampleAggregateId MapWithAutCreate(String key)
             {
                 return base.Translate(key, true);
+            }
+
+            public IDictionary<String, SampleAggregateId> GetMultipleMapWithoutAutoCreation(params String[] keys)
+            {
+                return base.GetMultipleMapWithoutAutoCreation(keys);
             }
 
             public string ReverseMap(SampleAggregateId id)
