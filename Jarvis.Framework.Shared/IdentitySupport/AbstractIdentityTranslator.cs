@@ -100,6 +100,22 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                 .ToDictionary(_ => _.AggregateId, _ =>  _.ExternalKey);
         }
 
+        /// <summary>
+        /// Return mapping for multiple keys, it does NOT create the mapping if it does not exists.
+        /// </summary>
+        /// <param name="externalKeys"></param>
+        /// <returns>Dictionary with mappings.</returns>
+        protected IDictionary<String, TKey> GetMultipleMapWithoutAutoCreation(IEnumerable<String> externalKeys)
+        {
+            if (externalKeys == null || !externalKeys.Any())
+                return new Dictionary<String, TKey>();
+
+            return _collection
+                .Find(Builders<MappedIdentity>.Filter.In("ExternalKey", externalKeys))
+                .ToEnumerable()
+                .ToDictionary(_ => _.ExternalKey, _ => _.AggregateId);
+        }
+
         protected TKey Translate(string externalKey, bool createOnMissing = true)
         {
             if (IdentityGenerator == null) throw new JarvisFrameworkEngineException("Identity Generator not set");
