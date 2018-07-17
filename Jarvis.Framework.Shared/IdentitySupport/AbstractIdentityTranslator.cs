@@ -5,6 +5,8 @@ using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using Jarvis.Framework.Shared.Helpers;
 using Jarvis.Framework.Shared.Exceptions;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Jarvis.Framework.Shared.IdentitySupport
 {
@@ -82,7 +84,23 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 			return alias?.ExternalKey;
 		}
 
-		protected TKey Translate(string externalKey, bool createOnMissing = true)
+        /// <summary>
+        /// Return reverse mapping for multiple aliases.
+        /// </summary>
+        /// <param name="keys"></param>
+        /// <returns>Dictionary with mappings.</returns>
+        protected IDictionary<TKey, String> GetAliases(IEnumerable<TKey> keys)
+        {
+            if (keys == null || !keys.Any())
+                return new Dictionary<TKey, String>();
+
+            return _collection
+                .Find(Builders<MappedIdentity>.Filter.In("AggregateId", keys))
+                .ToEnumerable()
+                .ToDictionary(_ => _.AggregateId, _ =>  _.ExternalKey);
+        }
+
+        protected TKey Translate(string externalKey, bool createOnMissing = true)
         {
             if (IdentityGenerator == null) throw new JarvisFrameworkEngineException("Identity Generator not set");
 

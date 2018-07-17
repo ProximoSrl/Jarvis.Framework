@@ -254,6 +254,7 @@
     <Compile Include="SharedTests\Commands\JarvisDefaultCommandExecutionExceptionHelperTests.cs" />
     <Compile Include="SharedTests\Helpers\CastleUtilsTests.cs" />
     <Compile Include="SharedTests\Helpers\MongoDriverHelperTests.cs" />
+    <Compile Include="SharedTests\IdentitySupport\AbstractIdentityTranslatorTests.cs" />
     <Compile Include="SharedTests\IdentitySupport\AuxClasses.cs" />
     <Compile Include="SharedTests\IdentitySupport\IdentityManagerTests.cs" />
     <Compile Include="SharedTests\IdentitySupport\IDentitySupportTests.cs" />
