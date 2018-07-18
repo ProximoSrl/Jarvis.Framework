@@ -107,13 +107,13 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         /// <returns>Dictionary with mappings.</returns>
         protected IDictionary<String, TKey> GetMultipleMapWithoutAutoCreation(IEnumerable<String> externalKeys)
         {
-            if (externalKeys == null || !externalKeys.Any())
+            if (externalKeys?.Any() != true)
                 return new Dictionary<String, TKey>();
 
             return _collection
-                .Find(Builders<MappedIdentity>.Filter.In("ExternalKey", externalKeys))
+                .Find(Builders<MappedIdentity>.Filter.In("ExternalKey", externalKeys.Select(_ => _.ToLowerInvariant())))
                 .ToEnumerable()
-                .ToDictionary(_ => _.ExternalKey, _ => _.AggregateId);
+                .ToDictionary(_ => _.ExternalKey, _ => _.AggregateId, StringComparer.InvariantCultureIgnoreCase);
         }
 
         protected TKey Translate(string externalKey, bool createOnMissing = true)
