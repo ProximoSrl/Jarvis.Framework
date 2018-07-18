@@ -1,6 +1,8 @@
 ﻿using Castle.Core.Logging;
+using Jarvis.Framework.Shared.Helpers;
 using Jarvis.Framework.Shared.IdentitySupport;
 using Jarvis.Framework.Tests.EngineTests;
+using Jarvis.Framework.Tests.ProjectionsTests;
 using Jarvis.Framework.Tests.Support;
 using MongoDB.Driver;
 using NUnit.Framework;
@@ -18,6 +20,7 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
         protected IMongoDatabase _db;
         private IdentityManager _identityManager;
         protected ILogger testLogger = NullLogger.Instance;
+        private Int64 _seed = 1;
 
         [OneTimeSetUp]
         public void TestFixtureSetUp()
@@ -25,6 +28,7 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             TestHelper.RegisterSerializerForFlatId<TestId>();
             TestHelper.RegisterSerializerForFlatId<TestFlatId>();
             _db = TestHelper.CreateNew(ConfigurationManager.ConnectionStrings["system"].ConnectionString);
+            _db.Drop();
             _identityManager = new IdentityManager(new CounterService(_db));
             _identityManager.RegisterIdentitiesFromAssembly(Assembly.GetExecutingAssembly());
         }
@@ -40,6 +44,17 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
         }
 
         [Test]
+        public void Verify_identity_Translation()
+        {
+            TestMapper sut = new TestMapper(_db, _identityManager);
+            MyAggregateId id = new MyAggregateId(_seed++);
+            var mappedIdentity = sut.MapIdentity(id);
+
+            var reverseMap = sut.ReverseMap(mappedIdentity);
+            Assert.That(reverseMap, Is.EqualTo(id.AsString().ToLowerInvariant()));
+        }
+
+        [Test]
         public void Verify_reverse_translation()
         {
             TestMapper sut = new TestMapper(_db, _identityManager);
@@ -47,6 +62,16 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             var id = sut.MapWithAutCreate(key);
             var reversed = sut.ReverseMap(id);
             Assert.That(reversed, Is.EqualTo(key));
+        }
+
+        [Test]
+        public void Verify_reverse_translation_is_not_case_sensitive()
+        {
+            TestMapper sut = new TestMapper(_db, _identityManager);
+            String key = Guid.NewGuid().ToString() + "CASE_UPPER";
+            var id = sut.MapWithAutCreate(key);
+            var reversed = sut.ReverseMap(id);
+            Assert.That(reversed, Is.EqualTo(key.ToLowerInvariant()));
         }
 
         [Test]
@@ -60,7 +85,24 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             var id1 = sut.MapWithAutCreate(key1);
             var id2 = sut.MapWithAutCreate(key2);
 
-            var multimap = sut.          GetMultipleMapWithoutAutoCreation(key1, key2);
+            var multimap = sut.GetMultipleMapWithoutAutoCreation(key1, key2);
+            Assert.That(multimap[key1], Is.EqualTo(id1));
+            Assert.That(multimap[key2], Is.EqualTo(id2));
+            Assert.That(multimap.ContainsKey(key3), Is.False);
+        }
+
+        [Test]
+        public void Verify_translation_multiple_case_insensitive()
+        {
+            TestMapper sut = new TestMapper(_db, _identityManager);
+            String key1 = Guid.NewGuid().ToString() + "UPPER";
+            String key2 = Guid.NewGuid().ToString() + "UPPER";
+            String key3 = Guid.NewGuid().ToString() + "UPPER";
+
+            var id1 = sut.MapWithAutCreate(key1);
+            var id2 = sut.MapWithAutCreate(key2);
+
+            var multimap = sut.GetMultipleMapWithoutAutoCreation(key1, key2);
             Assert.That(multimap[key1], Is.EqualTo(id1));
             Assert.That(multimap[key2], Is.EqualTo(id2));
             Assert.That(multimap.ContainsKey(key3), Is.False);
@@ -133,6 +175,11 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             public SampleAggregateId MapWithAutCreate(String key)
             {
                 return base.Translate(key, true);
+            }
+
+            public SampleAggregateId MapIdentity(IIdentity identity)
+            {
+                return Translate(identity.AsString(), true);
             }
 
             public IDictionary<String, SampleAggregateId> GetMultipleMapWithoutAutoCreation(params String[] keys)
