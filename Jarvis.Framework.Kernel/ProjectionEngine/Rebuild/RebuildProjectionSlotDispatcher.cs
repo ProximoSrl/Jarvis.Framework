@@ -101,7 +101,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 						await projection.HandleAsync(unwindedEvent.GetEvent(), true).ConfigureAwait(false);
 						sw.Stop();
 						ticks = sw.ElapsedTicks;
-						MetricsHelper.IncrementProjectionCounterRebuild(cname, SlotName, eventName, ticks);
+						KernelMetricsHelper.IncrementProjectionCounterRebuild(cname, SlotName, eventName, ticks);
 					}
 					catch (Exception ex)
 					{

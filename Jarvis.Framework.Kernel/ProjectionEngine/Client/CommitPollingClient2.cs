@@ -163,7 +163,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         private void RegisterHealthChecks(string pollerName)
         {
-            MetricsHelper.SetCommitPollingClientBufferSize(pollerName, () => GetClientBufferSize());
+            KernelMetricsHelper.SetCommitPollingClientBufferSize(pollerName, () => GetClientBufferSize());
             //Set health check for polling
             HealthChecks.RegisterHealthCheck("Polling-" + pollerName, () =>
             {

@@ -2,11 +2,7 @@
 using Metrics;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
-using Jarvis.Framework.Shared;
 using Jarvis.Framework.Kernel.Engine;
 
 namespace Jarvis.Framework.Kernel.Support
@@ -14,7 +10,7 @@ namespace Jarvis.Framework.Kernel.Support
     /// <summary>
     /// Class to centralize metrics based on Metrics.NET
     /// </summary>
-    public static class MetricsHelper
+    public static class KernelMetricsHelper
     {
         private const String _checkpointToDispatchRebuildGaugeName ="checkpoint-to-dispatch";
 

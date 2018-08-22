@@ -269,7 +269,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
             foreach (var slotName in allSlots)
             {
-                MetricsHelper.CreateMeterForDispatcherCountSlot(slotName);
+                KernelMetricsHelper.CreateMeterForDispatcherCountSlot(slotName);
                 var startCheckpoint = GetStartCheckpointForSlot(slotName);
                 _logger.InfoFormat("Slot {0} starts from {1}", slotName, startCheckpoint);
 
@@ -283,7 +283,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             }
 
             Initialized = true;
-            MetricsHelper.SetProjectionEngineCurrentDispatchCount(() => _countOfConcurrentDispatchingCommit);
+            KernelMetricsHelper.SetProjectionEngineCurrentDispatchCount(() => _countOfConcurrentDispatchingCommit);
         }
 
         private Int64 GetStartGlobalCheckpoint(String[] slots)
@@ -422,7 +422,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                                         .ConfigureAwait(false);
                                     sw.Stop();
                                     ticks = sw.ElapsedTicks;
-                                    MetricsHelper.IncrementProjectionCounter(cname, slotName, eventName, ticks, sw.ElapsedMilliseconds);
+                                    KernelMetricsHelper.IncrementProjectionCounter(cname, slotName, eventName, ticks, sw.ElapsedMilliseconds);
 
                                     if (_logger.IsDebugEnabled)
                                     {
@@ -468,7 +468,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                     slotName,
                     projections.Select(_ => _.Info.CommonName),
                     chunk.Position).ConfigureAwait(false);
-                MetricsHelper.MarkCommitDispatchedCount(slotName, 1);
+                KernelMetricsHelper.MarkCommitDispatchedCount(slotName, 1);
 
                 await _notifyCommitHandled.SetDispatched(slotName, chunk).ConfigureAwait(false);
 

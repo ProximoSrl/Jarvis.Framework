@@ -40,10 +40,10 @@ namespace Jarvis.Framework.Kernel.Commands
                 await OnCheckSecurityAsync(cmd).ConfigureAwait(false);
                 if (JarvisFrameworkGlobalConfiguration.MetricsEnabled)
                 {
-                    using (var context = SharedMetricsHelper.CommandTimer.NewContext(cmd.GetType().Name))
+                    using (var context = SharedMetricsHelper.StartCommandTimer(cmd))
                     {
                         await Execute(cmd).ConfigureAwait(false);
-                        SharedMetricsHelper.CommandCounter.Increment(cmd.GetType().Name, context.Elapsed.Milliseconds);
+                        SharedMetricsHelper.IncrementCommandCounter(cmd, context.Elapsed);
                     }
                 }
                 else
