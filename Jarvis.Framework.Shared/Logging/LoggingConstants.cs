@@ -1,15 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Jarvis.Framework.Shared.Logging
+﻿namespace Jarvis.Framework.Shared.Logging
 {
     public static class LoggingConstants
     {
         public const string CommandId = "commandId";
         public const string CommandDescription = "commandDesc";
         public const string UserId = "commandUser";
+
+        /// <summary>
+        /// This is an important property, it is used to correlate logs in a flow.
+        /// </summary>
+        public const string CorrleationId = "correlationId";
     }
 }

@@ -1,27 +1,24 @@
-﻿using System;
+﻿using Castle.Core.Logging;
+using Jarvis.Framework.Kernel.Events;
+using Jarvis.Framework.Kernel.MultitenantSupport;
+using Jarvis.Framework.Kernel.ProjectionEngine.Client;
+using Jarvis.Framework.Kernel.Support;
+using Jarvis.Framework.Shared.Exceptions;
+using Jarvis.Framework.Shared.Logging;
+using Jarvis.Framework.Shared.Messages;
+using Jarvis.Framework.Shared.Support;
+using Metrics;
+using MongoDB.Driver;
+using MongoDB.Driver.Linq;
+using NStore.Core.Persistence;
+using NStore.Domain;
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Castle.Core.Logging;
-using Jarvis.Framework.Kernel.Events;
-using Jarvis.Framework.Kernel.MultitenantSupport;
-using Jarvis.Framework.Kernel.ProjectionEngine.Client;
-using Jarvis.Framework.Shared.Events;
-using MongoDB.Driver;
-using MongoDB.Driver.Linq;
-using Jarvis.Framework.Kernel.Support;
-using System.Collections.Concurrent;
-using Metrics;
-using NStore.Persistence.Mongo;
-using Jarvis.Framework.Kernel.Engine;
-using Jarvis.Framework.Shared.Exceptions;
-using NStore.Core.Persistence;
-using NStore.Domain;
-using Jarvis.Framework.Shared.Logging;
-using Jarvis.Framework.Shared.Support;
-using Jarvis.Framework.Shared.Messages;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
 {
@@ -348,143 +345,149 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         {
             Interlocked.Increment(ref _countOfConcurrentDispatchingCommit);
 
-            using (_loggerThreadContextManager.SetContextProperty("commit", $"{chunk.OperationId}/{chunk.Position}"))
+            _loggerThreadContextManager.SetContextProperty("commit", $"{chunk.OperationId}/{chunk.Position}");
+
+            if (_logger.IsDebugEnabled) _logger.DebugFormat("Dispatching checkpoit {0} on tenant {1}", chunk.Position, _config.TenantId);
+            TenantContext.Enter(_config.TenantId);
+            var chkpoint = chunk.Position;
+
+            if (!lastCheckpointDispatched.ContainsKey(slotName))
             {
-                if (_logger.IsDebugEnabled) _logger.DebugFormat("Dispatching checkpoit {0} on tenant {1}", chunk.Position, _config.TenantId);
-                TenantContext.Enter(_config.TenantId);
-                var chkpoint = chunk.Position;
-
-                if (!lastCheckpointDispatched.ContainsKey(slotName))
-                {
-                    lastCheckpointDispatched[slotName] = 0;
-                }
-
-                if (lastCheckpointDispatched[slotName] >= chkpoint)
-                {
-                    var error = String.Format("Sequence broken, last checkpoint for slot {0} was {1} and now we dispatched {2}",
-                            slotName, lastCheckpointDispatched[slotName], chkpoint);
-                    _logger.Error(error);
-                    throw new JarvisFrameworkEngineException(error);
-                }
-
-                if (lastCheckpointDispatched[slotName] + 1 != chkpoint && lastCheckpointDispatched[slotName] > 0)
-                {
-                    _logger.DebugFormat("Sequence of commit not consecutive (probably holes), last dispatched {0} receiving {1}",
-                      lastCheckpointDispatched[slotName], chkpoint);
-                }
-                lastCheckpointDispatched[slotName] = chkpoint;
-
-                if (chkpoint <= startCheckpoint)
-                {
-                    //Already dispatched, skip it.
-                    Interlocked.Decrement(ref _countOfConcurrentDispatchingCommit);
-                    return;
-                }
-
-                var projections = _projectionsBySlot[slotName];
-
-                object[] events = GetArrayOfObjectFromChunk(chunk);
-
-                var eventCount = events.Length;
-
-                //now it is time to dispatch the commit, we will dispatch each projection 
-                //and for each projection we dispatch all the events present in changeset
-                foreach (var projection in projections)
-                {
-                    var cname = projection.Info.CommonName;
-                    Object eventMessage = null;
-                    try
-                    {
-                        //Foreach projection we need to dispach every event
-                        for (int index = 0; index < eventCount; index++)
-                        {
-                            eventMessage = events[index];
-
-                            var message = eventMessage as IMessage;
-                            string eventName = eventMessage.GetType().Name;
-                            using (var serilogcontext = new DisposableStack())
-                            {
-                                serilogcontext.Push(_loggerThreadContextManager.SetContextProperty("evType", eventName));
-                                serilogcontext.Push(_loggerThreadContextManager.SetContextProperty("evMsId", message?.MessageId));
-                                serilogcontext.Push(_loggerThreadContextManager.SetContextProperty("evCheckpointToken", chunk.Position));
-                                serilogcontext.Push(_loggerThreadContextManager.SetContextProperty("prj", cname));
-
-                                var checkpointStatus = _checkpointTracker.GetCheckpointStatus(cname, chunk.Position);
-                                long ticks = 0;
-
-                                try
-                                {
-                                    //pay attention, stopwatch consumes time.
-                                    var sw = new Stopwatch();
-                                    sw.Start();
-                                    await projection
-                                        .HandleAsync(eventMessage, checkpointStatus.IsRebuilding)
-                                        .ConfigureAwait(false);
-                                    sw.Stop();
-                                    ticks = sw.ElapsedTicks;
-                                    KernelMetricsHelper.IncrementProjectionCounter(cname, slotName, eventName, ticks, sw.ElapsedMilliseconds);
-
-                                    if (_logger.IsDebugEnabled)
-                                    {
-                                        _logger.DebugFormat("[Slot:{3}] [Projection {4}] Handled checkpoint {0}: {1} > {2}",
-                                            chunk.Position,
-                                            chunk.PartitionId,
-                                            $"eventName: {eventName} [event N°{index}]",
-                                            slotName,
-                                            cname
-                                        );
-                                    }
-                                }
-                                catch (Exception ex)
-                                {
-                                    var error = String.Format("[Slot: {3} Projection: {4}] Failed checkpoint: {0} StreamId: {1} Event Name: {2}",
-                                        chunk.Position,
-                                        chunk.PartitionId,
-                                        eventName,
-                                        slotName,
-                                        cname);
-                                    _logger.Fatal(error, ex);
-                                    _engineFatalErrors.Add(String.Format("{0}\n{1}", error, ex));
-                                    throw;
-                                }
-                            }
-                        } //End of event cycle
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.ErrorFormat(ex, "Error dispathing Chunk [{0}]\n Message: {1}\n Error: {2}\n",
-                            chunk.Position, eventMessage?.GetType()?.Name, ex.Message);
-                        throw;
-                    }
-
-                    projection.CheckpointProjected(chunk.Position);
-
-                    //TODO: Evaluate if it is needed to update single projection checkpoint
-                    //Update this projection, set all events of this checkpoint as dispatched.
-                    //await _checkpointTracker.UpdateProjectionCheckpointAsync(cname, chunk.Position).ConfigureAwait(false);
-                } //End of projection cycle.
-
-                await _checkpointTracker.UpdateSlotAndSetCheckpointAsync(
-                    slotName,
-                    projections.Select(_ => _.Info.CommonName),
-                    chunk.Position).ConfigureAwait(false);
-                KernelMetricsHelper.MarkCommitDispatchedCount(slotName, 1);
-
-                await _notifyCommitHandled.SetDispatched(slotName, chunk).ConfigureAwait(false);
-
-                // ok in multithread wihout locks!
-                if (_maxDispatchedCheckpoint < chkpoint)
-                {
-                    if (_logger.IsDebugEnabled)
-                    {
-                        _logger.DebugFormat("Updating last dispatched checkpoint from {0} to {1}",
-                            _maxDispatchedCheckpoint,
-                            chkpoint
-                        );
-                    }
-                    _maxDispatchedCheckpoint = chkpoint;
-                }
+                lastCheckpointDispatched[slotName] = 0;
             }
+
+            if (lastCheckpointDispatched[slotName] >= chkpoint)
+            {
+                var error = String.Format("Sequence broken, last checkpoint for slot {0} was {1} and now we dispatched {2}",
+                        slotName, lastCheckpointDispatched[slotName], chkpoint);
+                _logger.Error(error);
+                throw new JarvisFrameworkEngineException(error);
+            }
+
+            if (lastCheckpointDispatched[slotName] + 1 != chkpoint && lastCheckpointDispatched[slotName] > 0)
+            {
+                _logger.DebugFormat("Sequence of commit not consecutive (probably holes), last dispatched {0} receiving {1}",
+                  lastCheckpointDispatched[slotName], chkpoint);
+            }
+            lastCheckpointDispatched[slotName] = chkpoint;
+
+            if (chkpoint <= startCheckpoint)
+            {
+                //Already dispatched, skip it.
+                Interlocked.Decrement(ref _countOfConcurrentDispatchingCommit);
+                return;
+            }
+
+            var projections = _projectionsBySlot[slotName];
+
+            object[] events = GetArrayOfObjectFromChunk(chunk);
+
+            var eventCount = events.Length;
+
+            //now it is time to dispatch the commit, we will dispatch each projection 
+            //and for each projection we dispatch all the events present in changeset
+            foreach (var projection in projections)
+            {
+                var cname = projection.Info.CommonName;
+                Object eventMessage = null;
+                try
+                {
+                    //Foreach projection we need to dispach every event
+                    for (int index = 0; index < eventCount; index++)
+                    {
+                        eventMessage = events[index];
+
+                        var message = eventMessage as IMessage;
+                        string eventName = eventMessage.GetType().Name;
+                        _loggerThreadContextManager.SetContextProperty("evType", eventName);
+                        _loggerThreadContextManager.SetContextProperty("evMsId", message?.MessageId);
+                        _loggerThreadContextManager.SetContextProperty("evCheckpointToken", chunk.Position);
+                        _loggerThreadContextManager.SetContextProperty("prj", cname);
+
+                        var checkpointStatus = _checkpointTracker.GetCheckpointStatus(cname, chunk.Position);
+                        long ticks = 0;
+
+                        try
+                        {
+                            //pay attention, stopwatch consumes time.
+                            var sw = new Stopwatch();
+                            sw.Start();
+                            await projection
+                                .HandleAsync(eventMessage, checkpointStatus.IsRebuilding)
+                                .ConfigureAwait(false);
+                            sw.Stop();
+                            ticks = sw.ElapsedTicks;
+                            KernelMetricsHelper.IncrementProjectionCounter(cname, slotName, eventName, ticks, sw.ElapsedMilliseconds);
+
+                            if (_logger.IsDebugEnabled)
+                            {
+                                _logger.DebugFormat("[Slot:{3}] [Projection {4}] Handled checkpoint {0}: {1} > {2}",
+                                    chunk.Position,
+                                    chunk.PartitionId,
+                                    $"eventName: {eventName} [event N°{index}]",
+                                    slotName,
+                                    cname
+                                );
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            var error = String.Format("[Slot: {3} Projection: {4}] Failed checkpoint: {0} StreamId: {1} Event Name: {2}",
+                                chunk.Position,
+                                chunk.PartitionId,
+                                eventName,
+                                slotName,
+                                cname);
+                            _logger.Fatal(error, ex);
+                            _engineFatalErrors.Add(String.Format("{0}\n{1}", error, ex));
+                            throw;
+                        }
+
+                    } //End of event cycle
+                }
+                catch (Exception ex)
+                {
+                    _loggerThreadContextManager.ClearContextProperty("commit");
+                    _logger.ErrorFormat(ex, "Error dispathing Chunk [{0}]\n Message: {1}\n Error: {2}\n",
+                            chunk.Position, eventMessage?.GetType()?.Name, ex.Message);
+                    throw;
+                }
+                finally
+                {
+                    _loggerThreadContextManager.ClearContextProperty("evType");
+                    _loggerThreadContextManager.ClearContextProperty("evMsId");
+                    _loggerThreadContextManager.ClearContextProperty("evCheckpointToken");
+                    _loggerThreadContextManager.ClearContextProperty("prj");
+                }
+
+                projection.CheckpointProjected(chunk.Position);
+
+                //TODO: Evaluate if it is needed to update single projection checkpoint
+                //Update this projection, set all events of this checkpoint as dispatched.
+                //await _checkpointTracker.UpdateProjectionCheckpointAsync(cname, chunk.Position).ConfigureAwait(false);
+            } //End of projection cycle.
+
+            await _checkpointTracker.UpdateSlotAndSetCheckpointAsync(
+                slotName,
+                projections.Select(_ => _.Info.CommonName),
+                chunk.Position).ConfigureAwait(false);
+            KernelMetricsHelper.MarkCommitDispatchedCount(slotName, 1);
+
+            await _notifyCommitHandled.SetDispatched(slotName, chunk).ConfigureAwait(false);
+
+            // ok in multithread wihout locks!
+            if (_maxDispatchedCheckpoint < chkpoint)
+            {
+                if (_logger.IsDebugEnabled)
+                {
+                    _logger.DebugFormat("Updating last dispatched checkpoint from {0} to {1}",
+                        _maxDispatchedCheckpoint,
+                        chkpoint
+                    );
+                }
+                _maxDispatchedCheckpoint = chkpoint;
+            }
+            _loggerThreadContextManager.ClearContextProperty("commit");
             Interlocked.Decrement(ref _countOfConcurrentDispatchingCommit);
         }
 

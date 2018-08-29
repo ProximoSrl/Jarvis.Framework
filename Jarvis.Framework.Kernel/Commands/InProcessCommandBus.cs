@@ -1,22 +1,17 @@
-﻿using System;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using Castle.Core.Logging;
+﻿using Castle.Core.Logging;
 using Castle.MicroKernel;
 using Jarvis.Framework.Kernel.Engine;
-using Jarvis.Framework.Kernel.Support;
 using Jarvis.Framework.Shared.Commands;
-using Jarvis.Framework.Shared.MultitenantSupport;
-using Newtonsoft.Json;
-using Jarvis.Framework.Shared.ReadModel;
-using Jarvis.Framework.Shared.Messages;
-using Jarvis.Framework.Shared.Logging;
-using System.Threading.Tasks;
 using Jarvis.Framework.Shared.Exceptions;
-using NStore.Core.Streams;
-using Jarvis.Framework.Shared.Support;
-using Jarvis.Framework.Shared.Helpers;
+using Jarvis.Framework.Shared.Logging;
+using Jarvis.Framework.Shared.Messages;
+using Jarvis.Framework.Shared.MultitenantSupport;
+using Jarvis.Framework.Shared.ReadModel;
+using Newtonsoft.Json;
+using System;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.Commands
 {
@@ -67,7 +62,8 @@ namespace Jarvis.Framework.Kernel.Commands
 
         public async Task<ICommand> SendLocalAsync(ICommand command, string impersonatingUser = null)
         {
-            using (LoggerThreadContextManager.MarkCommandExecution(command))
+            LoggerThreadContextManager.MarkCommandExecution(command);
+            try
             {
                 PrepareCommand(command, impersonatingUser);
                 var msg = command as IMessage;
@@ -110,6 +106,10 @@ namespace Jarvis.Framework.Kernel.Commands
                 ReleaseHandlers(handlers);
 
                 return command;
+            }
+            finally
+            {
+                LoggerThreadContextManager.ClearMarkCommandExecution();
             }
         }
 

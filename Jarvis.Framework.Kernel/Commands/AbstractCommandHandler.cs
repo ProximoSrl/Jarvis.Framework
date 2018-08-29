@@ -86,9 +86,14 @@ namespace Jarvis.Framework.Kernel.Commands
 
         public async Task HandleAsync(ICommand command)
         {
-            using (LoggerThreadContextManager.MarkCommandExecution(command))
+            try
             {
+                LoggerThreadContextManager.MarkCommandExecution(command);
                 await HandleAsync((TCommand)command).ConfigureAwait(false);
+            }
+            finally
+            {
+                LoggerThreadContextManager.ClearMarkCommandExecution();
             }
         }
     }
