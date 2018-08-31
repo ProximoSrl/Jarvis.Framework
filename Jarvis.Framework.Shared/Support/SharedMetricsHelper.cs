@@ -2,13 +2,8 @@
 using Jarvis.Framework.Shared.Exceptions;
 using Jarvis.Framework.Shared.Messages;
 using Metrics;
-using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Security;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.Support
 {
@@ -59,9 +54,11 @@ namespace Jarvis.Framework.Shared.Support
         /// </summary>
         public static event EventHandler<EventHappenedEventArgs> EventHappened;
 
+        public const String DomainExceptionEventName = "DomainException";
+
         private static void RaiseDomainExceptionEventHappened(ICommand command, DomainException exception)
         {
-            EventHappened?.Invoke(null, new EventHappenedEventArgs("DomainException", new Dictionary<String, String>()
+            RaiseEventHappened(new EventHappenedEventArgs(DomainExceptionEventName, new Dictionary<String, String>()
             {
                 ["CommandId"] = command.MessageId.ToString(),
                 ["UserId"] = command.GetContextData(MessagesConstants.UserId),
@@ -69,22 +66,44 @@ namespace Jarvis.Framework.Shared.Support
             }));
         }
 
+        public const String SecurityExceptionEventName = "SecurityException";
+
         private static void RaiseSecurityExceptionEventHappened(ICommand command)
         {
-            EventHappened?.Invoke(null, new EventHappenedEventArgs("SecurityException", new Dictionary<String, String>()
+            RaiseEventHappened(new EventHappenedEventArgs(SecurityExceptionEventName, new Dictionary<String, String>()
             {
                 ["CommandId"] = command.MessageId.ToString(),
                 ["UserId"] = command.GetContextData(MessagesConstants.UserId)
             }));
         }
 
+        public const String CommandExecutedEventName = "CommandExecuted";
+
         private static void RaiseCommandExecutedEventHappened(ICommand command)
         {
-            EventHappened?.Invoke(null, new EventHappenedEventArgs("CommandExecuted", new Dictionary<String, String>()
+            RaiseEventHappened(new EventHappenedEventArgs(CommandExecutedEventName, new Dictionary<String, String>()
             {
                 ["CommandType"] = command.GetType().Name,
                 ["UserId"] = command.GetContextData(MessagesConstants.UserId)
             }));
+        }
+
+        private static void RaiseEventHappened(EventHappenedEventArgs args)
+        {
+            try
+            {
+                EventHappened?.Invoke(null, args);
+            }
+            catch (OutOfMemoryException)
+            {
+                throw;
+            }
+#pragma warning disable RCS1075 // Avoid empty catch clause that catches System.Exception.
+            catch (Exception)
+#pragma warning restore RCS1075 // Avoid empty catch clause that catches System.Exception.
+            {
+                //External code throw error, simply ignore.
+            }
         }
     }
 
