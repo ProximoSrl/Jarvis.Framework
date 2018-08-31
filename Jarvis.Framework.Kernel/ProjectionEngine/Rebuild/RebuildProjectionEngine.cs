@@ -136,7 +136,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 					.Select(p => _checkpointTracker.GetCheckpoint(p))
 					.Max();
 				var dispatcher = new RebuildProjectionSlotDispatcher(Logger, slotName, _config, projectionsForThisSlot, maximumDispatchedValue, _loggerThreadContextManager);
-				MetricsHelper.SetCheckpointCountToDispatch(slotName, () => dispatcher.CheckpointToDispatch);
+				KernelMetricsHelper.SetCheckpointCountToDispatch(slotName, () => dispatcher.CheckpointToDispatch);
 				_rebuildDispatchers.Add(dispatcher);
 
 				//find right consumer
@@ -192,7 +192,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 			}
 
-			MetricsHelper.SetProjectionEngineCurrentDispatchCount(() => RebuildProjectionMetrics.CountOfConcurrentDispatchingCommit);
+			KernelMetricsHelper.SetProjectionEngineCurrentDispatchCount(() => RebuildProjectionMetrics.CountOfConcurrentDispatchingCommit);
 			return _status;
 		}
 

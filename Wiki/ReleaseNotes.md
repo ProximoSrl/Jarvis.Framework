@@ -5,15 +5,20 @@ J.A.R.V.I.S. Framework - Proximo srl (c)
 
 Main modification is: Moved framework to .NETStandard. 
 
-## Version 4.0.x
+### Version 4.2.x
 
-- Upgraded project for .NET standard
-- Changed TransformForNotification in CollectionWrapper to use also the event that generates change in the readmodel.
+- Added global events for Metrics to allow intercept metrics reporting.
+- Modified context logging adding explicit correlation id.
 
-## Version 4.1.x
+### Version 4.1.x
 
 - Added reverse translation of array of Ids in AbstractIdentityTranslator.
 - Added multiple mapping in AbstractIdentityTranslator.
+
+### Version 4.0.x
+
+- Upgraded project for .NET standard
+- Changed TransformForNotification in CollectionWrapper to use also the event that generates change in the readmodel.
 
 ## Version 3:
 

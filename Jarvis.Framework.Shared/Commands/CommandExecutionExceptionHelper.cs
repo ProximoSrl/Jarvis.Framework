@@ -91,6 +91,8 @@ namespace Jarvis.Framework.Shared.Commands
         /// <param name="retryCount"></param>
         /// <param name="retry"></param>
         /// <param name="replyCommand"></param>
+        /// <param name="shouldContinue">true if the handler can continue execution, false if the execution of the command should stop
+        /// because there is no need to continue.</param>
         /// <returns>Return always true because it is the very same routine used for aggregate exception. We always want not to throw in this
         /// method, but allow the caller to throw.</returns>
         private Boolean InnerHandle(Exception ex, ICommand command, Int32 retryCount, out Boolean retry, out CommandHandled replyCommand, out Boolean shouldContinue)
@@ -117,7 +119,7 @@ namespace Jarvis.Framework.Shared.Commands
 
                 case DomainException dex:
 
-                    SharedMetricsHelper.MarkDomainException();
+                    SharedMetricsHelper.MarkDomainException(command, dex);
                     var notifyTo = command.GetContextData(MessagesConstants.ReplyToHeader);
                     if (notifyTo != null)
                     {
@@ -137,7 +139,7 @@ namespace Jarvis.Framework.Shared.Commands
 
                 case SecurityException sex:
 
-                    SharedMetricsHelper.MarkDomainException();
+                    SharedMetricsHelper.MarkSecurityException(command);
                     var notifySexTo = command.GetContextData(MessagesConstants.ReplyToHeader);
                     if (notifySexTo != null)
                     {
