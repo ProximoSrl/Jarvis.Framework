@@ -300,16 +300,17 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             if (RebuildSettings.ShouldRebuild)
                 throw new JarvisFrameworkEngineException("Projection engine is not used anymore for rebuild. Rebuild is done with the specific RebuildProjectionEngine");
 
-            var projections = _projectionsBySlot[slotName];
-            foreach (var projection in projections)
+            if (_projectionsBySlot.TryGetValue(slotName, out var projections))
             {
-                var currentValue = _checkpointTracker.GetCurrent(projection);
-                if (currentValue < min)
+                foreach (var projection in projections)
                 {
-                    min = currentValue;
+                    var currentValue = _checkpointTracker.GetCurrent(projection);
+                    if (currentValue < min)
+                    {
+                        min = currentValue;
+                    }
                 }
             }
-
             return min;
         }
 
