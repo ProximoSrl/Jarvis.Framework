@@ -69,7 +69,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
                     .AsFactory(),
                 Component
                     .For<ICommitEnhancer>()
-                    .UsingFactoryMethod(() => new CommitEnhancer(_identityConverter)),
+                    .UsingFactoryMethod(() => new CommitEnhancer()),
                 Component
                     .For<INStoreLoggerFactory>()
                     .ImplementedBy< NStoreCastleLoggerFactory >(),

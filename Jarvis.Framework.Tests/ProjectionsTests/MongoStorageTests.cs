@@ -1,4 +1,7 @@
-﻿using Jarvis.Framework.Kernel.ProjectionEngine;
+﻿using Castle.Core.Logging;
+using Jarvis.Framework.Kernel.ProjectionEngine;
+using Jarvis.Framework.Shared.Helpers;
+using Jarvis.Framework.TestHelpers;
 using Jarvis.Framework.Tests.ProjectionEngineTests;
 using MongoDB.Driver;
 using NUnit.Framework;
@@ -6,8 +9,6 @@ using System;
 using System.Configuration;
 using System.Linq;
 using System.Threading.Tasks;
-using Jarvis.Framework.Shared.Helpers;
-using Jarvis.Framework.TestHelpers;
 
 namespace Jarvis.Framework.Tests.ProjectionsTests
 {
@@ -25,13 +26,13 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
             var readmodelDb = client.GetDatabase(url.DatabaseName);
             _collection = readmodelDb.GetCollection<SampleReadModel>("SampleReadModel");
             _sut = new MongoStorage<SampleReadModel, string>(_collection);
-            _sut.Logger = new TestLogger();
         }
 
         [SetUp]
         public void SetUp()
         {
             _collection.Drop();
+            _sut.Logger = new TestLogger(LoggerLevel.Info);
         }
 
         [Test]

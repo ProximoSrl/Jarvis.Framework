@@ -1,0 +1,138 @@
+﻿using Castle.Core;
+using Castle.Core.Logging;
+using Jarvis.Framework.Kernel.Engine;
+using Jarvis.Framework.Kernel.ProjectionEngine.Atomic;
+using Jarvis.Framework.Shared.Helpers;
+using Jarvis.Framework.Shared.ReadModel;
+using Jarvis.Framework.Shared.ReadModel.Atomic;
+using Metrics;
+using MongoDB.Bson;
+using MongoDB.Driver;
+using System;
+using System.Linq;
+
+namespace Jarvis.Framework.Kernel.Support
+{
+    public class ProjectionTargetCheckpointLoader : IProjectionTargetCheckpointLoader
+    {
+        private readonly IMongoCollection<BsonDocument> _commitsCollection;
+
+        public ProjectionTargetCheckpointLoader(IMongoDatabase eventStoreDatabase)
+        {
+            _commitsCollection = eventStoreDatabase.GetCollection<BsonDocument>(EventStoreFactory.PartitionCollectionName);
+        }
+
+        public long GetMaxCheckpointToDispatch()
+        {
+            var lastCommitDoc = _commitsCollection
+                .FindAll()
+                .Sort(Builders<BsonDocument>.Sort.Descending("_id"))
+                .Project(Builders<BsonDocument>.Projection.Include("_id"))
+                .FirstOrDefault();
+            if (lastCommitDoc == null)
+            {
+                return 0;
+            }
+
+            return lastCommitDoc["_id"].AsInt64;
+        }
+    }
+
+    public class AtomicReadModelVersionLoader
+    {
+        private readonly IMongoDatabase _readmodelDb;
+
+        public AtomicReadModelVersionLoader(IMongoDatabase readmodelDb)
+        {
+            _readmodelDb = readmodelDb;
+        }
+
+        public double CountReadModelToUpdateByName(string readmodelName, Int32 version)
+        {
+            var _collection = _readmodelDb.GetCollection<AbstractAtomicReadModel>(readmodelName);
+            if (_collection == null)
+            {
+                return 0; //collection still not present, maybe no readmodel is present, 0 to update
+            }
+
+            return _collection.AsQueryable()
+                 .Where(_ => _.ReadModelVersion != version)
+                 .Count();
+        }
+    }
+
+    public class AtomicProjectionMetricsConfigurer : IStartable
+    {
+        private readonly IProjectionTargetCheckpointLoader _checkPointLoader;
+        private readonly AtomicProjectionCheckpointManager _atomicProjectionCheckpointManager;
+        private readonly AtomicReadModelVersionLoader _versionaLoader;
+        private readonly IAtomicReadModelFactory _readModelFactory;
+
+        public ILogger Logger { get; set; } = NullLogger.Instance;
+
+        public AtomicProjectionMetricsConfigurer(
+                IProjectionTargetCheckpointLoader checkPointLoader,
+                IAtomicReadModelFactory readModelFactory,
+                AtomicProjectionCheckpointManager atomicProjectionCheckpointManager,
+                AtomicReadModelVersionLoader versionaLoader)
+        {
+            _checkPointLoader = checkPointLoader;
+            _atomicProjectionCheckpointManager = atomicProjectionCheckpointManager;
+            _versionaLoader = versionaLoader;
+            _readModelFactory = readModelFactory;
+        }
+
+        public void Start()
+        {
+            Metric.Gauge("checkpoint-behind-AtomicReadModels", CheckAllAtomicsValue(), Unit.Items);
+            HealthChecks.RegisterHealthCheck("Slot-All-AtomicReadmodels", CheckSlotHealth());
+            foreach (var readModelType in _atomicProjectionCheckpointManager.GetAllRegisteredAtomicReadModels())
+            {
+                var name = CollectionNames.GetCollectionName(readModelType);
+                //try to create an instance to grab the version
+                try
+                {
+                    var rm = (IAtomicReadModel) _readModelFactory.Create(readModelType, "NULL");
+                    Metric.Gauge("versions-behind-" + name, () => _versionaLoader.CountReadModelToUpdateByName(name, rm.ReadModelVersion), Unit.Items);
+                }
+                catch (Exception ex)
+                {
+                    Logger.ErrorFormat(ex, "Unable to setup metric for atomic readmodel {0}", readModelType.FullName);
+                }
+            }
+        }
+
+        public void Stop()
+        {
+            // Method intentionally left empty.
+        }
+
+        private Func<HealthCheckResult> CheckSlotHealth()
+        {
+            return () =>
+            {
+                long maxCheckpoint = _checkPointLoader.GetMaxCheckpointToDispatch();
+                long minimumDispateched = _atomicProjectionCheckpointManager.GetMinimumPositionDispatched();
+                long behind = maxCheckpoint - minimumDispateched;
+                if (minimumDispateched > maxCheckpoint)
+                {
+                    return HealthCheckResult.Unhealthy("Slot-All-AtomicReadmodels" + " behind:" + behind);
+                }
+                else
+                {
+                    return HealthCheckResult.Healthy("Slot-All-AtomicReadmodels" + " behind:" + behind);
+                }
+            };
+        }
+
+        private Func<double> CheckAllAtomicsValue()
+        {
+            return () =>
+            {
+                long maxCheckpoint = _checkPointLoader.GetMaxCheckpointToDispatch();
+                long minimumDispateched = _atomicProjectionCheckpointManager.GetMinimumPositionDispatched();
+                return maxCheckpoint - minimumDispateched;
+            };
+        }
+    }
+}

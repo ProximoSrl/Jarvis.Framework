@@ -21,7 +21,7 @@ namespace Jarvis.Framework.Kernel.Support
 	public interface IStreamProcessorManager
 	{
 		Task<T> ProcessAsync<T>(String streamId, Int32 versionUpTo) where T : class, new();
-	}
+    }
 
 	/// <summary>
 	/// Needed to create <see cref="StreamProcessorManager"/> for a specific

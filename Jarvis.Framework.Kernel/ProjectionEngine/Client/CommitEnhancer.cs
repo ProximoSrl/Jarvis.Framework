@@ -5,6 +5,7 @@ using System.Linq;
 using Jarvis.Framework.Shared.IdentitySupport;
 using NStore.Core.Persistence;
 using NStore.Domain;
+using System;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 {
@@ -20,13 +21,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 	/// </summary>
 	public class CommitEnhancer : ICommitEnhancer
 	{
-		private readonly IIdentityConverter _converter;
-
-		public CommitEnhancer(IIdentityConverter converter)
-		{
-			_converter = converter;
-		}
-
 		public void Enhance(IChunk chunk)
 		{
 			Changeset commit;
@@ -35,7 +29,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                 DomainEvent evt = null;
 				foreach (var eventMessage in commit.Events.Where(m => m is DomainEvent))
 				{
-					evt = (DomainEvent)eventMessage;
+                    evt = (DomainEvent)eventMessage;
 					var headers = commit.Headers;
 #pragma warning disable S125 // Sections of code should not be "commented out"
 					//if (eventMessage.Headers.Count > 0)
@@ -53,7 +47,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 					evt.SetPropertyValue(d => d.Version, commit.AggregateVersion);
 					evt.SetPropertyValue(d => d.Context, headers);
 					evt.SetPropertyValue(d => d.CheckpointToken, chunk.Position);
-				}
+                }
 
                 evt?.SetPropertyValue(d => d.IsLastEventOfCommit, true);
             }
