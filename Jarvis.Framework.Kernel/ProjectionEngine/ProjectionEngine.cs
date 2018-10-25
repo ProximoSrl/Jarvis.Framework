@@ -136,7 +136,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             {
                 //we are not in offline mode, just use all projection that are not marked to 
                 //run only in offline mode
-                logger.Info($"Projection engine is NOT in online mode, we remove all projections that are not explicitly marked for offline");
+                logger.Info($"Projection engine is NOT in OFFLINE mode, projection engine will run only projection that are not marked for OfflineModel.");
                 _allProjections = projections.Where(_ => !_.Info.OfflineProjection).ToArray();
             }
 
@@ -300,16 +300,17 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             if (RebuildSettings.ShouldRebuild)
                 throw new JarvisFrameworkEngineException("Projection engine is not used anymore for rebuild. Rebuild is done with the specific RebuildProjectionEngine");
 
-            var projections = _projectionsBySlot[slotName];
-            foreach (var projection in projections)
+            if (_projectionsBySlot.TryGetValue(slotName, out var projections))
             {
-                var currentValue = _checkpointTracker.GetCurrent(projection);
-                if (currentValue < min)
+                foreach (var projection in projections)
                 {
-                    min = currentValue;
+                    var currentValue = _checkpointTracker.GetCurrent(projection);
+                    if (currentValue < min)
+                    {
+                        min = currentValue;
+                    }
                 }
             }
-
             return min;
         }
 
