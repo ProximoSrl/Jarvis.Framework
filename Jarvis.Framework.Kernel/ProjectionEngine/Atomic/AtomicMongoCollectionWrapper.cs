@@ -136,6 +136,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 throw new CollectionWrapperException("Cannot save readmodel, Id property not initialized");
             }
 
+            if (model.NotPersistable)
+            {
+                return; //nothing should be done, the readmodel is not in a peristable state
+            }
+
             //we need to save the object, we first try to find and replace, if the operation 
             //fails we have two distinct situation, the insert and the update
             var existing = await _collection.Find(
@@ -179,6 +184,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
         public Task UpdateAsync(TModel model)
         {
+            if (model.NotPersistable)
+            {
+                return Task.CompletedTask;
+            }
+
             return _collection.FindOneAndReplaceAsync(
                 Builders<TModel>.Filter.And(
                     Builders<TModel>.Filter.Eq(_ => _.Id, model.Id),

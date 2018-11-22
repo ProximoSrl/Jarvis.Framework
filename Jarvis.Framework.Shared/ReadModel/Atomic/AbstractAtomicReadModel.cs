@@ -4,7 +4,7 @@ using Jarvis.Framework.Shared.Helpers;
 using NStore.Domain;
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
+using System.Linq;
 
 namespace Jarvis.Framework.Shared.ReadModel.Atomic
 {
@@ -65,13 +65,17 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
             }
         }
 
+        public Boolean NotPersistable { get; protected set; }
+
         protected abstract Int32 GetVersion();
 
         private Boolean ProcessEvent(DomainEvent domainEvent)
         {
             //if this readmodel is faulted, it should not process anymore any data.
             if (Faulted)
+            {
                 return false;
+            }
 
             //remember that we have a method for each combination ReadmodelType+EventType
             var eventType = domainEvent.GetType();
@@ -116,6 +120,15 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
                 ProjectedPosition = position;
             }
             return processed;
+        }
+
+        public void ProcessExtraStreamChangeset(Changeset changeset)
+        {
+            foreach (DomainEvent evt in changeset.Events.OfType<DomainEvent>())
+            {
+                ProcessEvent(evt);
+            }
+            NotPersistable = true;
         }
 
         private static ConcurrentDictionary<string, MethodInvoker> _handlersCache = new ConcurrentDictionary<string, MethodInvoker>();

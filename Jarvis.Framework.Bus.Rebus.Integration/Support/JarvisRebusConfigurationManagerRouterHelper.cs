@@ -12,7 +12,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 {
 	public class JarvisRebusConfigurationManagerRouterHelper
 	{
-		private readonly ConcurrentDictionary<Type, String> _mapCache = new ConcurrentDictionary<Type, string>();
+		private readonly ConcurrentDictionary<Type, String> _mapCache;
 		private readonly JarvisRebusConfiguration _configuration;
 
 		public JarvisRebusConfigurationManagerRouterHelper(

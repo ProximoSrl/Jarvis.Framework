@@ -177,6 +177,78 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             Assert.That(reloaded.ProjectedPosition, Is.EqualTo(evtTouch.CheckpointToken));
         }
 
+        [Test]
+        public async Task Process_extra_changeset_make_readmodel_not_persistable()
+        {
+            var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
+            var evt = GenerateCreatedEvent(false);
+            rm.ProcessChangeset(evt);
+            var evtTouch = GenerateTouchedEvent(false);
+            rm.ProcessChangeset(evtTouch);
+            await _sut.UpsertAsync(rm).ConfigureAwait(false);
+            //check
+            var reloaded = await _sut.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
+            Assert.That(reloaded, Is.Not.Null);
+            Assert.That(reloaded.TouchCount, Is.EqualTo(1));
+
+            //now generate another touch event but process with extra events
+            var changesetTouch2 = GenerateTouchedEvent(false);
+            rm.ProcessExtraStreamChangeset(changesetTouch2);
+            Assert.That(rm.TouchCount, Is.EqualTo(2));
+            await _sut.UpsertAsync(rm).ConfigureAwait(false);
+
+            //we expect two things.
+            Assert.That(rm.NotPersistable, Is.True, "After process extra stream changeset the aggregate is not persistable");
+
+            //saving should not have persisted
+            reloaded = await _sut.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
+            Assert.That(reloaded, Is.Not.Null);
+            Assert.That(reloaded.TouchCount, Is.EqualTo(1));
+            Assert.That(reloaded.ProjectedPosition, Is.EqualTo( evtTouch.GetChunkPosition()));
+        }
+
+        [Test]
+        public async Task Not_persistale_is_honored_in_update()
+        {
+            var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
+            var evt = GenerateCreatedEvent(false);
+            rm.ProcessChangeset(evt);
+            var evtTouch = GenerateTouchedEvent(false);
+            rm.ProcessChangeset(evtTouch);
+            await _sut.UpsertAsync(rm).ConfigureAwait(false);
+            //check
+            var reloaded = await _sut.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
+            Assert.That(reloaded, Is.Not.Null);
+            Assert.That(reloaded.TouchCount, Is.EqualTo(1));
+
+            //forcing not persistable
+            rm.SetPropertyValue(_ => _.NotPersistable, true);
+
+            //saving should not have persisted
+            reloaded = await _sut.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
+            Assert.That(reloaded, Is.Not.Null);
+            Assert.That(reloaded.TouchCount, Is.EqualTo(1));
+            Assert.That(reloaded.ProjectedPosition, Is.EqualTo( evtTouch.GetChunkPosition()));
+        }
+
+        [Test]
+        public async Task Not_persistable_is_honored_in_insert()
+        {
+            var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
+            var evt = GenerateCreatedEvent(false);
+            rm.ProcessChangeset(evt);
+            var evtTouch = GenerateTouchedEvent(false);
+            rm.ProcessChangeset(evtTouch);
+
+            //forcing not persistable
+            rm.SetPropertyValue(_ => _.NotPersistable, true);
+            await _sut.UpsertAsync(rm).ConfigureAwait(false);
+            
+            //check
+            var reloaded = await _sut.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
+            Assert.That(reloaded, Is.Null);
+        }
+
         #endregion
 
         #region infrastructure tests

@@ -31,7 +31,15 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
         Boolean Faulted { get; }
 
         /// <summary>
-        /// Mark the readmodel as faulted
+        /// This is a specific property that tells to the persistence wrapper that this
+        /// specific readmodel cannot be persisted anymore because something happened like
+        /// processing <see cref="Changeset"/> that comes from a different stream or from
+        /// a Draft Stream.
+        /// </summary>
+        Boolean NotPersistable { get; }
+
+        /// <summary>
+        /// Mark the readmodel as faulted.
         /// </summary>
         /// <returns></returns>
         void MarkAsFaulted(Int64 projectedPosition);
@@ -41,5 +49,21 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
         /// </summary>
         /// <param name="changeset"></param>
         Boolean ProcessChangeset(Changeset changeset);
+
+        /// <summary>
+        /// <para>
+        /// To allow support for Draftable, we need to have a different
+        /// method that will process the changeset that comes from a different
+        /// persistence storage.
+        /// </para>
+        /// <para>
+        /// This a concept where the readmodel will process a changeset that is not
+        /// part of the stream, this should prevent the readmodel from being saved again
+        /// to disk because it could generate confusion.
+        /// </para>
+        /// </summary>
+        /// <param name="changeset"></param>
+        /// <returns></returns>
+        void ProcessExtraStreamChangeset(Changeset changeset);
     }
 }
