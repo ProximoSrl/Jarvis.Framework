@@ -15,15 +15,15 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Castle.LoggingFacility" Version="4.1.0" />
+    <PackageReference Include="Castle.LoggingFacility" Version="4.1.1" />
     <PackageReference Include="Machine.Specifications" Version="0.12.0" />
-    <PackageReference Include="MongoDB.Driver" Version="2.7.0" />
+    <PackageReference Include="MongoDB.Driver" Version="2.7.2" />
     <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
-    <PackageReference Include="NStore.Core" Version="0.4.6" />
-    <PackageReference Include="NStore.Domain" Version="0.4.6" />
-    <PackageReference Include="NStore.Persistence.Mongo" Version="0.4.6" />
-    <PackageReference Include="NStore.Tpl" Version="0.4.6" />
-    <PackageReference Include="NUnit" Version="3.10.1" />
+    <PackageReference Include="NStore.Core" Version="0.4.7" />
+    <PackageReference Include="NStore.Domain" Version="0.4.7" />
+    <PackageReference Include="NStore.Persistence.Mongo" Version="0.4.7" />
+    <PackageReference Include="NStore.Tpl" Version="0.4.7" />
+    <PackageReference Include="NUnit" Version="3.11.0" />
   </ItemGroup>
 
   <ItemGroup>

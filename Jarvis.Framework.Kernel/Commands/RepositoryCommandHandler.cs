@@ -13,6 +13,16 @@ using NStore.Domain;
 
 namespace Jarvis.Framework.Kernel.Commands
 {
+    /// <summary>
+    /// <para>Base command handler that is capable to restore an aggregate with standard <see cref="IRepository"/></para>
+    /// <para>
+    /// Standard way to interact with an aggregate is <see cref="FindAndModifyAsync(EventStoreIdentity, Action{TAggregate}, bool)"/>
+    /// but command handler has the ability to interact directly with repository to interact with multiple aggregates. 
+    /// This second method of implementing command handler is discouraged and it should be strictly idempotent.
+    /// </para>
+    /// </summary>
+    /// <typeparam name="TAggregate"></typeparam>
+    /// <typeparam name="TCommand"></typeparam>
     public abstract class RepositoryCommandHandler<TAggregate, TCommand> : AbstractCommandHandler<TCommand>
 		where TAggregate : class, IAggregate
 		where TCommand : ICommand
