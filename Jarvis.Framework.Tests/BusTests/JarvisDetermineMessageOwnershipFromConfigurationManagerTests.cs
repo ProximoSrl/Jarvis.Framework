@@ -13,7 +13,7 @@ namespace Jarvis.Framework.Tests.BusTests
     [TestFixture]
     public class JarvisDetermineMessageOwnershipFromConfigurationManagerTests
     {
-        private JarvisRebusConfigurationManagerRouterHelper _sut;
+        JarvisRebusConfiguration _sut;
 
         [OneTimeSetUp]
         public void TestFixtureSetup()
@@ -23,12 +23,11 @@ namespace Jarvis.Framework.Tests.BusTests
                 {"Jarvis.Framework.Tests.BusTests.MessageFolder.SampleMessage, Jarvis.Framework.Tests", "test.queue1"},
                 {"Jarvis.Framework.Tests.BusTests.MessageFolder", "test.queue2"},
             };
-			JarvisRebusConfiguration config = new JarvisRebusConfiguration("", "");
-			config.EndpointsMap = map;
-			config.AssembliesWithMessages = new List<System.Reflection.Assembly>() {
+            _sut = new JarvisRebusConfiguration("", "");
+            _sut.EndpointsMap = map;
+            _sut.AssembliesWithMessages = new List<Assembly>() {
 				typeof(SampleMessage).Assembly
 			};
-			_sut = new JarvisRebusConfigurationManagerRouterHelper(config);
         }
 
         [Test]
