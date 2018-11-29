@@ -15,18 +15,18 @@
 
       <group>
         <dependency id="Jarvis.Framework.Shared" version="[$version$]" />
-        <dependency id="NStore.Core" version="0.2.0" />
-        <dependency id="NStore.Domain" version="0.2.0" />
-        <dependency id="NStore.Persistence.Mongo" version="0.2.0" />
+        <dependency id="NStore.Core" version="0.4.7" />
+        <dependency id="NStore.Domain" version="0.4.7" />
+        <dependency id="NStore.Persistence.Mongo" version="0.4.7" />
         
-        <dependency id="MongoDB.Driver" version="2.5.0" />
-        <dependency id="Newtonsoft.Json" version="9.0.1" />
+        <dependency id="MongoDB.Driver" version="2.7.2" />
+        <dependency id="Newtonsoft.Json" version="11.0.2" />
         <dependency id="Microsoft.Tpl.Dataflow" version="4.5.24" />
         <dependency id="System.Threading.Tasks.Dataflow" version="4.8.0" />
 
-        <dependency id="Castle.Core" version="4.2.1" />
-        <dependency id="Castle.LoggingFacility" version="4.1.0" />
-        <dependency id="Castle.Windsor" version="4.1.0" />
+        <dependency id="Castle.Core" version="4.3.1" />
+        <dependency id="Castle.LoggingFacility" version="4.1.1" />
+        <dependency id="Castle.Windsor" version="4.1.1" />
 
         <dependency id="Metrics" version="0.5.0.1000" />
       </group>
