@@ -10,6 +10,9 @@ using System.Text;
 
 namespace Jarvis.Framework.Kernel.Support
 {
+    /// <summary>
+    /// Default IdentityToAggregateManager to associate aggregate by id convention.
+    /// </summary>
 	public class IdentityToAggregateManager : IIdentityToAggregateManager
 	{
 		public IdentityToAggregateManager()
