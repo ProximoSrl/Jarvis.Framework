@@ -38,7 +38,10 @@ namespace Jarvis.Framework.Kernel.Engine
 		/// </summary>
 		private Action<object> _raiseEventFunction;
 
-		private String _ownerId;
+        /// <summary>
+        /// Store original Id of containing aggregate.
+        /// </summary>
+		protected String OwnerId { get; private set; }
 
 		public JarvisEntityState GetState()
 		{
@@ -55,7 +58,7 @@ namespace Jarvis.Framework.Kernel.Engine
 		void IEntityRoot.Init(Action<object> raiseEventFunction, String ownerId)
 		{
 			_raiseEventFunction = raiseEventFunction;
-			_ownerId = ownerId;
+			OwnerId = ownerId;
 		}
 
         public SnapshotInfo GetSnapshot()
@@ -101,9 +104,9 @@ namespace Jarvis.Framework.Kernel.Engine
 		{
 			if (p.Length > 0)
 			{
-				throw new DomainException(_ownerId, string.Format(format, p));
+				throw new DomainException(OwnerId, string.Format(format, p));
 			}
-			throw new DomainException(_ownerId, format);
+			throw new DomainException(OwnerId, format);
 		}
 
         public void EventEmitting(object @event)
