@@ -1,6 +1,7 @@
 ﻿using Fasterflect;
 using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.Helpers;
+using MongoDB.Bson.Serialization.Attributes;
 using NStore.Domain;
 using System;
 using System.Collections.Concurrent;
@@ -36,6 +37,30 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
         /// </summary>
 		public Int64 ProjectedPosition { get; private set; }
 
+        /// <summary>
+        /// User that created the object, this will be the user of the first <see cref="Changeset"/>
+        /// </summary>
+        public String CreationUser { get; set; }
+
+        /// <summary>
+        /// The user that generates last <see cref="Changeset"/>
+        /// </summary>
+        public String LastModificationUser { get; set; }
+
+        /// <summary>
+        /// Last modification timestamp
+        /// </summary>
+        public DateTime LastModify { get; set; }
+
+        /// <summary>
+        /// Version of the aggregate
+        /// </summary>
+        public Int64 AggregateVersion { get; set; }
+
+        /// <summary>
+        /// True if some processing of events thrown an exception, the readmodel
+        /// is blocked, it will not update anymore.
+        /// </summary>
         public Boolean Faulted { get; private set; }
 
         public void MarkAsFaulted(Int64 projectedPosition)
@@ -65,7 +90,16 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
             }
         }
 
-        public Boolean NotPersistable { get; protected set; }
+        /// <summary>
+        /// <para>
+        /// If this property is true, it means that the readmodel was manipulated
+        /// in memory with events that comes from other streams (draftable) or simply
+        /// with in memory generated events.
+        /// </para>
+        /// <para>The stream should not be persisted.</para>
+        /// </summary>
+        [BsonIgnore]
+        public Boolean ModifiedWithExtraStreamEvents { get; protected set; }
 
         protected abstract Int32 GetVersion();
 
@@ -112,8 +146,22 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
             if (changeset.Events.Length > 0 && changeset.GetChunkPosition() > ProjectedPosition)
             {
                 Int64 position = 0;
-                foreach (DomainEvent evt in changeset.Events)
+                for (int i = 0; i < changeset.Events.Length; i++)
                 {
+                    var evt = changeset.Events[i] as DomainEvent;
+                    if (i == 0)
+                    {
+                        //First event, we need to set some standard informations. These informations
+                        //are equal for all the events of this specific changeset.
+                        LastModify = evt.CommitStamp;
+                        LastModificationUser = evt.IssuedBy;
+                        AggregateVersion = changeset.AggregateVersion;
+                        if (CreationUser == null)
+                        {
+                            CreationUser = evt.IssuedBy;
+                        }
+                    }
+
                     processed |= ProcessEvent(evt);
                     position = evt.CheckpointToken;
                 }
@@ -128,7 +176,7 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
             {
                 ProcessEvent(evt);
             }
-            NotPersistable = true;
+            ModifiedWithExtraStreamEvents = true;
         }
 
         private static ConcurrentDictionary<string, MethodInvoker> _handlersCache = new ConcurrentDictionary<string, MethodInvoker>();

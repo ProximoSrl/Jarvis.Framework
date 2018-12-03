@@ -6,6 +6,11 @@ using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.ReadModel.Atomic
 {
+    /// <summary>
+    /// Subscription for NStore to simplify applying events to an 
+    /// atomic readmodel.
+    /// </summary>
+    /// <typeparam name="TModel"></typeparam>
     internal class AtomicReadModelSubscription<TModel> : ISubscription
         where TModel : IAtomicReadModel
     {

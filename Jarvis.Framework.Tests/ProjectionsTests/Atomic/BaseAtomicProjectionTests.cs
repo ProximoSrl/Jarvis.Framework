@@ -6,6 +6,7 @@ using Jarvis.Framework.Shared.Helpers;
 using Jarvis.Framework.Shared.ReadModel.Atomic;
 using Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support;
 using NStore.Domain;
+using NSubstitute;
 using NUnit.Framework;
 using System;
 using System.Linq;
@@ -263,6 +264,24 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
                 .Single();
 
             Assert.That(initializer.Initialized);
+        }
+
+        [Test]
+        public async Task Verify_generation_of_notification()
+        {
+            Changeset changeset = await GenerateSomeEvents().ConfigureAwait(false);
+
+            //And finally check if everything is projected
+            _sut = await CreateSutAndStartProjectionEngineAsync(autostart: false).ConfigureAwait(false);
+            _sut.AtomicReadmodelNotifier = Substitute.For<IAtomicReadmodelNotifier>();
+            await _sut.Start().ConfigureAwait(false);
+
+            //wait that commit was projected
+            GetTrackerAndWaitForChangesetToBeProjected("SimpleTestAtomicReadModel");
+
+            _sut.AtomicReadmodelNotifier
+                .Received()
+                .ReadmodelUpdated(Arg.Any<IAtomicReadModel>(), changeset);
         }
     }
 }

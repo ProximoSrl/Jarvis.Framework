@@ -21,8 +21,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support
         /// <param name="position"></param>
         /// <param name="changeset"></param>
         /// <param name="identity"></param>
-        /// <returns></returns>
-        Task Handle(
+        /// <returns>The instance of the readmoel after modification.</returns>
+        Task<IAtomicReadModel> Handle(
             Int64 position,
             Changeset changeset,
             IIdentity identity);
@@ -94,14 +94,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support
         /// Handle the events.
         /// </summary>
         /// <param name="changeset"></param>
-        public async Task Handle(
+        public async Task<IAtomicReadModel> Handle(
             Int64 position,
             Changeset changeset,
             IIdentity identity)
         {
             if (identity.GetType() != _atomicReadmodelInfoAttribute.AggregateIdType)
             {
-                return; //this is a changeset not directed to this readmodel, changeset of another aggregate.
+                return null; //this is a changeset not directed to this readmodel, changeset of another aggregate.
             }
 
             var rm = await _atomicCollectionWrapper.FindOneByIdAsync(identity.AsString()).ConfigureAwait(false);
@@ -140,6 +140,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support
                     await _atomicCollectionWrapper.UpdateAsync(rm).ConfigureAwait(false);
                 }
             }
+            return rm;
         }
     }
 }

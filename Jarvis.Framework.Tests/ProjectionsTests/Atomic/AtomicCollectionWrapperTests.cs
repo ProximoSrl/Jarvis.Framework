@@ -198,7 +198,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             await _sut.UpsertAsync(rm).ConfigureAwait(false);
 
             //we expect two things.
-            Assert.That(rm.NotPersistable, Is.True, "After process extra stream changeset the aggregate is not persistable");
+            Assert.That(rm.ModifiedWithExtraStreamEvents, Is.True, "After process extra stream changeset the aggregate is not persistable");
 
             //saving should not have persisted
             reloaded = await _sut.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
@@ -222,7 +222,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             Assert.That(reloaded.TouchCount, Is.EqualTo(1));
 
             //forcing not persistable
-            rm.SetPropertyValue(_ => _.NotPersistable, true);
+            rm.SetPropertyValue(_ => _.ModifiedWithExtraStreamEvents, true);
 
             //saving should not have persisted
             reloaded = await _sut.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
@@ -241,7 +241,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             rm.ProcessChangeset(evtTouch);
 
             //forcing not persistable
-            rm.SetPropertyValue(_ => _.NotPersistable, true);
+            rm.SetPropertyValue(_ => _.ModifiedWithExtraStreamEvents, true);
             await _sut.UpsertAsync(rm).ConfigureAwait(false);
             
             //check

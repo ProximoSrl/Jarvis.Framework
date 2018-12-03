@@ -10,6 +10,7 @@ using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.Helpers;
 using Jarvis.Framework.Shared.IdentitySupport;
 using Jarvis.Framework.Shared.Logging;
+using Jarvis.Framework.Shared.Messages;
 using Jarvis.Framework.Shared.ReadModel;
 using Jarvis.Framework.Shared.ReadModel.Atomic;
 using Jarvis.Framework.TestHelpers;
@@ -22,6 +23,7 @@ using NStore.Core.Persistence;
 using NStore.Domain;
 using NUnit.Framework;
 using System;
+using System.Collections.Generic;
 using System.Configuration;
 using System.Threading;
 using System.Threading.Tasks;
@@ -166,15 +168,17 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 
         protected Int64 lastUsedPosition;
 
-        protected Task<Changeset> GenerateCreatedEvent(Boolean inSameCommitAsPrevious)
+        protected Task<Changeset> GenerateCreatedEvent(Boolean inSameCommitAsPrevious, String issuedBy = null)
         {
             var evt = new SampleAggregateCreated();
+            SetBasePropertiesToEvent(evt, issuedBy);
             return ProcessEvent(evt, inSameCommitAsPrevious);
         }
 
-        protected Task<Changeset> GenerateTouchedEvent(Boolean inSameCommitAsPrevious)
+        protected Task<Changeset> GenerateTouchedEvent(Boolean inSameCommitAsPrevious, String issuedBy = null)
         {
             var evt = new SampleAggregateTouched();
+            SetBasePropertiesToEvent(evt, issuedBy);
             return ProcessEvent(evt, inSameCommitAsPrevious);
         }
 
@@ -277,6 +281,15 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             await GenerateCreatedEvent(false).ConfigureAwait(false);
             await GenerateTouchedEvent(false).ConfigureAwait(false);
             return await GenerateTouchedEvent(false).ConfigureAwait(false);
+        }
+
+        private static void SetBasePropertiesToEvent(DomainEvent evt, string issuedBy)
+        {
+            var context = new Dictionary<String, Object>();
+            context.Add(MessagesConstants.UserId, issuedBy);
+
+            evt.SetPropertyValue(d => d.Context, context);
+            evt.SetPropertyValue(e => e.CommitStamp, DateTime.UtcNow);
         }
     }
 }

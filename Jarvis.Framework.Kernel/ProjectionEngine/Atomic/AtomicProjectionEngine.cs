@@ -65,6 +65,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
         public IAtomicReadModelInitializer[] AllReadModelSetup { get; set; }
 
+        /// <summary>
+        /// By default we have a null notifier, but the user can register in castle
+        /// a specific notifier to do whathever it want.
+        /// </summary>
+        public IAtomicReadmodelNotifier AtomicReadmodelNotifier { get; set; } = new NullAtomicReadmodelNotifier();
+
         private readonly Int64 _lastPositionDispatched;
 
         public AtomicProjectionEngine(
@@ -155,7 +161,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
         private async Task<Boolean> DispatchToTpl(AtomicDispatchChunk atomicDispatchChunk)
         {
-            var result = await _tplBuffer.SendAsync(atomicDispatchChunk);
+            var result = await _tplBuffer.SendAsync(atomicDispatchChunk).ConfigureAwait(false);
             if (!result)
             {
                 Logger.ErrorFormat("Unable to dispatch chunk {0} for poller {1}", atomicDispatchChunk.Chunk.Position, atomicDispatchChunk.PollerId);
@@ -258,14 +264,15 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                             if (aggregateId?.GetType() == item.Key)
                             {
                                 //Remember to dispatch this only to objects that are associated to this poller.
-                                foreach (var rm in blocks.Where(_ => _.PollerId == dispatchObj.PollerId))
+                                foreach (var atomicDispatchChunkConsumer in blocks.Where(_ => _.PollerId == dispatchObj.PollerId))
                                 {
                                     if (Logger.IsDebugEnabled)
                                     {
-                                        Logger.DebugFormat("Dispatched chunk {0} with poller {1} for readmodel {2}", dispatchObj.Chunk.Position, dispatchObj.PollerId, rm.Consumer.AtomicReadmodelInfoAttribute.Name);
+                                        Logger.DebugFormat("Dispatched chunk {0} with poller {1} for readmodel {2}", dispatchObj.Chunk.Position, dispatchObj.PollerId, atomicDispatchChunkConsumer.Consumer.AtomicReadmodelInfoAttribute.Name);
                                     }
-                                    //let the abstract readmodel handle everyting.
-                                    await rm.Consumer.Handle(dispatchObj.Chunk.Position, changeset, aggregateId).ConfigureAwait(false);
+                                    //let the abstract readmodel handle everyting, then finally dispatch notification.
+                                    var readmodel = await atomicDispatchChunkConsumer.Consumer.Handle(dispatchObj.Chunk.Position, changeset, aggregateId).ConfigureAwait(false);
+                                    AtomicReadmodelNotifier.ReadmodelUpdated(readmodel, changeset);
                                 }
                             }
                         }

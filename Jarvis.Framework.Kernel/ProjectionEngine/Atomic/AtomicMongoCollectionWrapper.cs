@@ -136,7 +136,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 throw new CollectionWrapperException("Cannot save readmodel, Id property not initialized");
             }
 
-            if (model.NotPersistable)
+            if (model.ModifiedWithExtraStreamEvents)
             {
                 return; //nothing should be done, the readmodel is not in a peristable state
             }
@@ -184,7 +184,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
         public Task UpdateAsync(TModel model)
         {
-            if (model.NotPersistable)
+            if (model.ModifiedWithExtraStreamEvents)
             {
                 return Task.CompletedTask;
             }

@@ -130,5 +130,26 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 
             Assert.That(rm.TouchCount, Is.EqualTo(2));
         }
+
+        [Test]
+        public async Task Verify_basic_properties()
+        {
+            var cs = await GenerateCreatedEvent(false, issuedBy : "admin").ConfigureAwait(false);
+            var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
+            rm.ProcessChangeset(cs);
+
+            Assert.That(rm.CreationUser, Is.EqualTo("admin"));
+            Assert.That(rm.LastModificationUser, Is.EqualTo("admin"));
+            Assert.That(rm.LastModify, Is.EqualTo(((DomainEvent)cs.Events[0]).CommitStamp));
+            Assert.That(rm.AggregateVersion, Is.EqualTo(cs.AggregateVersion));
+
+            cs = await GenerateTouchedEvent(false, issuedBy: "admin2").ConfigureAwait(false);
+            rm.ProcessChangeset(cs);
+
+            Assert.That(rm.CreationUser, Is.EqualTo("admin"));
+            Assert.That(rm.LastModificationUser, Is.EqualTo("admin2"));
+            Assert.That(rm.LastModify, Is.EqualTo(((DomainEvent)cs.Events[0]).CommitStamp));
+            Assert.That(rm.AggregateVersion, Is.EqualTo(cs.AggregateVersion));
+        }
     }
 }

@@ -36,7 +36,7 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
         /// processing <see cref="Changeset"/> that comes from a different stream or from
         /// a Draft Stream.
         /// </summary>
-        Boolean NotPersistable { get; }
+        Boolean ModifiedWithExtraStreamEvents { get; }
 
         /// <summary>
         /// Mark the readmodel as faulted.
