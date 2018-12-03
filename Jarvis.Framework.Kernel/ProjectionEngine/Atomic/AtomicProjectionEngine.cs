@@ -272,7 +272,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                                     }
                                     //let the abstract readmodel handle everyting, then finally dispatch notification.
                                     var readmodel = await atomicDispatchChunkConsumer.Consumer.Handle(dispatchObj.Chunk.Position, changeset, aggregateId).ConfigureAwait(false);
-                                    AtomicReadmodelNotifier.ReadmodelUpdated(readmodel, changeset);
+                                    AtomicReadmodelNotifier.ReadmodelUpdatedAsync(readmodel, changeset);
                                 }
                             }
                         }

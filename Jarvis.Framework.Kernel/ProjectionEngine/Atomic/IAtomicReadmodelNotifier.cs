@@ -1,5 +1,6 @@
 ﻿using Jarvis.Framework.Shared.ReadModel.Atomic;
 using NStore.Domain;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 {
@@ -14,7 +15,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// </summary>
         /// <param name="atomicReadModel"></param>
         /// <param name="changeset"></param>
-        void ReadmodelUpdated(IAtomicReadModel atomicReadModel, Changeset changeset);
+         Task ReadmodelUpdatedAsync(IAtomicReadModel atomicReadModel, Changeset changeset);
     }
 
     /// <summary>
@@ -22,9 +23,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
     /// </summary>
     public class NullAtomicReadmodelNotifier : IAtomicReadmodelNotifier
     {
-        public void ReadmodelUpdated(IAtomicReadModel atomicReadModel, Changeset changeset)
+        public Task ReadmodelUpdatedAsync(IAtomicReadModel atomicReadModel, Changeset changeset)
         {
-            //Method intentionally left empty.
+            return Task.CompletedTask;
         }
     }
 }

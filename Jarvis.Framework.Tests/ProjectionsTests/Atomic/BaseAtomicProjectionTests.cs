@@ -281,7 +281,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 
             _sut.AtomicReadmodelNotifier
                 .Received()
-                .ReadmodelUpdated(Arg.Any<IAtomicReadModel>(), changeset);
+                .ReadmodelUpdatedAsync(Arg.Any<IAtomicReadModel>(), changeset);
         }
     }
 }
