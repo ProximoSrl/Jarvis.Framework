@@ -76,14 +76,26 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
         public async Task<TModel> FindOneByIdAsync(String id)
         {
-            var rm = await _collection.FindOneByIdAsync(id).ConfigureAwait(false);
+            TModel rm = null;
+            Boolean fixableExceptions = false;
+            //try to read, but intercept a format exception if someone changed binary
+            //serialization on mongodb.
+            try
+            {
+                rm = await _collection.FindOneByIdAsync(id).ConfigureAwait(false);
+            }
+            catch (FormatException)
+            {
+                fixableExceptions = true;
+            }
 
-            //ok check if we need rebuild
-            if (rm != null && rm.ReadModelVersion != _actualVersion)
+            //ok check if we need rebuild in memory, it happens when the RM changed version
+            //or if we have a fixable exception.
+            if (fixableExceptions || (rm != null && rm.ReadModelVersion != _actualVersion))
             {
                 //We need to update mongo only if the actual signature is greater
                 //than the old signature that we found on the database.
-                Boolean shouldSave = rm.ReadModelVersion < _actualVersion;
+                Boolean shouldSave =  fixableExceptions || rm.ReadModelVersion < _actualVersion;
 
                 //houston, we have a problem, database readmodel is out of sync.
                 rm = await _liveAtomicReadModelProcessor.ProcessAsync<TModel>(id, Int32.MaxValue).ConfigureAwait(false);

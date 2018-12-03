@@ -1,5 +1,7 @@
-﻿using Jarvis.Framework.Tests.EngineTests;
+﻿using Jarvis.Framework.Shared.Helpers;
+using Jarvis.Framework.Tests.EngineTests;
 using Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using NUnit.Framework;
 using System.Linq;
@@ -41,6 +43,31 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             var reloaded = await _sut.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
             Assert.That(reloaded.TouchCount, Is.EqualTo(2));
             Assert.That(reloaded.ReadModelVersion, Is.EqualTo(2));
+        }
+
+        [Test]
+        public async Task Auto_reload_on_serialization_error()
+        {
+            var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
+            var changeset = GenerateCreatedEvent(false);
+            rm.ProcessChangeset(changeset);
+            var evtTouch = GenerateTouchedEvent(false);
+            rm.ProcessChangeset(evtTouch);
+            Assert.That(rm.TouchCount, Is.EqualTo(1));
+            await _sut.UpsertAsync(rm).ConfigureAwait(false);
+
+            //ok now go to the database and alter the document
+            var doc = _mongoBsonCollection.FindOneById(rm.Id);
+            doc ["ExtraProperty"] = 42;
+            _mongoBsonCollection.ReplaceOne(
+                Builders<BsonDocument>.Filter.Eq("_id", rm.Id),
+                doc);
+
+            //I want to reload and autocorrect, reprojecting again everything.
+            GenerateSut();
+            var reloaded = await _sut.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
+            Assert.That(reloaded.TouchCount, Is.EqualTo(1));
+            Assert.That(reloaded.ReadModelVersion, Is.EqualTo(1));
         }
 
         [Test]

@@ -12,6 +12,7 @@ using Jarvis.Framework.Shared.ReadModel;
 using Jarvis.Framework.Shared.ReadModel.Atomic;
 using Jarvis.Framework.Tests.EngineTests;
 using Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using NStore.Core.InMemory;
 using NStore.Core.Persistence;
@@ -29,6 +30,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         protected IMongoDatabase _db;
         protected InMemoryPersistence _persistence;
         protected IMongoCollection<SimpleTestAtomicReadModel> _collection;
+        protected IMongoCollection<BsonDocument> _mongoBsonCollection;
         protected IdentityManager _identityManager;
 
         protected void Init()
@@ -42,6 +44,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             _db.Drop();
 
             _identityManager = new IdentityManager(new CounterService(_db));
+            _mongoBsonCollection = _db.GetCollection<BsonDocument>(CollectionNames.GetCollectionName<SimpleTestAtomicReadModel>());
         }
 
         protected void InitSingleTest()

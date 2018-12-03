@@ -251,7 +251,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 
         #endregion
 
-        #region infrastructure tests
+        #region Infrastructure tests
 
         [Test]
         public async Task Can_be_resolved_with_factory()
