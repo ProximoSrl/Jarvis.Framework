@@ -153,8 +153,11 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
                     {
                         //First event, we need to set some standard informations. These informations
                         //are equal for all the events of this specific changeset.
-                        LastModify = evt.CommitStamp;
-                        LastModificationUser = evt.IssuedBy;
+                        if(evt.CommitStamp != null && evt.IssuedBy != null)
+                        {
+                            LastModify = evt.CommitStamp;
+                            LastModificationUser = evt.IssuedBy;
+                        }
                         AggregateVersion = changeset.AggregateVersion;
                         if (CreationUser == null)
                         {
