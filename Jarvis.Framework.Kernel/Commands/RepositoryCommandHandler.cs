@@ -97,7 +97,7 @@ namespace Jarvis.Framework.Kernel.Commands
             return FindAndModifyAsync(id, a =>
             {
                 callback(a);
-                return RepositoryCommandHandlerCallbackReturnValue.Default;
+                return Task.FromResult(RepositoryCommandHandlerCallbackReturnValue.Default);
             },
             createIfNotExists);
         }
@@ -113,7 +113,7 @@ namespace Jarvis.Framework.Kernel.Commands
         /// <param name="createIfNotExists"></param>
         protected virtual async Task FindAndModifyAsync(
             EventStoreIdentity id,
-            Func<TAggregate, RepositoryCommandHandlerCallbackReturnValue> callback,
+            Func<TAggregate, Task<RepositoryCommandHandlerCallbackReturnValue>> callback,
             bool createIfNotExists = false)
         {
             if (JarvisFrameworkGlobalConfiguration.SingleAggregateRepositoryCacheEnabled)
@@ -132,7 +132,8 @@ namespace Jarvis.Framework.Kernel.Commands
 
                         CheckAggregateVersionForIfVersionEqualTo(repo.Aggregate);
 
-                        var callbackResult = callback(aggregate);
+                        //TODO: Waiting is not a perfect solution, but we cannot await inside a lock.
+                        var callbackResult = callback(aggregate).Result;
                         if (!callbackResult.ShouldNotPersistAggregate)
                         {
                             //TODO: Waiting is not a perfect solution, but we cannot await inside a lock.
@@ -152,7 +153,7 @@ namespace Jarvis.Framework.Kernel.Commands
 
                 CheckAggregateVersionForIfVersionEqualTo(aggregate);
 
-                var callbackResult = callback(aggregate);
+                var callbackResult = await callback(aggregate).ConfigureAwait(false);
                 if (!callbackResult.ShouldNotPersistAggregate)
                 {
                     await Repository.SaveAsync(aggregate, _commitId.ToString(), StoreCommandHeaders).ConfigureAwait(false);
