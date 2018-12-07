@@ -4,17 +4,13 @@ using Castle.Core.Logging;
 using Jarvis.Framework.Shared.Exceptions;
 using Metrics;
 using Metrics.Core;
-using MongoDB.Driver;
 using System;
 using System.ComponentModel;
-using System.Linq;
 using System.Messaging;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.Support
 {
-
 #pragma warning disable S101 // Types should be named in camel case
 
     public class MsmqHealthCheck : HealthCheck
@@ -51,13 +47,15 @@ namespace Jarvis.Framework.Kernel.Support
             {
                 using (var queue = new MessageQueue(_queueName))
                 {
-                    queue.Peek(TimeSpan.FromSeconds(1));
+                    queue.Peek(TimeSpan.FromSeconds(5));
                 }
             }
+#pragma warning disable RCS1075 // Avoid empty catch clause that catches System.Exception.
             catch (Exception)
             {
                 //ignore exception, just peek the queue to force activation
             }
+#pragma warning restore RCS1075 // Avoid empty catch clause that catches System.Exception.
         }
 
         /// <summary>
@@ -87,7 +85,9 @@ namespace Jarvis.Framework.Kernel.Support
 
                 int result = NativeMethods.MQMgmtGetInfo(null, "queue=DIRECT=OS:" + _queueName, ref props);
                 if (result != 0)
+                {
                     throw new Win32Exception(result);
+                }
 
                 if (Marshal.ReadInt32(props.status) != 0)
                 {
