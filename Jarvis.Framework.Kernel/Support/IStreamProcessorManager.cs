@@ -23,15 +23,6 @@ namespace Jarvis.Framework.Kernel.Support
 		Task<T> ProcessAsync<T>(String streamId, Int32 versionUpTo) where T : class, new();
     }
 
-	/// <summary>
-	/// Needed to create <see cref="StreamProcessorManager"/> for a specific
-	/// <see cref="IPersistence"/> persitence.
-	/// </summary>
-	public interface IStreamProcessorManagerFactory
-	{
-		IStreamProcessorManager Create(IPersistence persistence);
-	}
-
 	public class StreamProcessorManager : IStreamProcessorManager
 	{
 		private readonly StreamsFactory _streams;
