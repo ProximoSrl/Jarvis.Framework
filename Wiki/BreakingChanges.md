@@ -2,6 +2,10 @@
 
 Main modification is: Moved framework to .NETStandard. 
 
+## Version 4.3.0
+
+- Removed StreamProcessorManagerFactory, it was a class that is really not used anymore.
+
 ## Version 4.0.0
 
 - Changed TransformForNotification in CollectionWrapper to use also the event that generates change in the readmodel.

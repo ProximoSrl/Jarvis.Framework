@@ -5,6 +5,12 @@ J.A.R.V.I.S. Framework - Proximo srl (c)
 
 Main modification is: Moved framework to .NETStandard. 
 
+### Version 4.3.x
+
+- Atomic readmodel
+- Some command handler features to support draftable
+- Removed StreamProcessorManagerFactory
+
 ### Version 4.2.x
 
 - Added global events for Metrics to allow intercept metrics reporting.
