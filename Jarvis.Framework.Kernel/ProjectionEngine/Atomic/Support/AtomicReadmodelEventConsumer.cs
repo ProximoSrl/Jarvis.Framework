@@ -21,7 +21,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support
         /// <param name="position"></param>
         /// <param name="changeset"></param>
         /// <param name="identity"></param>
-        /// <returns>The instance of the readmoel after modification.</returns>
+        /// <returns>The instance of the readmoel after modification or null if the
+        /// readmodel was not modified.</returns>
         Task<IAtomicReadModel> Handle(
             Int64 position,
             Changeset changeset,
@@ -140,7 +141,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support
                     await _atomicCollectionWrapper.UpdateAsync(rm).ConfigureAwait(false);
                 }
             }
-            return rm;
+            return readmodelChanged ? rm : (IAtomicReadModel) null;
         }
     }
 }
