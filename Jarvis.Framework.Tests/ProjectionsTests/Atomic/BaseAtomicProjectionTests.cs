@@ -268,9 +268,12 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         }
 
         [Test]
-        public async Task Verify_generation_of_notification()
+        public async Task Verify_generation_of_notification_updated()
         {
-            Changeset changeset = await GenerateSomeEvents().ConfigureAwait(false);
+            //Three events all generated in datbase
+            var c1 = await GenerateCreatedEvent(false).ConfigureAwait(false);
+            var c2 = await GenerateTouchedEvent(false).ConfigureAwait(false);
+            var c3 = await GenerateTouchedEvent(false).ConfigureAwait(false);
 
             //And finally check if everything is projected
             _sut = await CreateSutAndStartProjectionEngineAsync(autostart: false).ConfigureAwait(false);
@@ -282,8 +285,35 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _sut.AtomicReadmodelNotifier
-                .Received()
-                .ReadmodelUpdatedAsync(Arg.Any<IAtomicReadModel>(), changeset);
+                .Received(1)
+                .ReadmodelUpdatedAsync(Arg.Any<IAtomicReadModel>(), c2);
+
+            _sut.AtomicReadmodelNotifier
+                .Received(1)
+                .ReadmodelUpdatedAsync(Arg.Any<IAtomicReadModel>(), c3);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+        }
+
+        [Test]
+        public async Task Verify_generation_of_notification_inserted()
+        {
+            //Three events all generated in datbase
+            var c1 = await GenerateCreatedEvent(false).ConfigureAwait(false);
+            var c2 = await GenerateTouchedEvent(false).ConfigureAwait(false);
+            var c3 = await GenerateTouchedEvent(false).ConfigureAwait(false);
+
+            //And finally check if everything is projected
+            _sut = await CreateSutAndStartProjectionEngineAsync(autostart: false).ConfigureAwait(false);
+            _sut.AtomicReadmodelNotifier = Substitute.For<IAtomicReadmodelNotifier>();
+            await _sut.Start().ConfigureAwait(false);
+
+            //wait that commit was projected
+            GetTrackerAndWaitForChangesetToBeProjected("SimpleTestAtomicReadModel");
+
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+            _sut.AtomicReadmodelNotifier
+                .Received(1)
+                .ReadmodelCreatedAsync(Arg.Any<IAtomicReadModel>(), c1);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
         }
 
