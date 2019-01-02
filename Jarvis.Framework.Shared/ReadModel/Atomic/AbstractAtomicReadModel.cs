@@ -164,7 +164,7 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
                             CreationUser = evt.IssuedBy;
                         }
                     }
-
+                    
                     processed |= ProcessEvent(evt);
                     position = evt.CheckpointToken;
                 }

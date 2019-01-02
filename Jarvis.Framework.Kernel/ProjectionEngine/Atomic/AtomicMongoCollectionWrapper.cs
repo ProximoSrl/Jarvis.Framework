@@ -159,15 +159,15 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                     Builders<TModel>.Filter.Eq(_ => _.Id, model.Id)
                 ).Project(
                     Builders<TModel>.Projection
-                        .Include(_ => _.ProjectedPosition)
+                        .Include(_ => _.AggregateVersion)
                         .Include(_ => _.ReadModelVersion)
                 ).SingleOrDefaultAsync().ConfigureAwait(false);
 
             if (existing != null
                 && (
-                    existing["ProjectedPosition"].AsInt64 > model.ProjectedPosition
+                    existing["AggregateVersion"].AsInt64 > model.AggregateVersion
                 || (
-                        existing["ProjectedPosition"].AsInt64 == model.ProjectedPosition
+                        existing["AggregateVersion"].AsInt64 == model.AggregateVersion
                         && existing["ReadModelVersion"].AsInt32 >= model.ReadModelVersion)
                 )
             )
@@ -205,7 +205,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 Builders<TModel>.Filter.And(
                     Builders<TModel>.Filter.Eq(_ => _.Id, model.Id),
                     Builders<TModel>.Filter.Or(
-                        Builders<TModel>.Filter.Lt(_ => _.ProjectedPosition, model.ProjectedPosition),
+                        Builders<TModel>.Filter.Lt(_ => _.AggregateVersion, model.AggregateVersion),
                         Builders<TModel>.Filter.Lt(_ => _.ReadModelVersion, model.ReadModelVersion)
                     ),
                     Builders<TModel>.Filter.Lte(_ => _.ReadModelVersion, model.ReadModelVersion)

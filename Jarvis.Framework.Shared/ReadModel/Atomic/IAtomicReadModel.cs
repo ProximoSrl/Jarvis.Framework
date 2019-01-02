@@ -19,6 +19,11 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
         Int64 ProjectedPosition { get; }
 
         /// <summary>
+        /// Position of the specific stream that was projected.
+        /// </summary>
+        Int64 AggregateVersion { get; }
+
+        /// <summary>
         /// Signature identify when a readmodel change, it should be changed every time
         /// that the readmodel changes.
         /// </summary>
