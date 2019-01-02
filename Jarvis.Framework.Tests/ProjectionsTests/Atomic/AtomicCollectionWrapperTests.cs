@@ -110,6 +110,63 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         }
 
         [Test]
+        public async Task Verify_force_insert_bypass_equal_version()
+        {
+            var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
+            var evt = GenerateCreatedEvent(false);
+            rm.ProcessChangeset(evt);
+            var evtTouch = GenerateTouchedEvent(false);
+            rm.ProcessChangeset(evtTouch);
+            await _sut.UpsertAsync(rm).ConfigureAwait(false);
+
+            //saved at version 2, manually alter data on database.
+            var rmLoaded = await _collection.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
+            rmLoaded.SetPropertyValue(_ => _.TouchCount, 10000);
+            _collection.Save(rmLoaded, rm.Id);
+
+            //now try to resave with insert true, but without any change, no exception, no data changed
+            await _sut.UpsertAsync(rm).ConfigureAwait(false);
+            rmLoaded = await _collection.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
+            Assert.That(rmLoaded.TouchCount, Is.EqualTo(10000));
+
+            //now upsert with force true, this will update data in database no matter what.
+            await _sut.UpsertForceAsync(rm).ConfigureAwait(false);
+            rmLoaded = await _collection.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
+            Assert.That(rmLoaded.TouchCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public async Task Verify_force_insert_honors_readmodel_version()
+        {
+            //Create a readmodel with signature equalto 2.
+            var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
+            SimpleTestAtomicReadModel.FakeSignature = 2;
+            var evt = GenerateCreatedEvent(false);
+            rm.ProcessChangeset(evt);
+            var evtTouch = GenerateTouchedEvent(false);
+            rm.ProcessChangeset(evtTouch);
+            await _sut.UpsertAsync(rm).ConfigureAwait(false);
+
+            //Now alter data on database
+            var rmLoaded = await _collection.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
+            rmLoaded.SetPropertyValue(_ => _.TouchCount, 10000);
+            _collection.Save(rmLoaded, rm.Id);
+
+            //Act: change the signature, downgrade the model
+            rm.SetPropertyValue(_ => _.ReadModelVersion, 1);
+
+            //now try to resave with insert true, but without any change, no exception, no data changed
+            await _sut.UpsertAsync(rm).ConfigureAwait(false);
+            rmLoaded = await _collection.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
+            Assert.That(rmLoaded.TouchCount, Is.EqualTo(10000));
+
+            //now upsert with force true, this should NOT update the reamodel because the version is lower.
+            await _sut.UpsertForceAsync(rm).ConfigureAwait(false);
+            rmLoaded = await _collection.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
+            Assert.That(rmLoaded.TouchCount, Is.EqualTo(10000));
+        }
+
+        [Test]
         public async Task Verify_idempotency_on_old_version()
         {
             SimpleTestAtomicReadModel.FakeSignature = 2;
