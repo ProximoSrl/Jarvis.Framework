@@ -1,4 +1,5 @@
-﻿using Castle.Windsor;
+﻿using Castle.MicroKernel;
+using Castle.Windsor;
 using Jarvis.Framework.Shared.IdentitySupport;
 using Jarvis.Framework.Shared.ReadModel.Atomic;
 using NStore.Domain;
@@ -65,18 +66,18 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support
     /// </summary>
     public class AtomicReadmodelChangesetConsumerFactory : IAtomicReadmodelChangesetConsumerFactory
     {
-        private readonly IWindsorContainer _windsorContainer;
+        private readonly IKernel _kernel;
 
-        public AtomicReadmodelChangesetConsumerFactory(IWindsorContainer windsorContainer)
+        public AtomicReadmodelChangesetConsumerFactory(IKernel kernel)
         {
-            _windsorContainer = windsorContainer;
+            _kernel = kernel;
         }
 
         public IAtomicReadmodelChangesetConsumer CreateFor(Type atomicReadmodelType)
         {
             var genericType = typeof(AtomicReadmodelChangesetConsumer<>);
             var closedType = genericType.MakeGenericType(new Type[] { atomicReadmodelType });
-            return (IAtomicReadmodelChangesetConsumer)_windsorContainer.Resolve(closedType);
+            return (IAtomicReadmodelChangesetConsumer)_kernel.Resolve(closedType);
         }
     }
 }

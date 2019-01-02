@@ -143,7 +143,7 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
         public virtual Boolean ProcessChangeset(Changeset changeset)
         {
             Boolean processed = false;
-            if (changeset.Events.Length > 0 && changeset.GetChunkPosition() > ProjectedPosition)
+            if (changeset.Events.Length > 0 && changeset.AggregateVersion > AggregateVersion)
             {
                 Int64 position = 0;
                 for (int i = 0; i < changeset.Events.Length; i++)
