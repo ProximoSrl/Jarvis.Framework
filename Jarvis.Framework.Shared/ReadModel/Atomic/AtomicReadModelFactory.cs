@@ -10,7 +10,7 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
     /// </summary>
     public class AtomicReadModelFactory : IAtomicReadModelFactory
     {
-        private readonly Dictionary<Type, Func<String, Object>> _factoryFunctions = new Dictionary<Type, Func<String, Object>>();
+        private readonly Dictionary<Type, Func<String, IAtomicReadModel>> _factoryFunctions = new Dictionary<Type, Func<String, IAtomicReadModel>>();
 
         /// <summary>
         /// Create an explicit readmodel given string Id, id should not be accessible
@@ -18,7 +18,7 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        public T Create<T>(String id)
+        public T Create<T>(String id) where T : IAtomicReadModel
         {
             return (T)Create(typeof(T), id);
         }
@@ -30,22 +30,22 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
         /// <param name="type"></param>
         /// <param name="id"></param>
         /// <returns></returns>
-        public Object Create(Type type, String id)
+        public IAtomicReadModel Create(Type type, String id)
         {
-            if (!_factoryFunctions.TryGetValue(type, out Func<String, Object> factoryFunc))
+            if (!_factoryFunctions.TryGetValue(type, out Func<String, IAtomicReadModel> factoryFunc))
             {
                 var constructor = type.GetConstructor(new Type[] { typeof(String) });
-                _factoryFunctions[type] = _ => constructor.CreateInstance(new Object[] { _ });
+                _factoryFunctions[type] = _ => (IAtomicReadModel) constructor.CreateInstance(new Object[] { _ });
             }
-            return _factoryFunctions[type](id);
+            return (IAtomicReadModel) _factoryFunctions[type](id);
         }
 
-        public AtomicReadModelFactory AddFactory<T>(Func<String, Object> function)
+        public AtomicReadModelFactory AddFactory<T>(Func<String, IAtomicReadModel> function)
         {
             return AddFactory(typeof(T), function);
         }
 
-        public AtomicReadModelFactory AddFactory(Type type, Func<String, Object> function)
+        public AtomicReadModelFactory AddFactory(Type type, Func<String, IAtomicReadModel> function)
         {
             _factoryFunctions[type] = function;
             return this;

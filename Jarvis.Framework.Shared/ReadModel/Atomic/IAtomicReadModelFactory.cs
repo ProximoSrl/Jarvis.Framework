@@ -13,7 +13,7 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
         /// <param name="type"></param>
         /// <param name="function"></param>
         /// <returns></returns>
-        AtomicReadModelFactory AddFactory(Type type, Func<String, Object> function);
+        AtomicReadModelFactory AddFactory(Type type, Func<String, IAtomicReadModel> function);
 
         /// <summary>
         /// See <see cref="AddFactory(Type, Func{string, object})"/>
@@ -21,10 +21,10 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
         /// <typeparam name="T"></typeparam>
         /// <param name="function"></param>
         /// <returns></returns>
-        AtomicReadModelFactory AddFactory<T>(Func<String, Object> function);
+        AtomicReadModelFactory AddFactory<T>(Func<String, IAtomicReadModel> function);
 
-        Object Create(Type type, String id);
+        IAtomicReadModel Create(Type type, String id);
 
-        T Create<T>(String id);
+        T Create<T>(String id) where T : IAtomicReadModel;
     }
 }
