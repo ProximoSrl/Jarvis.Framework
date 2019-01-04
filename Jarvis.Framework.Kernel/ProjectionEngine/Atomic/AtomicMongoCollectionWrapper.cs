@@ -60,8 +60,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                )
             );
 
-            var rm = _atomicReadModelFactory.Create<TModel>("NULL");
-            _actualVersion = rm.ReadModelVersion;
+            _actualVersion = _atomicReadModelFactory.GetReamdodelVersion(typeof(TModel));
         }
 
         /// <summary>

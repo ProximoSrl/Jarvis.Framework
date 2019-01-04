@@ -104,22 +104,24 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
             public void StartFixing()
             {
-                _stopped = false;
+                if (_started)
+                    return;
+
+                _started = true;
                 Task.Factory.StartNew(InnerFix);
             }
 
-            private Boolean _stopped;
+            private Boolean _started;
 
             public void StopFixing()
             {
-                _stopped = true;
+                _started = false;
             }
 
             private async Task InnerFix()
             {
                 Int64 fixCheckpoint = 0;
-                var rm = _atomicReadModelFactory.Create<T>("NULL");
-                var actualVersion = rm.ReadModelVersion;
+                var actualVersion = _atomicReadModelFactory.GetReamdodelVersion(typeof(T));
                 Int32 count = 0;
                 //cycle until exit point.
                 while (true)
@@ -146,7 +148,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                         }
                         foreach (var elementToFix in blockList)
                         {
-                            if (_stopped)
+                            if (!_started)
                             {
                                 return;
                             }

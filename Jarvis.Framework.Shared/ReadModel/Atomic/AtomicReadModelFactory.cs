@@ -50,5 +50,11 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
             _factoryFunctions[type] = function;
             return this;
         }
+
+        public int GetReamdodelVersion(Type type)
+        {
+            var reamodel = Create(type, "Fake Id to create an instance to grab readmodel version");
+            return reamodel.ReadModelVersion;
+        }
     }
 }
