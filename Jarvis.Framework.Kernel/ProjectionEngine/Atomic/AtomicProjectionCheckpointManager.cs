@@ -82,7 +82,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// </summary>
         /// <param name="atomicReadmodelName"></param>
         /// <returns></returns>
-        internal long GetCheckpoint(string atomicReadmodelName)
+        public long GetCheckpoint(string atomicReadmodelName)
         {
             if (_inMemoryCheckpoint.TryGetValue(atomicReadmodelName, out var checkpoint))
             {
@@ -136,7 +136,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// Simply return the minimum checkpoint already dispatched.
         /// </summary>
         /// <returns></returns>
-        internal long GetMinimumPositionDispatched()
+        public long GetMinimumPositionDispatched()
         {
             if (_inMemoryCheckpoint.Count == 0)
                 return 0;
@@ -148,7 +148,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// Simply return the minimum checkpoint already dispatched.
         /// </summary>
         /// <returns></returns>
-        internal long GetLastPositionDispatched()
+        public long GetLastPositionDispatched()
         {
             if (_inMemoryCheckpoint.Count == 0)
                 return 0;
