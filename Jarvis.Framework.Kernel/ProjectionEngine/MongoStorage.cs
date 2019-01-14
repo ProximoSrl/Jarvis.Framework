@@ -148,6 +148,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         public async Task<SaveResult> SaveWithVersionAsync(TModel model, int orignalVersion)
         {
+            if (model == null)
+            {
+                throw new ArgumentNullException(nameof(model));
+            }
+
             var result = await _collection.FindOneAndReplaceAsync(
                 Builders<TModel>.Filter.And(
                     Builders<TModel>.Filter.Eq(x => x.Id, model.Id),

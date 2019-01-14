@@ -127,6 +127,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         public async Task InsertAsync(DomainEvent e, TModel model, bool notify = false)
         {
+            if (e == null)
+            {
+                throw new ArgumentNullException(nameof(e));
+            }
+
+            if (model == null)
+            {
+                throw new ArgumentNullException(nameof(model));
+            }
+
             OnSave(model, e, CollectionWrapperOperationType.Insert);
             model.Version = 1;
             model.LastModified = e.CommitStamp;
@@ -184,6 +194,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         public async Task SaveAsync(DomainEvent e, TModel model, bool notify = false)
         {
+            if (e == null)
+            {
+                throw new ArgumentNullException(nameof(e));
+            }
+
+            if (model == null)
+            {
+                throw new ArgumentNullException(nameof(model));
+            }
+
             OnSave(model, e, CollectionWrapperOperationType.Update);
             var orignalVersion = model.Version;
             model.Version++;

@@ -259,6 +259,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         public async Task<SaveResult> SaveWithVersionAsync(TModel model, int orignalVersion)
         {
+            if (model == null)
+            {
+                throw new ArgumentNullException(nameof(model));
+            }
+
             if (_inmemoryCollection.IsActive)
             {
                 // non posso controllare le versioni perché l'istanza è la stessa
