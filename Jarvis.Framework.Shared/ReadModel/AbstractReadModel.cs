@@ -35,8 +35,9 @@ namespace Jarvis.Framework.Shared.ReadModel
 		/// <returns></returns>
 		public bool BuiltFromEvent(DomainEvent evt)
 		{
-			return BuiltFromMessage(evt.MessageId);
-		}
+			return BuiltFromMessage(evt.MessageId)
+                || (JarvisFrameworkGlobalConfiguration.OfflineEventsReadmodelIdempotencyCheck && evt.GetOfflineEventIdList().Intersect(ProcessedEvents).Any());
+        }
 
 		/// <summary>
 		/// This version check only a single message id, does not check for
@@ -46,8 +47,8 @@ namespace Jarvis.Framework.Shared.ReadModel
 		/// <returns></returns>
 		public Boolean BuiltFromMessage(Guid messageId)
 		{
-			return ProcessedEvents.Contains(messageId);
-		}
+            return ProcessedEvents.Contains(messageId);
+        }
 
 		public void AddEvent(Guid id)
 		{
