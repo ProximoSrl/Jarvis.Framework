@@ -23,6 +23,8 @@ using NStore.Core.Streams;
 using System.Collections.Generic;
 using Jarvis.Framework.Shared.Commands;
 using Castle.Core.Logging;
+using Jarvis.Framework.Shared.Logging;
+using Jarvis.Framework.Shared.Support;
 
 namespace Jarvis.Framework.Tests.BusTests
 {
@@ -43,7 +45,7 @@ namespace Jarvis.Framework.Tests.BusTests
             _container = new WindsorContainer();
             String connectionString = ConfigurationManager.ConnectionStrings["log"].ConnectionString;
             var logUrl = new MongoUrl(connectionString);
-            var logClient = new MongoClient(logUrl);
+            var logClient = logUrl.CreateClient();
             var logDb = logClient.GetDatabase(logUrl.DatabaseName);
             _messages = logDb.GetCollection<TrackedMessageModel>("messages");
 

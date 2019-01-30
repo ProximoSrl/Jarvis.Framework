@@ -18,6 +18,7 @@ using System.Threading.Tasks.Dataflow;
 using Jarvis.Framework.Kernel.Engine;
 using Jarvis.Framework.Shared.Logging;
 using Metrics;
+using Jarvis.Framework.Shared.Support;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 {
@@ -386,7 +387,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
         private IMongoCollection<BsonDocument> GetMongoCommitsCollection()
         {
             var url = new MongoUrl(_config.EventStoreConnectionString);
-            var client = new MongoClient(url);
+            var client = url.CreateClient();
             var db = client.GetDatabase(url.DatabaseName);
             return db.GetCollection<BsonDocument>(EventStoreFactory.PartitionCollectionName);
         }
