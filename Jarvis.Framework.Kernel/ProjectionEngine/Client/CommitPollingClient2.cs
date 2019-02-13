@@ -14,7 +14,8 @@ using System.Threading.Tasks.Dataflow;
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 {
     /// <summary>
-    /// Based on the new polling client of NEventStore.
+    /// This was completely rewritten for NEventstore 6 beta then 
+    /// completely re-adapted for NStore.
     /// </summary>
     public class CommitPollingClient2 : ICommitPollingClient
     {
@@ -56,6 +57,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             Status = CommitPollingClientStatus.Stopped;
             _persistence = persistStreams;
             _factory = factory;
+
+            _logger.InfoFormat("Created Commit Polling client id: {0}", id);
         }
 
         public void AddConsumer(String consumerId, Func<IChunk, Task> consumerAction)
@@ -102,12 +105,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             public string Error { get { return _error; } }
             public Boolean Active { get { return _active; } }
 
-            public async Task Consume(IChunk commit)
+            public async Task Consume(IChunk chunk)
             {
                 if (!Active) return; //consumer failed, we need to stop dispatching further commits.
                 try
                 {
-                    await _consumerAction(commit).ConfigureAwait(false);
+                    await _consumerAction(chunk).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
@@ -116,7 +119,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                         _consumerId,
                         ex.Message);
                     _active = false; //no more dispatch to this consumer.
-                    _error = $"Error dispatching {commit.Position}: {ex.ToString()}";
+                    _error = $"Error dispatching {chunk.Position}: {ex.ToString()}";
 
                     //it does not throw, simply stops dispatching commit to this consumer that will be blocked
                 }
@@ -135,6 +138,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             Int64 checkpointTokenFrom,
             Int32 bufferSize)
         {
+            _logger.InfoFormat("CommitPollingClient {0}: Configured starting from {1} buffer {2}", _id, checkpointTokenFrom, bufferSize);
             _bufferSize = bufferSize;
             _lastDispatchedPosition = checkpointTokenFrom - 1;
             LastException = null;
@@ -154,11 +158,19 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         public void Start()
         {
-            if (_innerClient == null)
-                throw new JarvisFrameworkEngineException("Cannot start polling client because you forget to call Configure First");
+            _logger.InfoFormat("CommitPollingClient {0}: start called", _id);
+            if (Status != CommitPollingClientStatus.Polling)
+            {
+                if (_innerClient == null)
+                    throw new JarvisFrameworkEngineException($"CommitPollingClient {_id}: Cannot start polling client because you forget to call Configure First");
 
-            _innerClient.Start();
-            Status = CommitPollingClientStatus.Polling;
+                _innerClient.Start();
+                Status = CommitPollingClientStatus.Polling;
+            }
+            else
+            {
+                _logger.WarnFormat("CommitPollingClient {0}: Start called but client was in status {1}", _id, Status);
+            }
         }
 
         private void RegisterHealthChecks(string pollerName)
@@ -201,20 +213,28 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         public void Stop(Boolean setToFaulted)
         {
-            if (_innerClient == null)
-                throw new JarvisFrameworkEngineException("Cannot stop polling client because you forget to call Configure First");
-
-            if (Status != CommitPollingClientStatus.Polling)
+            _logger.InfoFormat("CommitPollingClient {0}: Stop called, set to faulted {1}", _id, setToFaulted);
+            if (Status == CommitPollingClientStatus.Polling)
             {
-                _logger.Warn($"Cannot stop poller {_id}, poller is in unstoppable status: {Status}");
-                return;
-            }
+                if (_innerClient == null)
+                    throw new JarvisFrameworkEngineException($"CommitPollingClient {_id}: Cannot stop polling client because you forget to call Configure First");
 
-            _innerClient.Stop();
-            CloseEverything();
-            Status = setToFaulted ?
-                CommitPollingClientStatus.Faulted :
-                CommitPollingClientStatus.Stopped;
+                if (Status != CommitPollingClientStatus.Polling)
+                {
+                    _logger.WarnFormat($"CommitPollingClient {0}: Cannot stop poller poller is in unstoppable status: {1}", _id, Status);
+                    return;
+                }
+
+                _innerClient.Stop();
+                CloseEverything();
+                Status = setToFaulted ?
+                    CommitPollingClientStatus.Faulted :
+                    CommitPollingClientStatus.Stopped;
+            }
+            else
+            {
+                _logger.WarnFormat("CommitPollingClient {0}: Stop called but it was not started", _id);
+            }
         }
 
         private void CloseEverything()
@@ -244,6 +264,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         {
             try
             {
+                if (_logger.IsDebugEnabled) _logger.DebugFormat("CommitPollingClient {0}: CommitPollingClient2: Dispatched chunk {1}", _id, chunk.Position);
                 if (_stopRequested.IsCancellationRequested)
                 {
                     CloseTplChain();
@@ -252,7 +273,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
                 if (chunk.PartitionId.StartsWith("system.empty"))
                 {
-                    _logger.DebugFormat("Found empty commit - {0}", chunk.Position);
+                    if (_logger.IsDebugEnabled)  _logger.DebugFormat("CommitPollingClient {0}: CommitPollingClient2: Found empty commit - {1}", _id, chunk.Position);
                 }
                 else
                 {
@@ -291,7 +312,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             }
             catch (Exception ex)
             {
-                _logger.ErrorFormat(ex, "Error in dispatching commit {0} - {1}", chunk.Position, ex.Message);
+                _logger.ErrorFormat(ex, "CommitPollingClient2 {0}: Error in dispatching commit {1} - {2}", _id, chunk.Position, ex.Message);
                 return Task.FromResult(false);
             }
         }

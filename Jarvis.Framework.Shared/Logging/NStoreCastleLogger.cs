@@ -27,10 +27,16 @@ namespace Jarvis.Framework.Shared.Logging
 
 		public void LogDebug(string message, params object[] args)
         {
-            if (args.Length == 0)
-                _logger.Debug(message);
-            else
-                _logger.DebugFormat(message, args);
+            try
+            {
+                if (args.Length == 0)
+                    _logger.Debug(message);
+                else
+                    _logger.DebugFormat(message, args);
+            }
+            catch (Exception)
+            {
+            }
         }
 
         public void LogError(string message, params object[] args)

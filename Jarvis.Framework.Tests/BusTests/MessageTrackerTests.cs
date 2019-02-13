@@ -21,6 +21,8 @@ using Rebus.Config;
 using System.Threading.Tasks;
 using Jarvis.Framework.Shared.Commands;
 using Castle.Core.Logging;
+using Jarvis.Framework.Shared.Logging;
+using Jarvis.Framework.Shared.Support;
 
 namespace Jarvis.Framework.Tests.BusTests
 {
@@ -40,7 +42,7 @@ namespace Jarvis.Framework.Tests.BusTests
             _container.Kernel.ComponentRegistered += Kernel_ComponentRegistered;
             String connectionString = ConfigurationManager.ConnectionStrings["log"].ConnectionString;
             var rebusUrl = new MongoUrl(connectionString);
-            var rebusClient = new MongoClient(rebusUrl);
+            var rebusClient = rebusUrl.CreateClient();
             var rebusDb = rebusClient.GetDatabase(rebusUrl.DatabaseName);
             _messages = rebusDb.GetCollection<TrackedMessageModel>("messages");
             MongoDbMessagesTracker tracker = new MongoDbMessagesTracker(rebusDb);

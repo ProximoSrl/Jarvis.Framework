@@ -1,4 +1,6 @@
 ﻿using Jarvis.Framework.Shared.Exceptions;
+using Jarvis.Framework.Shared.Logging;
+using Jarvis.Framework.Shared.Support;
 using MongoDB.Bson;
 using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
@@ -128,18 +130,24 @@ namespace Jarvis.Framework.Shared.Helpers
         public static Boolean CheckConnection(String connection)
         {
             var url = new MongoUrl(connection);
-            var client = new MongoClient(url);
+            var client = url.CreateClient();
             return CheckConnection(client);
         }
 
+        /// <summary>
+        /// Simple class used to check if connection with mongo is ok or if the 
+        /// cluster cannot be contacted.
+        /// </summary>
+        /// <param name="client"></param>
+        /// <returns></returns>
         public static bool CheckConnection(IMongoClient client)
         {
             Task.Factory.StartNew(() => client.ListDatabases()); //forces a database connection
             Int32 spinCount = 0;
             ClusterState clusterState;
 
-            while ((clusterState = client.Cluster.Description.State) != ClusterState.Connected &&
-                spinCount++ < 100)
+            while ((clusterState = client.Cluster.Description.State) != ClusterState.Connected
+                && spinCount++ < 100)
             {
                 Thread.Sleep(20);
             }

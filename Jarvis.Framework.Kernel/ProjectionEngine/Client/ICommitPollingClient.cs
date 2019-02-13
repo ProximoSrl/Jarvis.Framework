@@ -5,6 +5,9 @@ using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 {
+    /// <summary>
+    /// An abstractio nof a 
+    /// </summary>
     public interface ICommitPollingClient
     {
         void Configure(

@@ -110,5 +110,11 @@ namespace Jarvis.Framework.Tests.EngineTests
 
             Assert.That(identity, Is.EqualTo(new SampleAggregateId(1)));
         }
+
+        [Test]
+        public void Verify_not_parse_extra_char()
+        {
+            Assert.Throws<FormatException>(() => new SampleAggregateId("SampleAggregate_20|458ca8a2-d165-45ba-8403-4c74c01e7fe1"));
+        }
     }
 }

@@ -32,5 +32,12 @@ namespace Jarvis.Framework.Shared.Messages
 		/// will contain the list of events that were generated offline due to that command.
 		/// </summary>
 		public const String OfflineEvents = "offline-events";
+
+        /// <summary>
+        /// With enties I do not know where to distpach a command directly from its type, so 
+        /// we can add this header to a command to instruct <see cref="RebusCommandBus"/> to 
+        /// dispatch the command to a specific queue.
+        /// </summary>
+        public const String DestinationAddress = "destination-address";
     }
 }

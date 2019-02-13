@@ -7,6 +7,7 @@ using Castle.Core.Logging;
 using Jarvis.Framework.Shared.Messages;
 using Rebus.Bus;
 using System.Threading.Tasks;
+using Jarvis.Framework.Shared.Exceptions;
 
 namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
 {
@@ -25,15 +26,41 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
         public async Task<ICommand> SendAsync(ICommand command, string impersonatingUser = null)
         {
             PrepareCommand(command, impersonatingUser);
-            await _bus.Send(command).ConfigureAwait(false);
+            await SendCommand(command).ConfigureAwait(false);
             return command;
+        }
+
+        private Task SendCommand(ICommand command)
+        {
+            var forcedDispatchQueue = command.GetContextData(MessagesConstants.DestinationAddress);
+            if (!String.IsNullOrEmpty(forcedDispatchQueue))
+            {
+                return _bus.Advanced.Routing.Send(forcedDispatchQueue, command);
+            }
+            else
+            {
+                return _bus.Send(command);
+            }
         }
 
         public async Task<ICommand> SendLocalAsync(ICommand command, string impersonatingUser = null)
         {
             PrepareCommand(command, impersonatingUser);
-            await _bus.SendLocal(command).ConfigureAwait(false);
+            await SendCommandLocal(command).ConfigureAwait(false);
             return command;
+        }
+
+        private Task SendCommandLocal(ICommand command)
+        {
+            var forcedDispatchQueue = command.GetContextData(MessagesConstants.DestinationAddress);
+            if (!String.IsNullOrEmpty(forcedDispatchQueue))
+            {
+                throw new JarvisFrameworkEngineException("Cannot use a DestinationAddress with a send local. It is allowed only with a standard send.");
+            }
+            else
+            {
+                return _bus.SendLocal(command);
+            }
         }
 
         public async Task<ICommand> DeferAsync(TimeSpan delay, ICommand command, string impersonatingUser = null)
@@ -42,10 +69,15 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
 
             if (delay <= TimeSpan.Zero)
             {
-                await _bus.Send(command).ConfigureAwait(false);
+                await SendCommand(command).ConfigureAwait(false);
             }
             else
             {
+                var forcedDispatchQueue = command.GetContextData(MessagesConstants.DestinationAddress);
+                if (!String.IsNullOrEmpty(forcedDispatchQueue))
+                {
+                    throw new JarvisFrameworkEngineException("Cannot use a DestinationAddress with a deferred message. It is allowed only with a standard send.");
+                }
                 await _bus.Defer(delay, command).ConfigureAwait(false);
             }
 

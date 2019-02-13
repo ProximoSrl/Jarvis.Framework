@@ -12,6 +12,8 @@ using Jarvis.Framework.Shared.Helpers;
 using System.Threading;
 using Jarvis.Framework.Shared.Exceptions;
 using Jarvis.Framework.Shared.Store;
+using Jarvis.Framework.Shared.Logging;
+using Jarvis.Framework.Shared.Support;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 {
@@ -37,7 +39,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 			_logger = logger;
 
 			var url = new MongoUrl(_config.EventStoreConnectionString);
-			var client = new MongoClient(url);
+            var client = url.CreateClient();
 			var _mongoDatabase = client.GetDatabase(url.DatabaseName);
 
 			_unwindedEventCollection = _mongoDatabase.GetCollection<UnwindedDomainEvent>("UnwindedEvents");

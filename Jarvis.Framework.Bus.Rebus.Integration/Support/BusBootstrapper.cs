@@ -19,6 +19,8 @@ using Rebus.Retry;
 using Rebus.Transport;
 using Rebus.Retry.Simple;
 using Rebus.Routing.TypeBased;
+using Jarvis.Framework.Shared.Logging;
+using Jarvis.Framework.Shared.Support;
 
 namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 {
@@ -70,8 +72,9 @@ at least configure one assembly with messages to be dispatched.";
 			_container = container;
             JarvisRebusConfiguration = configuration;
 			var mongoUrl = new MongoUrl(configuration.ConnectionString);
-			var mongoClient = new MongoClient(mongoUrl);
-			_mongoDatabase = mongoClient.GetDatabase(mongoUrl.DatabaseName);
+            var mongoClient = mongoUrl.CreateClient();
+
+            _mongoDatabase = mongoClient.GetDatabase(mongoUrl.DatabaseName);
 			Logger = NullLogger.Instance;
 
 			// PRXM

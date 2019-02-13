@@ -1,17 +1,20 @@
+using Jarvis.Framework.Shared.IdentitySupport;
+using Jarvis.Framework.Shared.Logging;
+using Jarvis.Framework.Shared.MultitenantSupport;
+using Jarvis.Framework.Shared.Support;
+using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
-using Jarvis.Framework.Shared.IdentitySupport;
-using Jarvis.Framework.Shared.MultitenantSupport;
-using MongoDB.Driver;
 
 namespace Jarvis.Framework.Kernel.MultitenantSupport
 {
-    public class TenantSettings 
+    public class TenantSettings
     {
         public TenantId TenantId { get; private set; }
         public ICounterService CounterService { get; private set; }
 
         readonly IDictionary<string, object> _settings;
+
         public TenantSettings(TenantId tenantId)
         {
             TenantId = tenantId;
@@ -30,16 +33,19 @@ namespace Jarvis.Framework.Kernel.MultitenantSupport
 
         public virtual string GetConnectionString(string name)
         {
-            var connectionString = Get<string>("connectionstring."+name);
-            if(connectionString == null)
-                throw new Exception("Connection string "+ name + " not found");
+            var connectionString = Get<string>("connectionstring." + name);
+            if (connectionString == null)
+            {
+                throw new Exception("Connection string " + name + " not found");
+            }
+
             return connectionString;
         }
 
-        protected IMongoDatabase GetDatabase(string connectionStringName)
+        protected virtual IMongoDatabase GetDatabase(string connectionStringName)
         {
             var url = new MongoUrl(GetConnectionString(connectionStringName));
-            var client = new MongoClient(url);
+            var client = url.CreateClient();
             return client.GetDatabase(url.DatabaseName);
         }
 
@@ -50,7 +56,7 @@ namespace Jarvis.Framework.Kernel.MultitenantSupport
 
         public T Get<T>(string key)
         {
-            return (T) _settings[key];
+            return (T)_settings[key];
         }
     }
 }

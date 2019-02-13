@@ -97,7 +97,7 @@ namespace Jarvis.Framework.Kernel.Support
                         .Match(pipeline[0])
                         .Project(pipeline[1])
                         .Group(pipeline[2])
-                        .ToList();
+                        .ToList(); 
                     foreach (BsonDocument metric in allCheckpoints)
                     {
                         var slotName = metric["_id"].AsString;

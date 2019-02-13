@@ -71,13 +71,16 @@ namespace Jarvis.Framework.Shared.Events
         public Int64 Version { get; private set; }
 
         /// <summary>
-        /// Commit checkpoint
+        /// With migration to NStore this is the position of the
+        /// Chunk in the stream. <see cref="NStore.Core.Persistence.IChunk.Position"/>
         /// </summary>
         [BsonIgnore]
         public Int64 CheckpointToken { get; private set; }
 
         /// <summary>
-        /// Costruttore 
+        /// Constructor of the domain event, it automatically generate 
+        /// the id of the event. When the event is deserialized, the 
+        /// id will be set in corresponding property.
         /// </summary>
         protected DomainEvent()
         {

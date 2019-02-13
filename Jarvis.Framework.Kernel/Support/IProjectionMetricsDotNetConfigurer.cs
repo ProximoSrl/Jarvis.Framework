@@ -3,7 +3,12 @@ using System.Collections.Generic;
 
 namespace Jarvis.Framework.Kernel.Support
 {
-    public interface IProjectionStatusLoader
+    public interface IProjectionTargetCheckpointLoader
+    {
+        Int64 GetMaxCheckpointToDispatch();
+    }
+
+    public interface IProjectionStatusLoader : IProjectionTargetCheckpointLoader
     {
         /// <summary>
         /// retrieve a set of metrics for slot that gives the idea
@@ -13,8 +18,6 @@ namespace Jarvis.Framework.Kernel.Support
         IEnumerable<SlotStatus> GetSlotMetrics();
 
         SlotStatus GetSlotMetric(String slotName);
-
-        Int64 GetMaxCheckpointToDispatch();
     }
 
     public class SlotStatus

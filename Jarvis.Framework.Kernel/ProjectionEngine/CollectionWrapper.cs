@@ -31,9 +31,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             _pollableSecondaryIndexCounter = DateTime.UtcNow.Ticks;
         }
 
-        private string FormatCollectionWrapperExceptionMessage(string message)
+        private string FormatCollectionWrapperExceptionMessage(string message, DomainEvent evt)
         {
-            return $"CollectionWrapper [{typeof(TModel).Name}] - {message}";
+            if (evt == null)
+            {
+                return $"CollectionWrapper [{typeof(TModel).Name}] - {message}";
+            }
+            else
+            {
+                return $"CollectionWrapper [{typeof(TModel).Name}] Event Position [{evt.CheckpointToken}] Event Type [{evt.GetType().Name}]- {message}";
+            }
         }
 
         /// <summary>
@@ -50,7 +57,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             bool notifyOnlyLastEventOfCommit = false)
         {
             if (this.Projection != null)
-                throw new CollectionWrapperException(FormatCollectionWrapperExceptionMessage("already attached to projection."));
+                throw new CollectionWrapperException(FormatCollectionWrapperExceptionMessage("already attached to projection.", null));
 
             Projection = projection;
             NotifySubscribers = enableNotifications;
@@ -120,6 +127,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         public async Task InsertAsync(DomainEvent e, TModel model, bool notify = false)
         {
+            if (e == null)
+            {
+                throw new ArgumentNullException(nameof(e));
+            }
+
+            if (model == null)
+            {
+                throw new ArgumentNullException(nameof(model));
+            }
+
             OnSave(model, e, CollectionWrapperOperationType.Insert);
             model.Version = 1;
             model.LastModified = e.CommitStamp;
@@ -132,7 +149,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
                 if (!result.Ok)
                 {
-                    throw new CollectionWrapperException(FormatCollectionWrapperExceptionMessage("Error writing on mongodb :" + result.ErrorMessage));
+                    throw new CollectionWrapperException(FormatCollectionWrapperExceptionMessage("Error writing on mongodb :" + result.ErrorMessage, e));
                 }
             }
             catch (MongoException ex)
@@ -144,7 +161,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 if (saved.BuiltFromEvent(e))
                     return;
 
-                throw new CollectionWrapperException(FormatCollectionWrapperExceptionMessage("Readmodel created by two different events!"));
+                throw new CollectionWrapperException(FormatCollectionWrapperExceptionMessage("Readmodel created by two different events!", e));
             }
 
             if (ShouldSendNotification(e, notify))
@@ -177,6 +194,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         public async Task SaveAsync(DomainEvent e, TModel model, bool notify = false)
         {
+            if (e == null)
+            {
+                throw new ArgumentNullException(nameof(e));
+            }
+
+            if (model == null)
+            {
+                throw new ArgumentNullException(nameof(model));
+            }
+
             OnSave(model, e, CollectionWrapperOperationType.Update);
             var orignalVersion = model.Version;
             model.Version++;
@@ -186,7 +213,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             var result = await _storage.SaveWithVersionAsync(model, orignalVersion).ConfigureAwait(false);
 
             if (!result.Ok)
-                throw new CollectionWrapperException(FormatCollectionWrapperExceptionMessage("Concurency exception"));
+                throw new CollectionWrapperException(FormatCollectionWrapperExceptionMessage("Concurency exception", e));
 
             if (ShouldSendNotification(e, notify))
             {
@@ -262,7 +289,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
             var result = await _storage.DeleteAsync(id).ConfigureAwait(false);
             if (!result.Ok)
-                throw new CollectionWrapperException(FormatCollectionWrapperExceptionMessage(string.Format("Delete error on {0} :: {1}", typeof(TModel).FullName, id)));
+                throw new CollectionWrapperException(FormatCollectionWrapperExceptionMessage(string.Format("Delete error on {0} :: {1}", typeof(TModel).FullName, id), e));
 
             if (result.DocumentsAffected == 1 && ShouldSendNotification(e, notify))
             {
@@ -322,7 +349,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         private void ThrowIfNotAttached()
         {
             if (Projection == null)
-                throw new CollectionWrapperException(FormatCollectionWrapperExceptionMessage(string.Format("Projection not attached to {0}", this.GetType().FullName)));
+                throw new CollectionWrapperException(FormatCollectionWrapperExceptionMessage(string.Format("Projection not attached to {0}", this.GetType().FullName), null));
         }
 
         public Task RebuildEndedAsync()
