@@ -11,14 +11,14 @@ namespace Jarvis.Framework.Shared.Support
     /// To avoid direct dependency from Application insight this is the interface
     /// that should be implemneted 
     /// </summary>
-    public interface IMongoQueryInterptorConsumer
+    public interface IMongoQueryInterceptorConsumer
     {
         void TrackMongoOperation(Boolean succeeded, String commandType, String commandDescription, TimeSpan duration, Exception exception);
     }
 
-    public class NullMongoQueryInterptorConsumer : IMongoQueryInterptorConsumer
+    public class NullMongoQueryInterptorConsumer : IMongoQueryInterceptorConsumer
     {
-        public static IMongoQueryInterptorConsumer Instance = new NullMongoQueryInterptorConsumer();
+        public static IMongoQueryInterceptorConsumer Instance = new NullMongoQueryInterptorConsumer();
 
         private NullMongoQueryInterptorConsumer()
         {
@@ -34,7 +34,7 @@ namespace Jarvis.Framework.Shared.Support
     /// </summary>
     public static class MongoQueryInterceptorExtension
     {
-        public static IMongoQueryInterptorConsumer MongoQueryInterptorConsumer = NullMongoQueryInterptorConsumer.Instance;
+        public static IMongoQueryInterceptorConsumer MongoQueryInterptorConsumer = NullMongoQueryInterptorConsumer.Instance;
 
         public static IMongoClient CreateClient(this MongoUrl url)
         {
