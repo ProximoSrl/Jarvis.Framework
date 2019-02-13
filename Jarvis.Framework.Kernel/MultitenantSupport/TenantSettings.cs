@@ -1,5 +1,7 @@
 using Jarvis.Framework.Shared.IdentitySupport;
+using Jarvis.Framework.Shared.Logging;
 using Jarvis.Framework.Shared.MultitenantSupport;
+using Jarvis.Framework.Shared.Support;
 using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
@@ -43,7 +45,7 @@ namespace Jarvis.Framework.Kernel.MultitenantSupport
         protected virtual IMongoDatabase GetDatabase(string connectionStringName)
         {
             var url = new MongoUrl(GetConnectionString(connectionStringName));
-            var client = new MongoClient(url);
+            var client = url.CreateClient();
             return client.GetDatabase(url.DatabaseName);
         }
 

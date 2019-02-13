@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 namespace Jarvis.Framework.Kernel.Events
 {
     /// <summary>
-    /// Abstract class that should implement a projection
+    /// Abstract class that should be used to implement all projections.
     /// </summary>
     public abstract class AbstractProjection : IProjection
     {

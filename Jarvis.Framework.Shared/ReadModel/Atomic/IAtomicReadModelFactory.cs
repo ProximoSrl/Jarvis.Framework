@@ -13,7 +13,7 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
         /// <param name="type"></param>
         /// <param name="function"></param>
         /// <returns></returns>
-        AtomicReadModelFactory AddFactory(Type type, Func<String, Object> function);
+        AtomicReadModelFactory AddFactory(Type type, Func<String, IAtomicReadModel> function);
 
         /// <summary>
         /// See <see cref="AddFactory(Type, Func{string, object})"/>
@@ -21,10 +21,29 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
         /// <typeparam name="T"></typeparam>
         /// <param name="function"></param>
         /// <returns></returns>
-        AtomicReadModelFactory AddFactory<T>(Func<String, Object> function);
+        AtomicReadModelFactory AddFactory<T>(Func<String, IAtomicReadModel> function);
 
-        Object Create(Type type, String id);
+        /// <summary>
+        /// Create an instance of <see cref="IAtomicReadModel"/> based on Type and Id
+        /// </summary>
+        /// <param name="type"></param>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        IAtomicReadModel Create(Type type, String id);
 
-        T Create<T>(String id);
+        /// <summary>
+        /// Create an instance of <see cref="IAtomicReadModel"/> based on Type and Id
+        /// </summary>
+        /// <param name="type"></param>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        T Create<T>(String id) where T : IAtomicReadModel;
+
+        /// <summary>
+        /// Get readmodel version associated with <see cref="IAtomicReadModel"/> of type <paramref name="type"/>
+        /// </summary>
+        /// <param name="type"></param>
+        /// <returns></returns>
+        Int32 GetReamdodelVersion(Type type);
     }
 }

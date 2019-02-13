@@ -11,11 +11,19 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
     public interface IAtomicReadmodelNotifier
     {
         /// <summary>
+        /// This method will be called when the readmodel will be creae
+        /// </summary>
+        /// <param name="atomicReadModel"></param>
+        /// <param name="changeset"></param>
+        /// <returns></returns>
+        Task ReadmodelCreatedAsync(IAtomicReadModel atomicReadModel, Changeset changeset);
+
+        /// <summary>
         /// This method will be called by projection service after an event is projected.
         /// </summary>
         /// <param name="atomicReadModel"></param>
         /// <param name="changeset"></param>
-         Task ReadmodelUpdatedAsync(IAtomicReadModel atomicReadModel, Changeset changeset);
+        Task ReadmodelUpdatedAsync(IAtomicReadModel atomicReadModel, Changeset changeset);
     }
 
     /// <summary>
@@ -23,6 +31,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
     /// </summary>
     public class NullAtomicReadmodelNotifier : IAtomicReadmodelNotifier
     {
+        public Task ReadmodelCreatedAsync(IAtomicReadModel atomicReadModel, Changeset changeset)
+        {
+            return Task.CompletedTask;
+        }
+
         public Task ReadmodelUpdatedAsync(IAtomicReadModel atomicReadModel, Changeset changeset)
         {
             return Task.CompletedTask;

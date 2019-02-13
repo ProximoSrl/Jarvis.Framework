@@ -1,12 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared
 {
-    public class JarvisFrameworkGlobalConfiguration
+    public static class JarvisFrameworkGlobalConfiguration
     {
         public static Boolean MetricsEnabled { get; private set; }
 
@@ -17,6 +13,8 @@ namespace Jarvis.Framework.Shared
         /// same aggregate.
         /// </summary>
         public static Boolean SingleAggregateRepositoryCacheEnabled { get; private set; }
+
+        public static Boolean OfflineEventsReadmodelIdempotencyCheck { get; private set; }
 
         static JarvisFrameworkGlobalConfiguration()
         {
@@ -42,6 +40,16 @@ namespace Jarvis.Framework.Shared
         public static void EnableSingleAggregateRepositoryCache()
         {
             SingleAggregateRepositoryCacheEnabled = true;
+        }
+
+        public static void EnableOfflineEventsReadmodelIdempotencyCheck()
+        {
+            OfflineEventsReadmodelIdempotencyCheck = true;
+        }
+
+        public static void DisableOfflineEventsReadmodelIdempotencyCheck()
+        {
+            OfflineEventsReadmodelIdempotencyCheck = false;
         }
     }
 }

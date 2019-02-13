@@ -92,8 +92,8 @@ namespace Jarvis.Framework.Kernel.Support
                 //try to create an instance to grab the version
                 try
                 {
-                    var rm = (IAtomicReadModel) _readModelFactory.Create(readModelType, "NULL");
-                    Metric.Gauge("versions-behind-" + name, () => _versionaLoader.CountReadModelToUpdateByName(name, rm.ReadModelVersion), Unit.Items);
+                    var readmodelVersion = _readModelFactory.GetReamdodelVersion(readModelType);
+                    Metric.Gauge("versions-behind-" + name, () => _versionaLoader.CountReadModelToUpdateByName(name, readmodelVersion), Unit.Items);
                 }
                 catch (Exception ex)
                 {

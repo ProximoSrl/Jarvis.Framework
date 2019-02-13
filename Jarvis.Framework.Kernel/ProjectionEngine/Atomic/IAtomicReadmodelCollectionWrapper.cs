@@ -36,6 +36,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         where TModel : IAtomicReadModel
     {
         /// <summary>
+        /// Insert or update a readmodel instance, avoid any AggregateVersion check, it will
+        /// overwrite the value on the database even if the AggregateVersion of <paramref name="model"/> is
+        /// lower than the version on disk
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <remarks>Readmodel global signature check is always performed.</remarks>
+        Task UpsertForceAsync(TModel model);
+
+        /// <summary>
         /// Insert or update a readmodel instance, perform check for idempotency and
         /// readmodel versioning.
         /// </summary>

@@ -5,6 +5,8 @@ using Jarvis.Framework.Shared.ReadModel;
 using MongoDB.Driver;
 using System.Linq;
 using Jarvis.Framework.Tests.BusTests.MessageFolder;
+using Jarvis.Framework.Shared.Logging;
+using Jarvis.Framework.Shared.Support;
 
 namespace Jarvis.Framework.Tests.BusTests
 {
@@ -19,7 +21,7 @@ namespace Jarvis.Framework.Tests.BusTests
         {
             String connectionString = ConfigurationManager.ConnectionStrings["log"].ConnectionString;
             var logUrl = new MongoUrl(connectionString);
-            var logClient = new MongoClient(logUrl);
+            var logClient = logUrl.CreateClient();
             var logDb = logClient.GetDatabase(logUrl.DatabaseName);
             sut = new MongoDbMessagesTracker(logDb);
             _messages = logDb.GetCollection<TrackedMessageModel>("messages");

@@ -52,6 +52,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         Task<InsertResult> InsertAsync(TModel model);
 
+        /// <summary>
+        /// This saves a readmodel only if the version on the database is equal to the original
+        /// version that we read
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="orignalVersion"></param>
+        /// <returns></returns>
         Task<SaveResult> SaveWithVersionAsync(TModel model, int orignalVersion);
 
         Task<DeleteResult> DeleteAsync(TKey id);

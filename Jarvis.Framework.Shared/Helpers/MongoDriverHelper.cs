@@ -1,4 +1,6 @@
 ﻿using Jarvis.Framework.Shared.Exceptions;
+using Jarvis.Framework.Shared.Logging;
+using Jarvis.Framework.Shared.Support;
 using MongoDB.Bson;
 using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
@@ -128,7 +130,7 @@ namespace Jarvis.Framework.Shared.Helpers
         public static Boolean CheckConnection(String connection)
         {
             var url = new MongoUrl(connection);
-            var client = new MongoClient(url);
+            var client = url.CreateClient();
             return CheckConnection(client);
         }
 

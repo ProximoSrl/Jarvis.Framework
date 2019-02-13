@@ -60,8 +60,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                )
             );
 
-            var rm = _atomicReadModelFactory.Create<TModel>("NULL");
-            _actualVersion = rm.ReadModelVersion;
+            _actualVersion = _atomicReadModelFactory.GetReamdodelVersion(typeof(TModel));
         }
 
         /// <summary>
@@ -95,7 +94,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             {
                 //We need to update mongo only if the actual signature is greater
                 //than the old signature that we found on the database.
-                Boolean shouldSave =  fixableExceptions || rm.ReadModelVersion < _actualVersion;
+                Boolean shouldSave = fixableExceptions || rm.ReadModelVersion < _actualVersion;
 
                 //houston, we have a problem, database readmodel is out of sync.
                 rm = await _liveAtomicReadModelProcessor.ProcessAsync<TModel>(id, Int32.MaxValue).ConfigureAwait(false);
@@ -122,7 +121,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             var rmsResult = new List<TModel>();
             foreach (var rm in rms.ToEnumerable())
             {
-                if(rm.ReadModelVersion != _actualVersion)
+                if (rm.ReadModelVersion != _actualVersion)
                 {
                     rmsResult.Add(await FindOneByIdAsync(rm.Id).ConfigureAwait(false));
                 }
@@ -134,6 +133,20 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             return rmsResult;
         }
 
+        /// <summary>
+        /// Perform an upsert without <see cref="AbstractAtomicReadModel.AggregateVersion"/> check.
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        public Task UpsertForceAsync(TModel model)
+        {
+            return UpsertAsync(model, false);
+        }
+
+        public Task UpsertAsync(TModel model)
+        {
+            return UpsertAsync(model, true);
+        }
 
         /// <summary>
         /// This can be tricky, we need to save and honor idempotency in the more efficient
@@ -141,7 +154,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
-        public async Task UpsertAsync(TModel model)
+        private async Task UpsertAsync(TModel model, Boolean performAggregateVersionCheck)
         {
             if (String.IsNullOrEmpty(model.Id))
             {
@@ -159,15 +172,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                     Builders<TModel>.Filter.Eq(_ => _.Id, model.Id)
                 ).Project(
                     Builders<TModel>.Projection
-                        .Include(_ => _.ProjectedPosition)
+                        .Include(_ => _.AggregateVersion)
                         .Include(_ => _.ReadModelVersion)
                 ).SingleOrDefaultAsync().ConfigureAwait(false);
 
-            if (existing != null
+            if (performAggregateVersionCheck
+                && existing != null
                 && (
-                    existing["ProjectedPosition"].AsInt64 > model.ProjectedPosition
+                    existing["AggregateVersion"].AsInt64 > model.AggregateVersion
                 || (
-                        existing["ProjectedPosition"].AsInt64 == model.ProjectedPosition
+                        existing["AggregateVersion"].AsInt64 == model.AggregateVersion
                         && existing["ReadModelVersion"].AsInt32 >= model.ReadModelVersion)
                 )
             )
@@ -191,25 +205,36 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
             //ok if we reach here, we incurr in concurrent exception, a record is alreay
             //present and inserted between the 
-            await UpdateAsync(model).ConfigureAwait(false);
+            await UpdateAsync(model, performAggregateVersionCheck).ConfigureAwait(false);
         }
 
         public Task UpdateAsync(TModel model)
+        {
+            return UpdateAsync(model, true);
+        }
+
+        public Task UpdateAsync(TModel model, Boolean performAggregateVersionCheck)
         {
             if (model.ModifiedWithExtraStreamEvents)
             {
                 return Task.CompletedTask;
             }
 
-            return _collection.FindOneAndReplaceAsync(
-                Builders<TModel>.Filter.And(
+            var filter = Builders<TModel>.Filter.And(
                     Builders<TModel>.Filter.Eq(_ => _.Id, model.Id),
-                    Builders<TModel>.Filter.Or(
-                        Builders<TModel>.Filter.Lt(_ => _.ProjectedPosition, model.ProjectedPosition),
-                        Builders<TModel>.Filter.Lt(_ => _.ReadModelVersion, model.ReadModelVersion)
-                    ),
                     Builders<TModel>.Filter.Lte(_ => _.ReadModelVersion, model.ReadModelVersion)
-                ),
+                );
+
+            if (performAggregateVersionCheck)
+            {
+                filter &= Builders<TModel>.Filter.Or(
+                        Builders<TModel>.Filter.Lt(_ => _.AggregateVersion, model.AggregateVersion),
+                        Builders<TModel>.Filter.Lt(_ => _.ReadModelVersion, model.ReadModelVersion)
+                    );
+            }
+
+            return _collection.FindOneAndReplaceAsync(
+                filter,
                 model, new FindOneAndReplaceOptions<TModel>()
                 {
                     ReturnDocument = ReturnDocument.After

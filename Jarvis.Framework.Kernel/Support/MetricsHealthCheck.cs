@@ -1,4 +1,6 @@
-﻿using Metrics;
+﻿using Jarvis.Framework.Shared.Logging;
+using Jarvis.Framework.Shared.Support;
+using Metrics;
 using Metrics.Core;
 using MongoDB.Driver;
 using System;
@@ -43,7 +45,7 @@ namespace Jarvis.Framework.Kernel.Support
             try
             {
                 var url = new MongoUrl(_serverUrl);
-                var client = new MongoClient(url);
+                var client = url.CreateClient();
                 client.ListDatabases();
 
                 var state = client.Cluster.Description.State;

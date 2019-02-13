@@ -283,7 +283,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             return await GenerateTouchedEvent(false).ConfigureAwait(false);
         }
 
-        private static void SetBasePropertiesToEvent(DomainEvent evt, string issuedBy)
+        protected static void SetBasePropertiesToEvent(DomainEvent evt, string issuedBy)
         {
             var context = new Dictionary<String, Object>();
             context.Add(MessagesConstants.UserId, issuedBy);

@@ -63,9 +63,25 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 		public enum ProjectionChangeType
 		{
 			None = 0,
+            /// <summary>
+            /// This is a new projection that have not record in checkpoints collection
+            /// </summary>
 			NewProjection = 1,
+
+            /// <summary>
+            /// This projection was moved to a new slot
+            /// </summary>
 			SlotChange = 2,
+
+            /// <summary>
+            /// This projection changed signature
+            /// </summary>
 			SignatureChange = 4,
+
+            /// <summary>
+            /// this projection is present in checkpoint, but is not present anymore
+            /// in code.
+            /// </summary>
 			Missing = 8,
 		}
 	}

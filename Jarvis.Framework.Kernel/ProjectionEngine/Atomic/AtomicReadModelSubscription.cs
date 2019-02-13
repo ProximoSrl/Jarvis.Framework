@@ -11,7 +11,7 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
     /// atomic readmodel.
     /// </summary>
     /// <typeparam name="TModel"></typeparam>
-    internal class AtomicReadModelSubscription<TModel> : ISubscription
+    public sealed class AtomicReadModelSubscription<TModel> : ISubscription
         where TModel : IAtomicReadModel
     {
         private readonly ICommitEnhancer _commitEnhancer;

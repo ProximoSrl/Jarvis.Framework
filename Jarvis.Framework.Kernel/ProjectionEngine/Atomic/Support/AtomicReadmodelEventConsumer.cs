@@ -11,59 +11,6 @@ using System.Threading.Tasks;
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support
 {
     /// <summary>
-    /// Helper class to consume Changeset projected by projection engin.
-    /// </summary>
-    public interface IAtomicReadmodelChangesetConsumer
-    {
-        /// <summary>
-        /// Simple consume a changeset applying it to the correct readmodel.
-        /// </summary>
-        /// <param name="position"></param>
-        /// <param name="changeset"></param>
-        /// <param name="identity"></param>
-        /// <returns>The instance of the readmoel after modification.</returns>
-        Task<IAtomicReadModel> Handle(
-            Int64 position,
-            Changeset changeset,
-            IIdentity identity);
-
-        /// <summary>
-        /// A reference to the attribute of the readmodel that is handled by this instance
-        /// </summary>
-        AtomicReadmodelInfoAttribute AtomicReadmodelInfoAttribute { get; }
-    }
-
-    /// <summary>
-    /// Factory for the consumers.
-    /// </summary>
-    public interface IAtomicReadmodelChangesetConsumerFactory
-    {
-        IAtomicReadmodelChangesetConsumer CreateFor(Type atomicReadmodelType);
-    }
-
-    /// <summary>
-    /// This is useful because all <see cref="IAtomicCollectionWrapper{TModel}"/> classes are typed in T while
-    /// the projection service works with type. This class will helps creating with reflection an <see cref="AtomicReadmodelChangesetConsumer{TModel}"/>
-    /// to consume changeset during projection.
-    /// </summary>
-    public class AtomicReadmodelChangesetConsumerFactory : IAtomicReadmodelChangesetConsumerFactory
-    {
-        private readonly IWindsorContainer _windsorContainer;
-
-        public AtomicReadmodelChangesetConsumerFactory(IWindsorContainer windsorContainer)
-        {
-            _windsorContainer = windsorContainer;
-        }
-
-        public IAtomicReadmodelChangesetConsumer CreateFor(Type atomicReadmodelType)
-        {
-            var genericType = typeof(AtomicReadmodelChangesetConsumer<>);
-            var closedType = genericType.MakeGenericType(new Type[] { atomicReadmodelType });
-            return (IAtomicReadmodelChangesetConsumer)_windsorContainer.Resolve(closedType);
-        }
-    }
-
-    /// <summary>
     /// Simple class to helps handling events for atomic projection
     /// engine.
     /// </summary>
@@ -94,7 +41,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support
         /// Handle the events.
         /// </summary>
         /// <param name="changeset"></param>
-        public async Task<IAtomicReadModel> Handle(
+        public async Task<AtomicReadmodelChangesetConsumerReturnValue> Handle(
             Int64 position,
             Changeset changeset,
             IIdentity identity)
@@ -105,17 +52,17 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support
             }
 
             var rm = await _atomicCollectionWrapper.FindOneByIdAsync(identity.AsString()).ConfigureAwait(false);
-            Boolean isFirstChangeset = false;
-            Boolean readmodelChanged = false;
+            var readmodelCreated = false;
+            var readmodelModified = false;
             if (rm == null)
             {
                 //TODO Check if this is the first event.
                 rm = _atomicReadModelFactory.Create<TModel>(identity.AsString());
-                isFirstChangeset = true;
+                readmodelCreated = true;
             }
             try
             {
-                readmodelChanged = rm.ProcessChangeset(changeset);
+                readmodelModified = rm.ProcessChangeset(changeset);
             }
             catch (Exception ex)
             {
@@ -125,13 +72,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support
                     changeset.Events?.OfType<DomainEvent>()?.FirstOrDefault()?.AggregateId ?? "Unknow aggregate id",
                     ex.Message);
                 rm.MarkAsFaulted(position);
-                readmodelChanged = true;
+                readmodelModified = true;
                 //continue.
             }
 
-            if (readmodelChanged)
+            if (readmodelModified)
             {
-                if (isFirstChangeset)
+                if (readmodelCreated)
                 {
                     await _atomicCollectionWrapper.UpsertAsync(rm).ConfigureAwait(false);
                 }
@@ -139,8 +86,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support
                 {
                     await _atomicCollectionWrapper.UpdateAsync(rm).ConfigureAwait(false);
                 }
+                return new AtomicReadmodelChangesetConsumerReturnValue(rm, readmodelCreated);
             }
-            return rm;
+            return null;
         }
     }
 }

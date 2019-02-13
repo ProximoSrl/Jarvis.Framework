@@ -271,8 +271,22 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                                         Logger.DebugFormat("Dispatched chunk {0} with poller {1} for readmodel {2}", dispatchObj.Chunk.Position, dispatchObj.PollerId, atomicDispatchChunkConsumer.Consumer.AtomicReadmodelInfoAttribute.Name);
                                     }
                                     //let the abstract readmodel handle everyting, then finally dispatch notification.
-                                    var readmodel = await atomicDispatchChunkConsumer.Consumer.Handle(dispatchObj.Chunk.Position, changeset, aggregateId).ConfigureAwait(false);
-                                    AtomicReadmodelNotifier.ReadmodelUpdatedAsync(readmodel, changeset);
+                                    var handleReturnValue = await atomicDispatchChunkConsumer.Consumer.Handle(dispatchObj.Chunk.Position, changeset, aggregateId).ConfigureAwait(false);
+
+                                    if (handleReturnValue != null)
+                                    {
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                                        //I do not care if the notification works or not, I simply call it and forget.
+                                        if (handleReturnValue.CreatedForFirstTime)
+                                        {
+                                            AtomicReadmodelNotifier.ReadmodelCreatedAsync(handleReturnValue.Readmodel, changeset);
+                                        }
+                                        else
+                                        {
+                                            AtomicReadmodelNotifier.ReadmodelUpdatedAsync(handleReturnValue.Readmodel, changeset);
+                                        }
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                                    }
                                 }
                             }
                         }

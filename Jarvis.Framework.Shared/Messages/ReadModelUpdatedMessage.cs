@@ -42,7 +42,7 @@ namespace Jarvis.Framework.Shared.Messages
             MessageId = Guid.NewGuid();
         }
 
-        private static string GetModelName<T, TKey>() where T : IReadModelEx<TKey>
+        protected static string GetModelName<T, TKey>() where T : IReadModelEx<TKey>
         {
             var modelName = typeof(T).Name;
             if (modelName.EndsWith("ReadModel"))
@@ -51,7 +51,7 @@ namespace Jarvis.Framework.Shared.Messages
             return modelName;
         }
 
-        static ReadModelUpdatedMessage Enhance(ReadModelUpdatedMessage message, string[] topics = null)
+        protected static ReadModelUpdatedMessage Enhance(ReadModelUpdatedMessage message, string[] topics = null)
         {
             if (topics != null)
             {
