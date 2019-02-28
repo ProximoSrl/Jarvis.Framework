@@ -45,7 +45,7 @@ namespace Jarvis.Framework.Tests.BusTests
             _container = new WindsorContainer();
             String connectionString = ConfigurationManager.ConnectionStrings["log"].ConnectionString;
             var logUrl = new MongoUrl(connectionString);
-            var logClient = logUrl.CreateClient();
+            var logClient = logUrl.CreateClient(false);
             var logDb = logClient.GetDatabase(logUrl.DatabaseName);
             _messages = logDb.GetCollection<TrackedMessageModel>("messages");
 

@@ -45,7 +45,7 @@ namespace Jarvis.Framework.Kernel.MultitenantSupport
         protected virtual IMongoDatabase GetDatabase(string connectionStringName)
         {
             var url = new MongoUrl(GetConnectionString(connectionStringName));
-            var client = url.CreateClient();
+            var client = url.CreateClient(false);
             return client.GetDatabase(url.DatabaseName);
         }
 

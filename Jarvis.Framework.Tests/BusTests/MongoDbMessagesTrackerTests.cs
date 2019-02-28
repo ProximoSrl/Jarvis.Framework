@@ -21,7 +21,7 @@ namespace Jarvis.Framework.Tests.BusTests
         {
             String connectionString = ConfigurationManager.ConnectionStrings["log"].ConnectionString;
             var logUrl = new MongoUrl(connectionString);
-            var logClient = logUrl.CreateClient();
+            var logClient = logUrl.CreateClient(false);
             var logDb = logClient.GetDatabase(logUrl.DatabaseName);
             sut = new MongoDbMessagesTracker(logDb);
             _messages = logDb.GetCollection<TrackedMessageModel>("messages");

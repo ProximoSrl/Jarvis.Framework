@@ -23,11 +23,14 @@ namespace Jarvis.Framework.Shared.ReadModel
         void Started(IMessage msg);
 
         /// <summary>
+        /// <para>
         /// This is called from the real Command Handler adapted, it is the timestamp
         /// of the system when the message is going to be elaborated.
-        /// 
+        /// </para>
+        /// <para>
         /// It can be called multiple times, if command execution has conflicts and needs
         /// to have a retry.
+        /// </para>
         /// </summary>
         /// <param name="command"></param>
         /// <param name="startAt"></param>
@@ -85,9 +88,8 @@ namespace Jarvis.Framework.Shared.ReadModel
         public string MessageId { get; set; }
 
         /// <summary>
-        /// Identifies the Type of message (Command, Event, etc... for easier queries)
-        /// 
-        /// It's nullable because this field was added at a later time
+        /// <para>Identifies the Type of message (Command, Event, etc... for easier queries)</para>
+        /// <para>It's nullable because this field was added at a later time</para>
         /// </summary>
         public TrackedMessageType? Type { get; set; }
 
@@ -97,58 +99,69 @@ namespace Jarvis.Framework.Shared.ReadModel
         public String MessageType { get; set; }
 
         /// <summary>
+        /// <para>
         /// Timestamp when message is "started", with bus it is the time the message is sent to the bus
         /// this is the timestamp the message is generated.
-        /// 
+        /// </para>
+        /// <para>
         /// This information is valid for:
         /// - Commands
         /// - Events
+        /// </para>
         /// </summary>
         public DateTime StartedAt { get; set; }
 
         /// <summary>
+        /// <para>
         /// This is an array because the command can have retries, due to conflicts. This property stores
         /// all the execution start time for the command
-        /// 
+        /// </para>
+        /// <para>
         /// This information is valid for:
         /// - Commands
+        /// </para>
         /// </summary>
         public DateTime[] ExecutionStartTimeList { get; set; }
 
         /// <summary>
-        /// Last execution start time. 
-        /// 
+        /// <para>Last execution start time. </para>
+        /// <para>
         /// This information is valid for:
         /// - Commands
+        /// </para>
         /// </summary>
         public DateTime? LastExecutionStartTime { get; set; }
 
         /// <summary>
+        /// <para>
         /// Set when the elaboration start, a command can then:
         /// - complete with success (when CompletedAt is set)
         /// - complete with a failure (when FailedAt is set)
         /// - pending: if this is set but this is not marked as completed or failed
-        /// 
-        /// In case of retries, this value is greater than 1 
-        /// 
+        /// </para>
+        /// <para>In case of retries, this value is greater than 1 </para>
+        /// <para>
         /// This information is valid for:
         /// - Commands
+        /// </para>
         /// </summary>
         public Int32 ExecutionCount { get; set; }
 
         /// <summary>
-        /// Time of completion of the command.
-        /// 
+        /// <para>Time of completion of the command.</para>
+        /// <para>
         /// This information is valid for:
         /// - Commands
+        /// </para>
         /// </summary>
         public DateTime? CompletedAt { get; set; }
 
         /// <summary>
-        /// Time of final dispatch of the command, this is the last message.
-        /// 
+        /// <para>Time of final dispatch of the command, this is the last message.</para>
+        /// <para>
         /// This information is valid for:
         /// - Commands
+        /// </para>
         /// </summary>
         public DateTime? DispatchedAt { get; set; }
 
@@ -159,26 +172,29 @@ namespace Jarvis.Framework.Shared.ReadModel
         public string IssuedBy { get; set; }
 
         /// <summary>
-        /// most recent error
-        /// 
+        /// <para>Most recent error</para>
+        /// <para>
         /// This information is valid for:
         /// - Commands
+        /// </para>
         /// </summary>
         public string ErrorMessage { get; set; }
 
         /// <summary>
-        /// True when the command is completed.
-        /// 
+        /// <para>True when the command is completed.</para>
+        /// <para>
         /// This information is valid for:
         /// - Commands
+        /// </para>
         /// </summary>
         public Boolean? Completed { get; set; }
 
         /// <summary>
-        /// True if the command completed successfully.
-        /// 
+        /// <para>True if the command completed successfully.</para>
+        /// <para>
         /// This information is valid for:
         /// - Commands
+        /// </para>
         /// </summary>
         public Boolean? Success { get; set; }
     }

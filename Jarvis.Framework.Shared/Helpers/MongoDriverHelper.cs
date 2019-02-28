@@ -130,7 +130,7 @@ namespace Jarvis.Framework.Shared.Helpers
         public static Boolean CheckConnection(String connection)
         {
             var url = new MongoUrl(connection);
-            var client = url.CreateClient();
+            var client = url.CreateClient(false);
             return CheckConnection(client);
         }
 

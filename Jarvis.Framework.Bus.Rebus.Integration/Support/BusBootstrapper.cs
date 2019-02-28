@@ -72,7 +72,7 @@ at least configure one assembly with messages to be dispatched.";
 			_container = container;
             JarvisRebusConfiguration = configuration;
 			var mongoUrl = new MongoUrl(configuration.ConnectionString);
-            var mongoClient = mongoUrl.CreateClient();
+            var mongoClient = mongoUrl.CreateClient(false);
 
             _mongoDatabase = mongoClient.GetDatabase(mongoUrl.DatabaseName);
 			Logger = NullLogger.Instance;

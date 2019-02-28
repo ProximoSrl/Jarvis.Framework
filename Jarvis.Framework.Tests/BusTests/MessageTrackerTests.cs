@@ -42,7 +42,7 @@ namespace Jarvis.Framework.Tests.BusTests
             _container.Kernel.ComponentRegistered += Kernel_ComponentRegistered;
             String connectionString = ConfigurationManager.ConnectionStrings["log"].ConnectionString;
             var rebusUrl = new MongoUrl(connectionString);
-            var rebusClient = rebusUrl.CreateClient();
+            var rebusClient = rebusUrl.CreateClient(false);
             var rebusDb = rebusClient.GetDatabase(rebusUrl.DatabaseName);
             _messages = rebusDb.GetCollection<TrackedMessageModel>("messages");
             MongoDbMessagesTracker tracker = new MongoDbMessagesTracker(rebusDb);

@@ -45,7 +45,7 @@ namespace Jarvis.Framework.Kernel.Support
             try
             {
                 var url = new MongoUrl(_serverUrl);
-                var client = url.CreateClient();
+                var client = url.CreateClient(false);
                 client.ListDatabases();
 
                 var state = client.Cluster.Description.State;
