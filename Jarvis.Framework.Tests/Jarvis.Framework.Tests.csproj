@@ -276,6 +276,7 @@
     <Compile Include="SharedTests\IdentitySupport\StringToIdentityAssociatorTests.cs" />
     <Compile Include="SharedTests\MapperTests.cs" />
     <Compile Include="SharedTests\ReadModel\AbstractChildReadModelTests.cs" />
+    <Compile Include="Support\EventStoreFactory.cs" />
     <Compile Include="Support\TestHelper.cs" />
   </ItemGroup>
   <ItemGroup>

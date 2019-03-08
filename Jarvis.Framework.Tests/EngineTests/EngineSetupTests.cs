@@ -17,7 +17,7 @@ namespace Jarvis.Framework.Tests.EngineTests
 	[TestFixture]
     public class EngineSetupTests
     {
-        private EventStoreFactory _factory;
+        private EventStoreFactoryTest _factory;
         private string _connectionString;
         private IMongoDatabase _db;
 
@@ -29,7 +29,7 @@ namespace Jarvis.Framework.Tests.EngineTests
 
             var loggerFactory = Substitute.For<INStoreLoggerFactory>();
             loggerFactory.CreateLogger(Arg.Any<String>()).Returns(NStoreNullLogger.Instance);
-            _factory = new EventStoreFactory(loggerFactory);
+            _factory = new EventStoreFactoryTest(loggerFactory);
 
             TestHelper.RegisterSerializerForFlatId<SampleAggregateId>();
         }

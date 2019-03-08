@@ -19,6 +19,7 @@ using NStore.Core.Streams;
 using NStore.Core.Snapshots;
 using NStore.Core.Logging;
 using Jarvis.Framework.Shared.Events;
+using Jarvis.Framework.Tests.Support;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 {
@@ -67,7 +68,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 		{
 			var loggerFactory = Substitute.For<INStoreLoggerFactory>();
 			loggerFactory.CreateLogger(Arg.Any<String>()).Returns(NStoreNullLogger.Instance);
-			var factory = new EventStoreFactory(loggerFactory);
+			var factory = new EventStoreFactoryTest(loggerFactory);
 			_persistence = factory.BuildEventStore(_eventStoreConnectionString).Result;
 		}
 
