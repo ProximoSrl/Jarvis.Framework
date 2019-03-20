@@ -5,7 +5,11 @@ J.A.R.V.I.S. Framework - Proximo srl (c)
 
 Main modification is: Moved framework to .NETStandard. 
 
-### Version 4.3.x
+### Version 4.3.1
+
+- Fix EventStoreIdentity Match<T> method
+
+### Version 4.3.0
 
 - Atomic readmodel
 - Some command handler features to support draftable

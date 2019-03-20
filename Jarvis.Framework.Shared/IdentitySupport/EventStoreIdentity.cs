@@ -7,7 +7,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 {
     public abstract class EventStoreIdentity : AbstractIdentity<long>
     {
-        private static ConcurrentDictionary<Type, String> classTags;
+        private static readonly ConcurrentDictionary<Type, String> classTags;
 
         static EventStoreIdentity()
         {
@@ -21,7 +21,31 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
         public static bool Match<T>(string id) where T : EventStoreIdentity
         {
-            return id.StartsWith(GetTagForIdentityClass<T>() + Separator);
+            if (String.IsNullOrEmpty(id))
+                return false;
+
+            string idTag = GetTagForIdentityClass<T>();
+
+            //at least I want the prefix to be followed by a dash and at least a digit
+            if (id.Length < idTag.Length + 2)
+                return false;
+
+            //it must start with id tag
+            if (!id.StartsWith(idTag))
+                return false;
+
+            //Check for separator after the prefix
+            if (id[idTag.Length] != Separator)
+                return false;
+
+            //all subsequent chars should be digits.
+            for (int i = idTag.Length + 1; i < id.Length; i++)
+            {
+                if (!char.IsDigit(id[i]))
+                    return false;
+            }
+
+            return true;
         }
 
         public static string GetTagForIdentityClass(Type identityType)
