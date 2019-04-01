@@ -271,7 +271,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         public async Task Verify_generation_of_notification_updated()
         {
             //Three events all generated in datbase
-            var c1 = await GenerateCreatedEvent(false).ConfigureAwait(false);
+            await GenerateCreatedEvent(false).ConfigureAwait(false);
             var c2 = await GenerateTouchedEvent(false).ConfigureAwait(false);
             var c3 = await GenerateTouchedEvent(false).ConfigureAwait(false);
 
@@ -286,11 +286,15 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _sut.AtomicReadmodelNotifier
                 .Received(1)
-                .ReadmodelUpdatedAsync(Arg.Any<IAtomicReadModel>(), c2);
+                .ReadmodelUpdatedAsync(
+                    Arg.Any<IAtomicReadModel>(),
+                    Arg.Is<Changeset>(c => c.GetChunkPosition() == c2.GetChunkPosition()));
 
             _sut.AtomicReadmodelNotifier
                 .Received(1)
-                .ReadmodelUpdatedAsync(Arg.Any<IAtomicReadModel>(), c3);
+                .ReadmodelUpdatedAsync(
+                    Arg.Any<IAtomicReadModel>(),
+                    Arg.Is<Changeset>(c => c.GetChunkPosition() == c3.GetChunkPosition()));
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
         }
 
@@ -299,8 +303,8 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         {
             //Three events all generated in datbase
             var c1 = await GenerateCreatedEvent(false).ConfigureAwait(false);
-            var c2 = await GenerateTouchedEvent(false).ConfigureAwait(false);
-            var c3 = await GenerateTouchedEvent(false).ConfigureAwait(false);
+            await GenerateTouchedEvent(false).ConfigureAwait(false);
+            await GenerateTouchedEvent(false).ConfigureAwait(false);
 
             //And finally check if everything is projected
             _sut = await CreateSutAndStartProjectionEngineAsync(autostart: false).ConfigureAwait(false);
@@ -313,7 +317,9 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _sut.AtomicReadmodelNotifier
                 .Received(1)
-                .ReadmodelCreatedAsync(Arg.Any<IAtomicReadModel>(), c1);
+                .ReadmodelCreatedAsync(
+                    Arg.Any<IAtomicReadModel>(),
+                    Arg.Is<Changeset>(c => c.GetChunkPosition() == c1.GetChunkPosition()));
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
         }
 

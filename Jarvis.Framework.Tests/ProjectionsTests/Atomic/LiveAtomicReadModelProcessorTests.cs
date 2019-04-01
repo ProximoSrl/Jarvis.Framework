@@ -63,6 +63,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
                 firstEvent.CheckpointToken).ConfigureAwait(false);
 
             Assert.That(processed.TouchCount, Is.EqualTo(2));
+            Assert.That(processed.AggregateVersion, Is.EqualTo(3));
 
             firstEvent = (DomainEvent)c2.Events[0];
             processed = await sut.ProcessAsyncUntilChunkPosition<SimpleTestAtomicReadModel>(
@@ -70,6 +71,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
                   firstEvent.CheckpointToken).ConfigureAwait(false);
 
             Assert.That(processed.TouchCount, Is.EqualTo(3));
+            Assert.That(processed.AggregateVersion, Is.EqualTo(4));
         }
     }
 }

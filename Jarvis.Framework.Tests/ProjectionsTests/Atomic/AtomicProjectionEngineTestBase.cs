@@ -9,6 +9,7 @@ using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.Helpers;
 using Jarvis.Framework.Shared.IdentitySupport;
+using Jarvis.Framework.Shared.IdentitySupport.Serialization;
 using Jarvis.Framework.Shared.Logging;
 using Jarvis.Framework.Shared.Messages;
 using Jarvis.Framework.Shared.ReadModel;
@@ -16,17 +17,20 @@ using Jarvis.Framework.Shared.ReadModel.Atomic;
 using Jarvis.Framework.TestHelpers;
 using Jarvis.Framework.Tests.EngineTests;
 using Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support;
+using Jarvis.Framework.Tests.Support;
 using MongoDB.Driver;
 using NStore.Core.InMemory;
 using NStore.Core.Logging;
 using NStore.Core.Persistence;
 using NStore.Domain;
+using NStore.Persistence.Mongo;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Threading;
 using System.Threading.Tasks;
+using static Jarvis.Framework.Tests.DomainTests.DomainEventIdentityBsonSerializationTests;
 
 namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 {
@@ -35,7 +39,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         private const Int32 WaitTimeInSeconds = 5;
 
         protected IMongoDatabase _db;
-        protected InMemoryPersistence _persistence;
+        protected IPersistence _persistence;
         protected IdentityManager _identityManager;
         protected IMongoCollection<SimpleTestAtomicReadModel> _collection;
         protected IMongoCollection<SimpleAtomicAggregateReadModel> _collectionForAtomicAggregate;
@@ -45,18 +49,39 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 
         protected void Init()
         {
+            var identityConverter = new IdentityManager(new InMemoryCounterService());
+            MongoFlatIdSerializerHelper.IdentityConverter = identityConverter;
+            identityConverter.RegisterIdentitiesFromAssembly(typeof(SampleId).Assembly);
+
             var url = new MongoUrl(ConfigurationManager.ConnectionStrings["readmodel"].ConnectionString);
             var client = new MongoClient(url);
             _db = client.GetDatabase(url.DatabaseName);
             _collection = GetCollection<SimpleTestAtomicReadModel>();
             _collectionForAtomicAggregate = GetCollection<SimpleAtomicAggregateReadModel>();
-            _persistence = new InMemoryPersistence();
+            var mongoStoreOptions = new MongoPersistenceOptions
+            {
+                PartitionsConnectionString = url.ToString(),
+                UseLocalSequence = true,
+                PartitionsCollectionName = "Commits",
+                SequenceCollectionName = "event_sequence",
+                DropOnInit = false
+            };
+
+            _persistence = CreatePersistence(mongoStoreOptions);
             _db.Drop();
 
             _identityManager = new IdentityManager(new CounterService(_db));
 
             GenerateContainer();
             SimpleTestAtomicReadModel.TouchMax = Int32.MaxValue;
+        }
+
+        private static IPersistence CreatePersistence(MongoPersistenceOptions mongoStoreOptions)
+        {
+            return new InMemoryPersistence(e => e.BsonSerializeAndDeserialize());
+            //var persistence = new MongoPersistence(mongoStoreOptions);
+            //persistence.InitAsync(CancellationToken.None).Wait();
+            //return persistence;
         }
 
         protected IMongoCollection<T> GetCollection<T>()
@@ -219,10 +244,12 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 
             generateId = generateId ?? (p => new SampleAggregateId(p));
             evt.SetPropertyValue(d => d.AggregateId, generateId(_aggregateIdSeed));
-            evt.SetPropertyValue(d => d.CheckpointToken, commitId);
             Changeset cs = new Changeset(_aggregateVersion++, evt);
             var chunk = await _persistence.AppendAsync(evt.AggregateId, cs).ConfigureAwait(false);
             lastUsedPosition = chunk.Position;
+
+            //now set checkpoint in memory to simplify testing
+            evt.SetPropertyValue(d => d.CheckpointToken, chunk.Position);
             return cs;
         }
 
@@ -263,7 +290,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 
         protected async Task<AtomicProjectionEngine> CreateSutAndStartProjectionEngineAsync(Int32 flushTimeInSeconds = 10, Boolean autostart = true)
         {
-             var sut = _container.Resolve<AtomicProjectionEngine>();
+            var sut = _container.Resolve<AtomicProjectionEngine>();
             sut.RegisterAtomicReadModel(typeof(SimpleTestAtomicReadModel));
             sut.FlushTimeSpan = TimeSpan.FromSeconds(flushTimeInSeconds);
 
