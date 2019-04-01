@@ -15,10 +15,11 @@ using NStore.Core.Streams;
 using NStore.Core.Persistence;
 using System.Threading.Tasks;
 using System.Linq;
+using MongoDB.Bson;
 
 namespace Jarvis.Framework.Tests.Support
 {
-	public static class TestHelper
+    public static class TestHelper
     {
         public static IMongoDatabase CreateNew(string connectionString)
         {
@@ -36,13 +37,13 @@ namespace Jarvis.Framework.Tests.Support
             return CreateNew(ConfigurationManager.ConnectionStrings["eventstore"].ConnectionString);
         }
 
-		public static async Task<List<Changeset>> EventStoreReadChangeset(this IPersistence persistence, String partitionId) 
-		{
-			Recorder tape = new Recorder();
-			var stream = new ReadOnlyStream(partitionId, persistence);
-			await stream.ReadAsync(tape, 1).ConfigureAwait(false);
-			return tape.Data.OfType<Changeset>().ToList();
-		}
+        public static async Task<List<Changeset>> EventStoreReadChangeset(this IPersistence persistence, String partitionId)
+        {
+            Recorder tape = new Recorder();
+            var stream = new ReadOnlyStream(partitionId, persistence);
+            await stream.ReadAsync(tape, 1).ConfigureAwait(false);
+            return tape.Data.OfType<Changeset>().ToList();
+        }
 
         public static Repository GetRepository()
         {
@@ -73,6 +74,15 @@ namespace Jarvis.Framework.Tests.Support
                 EventStoreIdentityCustomBsonTypeMapper.Register<T>();
             }
         }
+
+        public static T BsonSerializeAndDeserialize<T>(this T obj) where T : class
+        {
+            if (obj == null)
+                return null;
+            var serialized = obj.ToBsonDocument();
+            return BsonSerializer.Deserialize<T>(serialized);
+        }
+
 #if NETFULL
         public static void ClearAllQueue(params String[] queueList)
         {

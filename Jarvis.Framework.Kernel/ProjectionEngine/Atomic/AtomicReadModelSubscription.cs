@@ -46,13 +46,13 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
 
         public Task<bool> OnNextAsync(IChunk chunk)
         {
+            _commitEnhancer.Enhance(chunk);
             if (chunk.Payload is Changeset cs)
             {
                 if (_stopCondition(cs))
                 {
                     return Task.FromResult(false);
                 }
-                _commitEnhancer.Enhance(chunk);
                 _readModel.ProcessChangeset(cs);
             }
             return Task.FromResult(true);
