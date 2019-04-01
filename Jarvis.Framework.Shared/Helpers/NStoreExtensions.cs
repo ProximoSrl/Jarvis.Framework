@@ -24,7 +24,7 @@ namespace Jarvis.Framework.Shared.Helpers
         public static IIdentity GetIdentity(this Changeset cs)
         {
             if (cs.Events?.Length == 0)
-                return null; 
+                return null;
 
             var evt = cs.Events[0] as DomainEvent;
             if (evt == null)
