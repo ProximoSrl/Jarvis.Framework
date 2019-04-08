@@ -1,4 +1,5 @@
-﻿using Jarvis.Framework.Shared.Commands;
+﻿using Fasterflect;
+using Jarvis.Framework.Shared.Commands;
 using Jarvis.Framework.Shared.Domain.Serialization;
 using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.Messages;
@@ -92,5 +93,14 @@ namespace Jarvis.Framework.Shared.Helpers
 		{
 			return command.GetContextData(MessagesConstants.UserId);
 		}
+
+        public static String ExtractAggregateId(this ICommand command)
+        {
+            if (command is IAggregateCommand aggregateCommand)
+            {
+                return aggregateCommand.CommandAggregateId?.AsString();
+            }
+            return null;
+        }
 	}
 }

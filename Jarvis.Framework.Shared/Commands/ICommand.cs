@@ -30,8 +30,26 @@ namespace Jarvis.Framework.Shared.Commands
         IEnumerable<string> AllContextKeys { get; }
     }
 
+    /// <summary>
+    /// We need to have a simple and non generic way to understand
+    /// if a command is a command for an aggregate and what is the 
+    /// id of the aggregate.
+    /// </summary>
+    public interface IAggregateCommand : ICommand
+    {
+        IIdentity CommandAggregateId { get; }
+    }
+
+    /// <summary>
+    /// Command that operate on an aggregate, and it has the aggregate id
+    /// as property.
+    /// </summary>
+    /// <typeparam name="TIdentity"></typeparam>
     public interface ICommand<out TIdentity> : ICommand where TIdentity : IIdentity
     {
+        /// <summary>
+        /// Id of the aggreagte this command is operating to.
+        /// </summary>
         TIdentity AggregateId { get; }
     }
 
@@ -97,7 +115,10 @@ namespace Jarvis.Framework.Shared.Commands
     }
 
     [Serializable]
-    public abstract class Command<TIdentity> : Command, ICommand<TIdentity> where TIdentity : IIdentity
+    public abstract class Command<TIdentity> : Command,
+        IAggregateCommand,
+        ICommand<TIdentity> 
+        where TIdentity : IIdentity
     {
         protected Command()
         {
@@ -109,5 +130,10 @@ namespace Jarvis.Framework.Shared.Commands
         }
 
         public TIdentity AggregateId { get; set; }
+
+        /// <summary>
+        /// Non generic way to get aggregate id of the command.
+        /// </summary>
+        public IIdentity CommandAggregateId => AggregateId;
     }
 }

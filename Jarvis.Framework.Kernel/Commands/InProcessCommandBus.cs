@@ -2,6 +2,7 @@
 using Castle.MicroKernel;
 using Jarvis.Framework.Kernel.Engine;
 using Jarvis.Framework.Shared.Commands;
+using Jarvis.Framework.Shared.Commands.Tracking;
 using Jarvis.Framework.Shared.Exceptions;
 using Jarvis.Framework.Shared.Logging;
 using Jarvis.Framework.Shared.Messages;

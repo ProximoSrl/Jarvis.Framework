@@ -1,28 +1,30 @@
 ﻿#if NETFULL
-using System;
-using System.Threading;
+using Castle.Core.Logging;
 using Castle.MicroKernel.Registration;
 using Castle.Windsor;
-using Jarvis.Framework.Bus.Rebus.Integration.Support;
-using NUnit.Framework;
-using System.Configuration;
-using Jarvis.Framework.Shared.ReadModel;
-using MongoDB.Driver;
-using System.Linq;
 using Jarvis.Framework.Bus.Rebus.Integration.Adapters;
-using Jarvis.Framework.Tests.BusTests.MessageFolder;
-using Jarvis.Framework.Shared.Messages;
-using System.Collections.Generic;
-using Jarvis.Framework.Shared.Helpers;
-using Rebus.Bus;
-using Rebus.Handlers;
-using Jarvis.Framework.Tests.BusTests.Handlers;
-using Rebus.Config;
-using System.Threading.Tasks;
+using Jarvis.Framework.Bus.Rebus.Integration.Support;
 using Jarvis.Framework.Shared.Commands;
-using Castle.Core.Logging;
-using Jarvis.Framework.Shared.Logging;
+using Jarvis.Framework.Shared.Commands.Tracking;
+using Jarvis.Framework.Shared.Helpers;
+using Jarvis.Framework.Shared.Messages;
 using Jarvis.Framework.Shared.Support;
+using Jarvis.Framework.Tests.BusTests.Handlers;
+using Jarvis.Framework.Tests.BusTests.MessageFolder;
+using Jarvis.Framework.Tests.EngineTests;
+using Jarvis.Framework.Tests.EngineTests.SagaTests;
+using Jarvis.Framework.Tests.Support;
+using MongoDB.Driver;
+using NUnit.Framework;
+using Rebus.Bus;
+using Rebus.Config;
+using Rebus.Handlers;
+using System;
+using System.Collections.Generic;
+using System.Configuration;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.BusTests
 {
@@ -69,6 +71,8 @@ namespace Jarvis.Framework.Tests.BusTests
                 configuration,
                 tracker);
 
+            TestHelper.RegisterSerializerForFlatId<SampleAggregateId>();
+
             bb.Start();
             var rebusConfigurer = _container.Resolve<RebusConfigurer>();
             rebusConfigurer.Start();
@@ -82,6 +86,14 @@ namespace Jarvis.Framework.Tests.BusTests
                 Component
                     .For<IHandleMessages<SampleTestCommand>>()
                     .Instance(handlerAdapter)
+            );
+
+            var handlerAggregateAdapter = new MessageHandlerToCommandHandlerAdapter<SampleAggregateTestCommand>(_handler, _commandExecutionExceptionHelper, tracker, _bus);
+
+            _container.Register(
+                Component
+                    .For<IHandleMessages<SampleAggregateTestCommand>>()
+                    .Instance(handlerAggregateAdapter)
             );
         }
 
@@ -114,8 +126,8 @@ namespace Jarvis.Framework.Tests.BusTests
             _handler.Reset.WaitOne(10000);
 
             //cycle until we found handled message on tracking
-            TrackedMessageModel track = null;
             DateTime startTime = DateTime.Now;
+            TrackedMessageModel track;
             do
             {
                 Thread.Sleep(50);
@@ -133,6 +145,21 @@ namespace Jarvis.Framework.Tests.BusTests
             Assert.That(track.CompletedAt, Is.Not.Null);
             Assert.That(track.Completed, Is.True);
             Assert.That(track.Success, Is.True);
+        }
+
+        [Test]
+        public async Task Check_tracking_of_aggregate_id()
+        {
+            var id = new SampleAggregateId(1);
+            var sampleMessage = new SampleAggregateTestCommand(id);
+            await _bus.Send(sampleMessage).ConfigureAwait(false);
+
+            _handler.Reset.WaitOne(10000);
+
+            Thread.Sleep(50);
+            var track = _messages.AsQueryable().Single();
+
+            Assert.That(track.AggregateId, Is.EqualTo(id.AsString()));
         }
 
         /// <summary>
@@ -197,8 +224,8 @@ namespace Jarvis.Framework.Tests.BusTests
                 track = tracks.Single();
             }
             while (
-                    track.CompletedAt == null &&
-                    DateTime.Now.Subtract(startTime).TotalSeconds < 4
+                    track.CompletedAt == null
+                    && DateTime.Now.Subtract(startTime).TotalSeconds < 4
             );
 
             Assert.That(track.MessageId, Is.EqualTo(sampleMessage.MessageId.ToString()));
