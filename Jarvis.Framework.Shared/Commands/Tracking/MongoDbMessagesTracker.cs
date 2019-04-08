@@ -284,7 +284,9 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
 
         #region Queries
 
-        public List<TrackedMessageModel> GetByIdList(List<string> idList)
+        private static SortDefinition<TrackedMessageModel> OrederByCreationDateDescending = Builders<TrackedMessageModel>.Sort.Descending(m => m.StartedAt);
+
+        public List<TrackedMessageModel> GetByIdList(IEnumerable<String> idList)
         {
             return Commands.Find(
                 Builders<TrackedMessageModel>.Filter.In(m => m.MessageId, idList))
@@ -325,10 +327,12 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
             {
                 limit = 1000;
             }
-            var queryable = query
-                .ComposeLinqQuery(Commands.AsQueryable())
-                .Take(limit);
-            return queryable.ToList();
+            var mongoQuery = query.CreateFilter();
+
+            return Commands
+                .Find(mongoQuery)
+                .Sort(OrederByCreationDateDescending)
+                .ToList();
         }
 
         #endregion

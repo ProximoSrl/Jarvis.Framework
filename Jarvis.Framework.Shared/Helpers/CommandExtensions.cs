@@ -98,7 +98,7 @@ namespace Jarvis.Framework.Shared.Helpers
         {
             if (command is IAggregateCommand aggregateCommand)
             {
-                return aggregateCommand.CommandAggregateId?.AsString();
+                return aggregateCommand.AggregateId?.AsString();
             }
             return null;
         }

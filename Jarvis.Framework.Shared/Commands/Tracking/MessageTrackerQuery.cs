@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using MongoDB.Driver;
 using MongoDB.Driver.Linq;
 
 namespace Jarvis.Framework.Shared.Commands.Tracking
@@ -58,21 +60,32 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
             return this;
         }
 
-        public IQueryable<TrackedMessageModel> ComposeLinqQuery(
-            IQueryable<TrackedMessageModel> linqQuery)
+        public FilterDefinition<TrackedMessageModel> CreateFilter()
         {
-            if (!String.IsNullOrEmpty(AggregateId))
-                linqQuery = linqQuery.Where(m => m.AggregateId == AggregateId);
-            if (Completed.HasValue)
-                linqQuery = linqQuery.Where(m => m.Completed == Completed.Value);
-            if (Failed.HasValue)
-                linqQuery = linqQuery.Where(m => m.Completed == true && m.Success == !Failed.Value);
-            if (!String.IsNullOrEmpty(User))
-                linqQuery = linqQuery.Where(m => m.IssuedBy == User);
-            if (FromDate.HasValue)
-                linqQuery = linqQuery.Where(m => m.StartedAt > FromDate.Value);
+            List<FilterDefinition<TrackedMessageModel>> filters = new List<FilterDefinition<TrackedMessageModel>>();
 
-            return linqQuery.OrderByDescending(m => m.StartedAt);
+            if (!String.IsNullOrEmpty(AggregateId))
+            {
+                filters.Add(Builders<TrackedMessageModel>.Filter.Eq(m => m.AggregateId, AggregateId));
+            }
+            if (Completed.HasValue)
+            {
+                filters.Add(Builders<TrackedMessageModel>.Filter.Eq(m => m.Completed, Completed.Value));
+            }
+            if (Failed.HasValue)
+            {
+                filters.Add(Builders<TrackedMessageModel>.Filter.Eq(m => m.Success, !Failed.Value));
+            }
+            if (!String.IsNullOrEmpty(User))
+            {
+                filters.Add(Builders<TrackedMessageModel>.Filter.Eq(m => m.IssuedBy, User));
+            }
+            if (FromDate.HasValue)
+            {
+                filters.Add(Builders<TrackedMessageModel>.Filter.Gt(m => m.StartedAt, FromDate.Value));
+            }
+
+            return Builders<TrackedMessageModel>.Filter.And(filters);
         }
     }
 }

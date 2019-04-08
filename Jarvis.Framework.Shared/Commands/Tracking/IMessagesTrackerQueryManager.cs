@@ -15,7 +15,7 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
         /// </summary>
         /// <param name="idList"></param>
         /// <returns></returns>
-        List<TrackedMessageModel> GetByIdList(List<String> idList);
+        List<TrackedMessageModel> GetByIdList(IEnumerable<String> idList);
 
         /// <summary>
         /// Get all tracking info for an aggregate id, it allows for filtering

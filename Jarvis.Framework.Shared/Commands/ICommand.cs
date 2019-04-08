@@ -37,7 +37,7 @@ namespace Jarvis.Framework.Shared.Commands
     /// </summary>
     public interface IAggregateCommand : ICommand
     {
-        IIdentity CommandAggregateId { get; }
+        IIdentity AggregateId { get; }
     }
 
     /// <summary>
@@ -45,12 +45,8 @@ namespace Jarvis.Framework.Shared.Commands
     /// as property.
     /// </summary>
     /// <typeparam name="TIdentity"></typeparam>
-    public interface ICommand<out TIdentity> : ICommand where TIdentity : IIdentity
+    public interface ICommand<out TIdentity> : IAggregateCommand where TIdentity : IIdentity
     {
-        /// <summary>
-        /// Id of the aggreagte this command is operating to.
-        /// </summary>
-        TIdentity AggregateId { get; }
     }
 
     [Serializable]
@@ -131,9 +127,6 @@ namespace Jarvis.Framework.Shared.Commands
 
         public TIdentity AggregateId { get; set; }
 
-        /// <summary>
-        /// Non generic way to get aggregate id of the command.
-        /// </summary>
-        public IIdentity CommandAggregateId => AggregateId;
+        IIdentity IAggregateCommand.AggregateId => AggregateId;
     }
 }
