@@ -80,8 +80,8 @@ namespace Jarvis.Framework.Tests.BusTests
         {
             var byId = _tracker.GetCommands("abba", 1, 100);
             Assert.That(byId.TotalPages, Is.EqualTo(1));
-            Assert.That(byId.Messages.Count, Is.EqualTo(2));
-            Assert.That(byId.Messages[0].Completed == true);
+            Assert.That(byId.Commands.Count, Is.EqualTo(2));
+            Assert.That(byId.Commands[0].Completed == true);
         }
 
         [Test]

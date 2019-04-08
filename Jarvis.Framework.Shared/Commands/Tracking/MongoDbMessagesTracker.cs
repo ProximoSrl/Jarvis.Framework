@@ -315,7 +315,7 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
             return new TrackedMessageModelPaginated
             {
                 TotalPages = totalPages,
-                Messages = pagedQuery.ToArray()
+                Commands = pagedQuery.ToArray()
             };
         }
 

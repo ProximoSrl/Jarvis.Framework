@@ -14,6 +14,6 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
         /// <summary>
         /// List of data
         /// </summary>
-        public TrackedMessageModel[] Messages { get; set; }
+        public TrackedMessageModel[] Commands { get; set; }
     }
 }
