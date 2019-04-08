@@ -15,6 +15,7 @@ using Rebus.Transport;
 using System.Threading.Tasks;
 using System.Net.Mime;
 using Jarvis.Framework.Shared.Exceptions;
+using Jarvis.Framework.Shared.Commands.Tracking;
 
 namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 {

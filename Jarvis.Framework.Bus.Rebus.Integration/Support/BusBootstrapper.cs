@@ -21,6 +21,7 @@ using Rebus.Retry.Simple;
 using Rebus.Routing.TypeBased;
 using Jarvis.Framework.Shared.Logging;
 using Jarvis.Framework.Shared.Support;
+using Jarvis.Framework.Shared.Commands.Tracking;
 
 namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 {

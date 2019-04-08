@@ -1,6 +1,7 @@
 using Castle.Core.Logging;
 using Jarvis.Framework.Kernel.Commands;
 using Jarvis.Framework.Shared.Commands;
+using Jarvis.Framework.Shared.Commands.Tracking;
 using Jarvis.Framework.Shared.Logging;
 using Jarvis.Framework.Shared.Messages;
 using Jarvis.Framework.Shared.ReadModel;

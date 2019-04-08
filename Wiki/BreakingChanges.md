@@ -1,3 +1,9 @@
+# Version 5
+
+## 5.0.0
+
+Moved IMessagesTracker to namespace Jarvis.Framework.Shared.Commands.Tracking
+
 # Version 4
 
 Main modification is: Moved framework to .NETStandard. 

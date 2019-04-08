@@ -1,20 +1,19 @@
-﻿using System;
-using NUnit.Framework;
-using System.Configuration;
-using Jarvis.Framework.Shared.ReadModel;
-using MongoDB.Driver;
-using System.Linq;
-using Jarvis.Framework.Tests.BusTests.MessageFolder;
-using Jarvis.Framework.Shared.Logging;
+﻿using Jarvis.Framework.Shared.Commands.Tracking;
 using Jarvis.Framework.Shared.Support;
+using Jarvis.Framework.Tests.BusTests.MessageFolder;
+using MongoDB.Driver;
+using NUnit.Framework;
+using System;
+using System.Configuration;
+using System.Linq;
 
 namespace Jarvis.Framework.Tests.BusTests
 {
     [TestFixture]
     public class MongoDbMessagesTrackerTests
     {
-        MongoDbMessagesTracker sut;
-        IMongoCollection<TrackedMessageModel> _messages;
+        private MongoDbMessagesTracker sut;
+        private IMongoCollection<TrackedMessageModel> _messages;
 
         [OneTimeSetUp]
         public void TestFixtureSetUp()
