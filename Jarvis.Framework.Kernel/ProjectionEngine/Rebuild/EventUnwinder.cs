@@ -39,7 +39,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 			_logger = logger;
 
 			var url = new MongoUrl(_config.EventStoreConnectionString);
-            var client = url.CreateClient();
+            var client = url.CreateClient(false);
 			var _mongoDatabase = client.GetDatabase(url.DatabaseName);
 
 			_unwindedEventCollection = _mongoDatabase.GetCollection<UnwindedDomainEvent>("UnwindedEvents");

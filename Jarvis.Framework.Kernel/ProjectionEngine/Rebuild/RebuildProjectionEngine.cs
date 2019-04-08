@@ -387,7 +387,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
         private IMongoCollection<BsonDocument> GetMongoCommitsCollection()
         {
             var url = new MongoUrl(_config.EventStoreConnectionString);
-            var client = url.CreateClient();
+            var client = url.CreateClient(false);
             var db = client.GetDatabase(url.DatabaseName);
             return db.GetCollection<BsonDocument>(EventStoreFactory.PartitionCollectionName);
         }

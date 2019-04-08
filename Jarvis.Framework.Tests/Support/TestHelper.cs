@@ -49,7 +49,7 @@ namespace Jarvis.Framework.Tests.Support
         {
             var loggerFactory = Substitute.For<INStoreLoggerFactory>();
             loggerFactory.CreateLogger(Arg.Any<String>()).Returns(NStoreNullLogger.Instance);
-            var persistence = new EventStoreFactory(loggerFactory)
+            var persistence = new EventStoreFactoryTest(loggerFactory)
                 .BuildEventStore(ConfigurationManager.ConnectionStrings["eventstore"].ConnectionString)
                 .Result;
             return new Repository(new AggregateFactoryEx(null), new StreamsFactory(persistence));

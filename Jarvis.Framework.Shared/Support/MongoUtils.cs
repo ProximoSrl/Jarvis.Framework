@@ -36,13 +36,50 @@ namespace Jarvis.Framework.Shared.Support
     {
         public static IMongoQueryInterceptorConsumer MongoQueryInterptorConsumer = NullMongoQueryInterptorConsumer.Instance;
 
-        public static IMongoClient CreateClient(this MongoUrl url)
+        private static readonly ConcurrentDictionary<String, IMongoClient> _mongoClientCache = new ConcurrentDictionary<string, IMongoClient>();
+
+        /// <summary>
+        /// Creates a mongo client and enable interception through <see cref="MongoQueryInterptorConsumer"/> class.
+        /// </summary>
+        /// <param name="url"></param>
+        /// <param name="enableInterception"></param>
+        /// <returns></returns>
+        public static IMongoClient CreateClient(this MongoUrl url, Boolean enableInterception)
         {
-            var settings = MongoClientSettings.FromUrl(url);
-            return CreateClient(settings);
+            var connectionKey = url.ToString() + enableInterception;
+            if (!_mongoClientCache.TryGetValue(connectionKey, out var client))
+            {
+                if (enableInterception)
+                {
+                    var settings = MongoClientSettings.FromUrl(url);
+                    client = CreateClient(settings);
+                }
+                else
+                {
+                    client = new MongoClient(url);
+                }
+
+                _mongoClientCache.TryAdd(connectionKey, client);
+            }
+            return client;
         }
 
-        private static  ConcurrentDictionary<Int64, String> _requests = new ConcurrentDictionary<Int64, String>();
+        private static readonly ConcurrentDictionary<Int64, String> _requests = new ConcurrentDictionary<Int64, String>();
+
+        /// <summary>
+        /// Useful for client code to understand if there is some leak of the dictinoary (maybe mongo driver fail to 
+        /// call close for some calls)
+        /// </summary>
+        public static Int32 GetActualRequestQueue => _requests.Count;
+
+        /// <summary>
+        /// Clear all request queue in memory, it will break interceptor for all ongoing query but
+        /// can be useful to cleanup memory.
+        /// </summary>
+        public static void PurgetActualRequestQueue()
+        {
+            _requests.Clear();
+        }
 
         public static IMongoClient CreateClient(this MongoClientSettings settings)
         {
@@ -50,6 +87,9 @@ namespace Jarvis.Framework.Shared.Support
             {
                 clusterConfigurator.Subscribe<CommandStartedEvent>(e => 
                 {
+                    if (MongoQueryInterptorConsumer == NullMongoQueryInterptorConsumer.Instance)
+                        return;
+
                     if (e.OperationId.HasValue)
                     {
                         _requests.TryAdd(e.OperationId.Value, e.Command.ToString());
@@ -58,6 +98,9 @@ namespace Jarvis.Framework.Shared.Support
 
                 clusterConfigurator.Subscribe<CommandSucceededEvent>(e =>
                 {
+                    if (MongoQueryInterptorConsumer == NullMongoQueryInterptorConsumer.Instance)
+                        return;
+
                     if (!_requests.TryRemove(e.OperationId ?? -1, out var command))
                     {
                         command = $"Command unknown: operation id {e.OperationId}";
@@ -67,6 +110,9 @@ namespace Jarvis.Framework.Shared.Support
 
                 clusterConfigurator.Subscribe<CommandFailedEvent>(e =>
                 {
+                    if (MongoQueryInterptorConsumer == NullMongoQueryInterptorConsumer.Instance)
+                        return;
+
                     if (!_requests.TryRemove(e.OperationId ?? -1, out var command))
                     {
                         command = $"Command unknown: operation id {e.OperationId}";

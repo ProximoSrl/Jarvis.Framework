@@ -1,4 +1,5 @@
 ﻿using Jarvis.Framework.Shared.Commands;
+using Jarvis.Framework.Shared.Commands.Tracking;
 using Jarvis.Framework.Shared.Messages;
 using MongoDB.Driver;
 using System;

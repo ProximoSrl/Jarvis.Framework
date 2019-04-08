@@ -25,6 +25,7 @@ using Jarvis.Framework.Shared.Commands;
 using Castle.Core.Logging;
 using Jarvis.Framework.Shared.Logging;
 using Jarvis.Framework.Shared.Support;
+using Jarvis.Framework.Shared.Commands.Tracking;
 
 namespace Jarvis.Framework.Tests.BusTests
 {
@@ -45,7 +46,7 @@ namespace Jarvis.Framework.Tests.BusTests
             _container = new WindsorContainer();
             String connectionString = ConfigurationManager.ConnectionStrings["log"].ConnectionString;
             var logUrl = new MongoUrl(connectionString);
-            var logClient = logUrl.CreateClient();
+            var logClient = logUrl.CreateClient(false);
             var logDb = logClient.GetDatabase(logUrl.DatabaseName);
             _messages = logDb.GetCollection<TrackedMessageModel>("messages");
 

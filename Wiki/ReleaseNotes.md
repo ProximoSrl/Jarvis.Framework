@@ -1,6 +1,12 @@
 J.A.R.V.I.S. Framework - Proximo srl (c)
 ====
 
+# Version 5
+
+# 5.0.0
+
+- Refactor of Tracking Message Model (see breaking changes)
+
 ## Version 4
 
 Main modification is: Moved framework to .NETStandard. 

@@ -139,7 +139,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
         {
             var loggerFactory = Substitute.For<INStoreLoggerFactory>();
             loggerFactory.CreateLogger(Arg.Any<String>()).Returns(NStoreNullLogger.Instance);
-            var factory = new EventStoreFactory(loggerFactory);
+            var factory = new EventStoreFactoryTest(loggerFactory);
             Persistence = factory.BuildEventStore(_eventStoreConnectionString).Result;
             Repository = new Repository(new AggregateFactoryEx(null), new StreamsFactory(Persistence));
         }

@@ -23,7 +23,7 @@ namespace Jarvis.Framework.Tests.EngineTests.SagaTests
 	[TestFixture]
 	public class SagaTests
 	{
-		private EventStoreFactory _factory;
+		private EventStoreFactoryTest _factory;
 		private string _connectionString;
 		private WindsorContainer _container;
 		private IMongoDatabase _db;
@@ -38,7 +38,7 @@ namespace Jarvis.Framework.Tests.EngineTests.SagaTests
 			_db = client.GetDatabase(url.DatabaseName);
 
 			var loggerFactory = Substitute.For<INStoreLoggerFactory>();
-			_factory = new EventStoreFactory(loggerFactory);
+			_factory = new EventStoreFactoryTest(loggerFactory);
 
 			_container = new WindsorContainer();
 		}
@@ -170,7 +170,7 @@ namespace Jarvis.Framework.Tests.EngineTests.SagaTests
 	[TestFixture]
 	public class SagaTestsBase
 	{
-		private EventStoreFactory _factory;
+		private EventStoreFactoryTest _factory;
 		private string _connectionString;
 		private WindsorContainer _container;
 		private IMongoDatabase _db;
@@ -188,7 +188,7 @@ namespace Jarvis.Framework.Tests.EngineTests.SagaTests
 			_db = client.GetDatabase(url.DatabaseName);
 
 			var loggerFactory = Substitute.For<INStoreLoggerFactory>();
-			_factory = new EventStoreFactory(loggerFactory);
+			_factory = new EventStoreFactoryTest(loggerFactory);
 
 			_container = new WindsorContainer();
 			_listener = new DeliverPizzaSagaListener2();

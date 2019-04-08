@@ -1,5 +1,6 @@
 ﻿#if NETFULL
 using Jarvis.Framework.Bus.Rebus.Integration.Support;
+using Jarvis.Framework.Shared.Commands.Tracking;
 using Rebus.Config;
 using System;
 using System.Collections.Generic;
@@ -11,7 +12,7 @@ namespace Jarvis.Framework.Tests.BusTests
 {
     internal class JarvisTestBusBootstrapper : BusBootstrapper
     {
-        public JarvisTestBusBootstrapper(Castle.Windsor.IWindsorContainer container, JarvisRebusConfiguration configuration, Shared.ReadModel.IMessagesTracker messagesTracker) : base(container, configuration, messagesTracker)
+        public JarvisTestBusBootstrapper(Castle.Windsor.IWindsorContainer container, JarvisRebusConfiguration configuration, IMessagesTracker messagesTracker) : base(container, configuration, messagesTracker)
         {
         }
 

@@ -21,6 +21,7 @@ using NStore.Domain;
 using NStore.Core.Persistence;
 using NStore.Core.Logging;
 using NStore.Core.Streams;
+using Jarvis.Framework.Tests.Support;
 
 namespace Jarvis.Framework.Tests.Kernel.Commands
 {
@@ -42,7 +43,7 @@ namespace Jarvis.Framework.Tests.Kernel.Commands
             var url = new MongoUrl(connectionString);
             var client = new MongoClient(url);
             var _db = client.GetDatabase(url.DatabaseName);
-            _eventsCollection = _db.GetCollection<BsonDocument>(EventStoreFactory.PartitionCollectionName);
+            _eventsCollection = _db.GetCollection<BsonDocument>(EventStoreFactoryTest.PartitionCollectionName);
 
             client.DropDatabase(url.DatabaseName);
 
@@ -51,7 +52,7 @@ namespace Jarvis.Framework.Tests.Kernel.Commands
             MongoFlatIdSerializerHelper.Initialize(identityConverter);
             var loggerFactory = Substitute.For<INStoreLoggerFactory>();
             loggerFactory.CreateLogger(Arg.Any<String>()).Returns(NStoreNullLogger.Instance);
-            _persistence = new EventStoreFactory(loggerFactory)
+            _persistence = new EventStoreFactoryTest(loggerFactory)
                 .BuildEventStore(connectionString)
                 .Result;
             _repositoryEx = CreateRepository();
