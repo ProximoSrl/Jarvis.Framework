@@ -8,6 +8,7 @@ using MongoDB.Driver;
 using NStore.Core.Streams;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Jarvis.Framework.Shared.Commands.Tracking
 {
@@ -47,8 +48,8 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
             var collection = _db.GetCollection<TrackedMessageModel>("messages");
 
             //Drop old index of version <= 4.x
-            collection.Indexes.DropOne("MessageId_1");
-            collection.Indexes.DropOne("IssuedBy_1");
+            collection.Indexes.DropOneAsync("MessageId_1");
+            collection.Indexes.DropOneAsync("IssuedBy_1");
 
             //Add new indexes of version > 4.x
             collection.Indexes.CreateMany(
@@ -63,10 +64,20 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
                     }),
                 new CreateIndexModel<TrackedMessageModel>(
                     Builders<TrackedMessageModel>.IndexKeys
-                        .Ascending(m => m.IssuedBy),
+                        .Ascending(m => m.IssuedBy)
+                        .Ascending(m => m.StartedAt), //needed for sorting
                     new CreateIndexOptions()
                     {
                         Name = "IssuedBy",
+                        Background = true
+                    }
+                ),
+                 new CreateIndexModel<TrackedMessageModel>(
+                    Builders<TrackedMessageModel>.IndexKeys
+                        .Ascending(m => m.Type),
+                    new CreateIndexOptions()
+                    {
+                        Name = "Type",
                         Background = true
                     }
                 ),
@@ -271,11 +282,55 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
             }
         }
 
+        #region Queries
+
         public List<TrackedMessageModel> GetByIdList(List<string> idList)
         {
             return Commands.Find(
                 Builders<TrackedMessageModel>.Filter.In(m => m.MessageId, idList))
                 .ToList();
         }
+
+        /// <summary>
+        /// Get a list of command for a user with pagination.
+        /// </summary>
+        /// <param name="userId"></param>
+        /// <param name="pageIndex"></param>
+        /// <param name="pageSize"></param>
+        /// <returns></returns>
+        public TrackedMessageModelPaginated GetCommands(string userId, int pageIndex, int pageSize)
+        {
+            var query = Commands.AsQueryable()
+              .Where(m =>
+                    m.IssuedBy == userId
+                    && m.Type == TrackedMessageType.Command);
+
+            var countOfResults = query.Count();
+            var totalPages = (int)Math.Ceiling((double)countOfResults / pageSize);
+
+            var pagedQuery = query.OrderByDescending(m => m.StartedAt)
+               .Skip((pageIndex - 1) * pageSize)
+               .Take(pageSize);
+
+            return new TrackedMessageModelPaginated
+            {
+                TotalPages = totalPages,
+                Messages = pagedQuery.ToArray()
+            };
+        }
+
+        public List<TrackedMessageModel> Query(MessageTrackerQuery query, int limit)
+        {
+            if (limit > 1000)
+            {
+                limit = 1000;
+            }
+            var queryable = query
+                .ComposeLinqQuery(Commands.AsQueryable())
+                .Take(limit);
+            return queryable.ToList();
+        }
+
+        #endregion
     }
 }

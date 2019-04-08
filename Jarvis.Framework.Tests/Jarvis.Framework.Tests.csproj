@@ -148,6 +148,7 @@
     <Compile Include="BusTests\MessageFolder\SampleMessage.cs" />
     <Compile Include="BusTests\MessageFolder\SampleMessageInFolder.cs" />
     <Compile Include="BusTests\MessageFolder\SampleTestCommand.cs" />
+    <Compile Include="BusTests\MessageTrackerQueryManagerTest.cs" />
     <Compile Include="BusTests\MessageTrackerWithFailureTests.cs" />
     <Compile Include="BusTests\MessageTrackerTests.cs" />
     <Compile Include="BusTests\MongoDbMessagesTrackerTests.cs" />

@@ -12,7 +12,6 @@ using Jarvis.Framework.Shared.Support;
 using Jarvis.Framework.Tests.BusTests.Handlers;
 using Jarvis.Framework.Tests.BusTests.MessageFolder;
 using Jarvis.Framework.Tests.EngineTests;
-using Jarvis.Framework.Tests.EngineTests.SagaTests;
 using Jarvis.Framework.Tests.Support;
 using MongoDB.Driver;
 using NUnit.Framework;
@@ -122,7 +121,7 @@ namespace Jarvis.Framework.Tests.BusTests
         public async Task Check_basic_tracking()
         {
             var sampleMessage = new SampleTestCommand(10);
-            await _bus.Send(sampleMessage);
+            await _bus.Send(sampleMessage).ConfigureAwait(false);
             _handler.Reset.WaitOne(10000);
 
             //cycle until we found handled message on tracking
@@ -172,7 +171,7 @@ namespace Jarvis.Framework.Tests.BusTests
         {
             var sampleMessage = new SampleTestCommand(10);
             sampleMessage.SetContextData(MessagesConstants.ReplyToHeader, "test");
-            await _bus.Send(sampleMessage);
+            await _bus.Send(sampleMessage).ConfigureAwait(false);
             _handler.Reset.WaitOne(10000);
 
             //cycle until we found handled message on tracking
@@ -211,12 +210,11 @@ namespace Jarvis.Framework.Tests.BusTests
         public async Task Verify_elaboration_tracking()
         {
             var sampleMessage = new SampleTestCommand(10);
-            await _bus.Send(sampleMessage);
+            await _bus.Send(sampleMessage).ConfigureAwait(false);
             _handler.Reset.WaitOne(10000);
 
             //cycle until we found handled message on tracking
-            TrackedMessageModel track = null;
-            DateTime startTime = DateTime.Now;
+            TrackedMessageModel track;
             do
             {
                 Thread.Sleep(50);
@@ -225,7 +223,7 @@ namespace Jarvis.Framework.Tests.BusTests
             }
             while (
                     track.CompletedAt == null
-                    && DateTime.Now.Subtract(startTime).TotalSeconds < 4
+                    && DateTime.Now.Subtract(DateTime.Now).TotalSeconds < 4
             );
 
             Assert.That(track.MessageId, Is.EqualTo(sampleMessage.MessageId.ToString()));
