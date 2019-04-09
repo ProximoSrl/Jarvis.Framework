@@ -3,6 +3,10 @@ J.A.R.V.I.S. Framework - Proximo srl (c)
 
 # Version 5
 
+# 5.0.1
+
+- Fixed query for tracking message model pending plus other fix in message tracking area.
+
 # 5.0.0
 
 - Refactor of Tracking Message Model (see breaking changes)
