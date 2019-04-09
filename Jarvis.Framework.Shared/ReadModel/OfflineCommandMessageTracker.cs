@@ -5,8 +5,6 @@ using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.ReadModel
 {
@@ -124,16 +122,20 @@ namespace Jarvis.Framework.Shared.ReadModel
     /// be used to save more information for offline commands
     /// that are executed.
     /// </summary>
-    public class OfflineCommandMessageTracker : IMessagesTracker, IOfflineCommandManager
+    public class OfflineCommandMessageTracker : IMessagesTracker, IOfflineCommandManager, IMessagesTrackerQueryManager
     {
         private readonly IMessagesTracker _originalTracker;
         private readonly IMongoCollection<OfflineCommandInfo> _offlineCommandCollection;
+        private readonly IMessagesTrackerQueryManager _originalQueryManager;
 
-        public OfflineCommandMessageTracker(IMessagesTracker originalTracker, IMongoDatabase logDb)
+        public OfflineCommandMessageTracker(
+            IMessagesTracker originalTracker,
+            IMessagesTrackerQueryManager originalQueryManager,
+            IMongoDatabase logDb)
         {
             _originalTracker = originalTracker;
             _offlineCommandCollection = logDb.GetCollection<OfflineCommandInfo>("OfflineCommands");
-
+            _originalQueryManager = originalQueryManager;
         }
 
         #region IMessageTracker interface
@@ -178,13 +180,32 @@ namespace Jarvis.Framework.Shared.ReadModel
 
         #endregion
 
+        #region IMessagesTrackerQueryManager interface
+
+        public List<TrackedMessageModel> GetByIdList(IEnumerable<string> idList)
+        {
+            return _originalQueryManager.GetByIdList(idList);
+        }
+
+        public List<TrackedMessageModel> Query(MessageTrackerQuery query, int limit)
+        {
+            return _originalQueryManager.Query(query, limit);
+        }
+
+        public TrackedMessageModelPaginated GetCommands(string userId, int pageIndex, int pageSize)
+        {
+            return _originalQueryManager.GetCommands(userId, pageIndex, pageSize);
+        }
+
+        #endregion
+
         #region IOfflineCommandManager
 
         public List<OfflineCommandInfo> GetOfflineCommandExecuted()
         {
-           return _offlineCommandCollection.AsQueryable()
-                .OrderBy(m => m.CompletionDate)
-                .ToList();
+            return _offlineCommandCollection.AsQueryable()
+                 .OrderBy(m => m.CompletionDate)
+                 .ToList();
         }
 
         public Boolean MarkCommandAsSynchronizing(string id)
@@ -200,7 +221,7 @@ namespace Jarvis.Framework.Shared.ReadModel
         public Boolean MarkCommandAsSynchronized(String id, Boolean success)
         {
             var newStatus = success ? OfflineCommandSynchronizingStatus.SynchronizationOk : OfflineCommandSynchronizingStatus.SynchronizationFailed;
-            var result =  _offlineCommandCollection.UpdateOne(
+            var result = _offlineCommandCollection.UpdateOne(
                 Builders<OfflineCommandInfo>.Filter.Eq(m => m.Id, id),
                 Builders<OfflineCommandInfo>.Update
                     .Set(m => m.SynchronizingStatus, newStatus));
@@ -208,7 +229,6 @@ namespace Jarvis.Framework.Shared.ReadModel
             return result.ModifiedCount == 1;
         }
 
-   
         public OfflineCommandInfo GetById(String id)
         {
             return _offlineCommandCollection.AsQueryable()
@@ -226,13 +246,14 @@ namespace Jarvis.Framework.Shared.ReadModel
 
         public Boolean SetSkipSynchronizationFlag(string id, bool skipSynchronization)
         {
-            var result =  _offlineCommandCollection.UpdateOne(
+            var result = _offlineCommandCollection.UpdateOne(
                Builders<OfflineCommandInfo>.Filter.Eq(m => m.Id, id),
                Builders<OfflineCommandInfo>.Update
                    .Set(m => m.SkipSynchronization, skipSynchronization));
 
             return result.ModifiedCount == 1;
         }
+
         #endregion
     }
 }

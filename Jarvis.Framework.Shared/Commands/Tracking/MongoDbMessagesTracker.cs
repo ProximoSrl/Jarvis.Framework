@@ -125,7 +125,8 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
                         .Set(x => x.IssuedBy, issuedBy)
                         .Set(x => x.Description, msg.Describe())
                         .Set(x => x.Type, type)
-                        .Set(x => x.MessageType, msg.GetType().Name),
+                        .Set(x => x.MessageType, msg.GetType().Name)
+                        .Set(x => x.Completed, false),
                    new UpdateOptions() { IsUpsert = true }
                 );
             }
@@ -332,6 +333,7 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
             return Commands
                 .Find(mongoQuery)
                 .Sort(OrederByCreationDateDescending)
+                .Limit(limit)
                 .ToList();
         }
 
