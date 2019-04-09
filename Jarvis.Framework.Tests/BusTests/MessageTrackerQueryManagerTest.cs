@@ -95,6 +95,18 @@ namespace Jarvis.Framework.Tests.BusTests
         }
 
         [Test]
+        public void Test_basic_get_by_aggregate_pending()
+        {
+            var query = new MessageTrackerQuery();
+            query
+                .ForAggregate(succeededMessageAggregate1.AggregateId)
+                .GetPending();
+            var byAggregate = _tracker.Query(query, 100);
+            Assert.That(byAggregate.Count, Is.EqualTo(1));
+            Assert.That(byAggregate[0].MessageId, Is.EqualTo(messageAggregate3.MessageId.ToString()));
+        }
+
+        [Test]
         public void Test_basic_get_by_aggregate_failed()
         {
             var query = new MessageTrackerQuery();
