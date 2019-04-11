@@ -46,5 +46,22 @@ namespace Jarvis.Framework.Tests.BusTests
             Assert.That(handledTrack.LastExecutionStartTime, Is.EqualTo(startDate2));
             Assert.That(handledTrack.ExecutionStartTimeList, Is.EquivalentTo(new[] { startDate1, startDate2 }));
         }
+
+        [Test]
+        public void Verify_multiple_start_do_not_push_too_much_data()
+        {
+            SampleTestCommand cmd = new SampleTestCommand(1);
+            sut.Started(cmd);
+            DateTime startDate1 = new DateTime(2000, 01, 01, 1, 1, 42, DateTimeKind.Utc);
+            for (int i = 0; i < 100; i++)
+            {
+                sut.ElaborationStarted(cmd, startDate1.AddMinutes(i));
+            }
+
+            var handledTrack = _messages.AsQueryable().Single(t => t.MessageId == cmd.MessageId.ToString());
+            Assert.That(handledTrack.ExecutionStartTimeList.Length, Is.EqualTo(10));
+            var last = handledTrack.ExecutionStartTimeList.Last();
+            Assert.That(last, Is.EqualTo(startDate1.AddMinutes(99)));
+        }
     }
 }

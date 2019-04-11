@@ -1,31 +1,29 @@
 ﻿#if NETFULL
-using System;
-using System.Threading;
+using Castle.Core.Logging;
 using Castle.MicroKernel.Registration;
 using Castle.Windsor;
-using Jarvis.Framework.Bus.Rebus.Integration.Support;
-using NUnit.Framework;
-using System.Configuration;
-using Jarvis.Framework.Shared.ReadModel;
-using MongoDB.Driver;
-using System.Linq;
 using Jarvis.Framework.Bus.Rebus.Integration.Adapters;
+using Jarvis.Framework.Bus.Rebus.Integration.Support;
+using Jarvis.Framework.Shared.Commands;
+using Jarvis.Framework.Shared.Commands.Tracking;
+using Jarvis.Framework.Shared.Exceptions;
+using Jarvis.Framework.Shared.Helpers;
+using Jarvis.Framework.Shared.Support;
+using Jarvis.Framework.Tests.BusTests.Handlers;
 using Jarvis.Framework.Tests.BusTests.MessageFolder;
 using MongoDB.Bson;
-using Rebus.Bus;
-using Rebus.Handlers;
-using Jarvis.Framework.Tests.BusTests.Handlers;
-using Jarvis.Framework.Shared.Helpers;
-using Rebus.Config;
-using System.Threading.Tasks;
-using Jarvis.Framework.Shared.Exceptions;
+using MongoDB.Driver;
 using NStore.Core.Streams;
+using NUnit.Framework;
+using Rebus.Bus;
+using Rebus.Config;
+using Rebus.Handlers;
+using System;
 using System.Collections.Generic;
-using Jarvis.Framework.Shared.Commands;
-using Castle.Core.Logging;
-using Jarvis.Framework.Shared.Logging;
-using Jarvis.Framework.Shared.Support;
-using Jarvis.Framework.Shared.Commands.Tracking;
+using System.Configuration;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.BusTests
 {
@@ -80,7 +78,7 @@ namespace Jarvis.Framework.Tests.BusTests
             _bus = _container.Resolve<IBus>();
             var handler = new AnotherSampleCommandHandler();
 
-            var commandExecutionExceptionHelper = new JarvisDefaultCommandExecutionExceptionHelper( NullLogger.Instance, 20, 10);
+            var commandExecutionExceptionHelper = new JarvisDefaultCommandExecutionExceptionHelper(NullLogger.Instance, 20, 10);
             var handlerAdapter = new MessageHandlerToCommandHandlerAdapter<AnotherSampleTestCommand>(
                 handler, commandExecutionExceptionHelper, tracker, _bus);
 
@@ -234,7 +232,7 @@ namespace Jarvis.Framework.Tests.BusTests
             var sampleMessage = new AnotherSampleTestCommand(3, "verify_exceeding_retry");
             AnotherSampleCommandHandler.SetFixtureData(
                 sampleMessage.MessageId,
-                Int32.MaxValue, 
+                Int32.MaxValue,
                 new ConcurrencyException("TEST_1", null),
                 false,
                 wrapInAggregateException: wrapInAggregateException);
