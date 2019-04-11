@@ -145,7 +145,10 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
                     Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
                      Builders<TrackedMessageModel>.Update
                         .Set(x => x.LastExecutionStartTime, startAt)
-                        .Push(x => x.ExecutionStartTimeList, startAt)
+                        .PushEach(
+                            s => s.ExecutionStartTimeList,
+                            new[] { startAt },
+                            slice: -10)
                         .Inc(x => x.ExecutionCount, 1)
                 );
             }
