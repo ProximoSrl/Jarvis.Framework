@@ -37,7 +37,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
 			_repository = repository;
 		}
 
-		public Task Handle(TMessage message)
+		public async Task Handle(TMessage message)
 		{
 			TProcessManager pm = null;
 			int i = 0;
@@ -48,7 +48,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
 				{
 					var id = _listener.GetCorrelationId(message);
 					if (String.IsNullOrEmpty(id))
-						return Task.CompletedTask;
+						return;
 
 					if (i > 0)
 					{
@@ -86,8 +86,6 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
 				_logger.ErrorFormat($"Saga [{pm?.GetType()?.Name}]: Too many conflict on command {message.GetType()} [MessageId: {message.MessageId}] : {message.Describe()}");
 			}
 			if (_logger.IsDebugEnabled) _logger.DebugFormat($"Saga [{pm?.GetType()?.Name}]: Handled {message.GetType().FullName} {message.MessageId} {message.Describe()}");
-
-            return Task.CompletedTask;
         }
 	}
 }

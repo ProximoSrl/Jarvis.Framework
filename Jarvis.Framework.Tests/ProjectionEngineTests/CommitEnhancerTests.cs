@@ -21,9 +21,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         [SetUp]
         public void SetUp()
         {
-            var cs = new InMemoryCounterService();
-            var identityManager = new IdentityManager(cs);
-            _sut = new CommitEnhancer(identityManager);
+            _sut = new CommitEnhancer();
         }
 
         [Test]
@@ -31,10 +29,12 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         {
             var chunk = new MongoChunk();
             Changeset cs = new Changeset(1,
-                new SampleAggregateCreated(),
-                new SampleAggregateTouched());
+                new Object[] {
+                    new SampleAggregateCreated(),
+                    new SampleAggregateTouched()
+                });
 
-            chunk.Init(10, new SampleAggregateId(2), 1, cs , "TEST");
+            chunk.Init(10, new SampleAggregateId(2), 1, cs, "TEST");
             _sut.Enhance(chunk);
             Assert.That(((DomainEvent)cs.Events[0]).EventPosition, Is.EqualTo(1));
             Assert.That(((DomainEvent)cs.Events[1]).EventPosition, Is.EqualTo(2));
@@ -45,8 +45,10 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         {
             var chunk = new MongoChunk();
             Changeset cs = new Changeset(1,
-                new SampleAggregateCreated(),
-                new SampleAggregateTouched());
+                new Object[] {
+                    new SampleAggregateCreated(),
+                    new SampleAggregateTouched() 
+                });
 
             chunk.Init(10, new SampleAggregateId(2), 1, cs, "TEST");
             _sut.Enhance(chunk);
@@ -61,11 +63,11 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         public void Verify_resiliency_on_empty_commit()
         {
             var chunk = new MongoChunk();
-            Changeset cs = new Changeset(1);
+            Changeset cs = new Changeset(1, Array.Empty<Object>());
 
             chunk.Init(10, new SampleAggregateId(2), 1, cs, "TEST");
             //Call and fail if some exception is raised.
-            _sut.Enhance(chunk);
+            Assert.DoesNotThrow(() => _sut.Enhance(chunk));
         }
     }
 }

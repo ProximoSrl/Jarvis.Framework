@@ -45,24 +45,14 @@ namespace Jarvis.Framework.Shared
             SingleAggregateRepositoryCacheEnabled = true;
         }
 
-        public static void EnableOfflineEventsReadmodelIdempotencyCheck()
-        {
-            OfflineEventsReadmodelIdempotencyCheck = true;
-        }
+        //public static void EnableOfflineEventsReadmodelIdempotencyCheck()
+        //{
+        //    OfflineEventsReadmodelIdempotencyCheck = true;
+        //}
 
-        public static void DisableOfflineEventsReadmodelIdempotencyCheck()
-        {
-            OfflineEventsReadmodelIdempotencyCheck = false;
-        }
-
-        public static void EnableAtomicProjectionEngineOptimizedCatchup()
-        {
-            AtomicProjectionEngineOptimizedCatchup = true;
-        }
-
-        public static void DisableAtomicProjectionEngineOptimizedCatchup()
-        {
-            AtomicProjectionEngineOptimizedCatchup = false;
-        }
+        //public static void DisableOfflineEventsReadmodelIdempotencyCheck()
+        //{
+        //    OfflineEventsReadmodelIdempotencyCheck = false;
+        //}
     }
 }

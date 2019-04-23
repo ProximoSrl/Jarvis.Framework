@@ -12,6 +12,8 @@ using System.Threading.Tasks;
 using Jarvis.Framework.Shared.Helpers;
 using NSubstitute;
 using Jarvis.Framework.Shared;
+using Jarvis.Framework.TestHelpers;
+using Fasterflect;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests
 {
@@ -145,8 +147,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             await sut.InsertAsync(new SampleAggregateCreated(), rm).ConfigureAwait(false);
 
             //now try to update counter with an event
-            SampleAggregateTouched e = new SampleAggregateTouched()
-                .AssignPositionValues(1, 1, 1); 
+            SampleAggregateTouched e = new SampleAggregateTouched().AssignPositionValues(1, 1, 1); 
 
             await sut.FindAndModifyAsync(e, rm.Id, _ => _.Counter++).ConfigureAwait(false);
             var reloaded = await sut.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
@@ -158,51 +159,10 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             Assert.That(reloaded.Counter, Is.EqualTo(11));
 
             //increment on different event
-            SampleAggregateTouched anotherEvent = new SampleAggregateTouched();
+            SampleAggregateTouched anotherEvent = new SampleAggregateTouched().AssignPositionValues(2, 2, 1);
             await sut.FindAndModifyAsync(anotherEvent, rm.Id, _ => _.Counter++).ConfigureAwait(false);
             reloaded = await sut.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
             Assert.That(reloaded.Counter, Is.EqualTo(12));
-        }
-
-        [Test]
-        public async Task Verify_check_on_creation_by_two_different_event_honor_offline_events()
-        {
-            JarvisFrameworkGlobalConfiguration.EnableOfflineEventsReadmodelIdempotencyCheck();
-            var rm = new SampleReadModelTest
-            {
-                Id = new TestId(1),
-                Value = "test"
-            };
-            SampleAggregateCreated offlineEvent = new SampleAggregateCreated();
-            SampleAggregateCreated onlineEvent = new SampleAggregateCreated();
-            onlineEvent.SetPropertyValue(_ => _.Context, new Dictionary<string, Object>());
-            onlineEvent.Context.Add(MessagesConstants.OfflineEvents, new DomainEvent[] { offlineEvent });
-
-            await sut.InsertAsync(offlineEvent, rm).ConfigureAwait(false);
-
-            //this should be ignored, because the online event was generated with the same command of the offlineEvent
-            //and this should simply skip the insertion.
-            await sut.InsertAsync(onlineEvent, rm).ConfigureAwait(false);
-        }
-
-        [Test]
-        public async Task Verify_disable_check_on_creation_by_two_different_event_honor_offline_events()
-        {
-            JarvisFrameworkGlobalConfiguration.DisableOfflineEventsReadmodelIdempotencyCheck();
-            var rm = new SampleReadModelTest
-            {
-                Id = new TestId(1),
-                Value = "test"
-            };
-            SampleAggregateCreated offlineEvent = new SampleAggregateCreated();
-            SampleAggregateCreated onlineEvent = new SampleAggregateCreated();
-            onlineEvent.SetPropertyValue(_ => _.Context, new Dictionary<string, Object>());
-            onlineEvent.Context.Add(MessagesConstants.OfflineEvents, new DomainEvent[] { offlineEvent });
-
-            await sut.InsertAsync(offlineEvent, rm).ConfigureAwait(false);
-
-            //this should NOT be ignored, because I've disabled the readmodelidempotency check.
-            Assert.ThrowsAsync<CollectionWrapperException>(async () => await sut.InsertAsync(onlineEvent, rm));
         }
 
         [Test]

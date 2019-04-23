@@ -1,8 +1,8 @@
-﻿using System;
+﻿using Castle.Core.Logging;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using Castle.Core.Logging;
 
 namespace Jarvis.Framework.TestHelpers
 {
@@ -48,14 +48,14 @@ namespace Jarvis.Framework.TestHelpers
 
 		protected void ChangeName(string newName)
 		{
-			this.name = newName ?? throw new ArgumentNullException("newName");
+			this.name = newName ?? throw new ArgumentNullException(nameof(newName));
 		}
 
 		public ILogger CreateChildLogger(string loggerName)
 		{
 			if (loggerName == null)
 			{
-				throw new ArgumentNullException("loggerName", "To create a child logger you must supply a non null name");
+				throw new ArgumentNullException(nameof(loggerName), "To create a child logger you must supply a non null name");
 			}
 			return new ConsoleLogger(string.Format(CultureInfo.CurrentCulture, "{0}.{1}", new object[] { Name, loggerName }));
 		}
@@ -116,7 +116,7 @@ namespace Jarvis.Framework.TestHelpers
 			}
 		}
 
-        public void Trace(string message)
+		public void Trace(string message)
 		{
 			if (this.IsDebugEnabled)
 			{
@@ -480,24 +480,24 @@ namespace Jarvis.Framework.TestHelpers
 		{
 			get
 			{
-				return (Level >= LoggerLevel.Debug && GlobalEnabled);
+				return Level >= LoggerLevel.Debug && GlobalEnabled;
 			}
 		}
 
-        // Properties
-        public bool IsTraceEnabled
-        {
-            get
-            {
-                return (Level >= LoggerLevel.Trace && GlobalEnabled);
-            }
-        }
-
-        public bool IsErrorEnabled
+		// Properties
+		public bool IsTraceEnabled
 		{
 			get
 			{
-				return (Level >= LoggerLevel.Error && GlobalEnabled);
+				return Level >= LoggerLevel.Trace && GlobalEnabled;
+			}
+		}
+
+		public bool IsErrorEnabled
+		{
+			get
+			{
+				return Level >= LoggerLevel.Error && GlobalEnabled;
 			}
 		}
 
@@ -505,7 +505,7 @@ namespace Jarvis.Framework.TestHelpers
 		{
 			get
 			{
-				return (Level >= LoggerLevel.Fatal && GlobalEnabled);
+				return Level >= LoggerLevel.Fatal && GlobalEnabled;
 			}
 		}
 
@@ -514,7 +514,7 @@ namespace Jarvis.Framework.TestHelpers
 		{
 			get
 			{
-				return (Level >= LoggerLevel.Fatal && GlobalEnabled);
+				return Level >= LoggerLevel.Fatal && GlobalEnabled;
 			}
 		}
 
@@ -522,7 +522,7 @@ namespace Jarvis.Framework.TestHelpers
 		{
 			get
 			{
-				return (Level >= LoggerLevel.Info && GlobalEnabled);
+				return Level >= LoggerLevel.Info && GlobalEnabled;
 			}
 		}
 
@@ -530,7 +530,7 @@ namespace Jarvis.Framework.TestHelpers
 		{
 			get
 			{
-				return (Level >= LoggerLevel.Warn && GlobalEnabled);
+				return Level >= LoggerLevel.Warn && GlobalEnabled;
 			}
 		}
 
@@ -549,12 +549,12 @@ namespace Jarvis.Framework.TestHelpers
 			this.Log(LoggerLevel.Debug, messageFactory(), null);
 		}
 
-        public void Trace(Func<string> messageFactory)
-        {
-            this.Log(LoggerLevel.Trace, messageFactory(), null);
-        }
+		public void Trace(Func<string> messageFactory)
+		{
+			this.Log(LoggerLevel.Trace, messageFactory(), null);
+		}
 
-        public void Error(Func<string> messageFactory)
+		public void Error(Func<string> messageFactory)
 		{
 			this.Log(LoggerLevel.Error, messageFactory(), null);
 		}

@@ -41,8 +41,10 @@ namespace Jarvis.Framework.Shared.ReadModel
 		/// <returns></returns>
 		public bool BuiltFromEvent(DomainEvent evt)
 		{
-			return BuiltFromMessage(evt.CheckpointToken, evt.EventPosition)
-                || (JarvisFrameworkGlobalConfiguration.OfflineEventsReadmodelIdempotencyCheck && evt.GetOfflineEventIdList().Intersect(ProcessedEvents).Any());
+            //Ouch, we cannot understand if offline engine processed the events.
+            return BuiltFromMessage(evt.CheckpointToken, evt.EventPosition);
+             
+           // || (JarvisFrameworkGlobalConfiguration.OfflineEventsReadmodelIdempotencyCheck && evt.GetOfflineEventIdList().Intersect(ProcessedEvents).Any());
         }
 
         /// <summary>

@@ -133,13 +133,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             foreach (var slot in projections.Select(p => p.Info.SlotName).Distinct())
             {
                 var slotName = slot;
-                if (setupMetrics) MetricsHelper.SetCheckpointCountToDispatch(slot, () => GetCheckpointCount(slotName));
+                if (setupMetrics) KernelMetricsHelper.SetCheckpointCountToDispatch(slot, () => GetCheckpointCount(slotName));
                 var slotMinDispatched = _checkpoints.AsQueryable()
                     .OrderBy(_ => _.Current)
                     .Where(_ => _.Slot == slot)
                     .FirstOrDefault();
                 _checkpointSlotTracker[slot] = slotMinDispatched?.Current ?? 0;
-                _slotRebuildTracker[slot] = false;
             }
 
             if (setupMetrics) KernelMetricsHelper.SetCheckpointCountToDispatch("", GetCheckpointMaxCount);

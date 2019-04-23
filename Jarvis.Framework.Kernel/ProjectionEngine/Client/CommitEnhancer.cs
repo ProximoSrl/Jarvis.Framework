@@ -3,6 +3,7 @@ using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.Helpers;
 using NStore.Core.Persistence;
 using NStore.Domain;
+using System;
 using System.Linq;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
@@ -27,7 +28,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 	{
 		public void Enhance(IChunk chunk)
 		{
-			Changeset commit;
             if (chunk.Payload is Changeset commit)
             {
                 Int32 eventPosition = 1;

@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 namespace Jarvis.Framework.Tests.ProjectionEngineTests
 {
     [TestFixture]
-public    class ConcurrentCheckpointTrackerTests
+    public class ConcurrentCheckpointTrackerTests
     {
         private ConcurrentCheckpointTracker _sut;
         private IMongoDatabase _db;

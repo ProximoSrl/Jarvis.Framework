@@ -75,13 +75,7 @@ namespace Jarvis.Framework.Shared.Events
         /// This is populated by the ICommitEnhancer interface.
         /// </summary>
         [BsonIgnore]
-        public Int32 EventPosition { get; private set; }
-
-        /// <summary>
-        /// Useful to know if this is the last event projected for a given <see cref="Changeset"/>
-        /// </summary>
-        [BsonIgnore]
-        public Boolean IsLastEventOfCommit { get; set; }
+        public Int32 EventPosition { get; internal set; }
 
         /// <summary>
         /// With migration to NStore this is the position of the

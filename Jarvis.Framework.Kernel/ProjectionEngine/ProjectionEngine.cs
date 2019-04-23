@@ -11,6 +11,15 @@ using Jarvis.Framework.Shared.Exceptions;
 using Jarvis.Framework.Shared.Logging;
 using Jarvis.Framework.Shared.Messages;
 using Jarvis.Framework.Shared.Helpers;
+using System.Collections.Generic;
+using System;
+using NStore.Core.Persistence;
+using System.Linq;
+using Jarvis.Framework.Shared.Support;
+using System.Threading.Tasks;
+using System.Threading;
+using System.Diagnostics;
+using NStore.Domain;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
 {
@@ -267,14 +276,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 var client = _pollingClientFactory.Create(_persistence, pollerId);
                 allClients.Add(client);
                 _bucketToClient.Add(bucket, client);
-                client.Configure(GetStartGlobalCheckpoint(), 4000);
+                client.Configure(GetStartGlobalCheckpoint(bucket.Slots), 4000);
             }
 
             _clients = allClients.ToArray();
 
             foreach (var slotName in allSlots)
             {
-                MetricsHelper.CreateMeterForDispatcherCountSlot(slotName);
+                KernelMetricsHelper.CreateMeterForDispatcherCountSlot(slotName);
                 var startCheckpoint = GetStartCheckpointForSlot(slotName);
                 _logger.InfoFormat("Slot {0} starts from {1}", slotName, startCheckpoint);
 
@@ -284,11 +293,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                     b.Slots.Any(s => s.Equals(slotName, StringComparison.OrdinalIgnoreCase))) ??
                     _config.BucketInfo.Single(b => b.Slots[0] == "*");
                 var client = _bucketToClient[slotBucket];
-                client.AddConsumer(commit => DispatchCommitAsync(commit, name, startCheckpoint));
+                client.AddConsumer($"SLOT: {slotName}", commit => DispatchCommitAsync(commit, name, startCheckpoint));
             }
 
             Initialized = true;
-            MetricsHelper.SetProjectionEngineCurrentDispatchCount(() => _countOfConcurrentDispatchingCommit);
+            KernelMetricsHelper.SetProjectionEngineCurrentDispatchCount(() => _countOfConcurrentDispatchingCommit);
         }
 
         private Int64 GetStartGlobalCheckpoint(String[] slots)
@@ -390,7 +399,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
             var projections = _projectionsBySlot[slotName];
 
-            object[] events = GetArrayOfObjectFromChunk(chunk);
+            object[] events = chunk.GetDispatchList();
 
             var eventCount = events.Length;
 
@@ -470,15 +479,15 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                     _loggerThreadContextManager.ClearContextProperty("prj");
                 }
 
-                    projection.CheckpointProjected(chunk.Position);
-                    flushNeeded = true;
+                projection.CheckpointProjected(chunk.Position);
+                flushNeeded = true;
 
 #pragma warning disable S125 // Sections of code should not be "commented out"
-                    //TODO: Evaluate if it is needed to update single projection checkpoint
-                    //Update this projection, set all events of this checkpoint as dispatched.
-                    //await _checkpointTracker.UpdateProjectionCheckpointAsync(cname, chunk.Position).ConfigureAwait(false);
+                //TODO: Evaluate if it is needed to update single projection checkpoint
+                //Update this projection, set all events of this checkpoint as dispatched.
+                //await _checkpointTracker.UpdateProjectionCheckpointAsync(cname, chunk.Position).ConfigureAwait(false);
 #pragma warning restore S125 // Sections of code should not be "commented out"
-                } //End of projection cycle.
+            } //End of projection cycle.
 
             await _checkpointTracker.UpdateSlotAndSetCheckpointAsync(
                 slotName,
@@ -509,9 +518,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         /// is idle.
         /// </summary>
         private Boolean flushNeeded;
-        private static object[] GetArrayOfObjectFromChunk(IChunk chunk)
-        {
-            Object[] events;
 
         /// <summary>
         /// Simply ask to the checkpoint collection tracker to flush everything.
@@ -525,21 +531,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 flushNeeded = false;
                 _checkpointTracker?.FlushCheckpointCollectionAsync().Wait();
             }
-        }
-            if (chunk.Payload is Changeset)
-            {
-                events = ((Changeset)chunk.Payload).Events;
-            }
-            else if (chunk.Payload != null)
-            {
-                events = new Object[] { chunk.Payload };
-            }
-            else
-            {
-                events = new Object[0];
-            }
-
-            return events;
         }
 
         public async Task UpdateAsync()
@@ -609,7 +600,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             }
         }
 
-        #region Healt Checks
+        #region Health Checks
 
         private void RegisterHealthCheck()
         {
@@ -632,3 +623,4 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         public Int32 BufferSize { get; set; }
     }
 }
+

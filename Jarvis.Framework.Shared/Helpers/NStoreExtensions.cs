@@ -1,5 +1,6 @@
 ﻿using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.IdentitySupport;
+using NStore.Core.Persistence;
 using NStore.Domain;
 using System;
 
@@ -7,6 +8,8 @@ namespace Jarvis.Framework.Shared.Helpers
 {
     public static class NStoreExtensions
     {
+        private static Object[] EmptyCommitEvents = Array.Empty<Object>();
+
         public static Int64 GetChunkPosition(this Changeset cs)
         {
             if (cs.Events.Length == 0)
