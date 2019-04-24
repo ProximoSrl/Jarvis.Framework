@@ -129,14 +129,14 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
                     .For<IAtomicReadModelFactory>()
                     .ImplementedBy<AtomicReadModelFactory>(),
                 Component
-                    .For<IAtomicReadmodelChangesetConsumerFactory>()
-                    .ImplementedBy<AtomicReadmodelChangesetConsumerFactory>()
+                    .For<IAtomicReadmodelProjectorHelperFactory>()
+                    .ImplementedBy<AtomicReadmodelProjectorHelperFactory>()
                     .DependsOn(Dependency.OnValue<IWindsorContainer>(_container)), //I Know, this is not optima, we will refactor this to a facility.
                 Component
                     .For<ICommitPollingClientFactory>()
                     .AsFactory(),
-                Component.For(typeof(AtomicReadmodelChangesetConsumer<>))
-                   .ImplementedBy(typeof(AtomicReadmodelChangesetConsumer<>)),
+                Component.For(typeof(AtomicReadmodelProjectorHelper<>))
+                   .ImplementedBy(typeof(AtomicReadmodelProjectorHelper<>)),
                 Component
                     .For(new Type[]
                     {

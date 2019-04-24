@@ -29,8 +29,8 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         [Test]
         public async Task Verify_basic_consumption_of_single_event()
         {
-            AtomicReadmodelChangesetConsumer<SimpleTestAtomicReadModel> sut =
-                _container.Resolve<AtomicReadmodelChangesetConsumer<SimpleTestAtomicReadModel>>();
+            AtomicReadmodelProjectorHelper<SimpleTestAtomicReadModel> sut =
+                _container.Resolve<AtomicReadmodelProjectorHelper<SimpleTestAtomicReadModel>>();
 
             var changeset = await GenerateCreatedEvent().ConfigureAwait(false);
             await sut.Handle(lastUsedPosition, changeset, changeset.GetIdentity()).ConfigureAwait(false);
@@ -45,8 +45,8 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         [Test]
         public async Task Verify_basic_consumption_of_two_events()
         {
-            AtomicReadmodelChangesetConsumer<SimpleTestAtomicReadModel> sut =
-                _container.Resolve<AtomicReadmodelChangesetConsumer<SimpleTestAtomicReadModel>>();
+            AtomicReadmodelProjectorHelper<SimpleTestAtomicReadModel> sut =
+                _container.Resolve<AtomicReadmodelProjectorHelper<SimpleTestAtomicReadModel>>();
 
             var changeset = await GenerateCreatedEvent().ConfigureAwait(false);
             await sut.Handle(lastUsedPosition, changeset, changeset.GetIdentity()).ConfigureAwait(false);

@@ -16,23 +16,26 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support
     /// </summary>
     /// <typeparam name="TModel"></typeparam>
     /// <typeparam name="TKey"></typeparam>
-    public class AtomicReadmodelChangesetConsumer<TModel> : IAtomicReadmodelChangesetConsumer
+    public class AtomicReadmodelProjectorHelper<TModel> : IAtomicReadmodelProjectorHelper
          where TModel : IAtomicReadModel
     {
         private readonly IAtomicCollectionWrapper<TModel> _atomicCollectionWrapper;
         private readonly AtomicReadmodelInfoAttribute _atomicReadmodelInfoAttribute;
         private readonly IAtomicReadModelFactory _atomicReadModelFactory;
+        private readonly ILiveAtomicReadModelProcessor _liveAtomicReadModelProcessor;
         private readonly ILogger _logger;
 
-        public AtomicReadmodelChangesetConsumer(
+        public AtomicReadmodelProjectorHelper(
             IAtomicCollectionWrapper<TModel> atomicCollectionWrapper,
             IAtomicReadModelFactory atomicReadModelFactory,
+            ILiveAtomicReadModelProcessor liveAtomicReadModelProcessor,
             ILogger logger)
         {
             _atomicCollectionWrapper = atomicCollectionWrapper;
             _atomicReadmodelInfoAttribute = AtomicReadmodelInfoAttribute.GetFrom(typeof(TModel));
             _logger = logger;
             _atomicReadModelFactory = atomicReadModelFactory;
+            _liveAtomicReadModelProcessor = liveAtomicReadModelProcessor;
         }
 
         public AtomicReadmodelInfoAttribute AtomicReadmodelInfoAttribute => _atomicReadmodelInfoAttribute;
@@ -53,13 +56,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support
 
             var rm = await _atomicCollectionWrapper.FindOneByIdAsync(identity.AsString()).ConfigureAwait(false);
             var readmodelCreated = false;
-            var readmodelModified = false;
             if (rm == null)
             {
                 //TODO Check if this is the first event.
                 rm = _atomicReadModelFactory.Create<TModel>(identity.AsString());
                 readmodelCreated = true;
             }
+
+            bool readmodelModified;
             try
             {
                 readmodelModified = rm.ProcessChangeset(changeset);
@@ -89,6 +93,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support
                 return new AtomicReadmodelChangesetConsumerReturnValue(rm, readmodelCreated);
             }
             return null;
+        }
+
+        public async Task FullProject(IIdentity identity)
+        {
+            var rm = await _liveAtomicReadModelProcessor.ProcessAsync<TModel>(identity.AsString(), Int64.MaxValue).ConfigureAwait(false);
+            await _atomicCollectionWrapper.UpsertAsync(rm).ConfigureAwait(false);
         }
     }
 }

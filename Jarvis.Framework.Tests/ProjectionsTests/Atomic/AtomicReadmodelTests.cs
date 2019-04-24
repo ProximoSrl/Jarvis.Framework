@@ -126,9 +126,26 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 
             var touch2 = await GenerateTouchedEvent().ConfigureAwait(false);
             rm.ProcessChangeset(touch2);
+            //reprocess past event.
             rm.ProcessChangeset(touch);
 
             Assert.That(rm.TouchCount, Is.EqualTo(2));
+        }
+
+        [Test]
+        public async Task Verify_processing_event_with_holes()
+        {
+            var cs = await GenerateAtomicAggregateCreatedEvent().ConfigureAwait(false);
+            var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
+            rm.ProcessChangeset(cs);
+            var touch1 = await GenerateTouchedEvent().ConfigureAwait(false);
+            var touch2 = await GenerateTouchedEvent().ConfigureAwait(false);
+
+            rm.ProcessChangeset(touch2);
+            Assert.That(rm.TouchCount, Is.EqualTo(1), "We can process event even if there are holes.");
+
+            rm.ProcessChangeset(touch1);
+            Assert.That(rm.TouchCount, Is.EqualTo(1), "Past events should not be processed");
         }
 
         [Test]
