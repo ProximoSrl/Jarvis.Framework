@@ -145,7 +145,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         }
 
         /// <summary>
-        /// Simply return the minimum checkpoint already dispatched.
+        /// Simply return the Maximum checkpoint already dispatched.
         /// </summary>
         /// <returns></returns>
         public long GetLastPositionDispatched()
@@ -158,9 +158,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
         public async Task FlushAsync()
         {
-            //var writes = new List<WriteModel<AtomicProjectionCheckpoint>>();
-            //_collection.BulkWriteAsync()
-
             //Not efficient, use a bulk write
             foreach (var c in _inMemoryCheckpoint)
             {

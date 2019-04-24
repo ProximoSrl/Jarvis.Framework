@@ -14,7 +14,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         [Test]
         public async Task Verify_basic_dispatch_of_changeset()
         {
-            var cs = await GenerateCreatedEvent(false).ConfigureAwait(false);
+            var cs = await GenerateCreatedEvent().ConfigureAwait(false);
             var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
             rm.ProcessChangeset(cs);
 
@@ -24,7 +24,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         [Test]
         public async Task Verify_correctly_return_of_handled_event()
         {
-            var cs = await GenerateCreatedEvent(false).ConfigureAwait(false);
+            var cs = await GenerateCreatedEvent().ConfigureAwait(false);
             var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
             rm.ProcessChangeset(cs);
 
@@ -35,7 +35,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         public async Task Verify_cache_does_not_dispatch_wrong_event()
         {
             //ok process a created event
-            var cs = await GenerateCreatedEvent(false).ConfigureAwait(false);
+            var cs = await GenerateCreatedEvent().ConfigureAwait(false);
             var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
             rm.ProcessChangeset(cs);
 
@@ -51,7 +51,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         public async Task Verify_cache_does_not_dispatch_wrong_event_to_reamodel_of_same_aggregate()
         {
             //ok process a created event
-            var cs = await GenerateCreatedEvent(false).ConfigureAwait(false);
+            var cs = await GenerateCreatedEvent().ConfigureAwait(false);
             var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
             rm.ProcessChangeset(cs);
 
@@ -67,20 +67,20 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         [Test]
         public async Task Verify_correctly_return_of_handled_event_even_if_a_single_Event_is_handled()
         {
-            var cs = await GenerateCreatedEvent(false).ConfigureAwait(false);
+            var cs = await GenerateCreatedEvent().ConfigureAwait(false);
             var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
             rm.ProcessChangeset(cs);
 
             var evta = new SampleAggregateDerived1();
             var evtb = new SampleAggregateTouched();
-            var cs2 = await ProcessEvents(new DomainEvent[] { evta, evtb }, p => new AtomicAggregateId(p));
+            var cs2 = await ProcessEvents(new DomainEvent[] { evta, evtb }, p => new AtomicAggregateId(p)).ConfigureAwait(false);
             Assert.IsTrue(rm.ProcessChangeset(cs2));
         }
 
         [Test]
         public async Task Verify_correctly_return_false_of_Unhandled_event()
         {
-            var cs = await GenerateSampleAggregateDerived1(false).ConfigureAwait(false);
+            var cs = await GenerateSampleAggregateDerived1().ConfigureAwait(false);
             var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
             Assert.IsFalse(rm.ProcessChangeset(cs));
         }
@@ -88,10 +88,10 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         [Test]
         public async Task Verify_basic_dispatch_of_two_changeset()
         {
-            var cs = await GenerateAtomicAggregateCreatedEvent(false).ConfigureAwait(false);
+            var cs = await GenerateAtomicAggregateCreatedEvent().ConfigureAwait(false);
             var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
             rm.ProcessChangeset(cs);
-            var touch = await GenerateTouchedEvent(false).ConfigureAwait(false);
+            var touch = await GenerateTouchedEvent().ConfigureAwait(false);
             rm.ProcessChangeset(touch);
 
             Assert.That(rm.ProjectedPosition, Is.EqualTo(touch.GetChunkPosition()));
@@ -100,10 +100,10 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         [Test]
         public async Task Verify_idempotence_of_changeest_processing()
         {
-            var cs = await GenerateAtomicAggregateCreatedEvent(false).ConfigureAwait(false);
+            var cs = await GenerateAtomicAggregateCreatedEvent().ConfigureAwait(false);
             var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
             rm.ProcessChangeset(cs);
-            var touch = await GenerateTouchedEvent(false).ConfigureAwait(false);
+            var touch = await GenerateTouchedEvent().ConfigureAwait(false);
             rm.ProcessChangeset(touch);
 
             Assert.That(rm.TouchCount, Is.EqualTo(1));
@@ -116,15 +116,15 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         [Test]
         public async Task Verify_idempotence_of_changeest_processing_past_event()
         {
-            var cs = await GenerateAtomicAggregateCreatedEvent(false).ConfigureAwait(false);
+            var cs = await GenerateAtomicAggregateCreatedEvent().ConfigureAwait(false);
             var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
             rm.ProcessChangeset(cs);
-            var touch = await GenerateTouchedEvent(false).ConfigureAwait(false);
+            var touch = await GenerateTouchedEvent().ConfigureAwait(false);
             rm.ProcessChangeset(touch);
 
             Assert.That(rm.TouchCount, Is.EqualTo(1));
 
-            var touch2 = await GenerateTouchedEvent(false).ConfigureAwait(false);
+            var touch2 = await GenerateTouchedEvent().ConfigureAwait(false);
             rm.ProcessChangeset(touch2);
             rm.ProcessChangeset(touch);
 
@@ -134,7 +134,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         [Test]
         public async Task Verify_basic_properties()
         {
-            var cs = await GenerateCreatedEvent(false, issuedBy : "admin").ConfigureAwait(false);
+            var cs = await GenerateCreatedEvent(issuedBy : "admin").ConfigureAwait(false);
             var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
             rm.ProcessChangeset(cs);
 
@@ -143,7 +143,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             Assert.That(rm.LastModify, Is.EqualTo(((DomainEvent)cs.Events[0]).CommitStamp));
             Assert.That(rm.AggregateVersion, Is.EqualTo(cs.AggregateVersion));
 
-            cs = await GenerateTouchedEvent(false, issuedBy: "admin2").ConfigureAwait(false);
+            cs = await GenerateTouchedEvent(issuedBy: "admin2").ConfigureAwait(false);
             rm.ProcessChangeset(cs);
 
             Assert.That(rm.CreationUser, Is.EqualTo("admin"));

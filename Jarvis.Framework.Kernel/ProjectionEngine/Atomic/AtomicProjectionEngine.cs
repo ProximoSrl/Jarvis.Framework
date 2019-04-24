@@ -1,4 +1,5 @@
 ﻿using Castle.Core.Logging;
+using Jarvis.Framework.Kernel.Events;
 using Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 using Jarvis.Framework.Kernel.Support;
@@ -13,6 +14,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using System.Timers;
@@ -73,6 +75,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
         private readonly Int64 _lastPositionDispatched;
 
+        /// <summary>
+        /// Used for health checks, it stores last exception for each dispatcher, to understand if a dispatcher
+        /// was halted.
+        /// </summary>
+        private readonly Dictionary<String, Exception> _dispatchingExceptions = new Dictionary<String, Exception>();
+
         public AtomicProjectionEngine(
             IPersistence persistence,
             ICommitEnhancer commitEnhancer,
@@ -87,11 +95,25 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             _atomicReadmodelEventConsumerFactory = atomicReadmodelEventConsumerFactory;
             _lastPositionDispatched = _atomicProjectionCheckpointManager.GetLastPositionDispatched();
             _nStoreLoggerFactory = nStoreLoggerFactory;
-
             FlushTimeSpan = TimeSpan.FromSeconds(30); //flush checkpoint on db each 10 seconds.
 
             Logger.Info("Created Atomic Projection Engine");
             MaximumDifferenceForCatchupPoller = 20000;
+
+            Metrics.HealthChecks.RegisterHealthCheck("AtomicProjectionEngine", GetHealthCheck);
+        }
+
+        private Metrics.HealthCheckResult GetHealthCheck()
+        {
+            if (_dispatchingExceptions.Count == 0)
+                return Metrics.HealthCheckResult.Healthy();
+
+            StringBuilder errors = new StringBuilder();
+            foreach (var ex in _dispatchingExceptions)
+            {
+                errors.AppendLine($"Error in dispatching {ex.Key}: {ex}");
+            }
+            return Metrics.HealthCheckResult.Unhealthy("Error in Atomic Projection Engine: " + errors.ToString());
         }
 
         /// <summary>
@@ -219,7 +241,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
        
             To keep it simple we have two tpl, one for the standard polling the other for the catchup.
         */
-
         private BufferBlock<AtomicDispatchChunk> _tplBuffer;
         private ITargetBlock<AtomicDispatchChunk> _tplBroadcaster;
 
@@ -254,59 +275,71 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             {
                 //Ok I have a list of atomic projection, we need to create projector for every item.
                 var blocks = item.Value;
-                var consumer = new ActionBlock<AtomicDispatchChunk>(async dispatchObj =>
-                {
-                    try
-                    {
-                        if (dispatchObj.Chunk.Payload is Changeset changeset)
-                        {
-                            var aggregateId = changeset.GetIdentity();
-                            if (aggregateId?.GetType() == item.Key)
-                            {
-                                //Remember to dispatch this only to objects that are associated to this poller.
-                                foreach (var atomicDispatchChunkConsumer in blocks.Where(_ => _.PollerId == dispatchObj.PollerId))
-                                {
-                                    if (Logger.IsDebugEnabled)
-                                    {
-                                        Logger.DebugFormat("Dispatched chunk {0} with poller {1} for readmodel {2}", dispatchObj.Chunk.Position, dispatchObj.PollerId, atomicDispatchChunkConsumer.Consumer.AtomicReadmodelInfoAttribute.Name);
-                                    }
-                                    //let the abstract readmodel handle everyting, then finally dispatch notification.
-                                    var handleReturnValue = await atomicDispatchChunkConsumer.Consumer.Handle(dispatchObj.Chunk.Position, changeset, aggregateId).ConfigureAwait(false);
-
-                                    if (handleReturnValue != null)
-                                    {
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                                        //I do not care if the notification works or not, I simply call it and forget.
-                                        if (handleReturnValue.CreatedForFirstTime)
-                                        {
-                                            AtomicReadmodelNotifier.ReadmodelCreatedAsync(handleReturnValue.Readmodel, changeset);
-                                        }
-                                        else
-                                        {
-                                            AtomicReadmodelNotifier.ReadmodelUpdatedAsync(handleReturnValue.Readmodel, changeset);
-                                        }
-#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                                    }
-                                }
-                            }
-                        }
-                        foreach (var rm in blocks.Where(_ => _.PollerId == dispatchObj.PollerId))
-                        {
-                            _atomicProjectionCheckpointManager.MarkPosition(rm.Consumer.AtomicReadmodelInfoAttribute.Name, dispatchObj.Chunk.Position);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        //TODO: Implement health check with failed
-                        //TODO: Implement autorestart.
-                        Logger.ErrorFormat(ex, "Generic error in TPL dispatching {0} with poller {1} for id type {2}", dispatchObj.Chunk.Position, dispatchObj.PollerId, item.Key);
-                        throw;
-                    }
-                }, executionOption);
+                var consumer = new ActionBlock<AtomicDispatchChunk>(InnerDispatch(item, blocks), executionOption);
                 consumers.Add(consumer);
             }
             broadcaster = GuaranteedDeliveryBroadcastBlock.Create(consumers, "AtomicPoller", 3000);
             enhancer.LinkTo(broadcaster, new DataflowLinkOptions() { PropagateCompletion = true });
+        }
+
+        private Func<AtomicDispatchChunk, Task> InnerDispatch(
+            KeyValuePair<Type, List<AtomicDispatchChunkConsumer>> item,
+            List<AtomicDispatchChunkConsumer> blocks)
+        {
+            return async dispatchObj =>
+            {
+                try
+                {
+                    if (dispatchObj.Chunk.Payload is Changeset changeset)
+                    {
+                        var aggregateId = changeset.GetIdentity();
+                        if (aggregateId?.GetType() == item.Key)
+                        {
+                            //Remember to dispatch this only to objects that are associated to this poller.
+                            foreach (var atomicDispatchChunkConsumer in blocks.Where(_ => _.PollerId == dispatchObj.PollerId))
+                            {
+                                if (Logger.IsDebugEnabled)
+                                {
+                                    Logger.DebugFormat("Dispatched chunk {0} with poller {1} for readmodel {2}", dispatchObj.Chunk.Position, dispatchObj.PollerId, atomicDispatchChunkConsumer.Consumer.AtomicReadmodelInfoAttribute.Name);
+                                }
+
+                                //let the abstract readmodel handle everyting, then finally dispatch notification.Handle method internally
+                                //catches exception and make atomic readmodel faulty.
+                                var handleReturnValue = await atomicDispatchChunkConsumer.Consumer.Handle(
+                                    dispatchObj.Chunk.Position,
+                                    changeset,
+                                    aggregateId).ConfigureAwait(false);
+
+                                if (handleReturnValue != null)
+                                {
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                                    //I do not care if the notification works or not, I simply call it and forget.
+                                    if (handleReturnValue.CreatedForFirstTime)
+                                    {
+                                        AtomicReadmodelNotifier.ReadmodelCreatedAsync(handleReturnValue.Readmodel, changeset);
+                                    }
+                                    else
+                                    {
+                                        AtomicReadmodelNotifier.ReadmodelUpdatedAsync(handleReturnValue.Readmodel, changeset);
+                                    }
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                                }
+                            }
+                        }
+                    }
+                    foreach (var rm in blocks.Where(_ => _.PollerId == dispatchObj.PollerId))
+                    {
+                        _atomicProjectionCheckpointManager.MarkPosition(rm.Consumer.AtomicReadmodelInfoAttribute.Name, dispatchObj.Chunk.Position);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    //TODO: Implement health check with failed
+                    _dispatchingExceptions[item.Key.Name] = ex;
+                    Logger.ErrorFormat(ex, "Generic error in TPL dispatching {0} with poller {1} for id type {2}", dispatchObj.Chunk.Position, dispatchObj.PollerId, item.Key);
+                    throw;
+                }
+            };
         }
 
         #endregion

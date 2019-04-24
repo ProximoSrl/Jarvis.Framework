@@ -17,7 +17,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 
             _aggregateIdSeed++;
             var c2 = await GenerateSomeEvents().ConfigureAwait(false);
-            await GenerateTouchedEvent(false).ConfigureAwait(false);
+            await GenerateTouchedEvent().ConfigureAwait(false);
 
             //ok we need to check that events are not mixed.
             var sut = _container.Resolve<ILiveAtomicReadModelProcessor>();
@@ -35,7 +35,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         {
             var c1 = await GenerateSomeEvents().ConfigureAwait(false);
 
-            var c2 = await GenerateTouchedEvent(false).ConfigureAwait(false);
+            var c2 = await GenerateTouchedEvent().ConfigureAwait(false);
 
             //ok we need to check that events are not mixed.
             var sut = _container.Resolve<ILiveAtomicReadModelProcessor>();
@@ -53,7 +53,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         {
             var c1 = await GenerateSomeEvents().ConfigureAwait(false);
 
-            var c2 = await GenerateTouchedEvent(false).ConfigureAwait(false);
+            var c2 = await GenerateTouchedEvent().ConfigureAwait(false);
 
             //ok we need to check that events are not mixed.
             var sut = _container.Resolve<ILiveAtomicReadModelProcessor>();

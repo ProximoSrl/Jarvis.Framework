@@ -26,7 +26,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         public async Task Verify_older_readmodel_will_use_a_different_cachup_projection_engine()
         {
             Int32 newCheckpoint = 110;
-            var csAtomic = await GenerateAtomicAggregateCreatedEvent(false).ConfigureAwait(false);
+            var csAtomic = await GenerateAtomicAggregateCreatedEvent().ConfigureAwait(false);
             await GenerateSomeEvents().ConfigureAwait(false);
             await GenerateEmptyUntil(newCheckpoint).ConfigureAwait(false);
 

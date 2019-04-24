@@ -9,6 +9,7 @@ using Metrics;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using System;
+using System.Collections.Concurrent;
 using System.Linq;
 
 namespace Jarvis.Framework.Kernel.Support
@@ -41,23 +42,30 @@ namespace Jarvis.Framework.Kernel.Support
     public class AtomicReadModelVersionLoader
     {
         private readonly IMongoDatabase _readmodelDb;
+        private readonly ConcurrentDictionary<String, IMongoCollection<AbstractAtomicReadModel>> _collectionsCache;
 
         public AtomicReadModelVersionLoader(IMongoDatabase readmodelDb)
         {
             _readmodelDb = readmodelDb;
+            _collectionsCache = new ConcurrentDictionary<string, IMongoCollection<AbstractAtomicReadModel>>();
         }
 
         public double CountReadModelToUpdateByName(string readmodelName, Int32 version)
         {
-            var _collection = _readmodelDb.GetCollection<AbstractAtomicReadModel>(readmodelName);
-            if (_collection == null)
-            {
-                return 0; //collection still not present, maybe no readmodel is present, 0 to update
-            }
-
+            var _collection = GetCollection(readmodelName);
             return _collection.AsQueryable()
                  .Where(_ => _.ReadModelVersion != version)
                  .Count();
+        }
+
+        private IMongoCollection<AbstractAtomicReadModel> GetCollection(string readmodelName)
+        {
+            if (!_collectionsCache.TryGetValue(readmodelName, out var collection) )
+            {
+                collection = _readmodelDb.GetCollection<AbstractAtomicReadModel>(readmodelName);
+                _collectionsCache.TryAdd(readmodelName, collection);
+            }
+            return collection;
         }
     }
 
@@ -65,7 +73,7 @@ namespace Jarvis.Framework.Kernel.Support
     {
         private readonly IProjectionTargetCheckpointLoader _checkPointLoader;
         private readonly AtomicProjectionCheckpointManager _atomicProjectionCheckpointManager;
-        private readonly AtomicReadModelVersionLoader _versionaLoader;
+        private readonly AtomicReadModelVersionLoader _versionLoader;
         private readonly IAtomicReadModelFactory _readModelFactory;
 
         public ILogger Logger { get; set; } = NullLogger.Instance;
@@ -74,11 +82,11 @@ namespace Jarvis.Framework.Kernel.Support
                 IProjectionTargetCheckpointLoader checkPointLoader,
                 IAtomicReadModelFactory readModelFactory,
                 AtomicProjectionCheckpointManager atomicProjectionCheckpointManager,
-                AtomicReadModelVersionLoader versionaLoader)
+                AtomicReadModelVersionLoader versionLoader)
         {
             _checkPointLoader = checkPointLoader;
             _atomicProjectionCheckpointManager = atomicProjectionCheckpointManager;
-            _versionaLoader = versionaLoader;
+            _versionLoader = versionLoader;
             _readModelFactory = readModelFactory;
         }
 
@@ -93,7 +101,7 @@ namespace Jarvis.Framework.Kernel.Support
                 try
                 {
                     var readmodelVersion = _readModelFactory.GetReamdodelVersion(readModelType);
-                    Metric.Gauge("versions-behind-" + name, () => _versionaLoader.CountReadModelToUpdateByName(name, readmodelVersion), Unit.Items);
+                    Metric.Gauge("versions-behind-" + name, () => _versionLoader.CountReadModelToUpdateByName(name, readmodelVersion), Unit.Items);
                 }
                 catch (Exception ex)
                 {

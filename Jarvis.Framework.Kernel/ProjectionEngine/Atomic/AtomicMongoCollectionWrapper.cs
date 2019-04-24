@@ -20,7 +20,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         private readonly IMongoCollection<TModel> _collection;
         private readonly Int32 _actualVersion;
         private readonly ILiveAtomicReadModelProcessor _liveAtomicReadModelProcessor;
-        private readonly IAtomicReadModelFactory _atomicReadModelFactory;
 
         public AtomicMongoCollectionWrapper(
             IMongoDatabase readmodelDb,
@@ -28,7 +27,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             ILiveAtomicReadModelProcessor liveAtomicReadModelProcessor)
         {
             _liveAtomicReadModelProcessor = liveAtomicReadModelProcessor;
-            _atomicReadModelFactory = atomicReadModelFactory;
 
             var collectionName = CollectionNames.GetCollectionName<TModel>();
             _collection = readmodelDb.GetCollection<TModel>(collectionName);
@@ -60,7 +58,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                )
             );
 
-            _actualVersion = _atomicReadModelFactory.GetReamdodelVersion(typeof(TModel));
+            _actualVersion = atomicReadModelFactory.GetReamdodelVersion(typeof(TModel));
         }
 
         /// <summary>
