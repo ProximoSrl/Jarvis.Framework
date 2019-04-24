@@ -21,10 +21,10 @@
     <PackageReference Include="Microsoft.Composition" Version="1.0.31" />
     <PackageReference Include="MongoDB.Driver" Version="2.7.2" />
     <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
-    <PackageReference Include="NStore.Core" Version="0.4.7" />
-    <PackageReference Include="NStore.Domain" Version="0.4.7" />
-    <PackageReference Include="NStore.Persistence.Mongo" Version="0.4.7" />
-    <PackageReference Include="NStore.Tpl" Version="0.4.7" />
+    <PackageReference Include="NStore.Core" Version="0.8.0" />
+    <PackageReference Include="NStore.Domain" Version="0.8.0" />
+    <PackageReference Include="NStore.Persistence.Mongo" Version="0.8.0" />
+    <PackageReference Include="NStore.Tpl" Version="0.8.0" />
   </ItemGroup>
 
    <ItemGroup Condition=" '$(TargetFramework)' == 'net461' ">

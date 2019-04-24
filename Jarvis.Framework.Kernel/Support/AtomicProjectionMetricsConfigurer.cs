@@ -116,11 +116,11 @@ namespace Jarvis.Framework.Kernel.Support
                 long behind = maxCheckpoint - minimumDispateched;
                 if (minimumDispateched > maxCheckpoint)
                 {
-                    return HealthCheckResult.Unhealthy("Slot-All-AtomicReadmodels" + " behind:" + behind);
+                    return HealthCheckResult.Unhealthy("Slot-All-AtomicReadmodels behind:" + behind);
                 }
                 else
                 {
-                    return HealthCheckResult.Healthy("Slot-All-AtomicReadmodels" + " behind:" + behind);
+                    return HealthCheckResult.Healthy("Slot-All-AtomicReadmodels behind:" + behind);
                 }
             };
         }

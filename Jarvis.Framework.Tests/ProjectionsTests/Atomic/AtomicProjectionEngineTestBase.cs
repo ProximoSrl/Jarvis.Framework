@@ -240,11 +240,9 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             bool inSameCommitAsPrevious,
             Func<Int64, IIdentity> generateId = null)
         {
-            Int64 commitId = inSameCommitAsPrevious ? _lastCommit : ++_lastCommit;
-
             generateId = generateId ?? (p => new SampleAggregateId(p));
             evt.SetPropertyValue(d => d.AggregateId, generateId(_aggregateIdSeed));
-            Changeset cs = new Changeset(_aggregateVersion++, evt);
+            Changeset cs = new Changeset(_aggregateVersion++, new Object[] { evt });
             var chunk = await _persistence.AppendAsync(evt.AggregateId, cs).ConfigureAwait(false);
             lastUsedPosition = chunk.Position;
 

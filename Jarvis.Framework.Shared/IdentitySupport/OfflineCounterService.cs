@@ -39,14 +39,16 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 			if (db == null) throw new ArgumentNullException("db");
 			_offlineSlots = db.GetCollection<OfflineIdentity>("sysOfflineCounterSlots");
 			_offlineSlots.Indexes.CreateOne(
-				Builders<OfflineIdentity>.IndexKeys
-				.Ascending(i => i.Used)
-				.Ascending(i => i.Value)
-				.Ascending(i => i.SerieName),
-				new CreateIndexOptions()
-				{
-					Name = "GetNextIndex"
-				});
+                new CreateIndexModel<OfflineIdentity>(
+				    Builders<OfflineIdentity>.IndexKeys
+				    .Ascending(i => i.Used)
+				    .Ascending(i => i.Value)
+				    .Ascending(i => i.SerieName),
+				    new CreateIndexOptions()
+				    {
+					    Name = "GetNextIndex"
+				    })
+                );
 		}
 
 		public long GetNext(string serie)
