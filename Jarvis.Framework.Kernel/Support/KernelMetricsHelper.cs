@@ -86,17 +86,17 @@ namespace Jarvis.Framework.Kernel.Support
                 var meter = Metric.Meter("projection-rebuild-event-dispatched-" + slotName, Unit.Items);
                 RebuildCommitDispatchedBySlot[slotName] = meter;
             }
-            Metric.Gauge("rebuild-slot-input-buffer-" + slotName, getBufferDispatchCount, Unit.Items);
+            Metric.Gauge("rebuild-buffer-STAGE3 (Action slot " + slotName + ")", getBufferDispatchCount, Unit.Items);
         }
 
         public static void CreateGaugeForRebuildBucketDBroadcasterBuffer(string bucketKey, Func<Double> provider)
         {
-            Metric.Gauge("rebuild-buffer-broadcaster-" + bucketKey, provider, Unit.Items);
+            Metric.Gauge("rebuild-buffer-STAGE2 (Broadcaster)-" + bucketKey, provider, Unit.Items);
         }
 
         public static void CreateGaugeForRebuildFirstBuffer(string bucketKey, Func<Double> provider)
         {
-            Metric.Gauge("rebuild-firstbuffer-" + bucketKey, provider, Unit.Items);
+            Metric.Gauge("rebuild-buffer-STAGE1-" + bucketKey, provider, Unit.Items);
         }
 
         public static void CreateMeterForRebuildEventCompleted(string bucketKey)

@@ -17,28 +17,42 @@ namespace Jarvis.Framework.Kernel.Support
     {
         private readonly String _queueName;
         private readonly Int32 _messageLimit;
-        private readonly ILogger _logger;
 
-        public MsmqHealthCheck(String queueName, Int32 messageLimit, ILogger logger)
+        public MsmqHealthCheck(String queueName, Int32 messageLimit)
            : base("MsmqHealthCheck: " + queueName)
         {
             _queueName = queueName;
             _messageLimit = messageLimit;
-            _logger = logger;
             HealthChecks.RegisterHealthCheck(this);
         }
 
+        private HealthCheckResult result = HealthCheckResult.Healthy();
+        private DateTime lastCheck;
+
         protected override HealthCheckResult Check()
+        {
+            //There is no reason to poll more than 5 minutes for the queue status
+            if (DateTime.UtcNow.Subtract(lastCheck).TotalMinutes > 5)
+            {
+                InnerCheck();
+            }
+            return result;
+        }
+
+        private void InnerCheck()
         {
             PeekQueueToActivate();
             var count = GetCount();
             if (count > _messageLimit)
             {
-                return HealthCheckResult.Unhealthy("Queue {0} has {1} messages waiting in queue, exceeding maximum allowable limit of {2}",
+                result = HealthCheckResult.Unhealthy("Queue {0} has {1} messages waiting in queue, exceeding maximum allowable limit of {2}",
                     _queueName, count, _messageLimit);
             }
-
-            return HealthCheckResult.Healthy();
+            else
+            {
+                result = HealthCheckResult.Healthy();
+            }
+            lastCheck = DateTime.UtcNow;
         }
 
         private void PeekQueueToActivate()
