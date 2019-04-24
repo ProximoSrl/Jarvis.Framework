@@ -135,6 +135,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 return;
             }
 
+            //Now it is time to Mark missing readmodels.
+            await _atomicProjectionCheckpointManager.MarkMissingReadmodels().ConfigureAwait(false);
+
             Logger.Info("Started atomic projection engine");
             if (AllReadModelSetup != null)
             {
