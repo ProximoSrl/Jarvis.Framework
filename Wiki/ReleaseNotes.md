@@ -3,6 +3,11 @@ J.A.R.V.I.S. Framework - Proximo srl (c)
 
 # Version 5
 
+# 5.1.0
+
+- Updated references
+- Global option to have a better catchup for atomic readmodels (JarvisFrameworkGlobalConfiguration.AtomicProjectionEngineOptimizedCatchup)
+
 # 5.0.1
 
 - Fixed query for tracking message model pending plus other fix in message tracking area.
