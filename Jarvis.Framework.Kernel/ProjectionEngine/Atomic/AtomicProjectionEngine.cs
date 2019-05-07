@@ -104,7 +104,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             Logger.Info("Created Atomic Projection Engine");
             MaximumDifferenceForCatchupPoller = 20000;
 
-            Metrics.HealthChecks.RegisterHealthCheck("AtomicProjectionEngine", GetHealthCheck);
+            Metrics.HealthChecks.RegisterHealthCheck("AtomicProjectionEngine", (Func<Metrics.HealthCheckResult>) GetHealthCheck);
         }
 
         private Metrics.HealthCheckResult GetHealthCheck()
