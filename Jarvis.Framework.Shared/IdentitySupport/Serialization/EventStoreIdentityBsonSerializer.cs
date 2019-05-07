@@ -166,6 +166,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport.Serialization
 		{
 			return new ValueClassSerializer();
 		}
+
 		/// <summary>
 		/// Initializes a new instance of the <see cref="DictionaryInterfaceImplementerSerializer{TDictionary, TKey, TValue}"/> class.
 		/// </summary>
@@ -175,7 +176,6 @@ namespace Jarvis.Framework.Shared.IdentitySupport.Serialization
 					GetKeySerializer(),
 					GetValueSerializer())
 		{
-
 		}
 
 		protected override TDictionary CreateInstance()

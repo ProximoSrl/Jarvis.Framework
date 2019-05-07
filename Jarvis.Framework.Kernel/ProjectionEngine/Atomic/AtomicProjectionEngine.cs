@@ -2,6 +2,7 @@
 using Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 using Jarvis.Framework.Kernel.Support;
+using Jarvis.Framework.Shared;
 using Jarvis.Framework.Shared.Exceptions;
 using Jarvis.Framework.Shared.Helpers;
 using Jarvis.Framework.Shared.ReadModel.Atomic;
@@ -13,6 +14,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using System.Timers;
@@ -29,7 +31,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
     {
         private readonly AtomicProjectionCheckpointManager _atomicProjectionCheckpointManager;
         private readonly IPersistence _persistence;
-        private readonly IAtomicReadmodelChangesetConsumerFactory _atomicReadmodelEventConsumerFactory;
+        private readonly IAtomicReadmodelProjectorHelperFactory _atomicReadmodelProjectorHelperFactory;
 
         /// <summary>
         /// Poller to grab commits.
@@ -71,27 +73,51 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// </summary>
         public IAtomicReadmodelNotifier AtomicReadmodelNotifier { get; set; } = new NullAtomicReadmodelNotifier();
 
+        /// <summary>
+        /// This is populated only at startup, it is the higher position that was dispatched by the atomic projection 
+        /// engine and it is used to understand if some readmodel should be projected using catch-up strategy.
+        /// </summary>
         private readonly Int64 _lastPositionDispatched;
+
+        /// <summary>
+        /// Used for health checks, it stores last exception for each dispatcher, to understand if a dispatcher
+        /// was halted.
+        /// </summary>
+        private readonly Dictionary<String, Exception> _dispatchingExceptions = new Dictionary<String, Exception>();
 
         public AtomicProjectionEngine(
             IPersistence persistence,
             ICommitEnhancer commitEnhancer,
             AtomicProjectionCheckpointManager atomicProjectionCheckpointManager,
-            IAtomicReadmodelChangesetConsumerFactory atomicReadmodelEventConsumerFactory,
+            IAtomicReadmodelProjectorHelperFactory atomicReadmodelProjectorHelperFactory,
             INStoreLoggerFactory nStoreLoggerFactory)
         {
             Logger = NullLogger.Instance;
             _atomicProjectionCheckpointManager = atomicProjectionCheckpointManager;
             _persistence = persistence;
             _commitEnhancer = commitEnhancer;
-            _atomicReadmodelEventConsumerFactory = atomicReadmodelEventConsumerFactory;
+            _atomicReadmodelProjectorHelperFactory = atomicReadmodelProjectorHelperFactory;
             _lastPositionDispatched = _atomicProjectionCheckpointManager.GetLastPositionDispatched();
             _nStoreLoggerFactory = nStoreLoggerFactory;
-
             FlushTimeSpan = TimeSpan.FromSeconds(30); //flush checkpoint on db each 10 seconds.
 
             Logger.Info("Created Atomic Projection Engine");
             MaximumDifferenceForCatchupPoller = 20000;
+
+            Metrics.HealthChecks.RegisterHealthCheck("AtomicProjectionEngine", (Func<Metrics.HealthCheckResult>) GetHealthCheck);
+        }
+
+        private Metrics.HealthCheckResult GetHealthCheck()
+        {
+            if (_dispatchingExceptions.Count == 0)
+                return Metrics.HealthCheckResult.Healthy();
+
+            StringBuilder errors = new StringBuilder();
+            foreach (var ex in _dispatchingExceptions)
+            {
+                errors.AppendLine($"Error in dispatching {ex.Key}: {ex}");
+            }
+            return Metrics.HealthCheckResult.Unhealthy("Error in Atomic Projection Engine: " + errors.ToString());
         }
 
         /// <summary>
@@ -106,12 +132,23 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         private const Int32 CatchupPollerId = 1;
         private const Int32 DefaultPollerId = 0;
 
+        /*
+          *those two are useful for catchup poller 
+        */
+        private readonly HashSet<String> _catchupPollerIdList = new HashSet<string>();
+        private Dictionary<Type, List<AtomicDispatchChunkConsumer>> _catchupConsumerBlocks;
+
+        private Int64 _defaultPollerStartingPoint;
+
         public async Task Start()
         {
             if (_started)
             {
                 return;
             }
+
+            //Now it is time to Mark missing readmodels.
+            await _atomicProjectionCheckpointManager.MarkMissingReadmodels().ConfigureAwait(false);
 
             Logger.Info("Started atomic projection engine");
             if (AllReadModelSetup != null)
@@ -125,7 +162,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             //we need to create a poller to dispatch everything to each readmodel.
             CreateTplChain(ref _tplBuffer, ref _tplBroadcaster);
 
-            CreatePollerAndStart(ref _mainPoller, DefaultPollerId);
+            _defaultPollerStartingPoint = CreatePollerAndStart(ref _mainPoller, DefaultPollerId, DispatchToTpl);
 
             //Need to know if we ned to start catchup poller
             var behindReadmodels = _consumerBlocks
@@ -135,8 +172,21 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
             if (behindReadmodels.Count > 0)
             {
+                _catchupPollerIdList.Clear();
+                //recreate a dictionary of type and list of all readmodel that we need to catchup.
+                _catchupConsumerBlocks = _consumerBlocks
+                    .Where(b => b.Value.Any(c => c.PollerId == CatchupPollerId))
+                    .ToDictionary(b => b.Key, b => b.Value.Where(p => p.PollerId == CatchupPollerId).ToList());
+
                 Logger.InfoFormat("Catchup Poller started because some readmodel are too far behind: {0}", String.Join(", ", behindReadmodels.Select(_ => _.Consumer.AtomicReadmodelInfoAttribute.Name)));
-                CreatePollerAndStart(ref _catchupPoller, CatchupPollerId);
+                if (JarvisFrameworkGlobalConfiguration.AtomicProjectionEngineOptimizedCatchup)
+                {
+                    CreatePollerAndStart(ref _catchupPoller, CatchupPollerId, DispatchCatchupToTpl);
+                }
+                else
+                {
+                    CreatePollerAndStart(ref _catchupPoller, CatchupPollerId, DispatchToTpl);
+                }
             }
 
             _flushTimer = new Timer(FlushTimeSpan.TotalMilliseconds);
@@ -146,7 +196,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             _started = true;
         }
 
-        private void CreatePollerAndStart(ref PollingClient poller, Int32 pollerId)
+        /// <summary>
+        /// Create a poller, start the poller and return starting position of the poller.
+        /// </summary>
+        /// <param name="poller"></param>
+        /// <param name="pollerId"></param>
+        /// <returns></returns>
+        private Int64 CreatePollerAndStart(ref PollingClient poller, Int32 pollerId, Func<AtomicDispatchChunk, Task<Boolean>> dispatchToTplFunction)
         {
             if (poller != null)
             {
@@ -154,9 +210,74 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             }
             var startingPosition = TryGetStartingPoint(pollerId);
             Logger.InfoFormat("AtomicProjectionEngine: Starting poller id {0} from position {1}", pollerId, startingPosition);
-            var subscription = new JarvisFrameworkLambdaSubscription(c => DispatchToTpl(new AtomicDispatchChunk(pollerId, c)));
+            var subscription = new JarvisFrameworkLambdaSubscription(c => dispatchToTplFunction(new AtomicDispatchChunk(pollerId, c)));
             poller = new PollingClient(_persistence, startingPosition, subscription, _nStoreLoggerFactory);
             poller.Start();
+            return startingPosition;
+        }
+
+        /// <summary>
+        /// Catchup poller is different, instead of sending everything to real TPL, it will simply
+        /// fix readmodels until we reach minimum dispatch, then finally it will simply dispatch 
+        /// to the standard tpl.
+        /// </summary>
+        /// <param name="atomicDispatchChunk"></param>
+        /// <returns></returns>
+        private async Task<Boolean> DispatchCatchupToTpl(AtomicDispatchChunk atomicDispatchChunk)
+        {
+            //Process only if we have a payload
+            if (atomicDispatchChunk?.Chunk?.Payload != null)
+            {
+                //if catchup poller reach starting point of the engine, it can start sending data to TPL
+                if (atomicDispatchChunk.Chunk.Position > _defaultPollerStartingPoint)
+                {
+                    //Catchup poller reached the original checkpoint, we can start doing standard projection.
+                    return await DispatchToTpl(atomicDispatchChunk).ConfigureAwait(false);
+                }
+
+                //to be more efficient, until we reach the startup commit of default, we can project
+                //differently, because we can simply project all the id in one shot.
+                //we need to completely reconstruct all readnodel that should be catched.
+                if (atomicDispatchChunk.Chunk.Payload is Changeset cs)
+                {
+                    var identity = cs.GetIdentity();
+                    if (identity != null) //remember empty commits.
+                    {
+                        if (_catchupConsumerBlocks.TryGetValue(identity.GetType(), out var consumers))
+                        {
+                            //if I already projected this id, nothing to do.
+                            if (!_catchupPollerIdList.Contains(identity.AsString()))
+                            {
+                                foreach (var consumer in consumers)
+                                {
+                                    await consumer.Consumer.FullProject(identity).ConfigureAwait(false);
+                                    _atomicProjectionCheckpointManager.MarkPosition(
+                                        consumer.Consumer.AtomicReadmodelInfoAttribute.Name,
+                                        atomicDispatchChunk.Chunk.Position);
+                                }
+
+                                _catchupPollerIdList.Add(identity.AsString());
+                            }
+                        }
+                    }
+                }
+
+                //Clear everything when we reach the ponit
+                if (atomicDispatchChunk.Chunk.Position == _defaultPollerStartingPoint)
+                {
+                    _catchupPollerIdList.Clear(); //we need to clear all the in memory id list.
+
+                    foreach (var consumer in _catchupConsumerBlocks.Values.SelectMany(c => c))
+                    {
+                        _atomicProjectionCheckpointManager.MarkPosition(
+                            consumer.Consumer.AtomicReadmodelInfoAttribute.Name,
+                            atomicDispatchChunk.Chunk.Position);
+                    }
+
+                }
+            }
+
+            return true;
         }
 
         private async Task<Boolean> DispatchToTpl(AtomicDispatchChunk atomicDispatchChunk)
@@ -219,7 +340,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
        
             To keep it simple we have two tpl, one for the standard polling the other for the catchup.
         */
-
         private BufferBlock<AtomicDispatchChunk> _tplBuffer;
         private ITargetBlock<AtomicDispatchChunk> _tplBroadcaster;
 
@@ -234,13 +354,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         {
             DataflowBlockOptions bufferOptions = new DataflowBlockOptions
             {
-                BoundedCapacity = 1000,
+                BoundedCapacity = 4000,
             };
-            buffer = new BufferBlock<AtomicDispatchChunk>(bufferOptions);
+            var localBuffer = buffer = new BufferBlock<AtomicDispatchChunk>(bufferOptions);
+            Metrics.Metric.Gauge("atomic-projection-buffer", () => localBuffer.Count, Metrics.Unit.Items);
 
             ExecutionDataflowBlockOptions executionOption = new ExecutionDataflowBlockOptions
             {
-                BoundedCapacity = 1000,
+                BoundedCapacity = 4000,
             };
             var enhancer = new TransformBlock<AtomicDispatchChunk, AtomicDispatchChunk>(c =>
             {
@@ -248,65 +369,81 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 return c;
             }, executionOption);
             buffer.LinkTo(enhancer, new DataflowLinkOptions() { PropagateCompletion = true });
+            Metrics.Metric.Gauge("atomic-projection-enhancer-buffer", () => (Double)enhancer.InputCount, Metrics.Unit.Items);
 
             var consumers = new List<ITargetBlock<AtomicDispatchChunk>>();
             foreach (var item in _consumerBlocks)
             {
                 //Ok I have a list of atomic projection, we need to create projector for every item.
                 var blocks = item.Value;
-                var consumer = new ActionBlock<AtomicDispatchChunk>(async dispatchObj =>
-                {
-                    try
-                    {
-                        if (dispatchObj.Chunk.Payload is Changeset changeset)
-                        {
-                            var aggregateId = changeset.GetIdentity();
-                            if (aggregateId?.GetType() == item.Key)
-                            {
-                                //Remember to dispatch this only to objects that are associated to this poller.
-                                foreach (var atomicDispatchChunkConsumer in blocks.Where(_ => _.PollerId == dispatchObj.PollerId))
-                                {
-                                    if (Logger.IsDebugEnabled)
-                                    {
-                                        Logger.DebugFormat("Dispatched chunk {0} with poller {1} for readmodel {2}", dispatchObj.Chunk.Position, dispatchObj.PollerId, atomicDispatchChunkConsumer.Consumer.AtomicReadmodelInfoAttribute.Name);
-                                    }
-                                    //let the abstract readmodel handle everyting, then finally dispatch notification.
-                                    var handleReturnValue = await atomicDispatchChunkConsumer.Consumer.Handle(dispatchObj.Chunk.Position, changeset, aggregateId).ConfigureAwait(false);
-
-                                    if (handleReturnValue != null)
-                                    {
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                                        //I do not care if the notification works or not, I simply call it and forget.
-                                        if (handleReturnValue.CreatedForFirstTime)
-                                        {
-                                            AtomicReadmodelNotifier.ReadmodelCreatedAsync(handleReturnValue.Readmodel, changeset);
-                                        }
-                                        else
-                                        {
-                                            AtomicReadmodelNotifier.ReadmodelUpdatedAsync(handleReturnValue.Readmodel, changeset);
-                                        }
-#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                                    }
-                                }
-                            }
-                        }
-                        foreach (var rm in blocks.Where(_ => _.PollerId == dispatchObj.PollerId))
-                        {
-                            _atomicProjectionCheckpointManager.MarkPosition(rm.Consumer.AtomicReadmodelInfoAttribute.Name, dispatchObj.Chunk.Position);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        //TODO: Implement health check with failed
-                        //TODO: Implement autorestart.
-                        Logger.ErrorFormat(ex, "Generic error in TPL dispatching {0} with poller {1} for id type {2}", dispatchObj.Chunk.Position, dispatchObj.PollerId, item.Key);
-                        throw;
-                    }
-                }, executionOption);
+                var consumer = new ActionBlock<AtomicDispatchChunk>(InnerDispatch(item, blocks), executionOption);
+                Metrics.Metric.Gauge("atomic-projection-consumer-buffer-" + item.Key.Name, () => consumer.InputCount, Metrics.Unit.Items);
                 consumers.Add(consumer);
             }
             broadcaster = GuaranteedDeliveryBroadcastBlock.Create(consumers, "AtomicPoller", 3000);
             enhancer.LinkTo(broadcaster, new DataflowLinkOptions() { PropagateCompletion = true });
+        }
+
+        private Func<AtomicDispatchChunk, Task> InnerDispatch(
+            KeyValuePair<Type, List<AtomicDispatchChunkConsumer>> item,
+            List<AtomicDispatchChunkConsumer> blocks)
+        {
+            return async dispatchObj =>
+            {
+                try
+                {
+                    if (dispatchObj.Chunk.Payload is Changeset changeset)
+                    {
+                        var aggregateId = changeset.GetIdentity();
+                        if (aggregateId?.GetType() == item.Key)
+                        {
+                            //Remember to dispatch this only to objects that are associated to this poller. Remember that we build a single
+                            //TPL chain, so both the poller (default and catchup) will push data inside the very same tpl pipeline, but inside
+                            //this dispatcher chain, we simply dispatch only to the blocks that have correct poller id.
+                            foreach (var atomicDispatchChunkConsumer in blocks.Where(_ => _.PollerId == dispatchObj.PollerId))
+                            {
+                                if (Logger.IsDebugEnabled)
+                                {
+                                    Logger.DebugFormat("Dispatched chunk {0} with poller {1} for readmodel {2}", dispatchObj.Chunk.Position, dispatchObj.PollerId, atomicDispatchChunkConsumer.Consumer.AtomicReadmodelInfoAttribute.Name);
+                                }
+
+                                //let the abstract readmodel handle everyting, then finally dispatch notification.Handle method internally
+                                //catches exception and make atomic readmodel faulty.
+                                var handleReturnValue = await atomicDispatchChunkConsumer.Consumer.Handle(
+                                    dispatchObj.Chunk.Position,
+                                    changeset,
+                                    aggregateId).ConfigureAwait(false);
+
+                                if (handleReturnValue != null)
+                                {
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                                    //I do not care if the notification works or not, I simply call it and forget.
+                                    if (handleReturnValue.CreatedForFirstTime)
+                                    {
+                                        AtomicReadmodelNotifier.ReadmodelCreatedAsync(handleReturnValue.Readmodel, changeset);
+                                    }
+                                    else
+                                    {
+                                        AtomicReadmodelNotifier.ReadmodelUpdatedAsync(handleReturnValue.Readmodel, changeset);
+                                    }
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                                }
+                            }
+                        }
+                    }
+                    foreach (var rm in blocks.Where(_ => _.PollerId == dispatchObj.PollerId))
+                    {
+                        _atomicProjectionCheckpointManager.MarkPosition(rm.Consumer.AtomicReadmodelInfoAttribute.Name, dispatchObj.Chunk.Position);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    //TODO: Implement health check with failed
+                    _dispatchingExceptions[item.Key.Name] = ex;
+                    Logger.ErrorFormat(ex, "Generic error in TPL dispatching {0} with poller {1} for id type {2}", dispatchObj.Chunk.Position, dispatchObj.PollerId, item.Key);
+                    throw;
+                }
+            };
         }
 
         #endregion
@@ -348,6 +485,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                      attribute.Name,
                      projectionPosition,
                      _lastPositionDispatched);
+
                 AddConsumer(projectionPosition, CatchupPollerId, atomicReadmodelType, attribute);
                 return this;
             }
@@ -358,9 +496,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             return this;
         }
 
-        private void AddConsumer(Int64 lastDispatchedPosition, Int32 pollerId, Type atomicReadmodelType, AtomicReadmodelInfoAttribute atomicReadmodelInfoAttribute)
+        private void AddConsumer(Int64 projectedPosition, Int32 pollerId, Type atomicReadmodelType, AtomicReadmodelInfoAttribute atomicReadmodelInfoAttribute)
         {
-            _pollerStartingPoint[pollerId] = Math.Min(TryGetStartingPoint(pollerId), lastDispatchedPosition);
+            //The real starting point is the minimum between actual position and what is already in the dictionary, each poller id should start from 
+            //minimum dispatched to avoid missing data.
+            _pollerStartingPoint[pollerId] = Math.Min(TryGetStartingPoint(pollerId), projectedPosition);
 
             if (!_consumerBlocks.TryGetValue(atomicReadmodelInfoAttribute.AggregateIdType, out List<AtomicDispatchChunkConsumer> atomicReadmodelEventConsumers))
             {
@@ -370,7 +510,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             //add the consumer
             if (!atomicReadmodelEventConsumers.Any(_ => _.Consumer.AtomicReadmodelInfoAttribute.Name == atomicReadmodelInfoAttribute.Name))
             {
-                var consumer = _atomicReadmodelEventConsumerFactory.CreateFor(atomicReadmodelType);
+                var consumer = _atomicReadmodelProjectorHelperFactory.CreateFor(atomicReadmodelType);
                 var atomicConsumer = new AtomicDispatchChunkConsumer(consumer, pollerId);
                 atomicReadmodelEventConsumers.Add(atomicConsumer);
             }
@@ -378,6 +518,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             _atomicProjectionCheckpointManager.Register(atomicReadmodelType);
         }
 
+        /// <summary>
+        /// We want to take for each poller id the minimum value.
+        /// </summary>
+        /// <param name="pollerId"></param>
+        /// <returns></returns>
         private Int64 TryGetStartingPoint(int pollerId)
         {
             if (_pollerStartingPoint.TryGetValue(pollerId, out var value))
@@ -385,6 +530,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 return value;
             }
 
+            //Start from Maximum, result will be passed to min function.
             return Int64.MaxValue;
         }
 
@@ -407,15 +553,22 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
         internal class AtomicDispatchChunkConsumer
         {
-            public AtomicDispatchChunkConsumer(IAtomicReadmodelChangesetConsumer consumer, int pollerId)
+            public AtomicDispatchChunkConsumer(IAtomicReadmodelProjectorHelper consumer, int pollerId)
             {
                 Consumer = consumer;
                 PollerId = pollerId;
             }
 
-            public IAtomicReadmodelChangesetConsumer Consumer { get; private set; }
+            public IAtomicReadmodelProjectorHelper Consumer { get; private set; }
 
             public Int32 PollerId { get; private set; }
+        }
+
+        internal class BehindAtomicReadModel
+        {
+            public AtomicReadmodelInfoAttribute Attribute { get; set; }
+
+            public Type ReadModelType { get; set; }
         }
 
         #endregion

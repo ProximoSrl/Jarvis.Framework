@@ -19,7 +19,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             Changeset changeset = await GenerateSomeEvents().ConfigureAwait(false);
 
             _aggregateIdSeed++; //start working on another aggregate
-            var secondAggregateChangeset = await GenerateCreatedEvent(false).ConfigureAwait(false);
+            var secondAggregateChangeset = await GenerateCreatedEvent().ConfigureAwait(false);
 
             //And finally check if everything is projected
             var sut = await CreateSutAndStartProjectionEngineAsync().ConfigureAwait(false);
@@ -41,7 +41,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             Assert.That(rm.TouchCount, Is.EqualTo(0));
 
             //another event
-            var anotherchangeset = await GenerateTouchedEvent(false).ConfigureAwait(false);
+            var anotherchangeset = await GenerateTouchedEvent().ConfigureAwait(false);
 
             //we need to wait to understand if it was projected
             GetTrackerAndWaitForChangesetToBeProjected( "SimpleTestAtomicReadModel");

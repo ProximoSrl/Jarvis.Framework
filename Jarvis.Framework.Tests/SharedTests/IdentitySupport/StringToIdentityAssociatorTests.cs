@@ -34,7 +34,6 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
 			public TestIdentityAssociation(IMongoDatabase database, ILogger testLogger, Boolean allowDuplicateId, Boolean caseInsensitive)
 				: base(database, CollectionName, testLogger, allowDuplicateId, caseInsensitive)
 			{
-
 			}
 		}
 

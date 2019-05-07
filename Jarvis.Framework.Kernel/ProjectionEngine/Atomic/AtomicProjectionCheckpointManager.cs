@@ -78,6 +78,27 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         }
 
         /// <summary>
+        /// After the caller called <see cref="Register(Type)"/> for all the readmodels, calling this
+        /// method will mark all other readmodel as missing.
+        /// </summary>
+        /// <returns></returns>
+        public async Task MarkMissingReadmodels()
+        {
+            HashSet<String> allregisteredTypes = new HashSet<string>();
+            foreach (var key in _registeredTypeNames.Keys)
+            {
+                allregisteredTypes.Add(key);
+            }
+            var missings = _inMemoryCheckpoint.Where(c => !allregisteredTypes.Contains(c.Key));
+            foreach (var missing in missings)
+            {
+                var checkpoint = missing.Value;
+                checkpoint.ReadmodelMissing = true;
+                await _collection.SaveAsync(checkpoint, checkpoint.Id).ConfigureAwait(false);
+            }
+        }
+
+        /// <summary>
         /// Retrieve checkpoint for a single readmodel.
         /// </summary>
         /// <param name="atomicReadmodelName"></param>
@@ -89,22 +110,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 return checkpoint.Position;
             }
             return 0;
-        }
-
-        /// <summary>
-        /// Loads all checkpoints from db.
-        /// </summary>
-        public void LoadCheckpointsFromDb()
-        {
-            var checkpoints = _collection.AsQueryable().ToList();
-            foreach (var checkpoint in checkpoints)
-            {
-                if (_inMemoryCheckpoint.TryGetValue(checkpoint.Id, out AtomicProjectionCheckpoint c))
-                {
-                    Logger.InfoFormat("Atomic projection {0} checkpoint loaded from database {1}", checkpoint.Position, checkpoint.Position);
-                    c.Position = checkpoint.Position;
-                }
-            }
         }
 
         /// <summary>
@@ -145,7 +150,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         }
 
         /// <summary>
-        /// Simply return the minimum checkpoint already dispatched.
+        /// Simply return the Maximum checkpoint already dispatched.
         /// </summary>
         /// <returns></returns>
         public long GetLastPositionDispatched()
@@ -158,9 +163,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
         public async Task FlushAsync()
         {
-            //var writes = new List<WriteModel<AtomicProjectionCheckpoint>>();
-            //_collection.BulkWriteAsync()
-
             //Not efficient, use a bulk write
             foreach (var c in _inMemoryCheckpoint)
             {
@@ -180,6 +182,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             /// This is the last checkpoint dispatched.
             /// </summary>
             public Int64 Position { get; set; }
+
+            /// <summary>
+            /// This property is true when the readmodel was not anymore present 
+            /// in projection engine. It is useful because if a readmodel was removed
+            /// <see cref="Position"/> will fall behind and this will immediately
+            /// show that the readmodel is really missing.
+            /// </summary>
+            public Boolean ReadmodelMissing { get; set; }
         }
     }
 }

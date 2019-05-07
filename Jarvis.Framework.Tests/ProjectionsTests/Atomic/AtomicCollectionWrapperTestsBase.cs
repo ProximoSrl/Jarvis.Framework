@@ -90,7 +90,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 
             evt.SetPropertyValue(d => d.AggregateId, new SampleAggregateId(_aggregateIdSeed));
             evt.SetPropertyValue(d => d.CheckpointToken, commitId);
-            Changeset cs = new Changeset(_aggregateVersion++, evt);
+            Changeset cs = new Changeset(_aggregateVersion++, new Object[] { evt });
             _persistence.AppendAsync(evt.AggregateId, cs).Wait();
             return cs;
         }

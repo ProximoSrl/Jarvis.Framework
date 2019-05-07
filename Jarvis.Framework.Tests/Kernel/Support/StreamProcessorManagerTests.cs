@@ -36,7 +36,7 @@ namespace Jarvis.Framework.Tests.Kernel.Support
 		[Test]
 		public async Task Verify_basic_apply_of_changeset()
 		{
-			Changeset cs = new Changeset(1, new PocoObject(2), new PocoObject(3));
+			Changeset cs = new Changeset(1, new[] { new PocoObject(2), new PocoObject(3) });
 			await persistence.AppendAsync("partitionId", cs).ConfigureAwait(false);
 			var result = await sut.ProcessAsync<SimpleProjection>("partitionId", Int32.MaxValue).ConfigureAwait(false);
 			Assert.That(result.EvtCount, Is.EqualTo(2));

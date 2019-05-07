@@ -58,16 +58,8 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             _db = client.GetDatabase(url.DatabaseName);
             _collection = GetCollection<SimpleTestAtomicReadModel>();
             _collectionForAtomicAggregate = GetCollection<SimpleAtomicAggregateReadModel>();
-            var mongoStoreOptions = new MongoPersistenceOptions
-            {
-                PartitionsConnectionString = url.ToString(),
-                UseLocalSequence = true,
-                PartitionsCollectionName = "Commits",
-                SequenceCollectionName = "event_sequence",
-                DropOnInit = false
-            };
 
-            _persistence = CreatePersistence(mongoStoreOptions);
+            _persistence = CreatePersistence();
             _db.Drop();
 
             _identityManager = new IdentityManager(new CounterService(_db));
@@ -76,12 +68,9 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             SimpleTestAtomicReadModel.TouchMax = Int32.MaxValue;
         }
 
-        private static IPersistence CreatePersistence(MongoPersistenceOptions mongoStoreOptions)
+        private static IPersistence CreatePersistence()
         {
             return new InMemoryPersistence(e => e.BsonSerializeAndDeserialize());
-            //var persistence = new MongoPersistence(mongoStoreOptions);
-            //persistence.InitAsync(CancellationToken.None).Wait();
-            //return persistence;
         }
 
         protected IMongoCollection<T> GetCollection<T>()
@@ -140,14 +129,14 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
                     .For<IAtomicReadModelFactory>()
                     .ImplementedBy<AtomicReadModelFactory>(),
                 Component
-                    .For<IAtomicReadmodelChangesetConsumerFactory>()
-                    .ImplementedBy<AtomicReadmodelChangesetConsumerFactory>()
+                    .For<IAtomicReadmodelProjectorHelperFactory>()
+                    .ImplementedBy<AtomicReadmodelProjectorHelperFactory>()
                     .DependsOn(Dependency.OnValue<IWindsorContainer>(_container)), //I Know, this is not optima, we will refactor this to a facility.
                 Component
                     .For<ICommitPollingClientFactory>()
                     .AsFactory(),
-                Component.For(typeof(AtomicReadmodelChangesetConsumer<>))
-                   .ImplementedBy(typeof(AtomicReadmodelChangesetConsumer<>)),
+                Component.For(typeof(AtomicReadmodelProjectorHelper<>))
+                   .ImplementedBy(typeof(AtomicReadmodelProjectorHelper<>)),
                 Component
                     .For(new Type[]
                     {
@@ -193,30 +182,30 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 
         protected Int64 lastUsedPosition;
 
-        protected Task<Changeset> GenerateCreatedEvent(Boolean inSameCommitAsPrevious, String issuedBy = null)
+        protected Task<Changeset> GenerateCreatedEvent(String issuedBy = null)
         {
             var evt = new SampleAggregateCreated();
             SetBasePropertiesToEvent(evt, issuedBy);
-            return ProcessEvent(evt, inSameCommitAsPrevious);
+            return ProcessEvent(evt);
         }
 
-        protected Task<Changeset> GenerateTouchedEvent(Boolean inSameCommitAsPrevious, String issuedBy = null)
+        protected Task<Changeset> GenerateTouchedEvent(String issuedBy = null)
         {
             var evt = new SampleAggregateTouched();
             SetBasePropertiesToEvent(evt, issuedBy);
-            return ProcessEvent(evt, inSameCommitAsPrevious);
+            return ProcessEvent(evt);
         }
 
-        protected Task<Changeset> GenerateInvalidatedEvent(Boolean inSameCommitAsPrevious)
+        protected Task<Changeset> GenerateInvalidatedEvent()
         {
             var evt = new SampleAggregateInvalidated();
-            return ProcessEvent(evt, inSameCommitAsPrevious);
+            return ProcessEvent(evt);
         }
 
-        protected Task<Changeset> GenerateAtomicAggregateCreatedEvent(Boolean inSameCommitAsPrevious)
+        protected Task<Changeset> GenerateAtomicAggregateCreatedEvent()
         {
             var evt = new AtomicAggregateCreated();
-            return ProcessEvent(evt, inSameCommitAsPrevious, p => new AtomicAggregateId(p));
+            return ProcessEvent(evt, p => new AtomicAggregateId(p));
         }
 
         protected async Task GenerateEmptyUntil(Int64 positionTo)
@@ -229,22 +218,19 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             } while (chunk.Position < positionTo);
         }
 
-        protected Task<Changeset> GenerateSampleAggregateDerived1(Boolean inSameCommitAsPrevious)
+        protected Task<Changeset> GenerateSampleAggregateDerived1()
         {
             var evt = new SampleAggregateDerived1();
-            return ProcessEvent(evt, inSameCommitAsPrevious, p => new SampleAggregateId(p));
+            return ProcessEvent(evt, p => new SampleAggregateId(p));
         }
 
         protected async Task<Changeset> ProcessEvent(
             DomainEvent evt,
-            bool inSameCommitAsPrevious,
             Func<Int64, IIdentity> generateId = null)
         {
-            Int64 commitId = inSameCommitAsPrevious ? _lastCommit : ++_lastCommit;
-
             generateId = generateId ?? (p => new SampleAggregateId(p));
             evt.SetPropertyValue(d => d.AggregateId, generateId(_aggregateIdSeed));
-            Changeset cs = new Changeset(_aggregateVersion++, evt);
+            Changeset cs = new Changeset(_aggregateVersion++, new Object[] { evt });
             var chunk = await _persistence.AppendAsync(evt.AggregateId, cs).ConfigureAwait(false);
             lastUsedPosition = chunk.Position;
 
@@ -305,9 +291,9 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         protected async Task<Changeset> GenerateSomeEvents()
         {
             //Three events all generated in datbase
-            await GenerateCreatedEvent(false).ConfigureAwait(false);
-            await GenerateTouchedEvent(false).ConfigureAwait(false);
-            return await GenerateTouchedEvent(false).ConfigureAwait(false);
+            await GenerateCreatedEvent().ConfigureAwait(false);
+            await GenerateTouchedEvent().ConfigureAwait(false);
+            return await GenerateTouchedEvent().ConfigureAwait(false);
         }
 
         protected static void SetBasePropertiesToEvent(DomainEvent evt, string issuedBy)

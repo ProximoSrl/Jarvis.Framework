@@ -29,10 +29,10 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         [Test]
         public async Task Verify_basic_consumption_of_single_event()
         {
-            AtomicReadmodelChangesetConsumer<SimpleTestAtomicReadModel> sut =
-                _container.Resolve<AtomicReadmodelChangesetConsumer<SimpleTestAtomicReadModel>>();
+            AtomicReadmodelProjectorHelper<SimpleTestAtomicReadModel> sut =
+                _container.Resolve<AtomicReadmodelProjectorHelper<SimpleTestAtomicReadModel>>();
 
-            var changeset = await GenerateCreatedEvent(false).ConfigureAwait(false);
+            var changeset = await GenerateCreatedEvent().ConfigureAwait(false);
             await sut.Handle(lastUsedPosition, changeset, changeset.GetIdentity()).ConfigureAwait(false);
 
             //A readmodel should be created.
@@ -45,13 +45,13 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         [Test]
         public async Task Verify_basic_consumption_of_two_events()
         {
-            AtomicReadmodelChangesetConsumer<SimpleTestAtomicReadModel> sut =
-                _container.Resolve<AtomicReadmodelChangesetConsumer<SimpleTestAtomicReadModel>>();
+            AtomicReadmodelProjectorHelper<SimpleTestAtomicReadModel> sut =
+                _container.Resolve<AtomicReadmodelProjectorHelper<SimpleTestAtomicReadModel>>();
 
-            var changeset = await GenerateCreatedEvent(false).ConfigureAwait(false);
+            var changeset = await GenerateCreatedEvent().ConfigureAwait(false);
             await sut.Handle(lastUsedPosition, changeset, changeset.GetIdentity()).ConfigureAwait(false);
 
-            var touchChangeset = await GenerateTouchedEvent(false).ConfigureAwait(false);
+            var touchChangeset = await GenerateTouchedEvent().ConfigureAwait(false);
             await sut.Handle(lastUsedPosition, touchChangeset, touchChangeset.GetIdentity()).ConfigureAwait(false);
 
             //A readmodel should be created.
@@ -82,7 +82,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         [Test]
         public async Task Not_consumed_event_does_not_generate_readmodel()
         {
-            Changeset changeset = await GenerateSampleAggregateDerived1(false).ConfigureAwait(false);
+            Changeset changeset = await GenerateSampleAggregateDerived1().ConfigureAwait(false);
 
             //And finally check if everything is projected
             await CreateSutAndStartProjectionEngineAsync().ConfigureAwait(false);
@@ -111,7 +111,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             await sut.Stop().ConfigureAwait(false);
 
             //well generate another commit
-            var changeset = await GenerateTouchedEvent(false).ConfigureAwait(false);
+            var changeset = await GenerateTouchedEvent().ConfigureAwait(false);
 
             //now simulate change of signature, recreate and restart another projection engine
             GenerateContainer(); //regenerate everything, we need to simulate a fresh start
@@ -135,7 +135,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             await GenerateSomeEvents().ConfigureAwait(false);
 
             //Generate a changeset, that has an event that was not handled by the readmodel.
-            await GenerateInvalidatedEvent(false).ConfigureAwait(false);
+            await GenerateInvalidatedEvent().ConfigureAwait(false);
 
             //And finally check if everything is projected
             await CreateSutAndStartProjectionEngineAsync(1).ConfigureAwait(false);
@@ -176,7 +176,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             await GenerateSomeEvents().ConfigureAwait(false);
 
             //Generate a changeset, that has an event that was not handled by the readmodel.
-            await GenerateAtomicAggregateCreatedEvent(false).ConfigureAwait(false);
+            await GenerateAtomicAggregateCreatedEvent().ConfigureAwait(false);
 
             //And finally check if everything is projected
             await CreateSutAndStartProjectionEngineAsync(1).ConfigureAwait(false);
@@ -271,9 +271,9 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         public async Task Verify_generation_of_notification_updated()
         {
             //Three events all generated in datbase
-            await GenerateCreatedEvent(false).ConfigureAwait(false);
-            var c2 = await GenerateTouchedEvent(false).ConfigureAwait(false);
-            var c3 = await GenerateTouchedEvent(false).ConfigureAwait(false);
+            await GenerateCreatedEvent().ConfigureAwait(false);
+            var c2 = await GenerateTouchedEvent().ConfigureAwait(false);
+            var c3 = await GenerateTouchedEvent().ConfigureAwait(false);
 
             //And finally check if everything is projected
             _sut = await CreateSutAndStartProjectionEngineAsync(autostart: false).ConfigureAwait(false);
@@ -302,9 +302,9 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         public async Task Verify_generation_of_notification_inserted()
         {
             //Three events all generated in datbase
-            var c1 = await GenerateCreatedEvent(false).ConfigureAwait(false);
-            await GenerateTouchedEvent(false).ConfigureAwait(false);
-            await GenerateTouchedEvent(false).ConfigureAwait(false);
+            var c1 = await GenerateCreatedEvent().ConfigureAwait(false);
+            await GenerateTouchedEvent().ConfigureAwait(false);
+            await GenerateTouchedEvent().ConfigureAwait(false);
 
             //And finally check if everything is projected
             _sut = await CreateSutAndStartProjectionEngineAsync(autostart: false).ConfigureAwait(false);
@@ -328,7 +328,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         {
             var evt = new SampleAggregateDerived1();
             SetBasePropertiesToEvent(evt, null);
-            var changeset = await ProcessEvent(evt, false).ConfigureAwait(false);
+            var changeset = await ProcessEvent(evt).ConfigureAwait(false);
 
             //And finally check if everything is projected
             _sut = await CreateSutAndStartProjectionEngineAsync(autostart: false).ConfigureAwait(false);

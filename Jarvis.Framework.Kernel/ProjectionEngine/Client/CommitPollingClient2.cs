@@ -186,7 +186,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                 }
                 else if (Status == CommitPollingClientStatus.Faulted || LastException != null)
                 {
-                    //poller is stopped, system healty
+                    //poller is stopped, system is not healty anymore.
                     var exceptionText = (LastException != null ? LastException.ToString() : "");
                     exceptionText = exceptionText.Replace("{", "{{").Replace("}", "}}");
                     return HealthCheckResult.Unhealthy(

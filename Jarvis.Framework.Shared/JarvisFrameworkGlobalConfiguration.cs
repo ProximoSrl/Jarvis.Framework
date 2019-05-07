@@ -16,10 +16,13 @@ namespace Jarvis.Framework.Shared
 
         public static Boolean OfflineEventsReadmodelIdempotencyCheck { get; private set; }
 
+        public static Boolean AtomicProjectionEngineOptimizedCatchup { get; private set; }
+
         static JarvisFrameworkGlobalConfiguration()
         {
             MetricsEnabled = true;
             SingleAggregateRepositoryCacheEnabled = false;
+            AtomicProjectionEngineOptimizedCatchup = true;
         }
 
         public static void DisableMetrics()
@@ -50,6 +53,16 @@ namespace Jarvis.Framework.Shared
         public static void DisableOfflineEventsReadmodelIdempotencyCheck()
         {
             OfflineEventsReadmodelIdempotencyCheck = false;
+        }
+
+        public static void EnableAtomicProjectionEngineOptimizedCatchup()
+        {
+            AtomicProjectionEngineOptimizedCatchup = true;
+        }
+
+        public static void DisableAtomicProjectionEngineOptimizedCatchup()
+        {
+            AtomicProjectionEngineOptimizedCatchup = false;
         }
     }
 }

@@ -1,6 +1,5 @@
 ﻿using Fasterflect;
 using Jarvis.Framework.Shared.Events;
-using Jarvis.Framework.Shared.Helpers;
 using MongoDB.Bson.Serialization.Attributes;
 using NStore.Domain;
 using System;
@@ -24,6 +23,33 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
         protected AbstractAtomicReadModel(String id)
         {
             Id = id;
+        }
+
+        /// <summary>
+        /// <para>
+        /// This is a shared function used to grab UserId from a <see cref="DomainEvent"/>, it can 
+        /// be changed statically by caller. It is static because there is no need to have a different
+        /// criteria for every readmodel. 
+        /// </para>
+        /// <para>
+        /// Basic implementation will use the <see cref="DomainEvent.IssuedBy"/> property and also
+        /// will remove domain name from the value.
+        /// </para>
+        /// </summary>
+        public static Func<DomainEvent, String> UserNameExtractor { get; set; } = InnerUserNameExtractor;
+
+        private static string InnerUserNameExtractor(DomainEvent evt)
+        {
+            if (evt.IssuedBy != null)
+            {
+                if (evt.IssuedBy.Contains("\\"))
+                {
+                    return evt.IssuedBy.Split('\\').Last();
+                }
+
+                return evt.IssuedBy;
+            }
+            return null;
         }
 
         /// <summary>
@@ -143,7 +169,10 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
         public virtual Boolean ProcessChangeset(Changeset changeset)
         {
             Boolean processed = false;
-            if (changeset.Events.Length > 0 && changeset.AggregateVersion > AggregateVersion)
+
+            //We should process events only if the changes really HAS events and if this is not a changes of the past.
+            bool shouldProcessEvents = changeset.Events.Length > 0 && changeset.AggregateVersion > AggregateVersion;
+            if (shouldProcessEvents)
             {
                 Int64 position = 0;
                 for (int i = 0; i < changeset.Events.Length; i++)
@@ -153,18 +182,15 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
                     {
                         //First event, we need to set some standard informations. These informations
                         //are equal for all the events of this specific changeset.
-                        if(evt.CommitStamp != null && evt.IssuedBy != null)
-                        {
-                            LastModify = evt.CommitStamp;
-                            LastModificationUser = evt.IssuedBy;
-                        }
+                        LastModify = evt.CommitStamp;
+                        LastModificationUser = UserNameExtractor(evt) ?? evt.IssuedBy;
                         AggregateVersion = changeset.AggregateVersion;
                         if (CreationUser == null)
                         {
                             CreationUser = evt.IssuedBy;
                         }
                     }
-                    
+
                     processed |= ProcessEvent(evt);
                     position = evt.CheckpointToken;
                 }

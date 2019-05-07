@@ -1,7 +1,6 @@
 ﻿using Castle.Facilities.TypedFactory;
 using Castle.MicroKernel.Registration;
 using Castle.Windsor;
-using Jarvis.Framework.Kernel.ProjectionEngine;
 using Jarvis.Framework.Kernel.ProjectionEngine.Atomic;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 using Jarvis.Framework.Shared.Events;
@@ -47,7 +46,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             //We need to check that the readmodel was saved correctly
             var reloaded = await _sut.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
             Assert.That(reloaded, Is.Not.Null);
-            var evt = changeset.Events.First() as DomainEvent;
+            var evt = changeset.Events[0] as DomainEvent;
             Assert.That(reloaded.Id, Is.EqualTo(evt.AggregateId.AsString()));
         }
 
@@ -81,7 +80,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             reloaded = await _sut.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
             Assert.That(reloaded, Is.Not.Null);
             Assert.That(reloaded.TouchCount, Is.EqualTo(2));
-            var evtTouch2 = changesetTouch2.Events.First() as DomainEvent;
+            var evtTouch2 = changesetTouch2.Events[0] as DomainEvent;
             Assert.That(reloaded.ProjectedPosition, Is.EqualTo(evtTouch2.CheckpointToken));
 
             //redo again without the insert mode
@@ -192,7 +191,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             Assert.That(reloaded, Is.Not.Null);
             Assert.That(reloaded.TouchCount, Is.EqualTo(2));
 
-            var evt2 = evtTouch2.Events.First() as DomainEvent;
+            var evt2 = evtTouch2.Events[0] as DomainEvent;
             Assert.That(reloaded.ProjectedPosition, Is.EqualTo(evt2.CheckpointToken));
 
             //Same test, but with insert mode true
@@ -230,7 +229,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             Assert.That(reloaded.TouchCount, Is.EqualTo(2));
             Assert.That(reloaded.ReadModelVersion, Is.EqualTo(2));
 
-            var evtTouch = changesetTouch.Events.First() as DomainEvent;
+            var evtTouch = changesetTouch.Events[0] as DomainEvent;
             Assert.That(reloaded.ProjectedPosition, Is.EqualTo(evtTouch.CheckpointToken));
         }
 
@@ -261,7 +260,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             reloaded = await _sut.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
             Assert.That(reloaded, Is.Not.Null);
             Assert.That(reloaded.TouchCount, Is.EqualTo(1));
-            Assert.That(reloaded.ProjectedPosition, Is.EqualTo( evtTouch.GetChunkPosition()));
+            Assert.That(reloaded.ProjectedPosition, Is.EqualTo(evtTouch.GetChunkPosition()));
         }
 
         [Test]
@@ -285,7 +284,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             reloaded = await _sut.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
             Assert.That(reloaded, Is.Not.Null);
             Assert.That(reloaded.TouchCount, Is.EqualTo(1));
-            Assert.That(reloaded.ProjectedPosition, Is.EqualTo( evtTouch.GetChunkPosition()));
+            Assert.That(reloaded.ProjectedPosition, Is.EqualTo(evtTouch.GetChunkPosition()));
         }
 
         [Test]
@@ -300,7 +299,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             //forcing not persistable
             rm.SetPropertyValue(_ => _.ModifiedWithExtraStreamEvents, true);
             await _sut.UpsertAsync(rm).ConfigureAwait(false);
-            
+
             //check
             var reloaded = await _sut.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
             Assert.That(reloaded, Is.Null);

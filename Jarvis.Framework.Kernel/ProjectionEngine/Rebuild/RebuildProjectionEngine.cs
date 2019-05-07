@@ -39,8 +39,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
         private readonly IRebuildContext _rebuildContext;
         private readonly ProjectionEventInspector _projectionInspector;
 
-        private const int _bufferSize = 4000;
-
         public RebuildProjectionEngine(
             EventUnwinder eventUnwinder,
             IConcurrentCheckpointTracker checkpointTracker,
@@ -106,6 +104,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 
         private RebuildStatus _status;
 
+        /// <summary>
+        /// Start rebuild process.
+        /// </summary>
+        /// <returns></returns>
         public async Task<RebuildStatus> RebuildAsync()
         {
             if (Logger.IsInfoEnabled) Logger.InfoFormat("Starting rebuild projection engine on tenant {0}", _config.TenantId);
@@ -148,7 +150,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                 consumerList.Add(dispatcher);
             }
 
-            //now start tpl and start polling in other threads.
+            //Creates TPL chain and start polling everything on the consumer
             foreach (var consumer in _consumers)
             {
                 var bucketInfo = String.Join(",", consumer.Key.Slots);
@@ -160,34 +162,58 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                     continue;
                 }
                 var consumerBufferOptions = new DataflowBlockOptions();
-                consumerBufferOptions.BoundedCapacity = _bufferSize;
+                consumerBufferOptions.BoundedCapacity = consumer.Key.BufferSize;
                 var _buffer = new BufferBlock<UnwindedDomainEvent>(consumerBufferOptions);
 
                 ExecutionDataflowBlockOptions executionOption = new ExecutionDataflowBlockOptions();
-                executionOption.BoundedCapacity = _bufferSize;
+                executionOption.BoundedCapacity = consumer.Key.BufferSize;
 
                 var dispatcherList = consumer.Value;
                 _projectionInspector.ResetHandledEvents();
-                List<ActionBlock<UnwindedDomainEvent>> consumers = new List<ActionBlock<UnwindedDomainEvent>>();
+                List<SlotGuaranteedDeliveryBroadcastBlock.SlotInfo<UnwindedDomainEvent>> consumers =
+                    new List<SlotGuaranteedDeliveryBroadcastBlock.SlotInfo<UnwindedDomainEvent>>();
                 foreach (var dispatcher in dispatcherList)
                 {
                     ExecutionDataflowBlockOptions consumerOptions = new ExecutionDataflowBlockOptions();
-                    consumerOptions.BoundedCapacity = _bufferSize;
+                    consumerOptions.BoundedCapacity = consumer.Key.BufferSize;
                     var actionBlock = new ActionBlock<UnwindedDomainEvent>((Func<UnwindedDomainEvent, Task>)dispatcher.DispatchEventAsync, consumerOptions);
-                    consumers.Add(actionBlock);
+                    HashSet<Type> eventsOfThisSlot = new HashSet<Type>();
                     foreach (var projection in dispatcher.Projections)
                     {
-                        _projectionInspector.InspectProjectionForEvents(projection.GetType());
+                        var domainEventTypesHandledByThisProjection = _projectionInspector.InspectProjectionForEvents(projection.GetType());
+                        foreach (var type in domainEventTypesHandledByThisProjection)
+                        {
+                            eventsOfThisSlot.Add(type);
+                        }
                     }
+
+                    SlotGuaranteedDeliveryBroadcastBlock.SlotInfo<UnwindedDomainEvent> slotInfo =
+                        new SlotGuaranteedDeliveryBroadcastBlock.SlotInfo<UnwindedDomainEvent>(
+                            actionBlock,
+                            dispatcher.SlotName,
+                            eventsOfThisSlot);
+                    consumers.Add(slotInfo);
+                    KernelMetricsHelper.CreateMeterForRebuildDispatcherBuffer(dispatcher.SlotName, () => actionBlock.InputCount);
                 }
                 var allTypeHandledStringList = _projectionInspector.EventHandled.Select(t => t.Name).ToList();
 
-                var _broadcaster = GuaranteedDeliveryBroadcastBlock.Create(consumers, bucketInfo, 3000);
-                _buffer.LinkTo(_broadcaster, new DataflowLinkOptions() { PropagateCompletion = true });
+                var broadcaster = SlotGuaranteedDeliveryBroadcastBlock.Create(consumers, bucketInfo, consumer.Key.BufferSize);
+                _buffer.LinkTo(broadcaster, new DataflowLinkOptions() { PropagateCompletion = true });
+
+                KernelMetricsHelper.CreateGaugeForRebuildFirstBuffer(bucketInfo, () => _buffer.Count);
+                KernelMetricsHelper.CreateGaugeForRebuildBucketDBroadcasterBuffer(bucketInfo, () => broadcaster.InputCount);
+
+                KernelMetricsHelper.CreateMeterForRebuildEventCompleted(bucketInfo);
 
                 //fire each bucket in own thread
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                Task.Factory.StartNew(() => StartPoll(_buffer, _broadcaster, bucketInfo, dispatcherList, allTypeHandledStringList, consumers));
+                Task.Factory.StartNew(() => StartPoll(
+                    _buffer,
+                    broadcaster,
+                    bucketInfo,
+                    dispatcherList,
+                    allTypeHandledStringList,
+                    consumers));
 
                 //await StartPoll(_buffer, _broadcaster, bucketInfo, dispatcherList, allTypeHandledStringList, consumers).ConfigureAwait(false);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
@@ -205,7 +231,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
             String bucketInfo,
             List<RebuildProjectionSlotDispatcher> dispatchers,
             List<String> allEventTypesHandledByAllSlots,
-            List<ActionBlock<UnwindedDomainEvent>> consumers)
+            List<SlotGuaranteedDeliveryBroadcastBlock.SlotInfo<UnwindedDomainEvent>> consumers)
         {
             if (buffer == null)
                 throw new ArgumentNullException(nameof(buffer));
@@ -248,14 +274,17 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                                             Builders<UnwindedDomainEvent>.Filter.Eq(e => e.CheckpointToken, lastCheckpointTokenDispatched)
                                         )
                                     ),
-                                    Builders<UnwindedDomainEvent>.Filter.Lte(e => e.CheckpointToken, maxEventDispatched), //less than or equal max event dispatched.
-                                    Builders<UnwindedDomainEvent>.Filter.In(e => e.EventType, allEventTypesHandledByAllSlots)
+                                    Builders<UnwindedDomainEvent>.Filter.Lte(e => e.CheckpointToken, maxEventDispatched) //less than or equal max event dispatched.
+                                    , Builders<UnwindedDomainEvent>.Filter.In(e => e.EventType, allEventTypesHandledByAllSlots)
                              )
                         );
+
                     Logger.InfoFormat($"polled rebuild query {filter}");
                     var query = filter
                         .Sort(Builders<UnwindedDomainEvent>.Sort.Ascending(e => e.CheckpointToken).Ascending(e => e.EventSequence));
-                    foreach (var eventUnwinded in query.ToEnumerable())
+                    await query.ForEachAsync(Dispatch).ConfigureAwait(false);
+
+                    async Task Dispatch(UnwindedDomainEvent eventUnwinded)
                     {
                         _pollError = null;
 
@@ -291,7 +320,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                 Logger.InfoFormat("Finished loading events for bucket {0} wait for tpl to finish flush", bucketInfo);
                 buffer.Complete();
                 broadcaster.Completion.Wait(); //wait for all event to be broadcasted.
-                Task.WaitAll(consumers.Select(c => c.Completion).ToArray()); //wait for all consumers to complete.
+                Task.WaitAll(consumers.Select(c => c.Target.Completion).ToArray()); //wait for all consumers to complete.
 
                 Thread.Sleep(1000); //wait for another secondo before finishing.
 

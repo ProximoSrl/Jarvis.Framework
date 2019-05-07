@@ -39,18 +39,18 @@ namespace Jarvis.Framework.Shared.Events
 		/// Indica il timestamp della commit associata all'evento
 		/// </summary>
 		[BsonIgnore]
-		public DateTime CommitStamp { get; private set; }
+		public DateTime CommitStamp { get; internal set; }
 
 		/// <summary>
 		/// Identificativo della commit
 		/// </summary>
 		[BsonIgnore]
-        public String CommitId { get; private set; }
+        public String CommitId { get; internal set; }
 
         /// <summary>
         /// Identificativo dell'aggregato a cui appartiene l'evento
         /// </summary>
-        public EventStoreIdentity AggregateId { get; private set; }
+        public EventStoreIdentity AggregateId { get; internal set; }
 
         /// <summary>
         /// This is true if this is the last event of a commit
@@ -62,20 +62,20 @@ namespace Jarvis.Framework.Shared.Events
         /// Contesto dell'evento
         /// </summary>
         [BsonIgnore]
-        public IDictionary<string, object> Context { get; private set; }
+        public IDictionary<string, object> Context { get; internal set; }
 
         /// <summary>
         /// Versione dell'aggregato al momento del raise dell'evento
         /// </summary>
         [BsonIgnore]
-        public Int64 Version { get; private set; }
+        public Int64 Version { get; internal set; }
 
         /// <summary>
         /// With migration to NStore this is the position of the
         /// Chunk in the stream. <see cref="NStore.Core.Persistence.IChunk.Position"/>
         /// </summary>
         [BsonIgnore]
-        public Int64 CheckpointToken { get; private set; }
+        public Int64 CheckpointToken { get; internal set; }
 
         /// <summary>
         /// Constructor of the domain event, it automatically generate 

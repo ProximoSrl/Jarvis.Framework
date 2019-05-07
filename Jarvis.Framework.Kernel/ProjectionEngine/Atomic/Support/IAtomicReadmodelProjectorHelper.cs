@@ -9,12 +9,14 @@ using System.Threading.Tasks;
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support
 {
     /// <summary>
-    /// Helper class to consume Changeset projected by projection engin.
+    /// Helper class to consume Changeset projected by projection engine, it is needed 
+    /// to being able to project / handle readmodel without handling generics.
     /// </summary>
-    public interface IAtomicReadmodelChangesetConsumer
+    public interface IAtomicReadmodelProjectorHelper
     {
         /// <summary>
-        /// Simple consume a changeset applying it to the correct readmodel.
+        /// Simple consume a changeset applying it to the correct readmodel performing load, modify, save
+        /// with the support of collection wrapper.
         /// </summary>
         /// <param name="position"></param>
         /// <param name="changeset"></param>
@@ -25,6 +27,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support
             Int64 position,
             Changeset changeset,
             IIdentity identity);
+
+        /// <summary>
+        /// This method will do a full projection reprojecting the entire stream into the database
+        /// and it is useful for the catchup of new readmodel, because it is much faster to rebuild
+        /// each readmodel with a simple roundtrip
+        /// </summary>
+        /// <param name="identity"></param>
+        Task FullProject(IIdentity identity);
 
         /// <summary>
         /// A reference to the attribute of the readmodel that is handled by this instance
@@ -49,35 +59,5 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support
         /// True if the readmodel was created for the first time
         /// </summary>
         public Boolean CreatedForFirstTime { get; set; }
-    }
-
-    /// <summary>
-    /// Factory for the consumers.
-    /// </summary>
-    public interface IAtomicReadmodelChangesetConsumerFactory
-    {
-        IAtomicReadmodelChangesetConsumer CreateFor(Type atomicReadmodelType);
-    }
-
-    /// <summary>
-    /// This is useful because all <see cref="IAtomicCollectionWrapper{TModel}"/> classes are typed in T while
-    /// the projection service works with type. This class will helps creating with reflection an <see cref="AtomicReadmodelChangesetConsumer{TModel}"/>
-    /// to consume changeset during projection.
-    /// </summary>
-    public class AtomicReadmodelChangesetConsumerFactory : IAtomicReadmodelChangesetConsumerFactory
-    {
-        private readonly IKernel _kernel;
-
-        public AtomicReadmodelChangesetConsumerFactory(IKernel kernel)
-        {
-            _kernel = kernel;
-        }
-
-        public IAtomicReadmodelChangesetConsumer CreateFor(Type atomicReadmodelType)
-        {
-            var genericType = typeof(AtomicReadmodelChangesetConsumer<>);
-            var closedType = genericType.MakeGenericType(new Type[] { atomicReadmodelType });
-            return (IAtomicReadmodelChangesetConsumer)_kernel.Resolve(closedType);
-        }
     }
 }

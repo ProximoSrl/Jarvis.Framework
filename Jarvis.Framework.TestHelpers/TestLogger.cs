@@ -116,6 +116,62 @@ namespace Jarvis.Framework.TestHelpers
 			}
 		}
 
+        public void Trace(string message)
+		{
+			if (this.IsDebugEnabled)
+			{
+				this.Log(LoggerLevel.Trace, message, null);
+			}
+		}
+
+		public void Trace(string message, Exception exception)
+		{
+			if (this.IsDebugEnabled)
+			{
+				this.Log(LoggerLevel.Trace, message, exception);
+			}
+		}
+
+		public void Trace(string format, params object[] args)
+		{
+			if (this.IsDebugEnabled)
+			{
+				this.Log(LoggerLevel.Trace, string.Format(CultureInfo.CurrentCulture, format, args), null);
+			}
+		}
+
+		public void TraceFormat(string format, params object[] args)
+		{
+			if (this.IsDebugEnabled)
+			{
+				this.Log(LoggerLevel.Trace, string.Format(CultureInfo.CurrentCulture, format, args), null);
+			}
+		}
+
+		public void TraceFormat(Exception exception, string format, params object[] args)
+		{
+			if (this.IsDebugEnabled)
+			{
+				this.Log(LoggerLevel.Trace, string.Format(CultureInfo.CurrentCulture, format, args), exception);
+			}
+		}
+
+		public void TraceFormat(IFormatProvider formatProvider, string format, params object[] args)
+		{
+			if (this.IsDebugEnabled)
+			{
+				this.Log(LoggerLevel.Trace, string.Format(formatProvider, format, args), null);
+			}
+		}
+
+		public void TraceFormat(Exception exception, IFormatProvider formatProvider, string format, params object[] args)
+		{
+			if (this.IsDebugEnabled)
+			{
+				this.Log(LoggerLevel.Trace, string.Format(formatProvider, format, args), exception);
+			}
+		}
+
 		public void Error(string message)
 		{
 			if (this.IsErrorEnabled)
@@ -428,7 +484,16 @@ namespace Jarvis.Framework.TestHelpers
 			}
 		}
 
-		public bool IsErrorEnabled
+        // Properties
+        public bool IsTraceEnabled
+        {
+            get
+            {
+                return (Level >= LoggerLevel.Trace && GlobalEnabled);
+            }
+        }
+
+        public bool IsErrorEnabled
 		{
 			get
 			{
@@ -484,7 +549,12 @@ namespace Jarvis.Framework.TestHelpers
 			this.Log(LoggerLevel.Debug, messageFactory(), null);
 		}
 
-		public void Error(Func<string> messageFactory)
+        public void Trace(Func<string> messageFactory)
+        {
+            this.Log(LoggerLevel.Trace, messageFactory(), null);
+        }
+
+        public void Error(Func<string> messageFactory)
 		{
 			this.Log(LoggerLevel.Error, messageFactory(), null);
 		}

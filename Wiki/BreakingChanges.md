@@ -1,5 +1,9 @@
 # Version 5
 
+## 5.1.0
+
+- IAtomicReadmodelChangesetConsumer renamed to IAtomicReadmodelProjectorHelper with also a rename for all factory classes.
+
 ## 5.0.0
 
 Moved IMessagesTracker to namespace Jarvis.Framework.Shared.Commands.Tracking
