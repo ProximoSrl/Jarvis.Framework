@@ -32,5 +32,19 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
         {
             Assert.That(EventStoreIdentity.Match<SampleAggregateId>(id), Is.False);
         }
+
+        [Test]
+        public void Verify_exception_when_incorrect_id_is_used()
+        {
+            try
+            {
+                new SampleAggregateId("Document_3");
+            }
+            catch (JarvisFrameworkIdentityException ie)
+            {
+                Assert.That(ie.Message, Contains.Substring("Document tag is not valid for type"));
+                Assert.That(ie.Message, Contains.Substring("Tag expected: SampleAggregate"));
+            }
+        }
     }
 }
