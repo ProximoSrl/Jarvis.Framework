@@ -99,8 +99,9 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
         protected virtual void Assign(string tag, Int64 value)
         {
-            if (tag != GetTag())
-                throw new JarvisFrameworkIdentityException(string.Format("Invalid assigment. {0} is not of valid tag for type {1}", value, GetType().FullName));
+            var thisTag = GetTag();
+            if (tag != thisTag)
+                throw new JarvisFrameworkIdentityException(string.Format("Invalid assigment. {0} tag is not valid for type {1} - Tag expected: {2}", tag, GetType().FullName, thisTag));
             this.Id = value;
         }
 
