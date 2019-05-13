@@ -1,5 +1,9 @@
 # Version 5
 
+## 5.2.0
+
+- Removed Jarvis Startable facitlities, it was moved into separate package Castle Utilities.
+
 ## 5.1.0
 
 - IAtomicReadmodelChangesetConsumer renamed to IAtomicReadmodelProjectorHelper with also a rename for all factory classes.
