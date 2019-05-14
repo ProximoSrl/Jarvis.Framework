@@ -17,12 +17,12 @@
   <ItemGroup>
     <PackageReference Include="Castle.LoggingFacility" Version="5.0.0" />
     <PackageReference Include="Machine.Specifications" Version="1.0.0" />
-    <PackageReference Include="MongoDB.Driver" Version="2.8.0" />
+    <PackageReference Include="MongoDB.Driver" Version="2.7.3" />
     <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
-    <PackageReference Include="NStore.Core" Version="0.8.2" />
-    <PackageReference Include="NStore.Domain" Version="0.8.2" />
-    <PackageReference Include="NStore.Persistence.Mongo" Version="0.8.2" />
-    <PackageReference Include="NStore.Tpl" Version="0.8.2" />
+    <PackageReference Include="NStore.Core" Version="0.8.3" />
+    <PackageReference Include="NStore.Domain" Version="0.8.3" />
+    <PackageReference Include="NStore.Persistence.Mongo" Version="0.8.3" />
+    <PackageReference Include="NStore.Tpl" Version="0.8.3" />
     <PackageReference Include="NUnit" Version="3.11.0" />
   </ItemGroup>
 
