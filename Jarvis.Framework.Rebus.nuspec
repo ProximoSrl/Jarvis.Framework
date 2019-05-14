@@ -17,11 +17,11 @@
         <dependency id="Jarvis.Framework.Shared" version="[$version$]" />
         <dependency id="Jarvis.Framework" version="[$version$]" />
 
-        <dependency id="NStore.Core" version="0.8.2" />
-        <dependency id="NStore.Domain" version="0.8.2" />
-        <dependency id="NStore.Persistence.Mongo" version="0.8.2" />
+        <dependency id="NStore.Core" version="0.8.3" />
+        <dependency id="NStore.Domain" version="0.8.3" />
+        <dependency id="NStore.Persistence.Mongo" version="0.8.3" />
         
-        <dependency id="MongoDB.Driver" version="2.8.0" />
+        <dependency id="MongoDB.Driver" version="2.7.3" />
         <dependency id="Newtonsoft.Json" version="11.0.2" />
         <dependency id="Rebus" version="5.3.0" />
         <dependency id="Rebus.Events" version="4.0.1" />
