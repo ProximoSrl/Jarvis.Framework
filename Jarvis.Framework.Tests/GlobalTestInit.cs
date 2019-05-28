@@ -27,7 +27,8 @@ namespace Jarvis.Framework.Tests
             if (String.IsNullOrEmpty(overrideTestDb)) return;
 
             Console.WriteLine("Mongodb database is overriden with TEST_MONGODB environment variable:" + overrideTestDb);
-            var overrideTestDbQueryString = Environment.GetEnvironmentVariable("TEST_MONGODB_QUERYSTRING").Trim();
+            var overrideTestDbQueryString = Environment.GetEnvironmentVariable("TEST_MONGODB_QUERYSTRING") ?? "";
+            overrideTestDbQueryString = overrideTestDbQueryString.Trim();
             var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
             var connectionStringsSection = (ConnectionStringsSection)config.GetSection("connectionStrings");
             connectionStringsSection.ConnectionStrings["eventstore"].ConnectionString = overrideTestDb.TrimEnd('/') + "/jarvis-framework-es-test" + overrideTestDbQueryString;
