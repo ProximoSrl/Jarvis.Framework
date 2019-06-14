@@ -11,6 +11,7 @@ using NStore.Core.Logging;
 using NStore.Core.Persistence;
 using NStore.Domain;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -83,7 +84,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// Used for health checks, it stores last exception for each dispatcher, to understand if a dispatcher
         /// was halted.
         /// </summary>
-        private readonly Dictionary<String, Exception> _engineExceptions = new Dictionary<String, Exception>();
+        private readonly ConcurrentDictionary<String, Exception> _engineExceptions = new ConcurrentDictionary<String, Exception>();
 
         public AtomicProjectionEngine(
             IPersistence persistence,
