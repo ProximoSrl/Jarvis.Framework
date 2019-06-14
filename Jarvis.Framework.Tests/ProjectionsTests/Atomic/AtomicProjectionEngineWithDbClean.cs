@@ -36,7 +36,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             //we need to wait to understand if it was projected
             GetTrackerAndWaitForChangesetToBeProjected( "SimpleTestAtomicReadModel");
 
-            await _sut.Stop().ConfigureAwait(false);
+            await _sut.StopAsync().ConfigureAwait(false);
 
             //now we will drop everything, and recreate the projection service, this time we will have
             //another readmodel, that starts from 0, we do not want that readmodel to be projected
@@ -48,7 +48,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             _sut.MaximumDifferenceForCatchupPoller = newCheckpoint - 10;
             _sut.RegisterAtomicReadModel(typeof(SimpleAtomicAggregateReadModel));
 
-            await _sut.Start().ConfigureAwait(false);
+            await _sut.StartAsync().ConfigureAwait(false);
 
             //ok, we do not want the main projection engine to register the new projection, then it should be projected with a different poller.
             _aggregateIdSeed++;
@@ -56,7 +56,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 
             GetTrackerAndWaitForChangesetToBeProjected("SimpleAtomicAggregateReadModel");
             GetTrackerAndWaitForChangesetToBeProjected("SimpleTestAtomicReadModel");
-            await _sut.Stop().ConfigureAwait(false);
+            await _sut.StopAsync().ConfigureAwait(false);
 
             var readmodel = await _collectionForAtomicAggregate.FindOneByIdAsync(csAtomic.GetIdentity()).ConfigureAwait(false);
             Assert.That(readmodel, Is.Not.Null);
