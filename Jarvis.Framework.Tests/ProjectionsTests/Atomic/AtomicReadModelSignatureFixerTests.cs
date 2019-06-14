@@ -24,7 +24,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             Changeset changeset = await GenerateSomeEvents().ConfigureAwait(false);
             var engine = await CreateSutAndStartProjectionEngineAsync().ConfigureAwait(false);
             GetTrackerAndWaitForChangesetToBeProjected("SimpleTestAtomicReadModel");
-            await engine.Stop().ConfigureAwait(false);
+            await engine.StopAsync().ConfigureAwait(false);
 
             //Act, start the fixer and change signature
             SimpleTestAtomicReadModel.FakeSignature = 2;

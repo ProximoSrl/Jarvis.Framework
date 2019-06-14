@@ -46,7 +46,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             //we need to wait to understand if it was projected
             GetTrackerAndWaitForChangesetToBeProjected( "SimpleTestAtomicReadModel");
 
-            await sut.Stop().ConfigureAwait(false);
+            await sut.StopAsync().ConfigureAwait(false);
 
             rm = await _collection.FindOneByIdAsync(evt.AggregateId).ConfigureAwait(false);
             evt = anotherchangeset.Events[0] as DomainEvent;

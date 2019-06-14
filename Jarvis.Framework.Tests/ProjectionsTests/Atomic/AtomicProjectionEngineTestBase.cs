@@ -280,7 +280,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             sut.RegisterAtomicReadModel(typeof(SimpleTestAtomicReadModel));
             sut.FlushTimeSpan = TimeSpan.FromSeconds(flushTimeInSeconds);
 
-            if (autostart) await sut.Start().ConfigureAwait(false);
+            if (autostart) await sut.StartAsync().ConfigureAwait(false);
             return sut;
         }
 

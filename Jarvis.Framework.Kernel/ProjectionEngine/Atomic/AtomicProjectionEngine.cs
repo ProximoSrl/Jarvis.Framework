@@ -11,6 +11,7 @@ using NStore.Core.Logging;
 using NStore.Core.Persistence;
 using NStore.Domain;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -83,7 +84,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// Used for health checks, it stores last exception for each dispatcher, to understand if a dispatcher
         /// was halted.
         /// </summary>
-        private readonly Dictionary<String, Exception> _dispatchingExceptions = new Dictionary<String, Exception>();
+        private readonly ConcurrentDictionary<String, Exception> _engineExceptions = new ConcurrentDictionary<String, Exception>();
 
         public AtomicProjectionEngine(
             IPersistence persistence,
@@ -109,13 +110,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
         private Metrics.HealthCheckResult GetHealthCheck()
         {
-            if (_dispatchingExceptions.Count == 0)
+            if (_engineExceptions.Count == 0)
                 return Metrics.HealthCheckResult.Healthy();
 
             StringBuilder errors = new StringBuilder();
-            foreach (var ex in _dispatchingExceptions)
+            foreach (var ex in _engineExceptions)
             {
-                errors.AppendLine($"Error in dispatching {ex.Key}: {ex}");
+                errors.AppendLine($"Error: {ex.Key}: {ex.Value}");
             }
             return Metrics.HealthCheckResult.Unhealthy("Error in Atomic Projection Engine: " + errors.ToString());
         }
@@ -140,7 +141,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
         private Int64 _defaultPollerStartingPoint;
 
-        public async Task Start()
+        public async Task StartAsync()
         {
             if (_started)
             {
@@ -155,7 +156,15 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             {
                 foreach (var readmodelSetup in AllReadModelSetup)
                 {
-                    await readmodelSetup.Initialize().ConfigureAwait(false);
+                    try
+                    {
+                        await readmodelSetup.Initialize().ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.ErrorFormat(ex, "Error with initializer {0}", readmodelSetup.GetType().FullName);
+                        _engineExceptions[readmodelSetup.GetType().FullName] = ex;
+                    }
                 }
             }
 
@@ -314,7 +323,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// that TPL has flushed.
         /// </summary>
         /// <returns></returns>
-        public async Task Stop()
+        public async Task StopAsync()
         {
             if (_started)
             {
@@ -439,7 +448,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 catch (Exception ex)
                 {
                     //TODO: Implement health check with failed
-                    _dispatchingExceptions[item.Key.Name] = ex;
+                    _engineExceptions[item.Key.Name] = ex;
                     Logger.ErrorFormat(ex, "Generic error in TPL dispatching {0} with poller {1} for id type {2}", dispatchObj.Chunk.Position, dispatchObj.PollerId, item.Key);
                     throw;
                 }
