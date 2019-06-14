@@ -89,42 +89,42 @@ namespace Jarvis.Framework.Tests.External.MongoDriver
             public String Property { get; set; }
         }
 
-        [Test]
-		[Explicit("This test shows a bug in mongo mapping.")]
-        public void Verify_ability_to_map_with_code_interface_dictionary_representation()
-        {
-            BsonClassMap.RegisterClassMap<TestClassWithHeadersAsInterfaceDictionary>(map =>
-            {
-                map.AutoMap();
-                var dictionarySerializer = new DictionaryInterfaceImplementerSerializer<Dictionary<String, String>>(DictionaryRepresentation.ArrayOfArrays);
-                var headerMapper = new ImpliedImplementationInterfaceSerializer<IDictionary<String, String>, Dictionary<String, String>>(dictionarySerializer);
-                map.MapProperty(c => c.Headers).SetSerializer(headerMapper);
-            });
+  //      [Test]
+		//[Explicit("This test shows a bug in mongo mapping.")]
+  //      public void Verify_ability_to_map_with_code_interface_dictionary_representation()
+  //      {
+  //          BsonClassMap.RegisterClassMap<TestClassWithHeadersAsInterfaceDictionary>(map =>
+  //          {
+  //              map.AutoMap();
+  //              var dictionarySerializer = new DictionaryInterfaceImplementerSerializer<Dictionary<String, String>>(DictionaryRepresentation.ArrayOfArrays);
+  //              var headerMapper = new ImpliedImplementationInterfaceSerializer<IDictionary<String, String>, Dictionary<String, String>>(dictionarySerializer);
+  //              map.MapProperty(c => c.Headers).SetSerializer(headerMapper);
+  //          });
 
-            var collection = db.GetCollection<TestClassWithHeadersAsInterfaceDictionary>("InterfaceDictionary");
+  //          var collection = db.GetCollection<TestClassWithHeadersAsInterfaceDictionary>("InterfaceDictionary");
 
-            //This is good, because we are using Dictionary
-            var instance = new TestClassWithHeadersAsInterfaceDictionary()
-            {
-                Headers = new Dictionary<string, string>()
-                {
-                    ["with.dot"] = "value",
-                },
-                Property = "Property value"
-            };
-            collection.InsertOne(instance);
+  //          //This is good, because we are using Dictionary
+  //          var instance = new TestClassWithHeadersAsInterfaceDictionary()
+  //          {
+  //              Headers = new Dictionary<string, string>()
+  //              {
+  //                  ["with.dot"] = "value",
+  //              },
+  //              Property = "Property value"
+  //          };
+  //          collection.InsertOne(instance);
 
-            //This also should be good, but a bug in the driver prevent it to be saved
-            instance = new TestClassWithHeadersAsInterfaceDictionary()
-            {
-                Headers = new SortedDictionary<string, string>()
-                {
-                    ["with.dot"] = "value",
-                },
-                Property = "Property value"
-            };
-            collection.InsertOne(instance);
-        }
+  //          //This also should be good, but a bug in the driver prevent it to be saved
+  //          instance = new TestClassWithHeadersAsInterfaceDictionary()
+  //          {
+  //              Headers = new SortedDictionary<string, string>()
+  //              {
+  //                  ["with.dot"] = "value",
+  //              },
+  //              Property = "Property value"
+  //          };
+  //          collection.InsertOne(instance);
+  //      }
 
         private class TestClassWithHeadersAsInterfaceDictionaryMappedWithAttributes
         {

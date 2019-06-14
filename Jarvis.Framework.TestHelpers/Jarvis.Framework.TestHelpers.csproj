@@ -23,7 +23,7 @@
     <PackageReference Include="NStore.Domain" Version="0.8.3" />
     <PackageReference Include="NStore.Persistence.Mongo" Version="0.8.3" />
     <PackageReference Include="NStore.Tpl" Version="0.8.3" />
-    <PackageReference Include="NUnit" Version="3.11.0" />
+    <PackageReference Include="NUnit" Version="3.12.0" />
   </ItemGroup>
 
   <ItemGroup>
