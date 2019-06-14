@@ -140,7 +140,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
         private Int64 _defaultPollerStartingPoint;
 
-        public async Task Start()
+        public async Task StartAsync()
         {
             if (_started)
             {
