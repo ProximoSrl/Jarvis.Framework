@@ -114,6 +114,13 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
         public string ErrorMessage { get; set; }
 
         /// <summary>
+        /// Needed to really understand source of full exception, <see cref="ErrorMessage"/>
+        /// property is simply the message of the exception, but the full exception will be
+        /// needed to better troubleshoot the problem.
+        /// </summary>
+        public string FullException { get; set; }
+
+        /// <summary>
         /// <para>True when the command is completed.</para>
         /// <para>
         /// This information is valid for:
