@@ -58,8 +58,8 @@
     <Reference Include="Machine.Specifications, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\Machine.Specifications.1.0.0\lib\net45\Machine.Specifications.dll</HintPath>
     </Reference>
-    <Reference Include="Metrics, Version=0.5.5.1000, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Metrics.0.5.0.1000\lib\net461\Metrics.dll</HintPath>
+    <Reference Include="metrics, Version=0.5.4.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\metrics.0.5.4.1001\lib\net461\metrics.dll</HintPath>
     </Reference>
     <Reference Include="MongoDB.Bson, Version=2.7.3.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\MongoDB.Bson.2.7.3\lib\net45\MongoDB.Bson.dll</HintPath>
