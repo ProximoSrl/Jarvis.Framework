@@ -169,6 +169,49 @@ namespace Jarvis.Framework.Tests.BusTests
         }
 
         /// <summary>
+        /// When a domain exception is raised, we expect only one failure
+        /// </summary>
+        /// <param name="wrapInAggregateException"></param>
+        [TestCase(true)]
+        [TestCase(false)]
+        public async Task Verify_failure_tracking_flatten_aggregate_exception(Boolean wrapInAggregateException)
+        {
+            var sampleMessage = new AnotherSampleTestCommand(1, "verify_failure_tracking_for_domain_exception");
+            AnotherSampleCommandHandler.SetFixtureData(
+                sampleMessage.MessageId,
+                10,
+                new DomainException("TEST_1", "Test Exception for verify_failure_tracking_for_domain_exception test", null),
+                true,
+                wrapInAggregateException: wrapInAggregateException);
+            await _bus.Send(sampleMessage).ConfigureAwait(false);
+
+            //cycle until we found handled message on tracking with specified condition
+            TrackedMessageModel track;
+            DateTime startTime = DateTime.Now;
+            do
+            {
+                Thread.Sleep(200);
+                track = _messages.AsQueryable().SingleOrDefault(t => t.MessageId == sampleMessage.MessageId.ToString() &&
+                    t.ExecutionCount == 1
+                    && t.Completed == true
+                    && t.Success == false);
+            }
+            while (
+                    track == null && DateTime.Now.Subtract(startTime).TotalSeconds < 4
+            );
+
+            if (track == null)
+            {
+                //failure, try to recover the message id to verify what was wrong
+                track = _messages.AsQueryable().SingleOrDefault(t => t.MessageId == sampleMessage.MessageId.ToString());
+            }
+
+            Assert.That(track.ErrorMessage, Is.EqualTo("Test Exception for verify_failure_tracking_for_domain_exception test"));
+            Assert.That(track.FullException, Is.Not.Null);
+            Assert.That(track.FullException.IndexOf("aggregate", StringComparison.OrdinalIgnoreCase), Is.EqualTo(-1));
+        }
+
+        /// <summary>
         /// Verify what happens when handle launch exception for two times, than execution suceeds.
         /// </summary>
         /// <param name="wrapInAggregateException"></param>
@@ -195,8 +238,8 @@ namespace Jarvis.Framework.Tests.BusTests
             DateTime startTime = DateTime.Now;
             {
                 Thread.Sleep(200);
-                track = _messages.AsQueryable().SingleOrDefault(t => t.MessageId == sampleMessage.MessageId.ToString() &&
-                    t.Completed == true);
+                track = _messages.AsQueryable().SingleOrDefault(t => t.MessageId == sampleMessage.MessageId.ToString()
+                    && t.Completed == true);
             }
             while (
                     track == null && DateTime.Now.Subtract(startTime).TotalSeconds < 5
@@ -250,7 +293,7 @@ namespace Jarvis.Framework.Tests.BusTests
                     && t.Completed == true);
             }
             while (
-                    track == null && DateTime.Now.Subtract(startTime).TotalSeconds < 4 //TODO: find a better way to handle this test.
+                    track == null && DateTime.Now.Subtract(startTime).TotalSeconds < 4
             );
 
             if (track == null)
@@ -301,7 +344,7 @@ namespace Jarvis.Framework.Tests.BusTests
                     && t.Completed == true);
             }
             while (
-                    track == null && DateTime.Now.Subtract(startTime).TotalSeconds < 4 //TODO: find a better way to handle this test.
+                    track == null && DateTime.Now.Subtract(startTime).TotalSeconds < 4
             );
 
             if (track == null)
