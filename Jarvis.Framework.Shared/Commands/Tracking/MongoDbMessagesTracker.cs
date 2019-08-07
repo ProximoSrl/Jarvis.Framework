@@ -253,13 +253,18 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
             LogTypedException(command, ex);
             try
             {
+                if (ex is AggregateException aex)
+                {
+                    ex = aex.Flatten()?.InnerException;
+                }
                 var id = command.MessageId.ToString();
                 Commands.UpdateOne(
                     Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
                     Builders<TrackedMessageModel>.Update
                         //.Set(x => x.FailedAt, failedAt)
                         .Set(x => x.CompletedAt, failedAt)
-                        .Set(x => x.ErrorMessage, ex.Message)
+                        .Set(x => x.ErrorMessage, ex?.Message)
+                        .Set(x => x.FullException, ex?.ToString())
                         .Set(x => x.Success, false)
                         .Set(x => x.Completed, true),
                     new UpdateOptions() { IsUpsert = true }
