@@ -217,7 +217,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             {
                 poller.Stop();
             }
-            var startingPosition = TryGetStartingPoint(pollerId);
+            //The default value to start is zero, it is a situation that should never happen, if it happens this poller has no projection to dispatch.
+            var startingPosition = TryGetStartingPoint(pollerId, 0);
             Logger.InfoFormat("AtomicProjectionEngine: Starting poller id {0} from position {1}", pollerId, startingPosition);
             var subscription = new JarvisFrameworkLambdaSubscription(c => dispatchToTplFunction(new AtomicDispatchChunk(pollerId, c)));
             poller = new PollingClient(_persistence, startingPosition, subscription, _nStoreLoggerFactory);
@@ -260,6 +261,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                                 foreach (var consumer in consumers)
                                 {
                                     await consumer.Consumer.FullProject(identity).ConfigureAwait(false);
+
+                                    //This is Sub Optimal, I'm telling that the position to poll is the one of the commit
+                                    //but the real object was fully projected. We need to mark this position so the next time this specific
+                                    //reamodel was reprojected this is the first position to grab.
                                     _atomicProjectionCheckpointManager.MarkPosition(
                                         consumer.Consumer.AtomicReadmodelInfoAttribute.Name,
                                         atomicDispatchChunk.Chunk.Position);
@@ -276,13 +281,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 {
                     _catchupPollerIdList.Clear(); //we need to clear all the in memory id list.
 
+                    //We finished catchup, so we can mark all the catchup readmodel to 
+                    //the latest position.
                     foreach (var consumer in _catchupConsumerBlocks.Values.SelectMany(c => c))
                     {
                         _atomicProjectionCheckpointManager.MarkPosition(
                             consumer.Consumer.AtomicReadmodelInfoAttribute.Name,
                             atomicDispatchChunk.Chunk.Position);
                     }
-
                 }
             }
 
@@ -508,8 +514,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         private void AddConsumer(Int64 projectedPosition, Int32 pollerId, Type atomicReadmodelType, AtomicReadmodelInfoAttribute atomicReadmodelInfoAttribute)
         {
             //The real starting point is the minimum between actual position and what is already in the dictionary, each poller id should start from 
-            //minimum dispatched to avoid missing data.
-            _pollerStartingPoint[pollerId] = Math.Min(TryGetStartingPoint(pollerId), projectedPosition);
+            //minimum dispatched to avoid missing data. If the poller still was not added, its default value is MaxValue because it is passed to the min 
+            //value, so projectedPosition will always win.
+            _pollerStartingPoint[pollerId] = Math.Min(TryGetStartingPoint(pollerId, Int32.MaxValue), projectedPosition);
 
             if (!_consumerBlocks.TryGetValue(atomicReadmodelInfoAttribute.AggregateIdType, out List<AtomicDispatchChunkConsumer> atomicReadmodelEventConsumers))
             {
@@ -531,16 +538,17 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// We want to take for each poller id the minimum value.
         /// </summary>
         /// <param name="pollerId"></param>
+        /// <param name="defaultValue">This is the default value we want to use if the 
+        /// value is not present in the dictionary of poller starting point.</param>
         /// <returns></returns>
-        private Int64 TryGetStartingPoint(int pollerId)
+        private Int64 TryGetStartingPoint(int pollerId, Int32 defaultValue)
         {
             if (_pollerStartingPoint.TryGetValue(pollerId, out var value))
             {
                 return value;
             }
 
-            //Start from Maximum, result will be passed to min function.
-            return Int64.MaxValue;
+            return defaultValue;
         }
 
         #endregion
