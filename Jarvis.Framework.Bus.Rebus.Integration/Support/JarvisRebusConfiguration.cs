@@ -1,36 +1,33 @@
-﻿using Jarvis.Framework.Shared.Helpers;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 {
     [Serializable]
     public class JarvisRebusConfiguration
     {
-		/// <summary>
-		/// Constructor
-		/// </summary>
-		/// <param name="connectionString"></param>
-		/// <param name="prefix"></param>
-		public JarvisRebusConfiguration(String connectionString, String prefix)
-		{
-			ConnectionString = connectionString;
-			Prefix = prefix;
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="connectionString"></param>
+        /// <param name="prefix"></param>
+        public JarvisRebusConfiguration(
+            String connectionString, 
+            String prefix)
+        {
+            ConnectionString = connectionString;
+            Prefix = prefix;
 
-			EndpointsMap = new Dictionary<string, string>();
-			ExplicitSubscriptions = new List<ExplicitSubscription>();
-			StartBusPriority = JarvisStartableFacility.Priorities.Normal;
-		}
+            EndpointsMap = new Dictionary<string, string>();
+            ExplicitSubscriptions = new List<ExplicitSubscription>();
+        }
 
-		public String InputQueue { get; set; }
+        public String InputQueue { get; set; }
 
         public String ErrorQueue { get; set; }
 
-		public String TransportAddress { get; set; }
+        public String TransportAddress { get; set; }
 
         public Int32 NumOfWorkers { get; set; }
 
@@ -38,9 +35,9 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 
         public Dictionary<String, String> EndpointsMap { get; set; }
 
-		public List<Assembly> AssembliesWithMessages { get; set; }
+        public List<Assembly> AssembliesWithMessages { get; set; }
 
-		public List<ExplicitSubscription> ExplicitSubscriptions { get; set; }
+        public List<ExplicitSubscription> ExplicitSubscriptions { get; set; }
 
         /// <summary>
         /// This is the priority for the startable component that will
@@ -64,10 +61,10 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
         /// </summary>
         public String ConnectionString { get; private set; }
 
-		/// <summary>
-		/// Set to false, should be true only for test.
-		/// </summary>
-		public Boolean CentralizedConfiguration { get; set; }
+        /// <summary>
+        /// Set to false, should be true only for test.
+        /// </summary>
+        public Boolean CentralizedConfiguration { get; set; }
     }
 
     public class ExplicitSubscription

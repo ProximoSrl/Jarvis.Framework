@@ -246,7 +246,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                         if (_logger.IsDebugEnabled) _logger.DebugFormat("Mapping between {0} and {1} is already existing and is allowed!", key, id);
                         return true;
                     }
-                    if (_logger.IsDebugEnabled) _logger.DebugFormat("Mapping between {0} and {1} is rejected because of duplication!", key, id);
+                    _logger.ErrorFormat("Mapping between {0} and {1} is rejected because of duplication! Mapper is {2}", key, id, typeof(TId));
                     return false;
                 }
                 throw;

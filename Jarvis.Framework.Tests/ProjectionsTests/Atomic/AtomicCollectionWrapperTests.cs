@@ -288,6 +288,31 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         }
 
         [Test]
+        public void Before_and_after_called()
+        {
+            var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
+            var evt = GenerateCreatedEvent(false);
+            rm.ProcessChangeset(evt);
+            var firstEvt = evt.Events[0] as DomainEvent;
+
+            Assert.That(rm.ExtraString, Is.EqualTo($"B-{firstEvt.MessageId}IN-{firstEvt.MessageId}A-{firstEvt.MessageId}"));
+        }
+
+        [Test]
+        public void Before_and_after_not_called_for_events_not_handled()
+        {
+            var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
+            var commit1 = GenerateCreatedEvent(false);
+            rm.ProcessChangeset(commit1);
+            var firstEvt = commit1.Events[0] as DomainEvent;
+
+            var commit2 = GenerateInvalidatedEvent(false);
+            rm.ProcessChangeset(commit2);
+
+            Assert.That(rm.ExtraString, Is.EqualTo($"B-{firstEvt.MessageId}IN-{firstEvt.MessageId}A-{firstEvt.MessageId}"));
+        }
+
+        [Test]
         public async Task Not_persistable_is_honored_in_insert()
         {
             var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));

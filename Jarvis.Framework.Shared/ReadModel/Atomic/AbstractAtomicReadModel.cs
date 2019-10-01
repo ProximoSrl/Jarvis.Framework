@@ -5,6 +5,7 @@ using NStore.Domain;
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.ReadModel.Atomic
 {
@@ -129,6 +130,14 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
 
         protected abstract Int32 GetVersion();
 
+        protected virtual void BeforeEventProcessing(DomainEvent domainEvent) 
+        {
+        }
+
+        protected virtual void AfterEventProcessing(DomainEvent domainEvent)
+        {
+        }
+
         private Boolean ProcessEvent(DomainEvent domainEvent)
         {
             //if this readmodel is faulted, it should not process anymore any data.
@@ -153,7 +162,9 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
 
             if (invoker != null)
             {
+                BeforeEventProcessing(domainEvent);
                 invoker.Invoke(this, domainEvent);
+                AfterEventProcessing(domainEvent);
                 return true;
             }
 
@@ -208,6 +219,6 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
             ModifiedWithExtraStreamEvents = true;
         }
 
-        private static ConcurrentDictionary<string, MethodInvoker> _handlersCache = new ConcurrentDictionary<string, MethodInvoker>();
+        private static readonly ConcurrentDictionary<string, MethodInvoker> _handlersCache = new ConcurrentDictionary<string, MethodInvoker>();
     }
 }

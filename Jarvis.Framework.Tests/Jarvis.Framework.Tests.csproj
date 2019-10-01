@@ -271,7 +271,6 @@
     <Compile Include="ServicesTests\CounterServiceTests.cs" />
     <Compile Include="ServicesTests\OfflineCounterServiceTest.cs" />
     <Compile Include="SharedTests\Commands\JarvisDefaultCommandExecutionExceptionHelperTests.cs" />
-    <Compile Include="SharedTests\Helpers\CastleUtilsTests.cs" />
     <Compile Include="SharedTests\Helpers\MongoDriverHelperTests.cs" />
     <Compile Include="SharedTests\IdentitySupport\AbstractIdentityTranslatorTests.cs" />
     <Compile Include="SharedTests\IdentitySupport\AuxClasses.cs" />
