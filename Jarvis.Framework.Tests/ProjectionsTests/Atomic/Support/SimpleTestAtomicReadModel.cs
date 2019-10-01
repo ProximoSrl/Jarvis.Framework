@@ -1,11 +1,9 @@
 ﻿using Jarvis.Framework.Kernel.ProjectionEngine.Atomic;
+using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.ReadModel.Atomic;
 using Jarvis.Framework.Tests.EngineTests;
 using MongoDB.Driver;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support
@@ -21,10 +19,25 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support
 
         public Boolean Created { get; private set; }
 
+        public String ExtraString { get; set; }
+
+        protected override void BeforeEventProcessing(DomainEvent domainEvent)
+        {
+            ExtraString += $"B-{domainEvent.MessageId}";
+            base.BeforeEventProcessing(domainEvent);
+        }
+
+        protected override void AfterEventProcessing(DomainEvent domainEvent)
+        {
+            ExtraString += $"A-{domainEvent.MessageId}";
+            base.AfterEventProcessing(domainEvent);
+        }
+
 #pragma warning disable S1144 // Unused private types or members should be removed
 #pragma warning disable S1172 // Unused method parameters should be removed
         private void On(SampleAggregateCreated evt)
         {
+            ExtraString += $"IN-{evt.MessageId}";
             Created = true;
             TouchCount = 0;
         }
