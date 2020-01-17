@@ -1,17 +1,14 @@
 ﻿using Jarvis.Framework.Kernel.Events;
 using Jarvis.Framework.Kernel.ProjectionEngine;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
+using Jarvis.Framework.Shared.Helpers;
 using Jarvis.Framework.Shared.Messages;
 using MongoDB.Driver;
+using NSubstitute;
 using NUnit.Framework;
 using System;
-using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Jarvis.Framework.Shared.Helpers;
-using NSubstitute;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests
 {
@@ -22,10 +19,10 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
     [TestFixture]
     public class ConcurrentCheckpointTrackerTests
     {
-        IMongoDatabase _db;
-        ConcurrentCheckpointTracker _concurrentCheckpointTrackerSut;
-        SlotStatusManager _slotStatusCheckerSut;
-        IMongoCollection<Checkpoint> _checkPoints;
+        private IMongoDatabase _db;
+        private ConcurrentCheckpointTracker _concurrentCheckpointTrackerSut;
+        private SlotStatusManager _slotStatusCheckerSut;
+        private IMongoCollection<Checkpoint> _checkPoints;
 
         [SetUp]
         public void SetUp()
@@ -108,6 +105,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
 
             Assert.That(status.NewSlots, Has.Count.EqualTo(0));
             Assert.That(status.SlotsThatNeedsRebuild, Has.Count.EqualTo(0));
+            Assert.That(status.AllSlots, Has.Count.EqualTo(2));
         }
 
         [Test]
@@ -120,8 +118,8 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             var projection3 = new Projection3(Substitute.For<ICollectionWrapper<SampleReadModel3, String>>());
 
             var projections = new IProjection[] { projection1, projection2, projection3 };
-            var checkpoint1 = new Checkpoint(projection1.Info.CommonName, 1, projection1.Info.Signature) { Slot = projection1.Info.SlotName};
-            var checkpoint2 = new Checkpoint(projection2.Info.CommonName, 1, projection2.Info.Signature) { Slot = projection2.Info.SlotName};
+            var checkpoint1 = new Checkpoint(projection1.Info.CommonName, 1, projection1.Info.Signature) { Slot = projection1.Info.SlotName };
+            var checkpoint2 = new Checkpoint(projection2.Info.CommonName, 1, projection2.Info.Signature) { Slot = projection2.Info.SlotName };
             var checkpoint3 = new Checkpoint(projection3.Info.CommonName, 1, projection3.Info.Signature) { Slot = projection3.Info.SlotName };
             _checkPoints.InsertMany(new[] { checkpoint1, checkpoint2, checkpoint3 });
 
@@ -151,7 +149,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             _slotStatusCheckerSut = new SlotStatusManager(_db, projections.Select(p => p.Info).ToArray());
             var status = _slotStatusCheckerSut.GetSlotsStatus();
 
-            Assert.That(status.NewSlots, Is.EquivalentTo(new[] { projection3.Info.SlotName}));
+            Assert.That(status.NewSlots, Is.EquivalentTo(new[] { projection3.Info.SlotName }));
 
             Assert.That(status.SlotsThatNeedsRebuild, Has.Count.EqualTo(0));
         }
@@ -259,7 +257,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             _slotStatusCheckerSut = new SlotStatusManager(_db, projections.Select(p => p.Info).ToArray());
             var status = _slotStatusCheckerSut.GetProjectionChangeInfo();
             var singleProjectionStatus = status.Single();
-            Assert.That((Int32) (singleProjectionStatus.ChangeType | ProjectionChangeInfo.ProjectionChangeType.SignatureChange), Is.GreaterThan(0));
+            Assert.That((Int32)(singleProjectionStatus.ChangeType | ProjectionChangeInfo.ProjectionChangeType.SignatureChange), Is.GreaterThan(0));
             Assert.That(singleProjectionStatus.OldSignature, Is.EqualTo(projection1.Info.Signature + "modified"));
             Assert.That(singleProjectionStatus.ActualSignature, Is.EqualTo(projection1.Info.Signature));
         }
@@ -271,7 +269,8 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             var projection1 = new Projection(Substitute.For<ICollectionWrapper<SampleReadModel, String>>());
 
             var projections = new IProjection[] { projection1 };
-            var checkpoint1 = new Checkpoint(projection1.Info.CommonName, 1, projection1.Info.Signature) {
+            var checkpoint1 = new Checkpoint(projection1.Info.CommonName, 1, projection1.Info.Signature)
+            {
                 Slot = projection1.Info.SlotName + "modified"
             };
 
@@ -293,7 +292,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             var projection1 = new Projection(Substitute.For<ICollectionWrapper<SampleReadModel, String>>());
 
             var projections = new IProjection[] { projection1 };
-            var checkpoint1 = new Checkpoint(projection1.Info.CommonName, 1, projection1.Info.Signature+ "modified")
+            var checkpoint1 = new Checkpoint(projection1.Info.CommonName, 1, projection1.Info.Signature + "modified")
             {
                 Slot = projection1.Info.SlotName + "modified"
             };
