@@ -27,10 +27,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         /// </summary>
         public List<String> NewSlots { get; private set; }
 
+        /// <summary>
+        /// This contains list of all slots for all projection that are currently loaded into the system
+        /// </summary>
+        public HashSet<String> AllSlots { get; private set; }
+
         public CheckpointSlotStatus()
         {
             SlotsThatNeedsRebuild = new List<string>();
             NewSlots = new List<string>();
+            AllSlots = new HashSet<string>();
         }
     }
 }
