@@ -52,6 +52,12 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             _collection = systemDB.GetCollection<MappedIdentity>("map_" + typeof(TKey).Name.ToLower());
         }
 
+        /// <summary>
+        /// Add an aliast to a key, this is useful when you want 
+        /// multiple keys to map to the very same identity (TKey)
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="alias"></param>
         protected void AddAlias(TKey key, string alias)
         {
             if (alias == null) throw new ArgumentNullException(nameof(alias));
@@ -145,11 +151,6 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             var mapped = _collection.FindOneById(externalKey);
 
             return mapped == null ? null : mapped.AggregateId;
-        }
-
-        protected TKey LinkKeys(string externalKey, TKey key)
-        {
-            return MapIdentity(externalKey, key).AggregateId;
         }
 
         private MappedIdentity MapIdentity(string externalKey, TKey key)

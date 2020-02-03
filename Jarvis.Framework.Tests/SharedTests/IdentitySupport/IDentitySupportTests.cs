@@ -1,20 +1,13 @@
-﻿using Jarvis.Framework.Shared.Domain.Serialization;
+﻿using Jarvis.Framework.Shared.Helpers;
 using Jarvis.Framework.Shared.IdentitySupport;
-using Jarvis.Framework.Shared.IdentitySupport.Serialization;
 using Jarvis.Framework.Tests.Support;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using NUnit.Framework;
 using System;
-using System.Collections.Generic;
 using System.Configuration;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
-using Jarvis.Framework.Shared.Helpers;
-using Jarvis.Framework.Tests.SharedTests.IdentitySupport;
 
 namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
 {
@@ -59,7 +52,6 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             Assert.That(mapCount.Count(), Is.EqualTo(0));
         }
 
-
         [Test]
         public void Verify_delete_of_flat_mapping()
         {
@@ -97,7 +89,6 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             {
                 Assert.That(ex.Message, Contains.Substring("Alias alias2 already mapped to Test_2"));
             }
-
         }
 
         [Test]
@@ -119,7 +110,7 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
         [Test]
         public void should_serialize_class_with_abstract_id()
         {
-            var instance = new WithAbstractId() { AbstractId = new TestAbstractId(42)};
+            var instance = new WithAbstractId() { AbstractId = new TestAbstractId(42) };
             var json = instance.ToJson();
 
             Assert.AreEqual("{ \"AbstractId\" : \"TestAbstract_42\" }", json);

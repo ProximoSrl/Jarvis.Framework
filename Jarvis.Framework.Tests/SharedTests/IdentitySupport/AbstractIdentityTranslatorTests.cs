@@ -9,7 +9,6 @@ using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
-using System.Linq;
 using System.Reflection;
 
 namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
@@ -38,8 +37,8 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
         {
             TestMapper sut = new TestMapper(_db, _identityManager);
             String key = Guid.NewGuid().ToString();
-            var id = sut.MapWithAutCreate(key);
-            var secondCall = sut.MapWithAutCreate(key);
+            var id = sut.MapWithAutomaticCreate(key);
+            var secondCall = sut.MapWithAutomaticCreate(key);
             Assert.That(id, Is.EqualTo(secondCall));
         }
 
@@ -48,7 +47,7 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
         {
             TestMapper sut = new TestMapper(_db, _identityManager);
             MyAggregateId id = new MyAggregateId(_seed++);
-            var mappedIdentity = sut.MapIdentity(id);
+            var mappedIdentity = sut.MapWithAutomaticCreate(id.AsString());
 
             var reverseMap = sut.ReverseMap(mappedIdentity);
             Assert.That(reverseMap, Is.EqualTo(id.AsString().ToLowerInvariant()));
@@ -59,7 +58,7 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
         {
             TestMapper sut = new TestMapper(_db, _identityManager);
             String key = Guid.NewGuid().ToString();
-            var id = sut.MapWithAutCreate(key);
+            var id = sut.MapWithAutomaticCreate(key);
             var reversed = sut.ReverseMap(id);
             Assert.That(reversed, Is.EqualTo(key));
         }
@@ -69,7 +68,7 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
         {
             TestMapper sut = new TestMapper(_db, _identityManager);
             String key = Guid.NewGuid().ToString() + "CASE_UPPER";
-            var id = sut.MapWithAutCreate(key);
+            var id = sut.MapWithAutomaticCreate(key);
             var reversed = sut.ReverseMap(id);
             Assert.That(reversed, Is.EqualTo(key.ToLowerInvariant()));
         }
@@ -82,8 +81,8 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             String key2 = Guid.NewGuid().ToString();
             String key3 = Guid.NewGuid().ToString();
 
-            var id1 = sut.MapWithAutCreate(key1);
-            var id2 = sut.MapWithAutCreate(key2);
+            var id1 = sut.MapWithAutomaticCreate(key1);
+            var id2 = sut.MapWithAutomaticCreate(key2);
 
             var multimap = sut.GetMultipleMapWithoutAutoCreation(key1, key2);
             Assert.That(multimap[key1], Is.EqualTo(id1));
@@ -99,8 +98,8 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             String key2 = Guid.NewGuid().ToString() + "UPPER";
             String key3 = Guid.NewGuid().ToString() + "UPPER";
 
-            var id1 = sut.MapWithAutCreate(key1);
-            var id2 = sut.MapWithAutCreate(key2);
+            var id1 = sut.MapWithAutomaticCreate(key1);
+            var id2 = sut.MapWithAutomaticCreate(key2);
 
             var multimap = sut.GetMultipleMapWithoutAutoCreation(key1, key2);
             Assert.That(multimap[key1], Is.EqualTo(id1));
@@ -128,11 +127,11 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             String key2 = Guid.NewGuid().ToString();
             String key3 = Guid.NewGuid().ToString();
 
-            var id1 = sut.MapWithAutCreate(key1);
-            var id2 = sut.MapWithAutCreate(key2);
-            var id3 = sut.MapWithAutCreate(key3);
+            var id1 = sut.MapWithAutomaticCreate(key1);
+            var id2 = sut.MapWithAutomaticCreate(key2);
+            var id3 = sut.MapWithAutomaticCreate(key3);
 
-            var reversed = sut.ReverseMap(id1,id2, id3);
+            var reversed = sut.ReverseMap(id1, id2, id3);
             Assert.That(reversed[id1], Is.EqualTo(key1));
             Assert.That(reversed[id2], Is.EqualTo(key2));
             Assert.That(reversed[id3], Is.EqualTo(key3));
@@ -145,8 +144,8 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             String key1 = Guid.NewGuid().ToString();
             String key2 = Guid.NewGuid().ToString();
 
-            var id1 = sut.MapWithAutCreate(key1);
-            var id2 = sut.MapWithAutCreate(key2);
+            var id1 = sut.MapWithAutomaticCreate(key1);
+            var id2 = sut.MapWithAutomaticCreate(key2);
             var id3 = new SampleAggregateId(100000);
 
             var reversed = sut.ReverseMap(id1, id2, id3);
@@ -162,8 +161,38 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             var reversed = sut.ReverseMap(new SampleAggregateId[] { });
             Assert.That(reversed.Count, Is.EqualTo(0));
 
-            reversed = sut.ReverseMap(( SampleAggregateId[]) null);
+            reversed = sut.ReverseMap((SampleAggregateId[])null);
             Assert.That(reversed.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Verify_alias_to_id()
+        {
+            TestMapper sut = new TestMapper(_db, _identityManager);
+            String key1 = Guid.NewGuid().ToString();
+            String key2 = Guid.NewGuid().ToString();
+            var identity = sut.MapWithAutomaticCreate(key1);
+            sut.AddAlias(identity, key2);
+
+            //Both keys gets mapped to the very same identity.
+            Assert.That(sut.MapWithWithoutAutomaticCreate(key1), Is.EqualTo(identity));
+            Assert.That(sut.MapWithWithoutAutomaticCreate(key2), Is.EqualTo(identity));
+
+            Assert.That(sut.MapWithAutomaticCreate(key1), Is.EqualTo(identity));
+            Assert.That(sut.MapWithAutomaticCreate(key2), Is.EqualTo(identity));
+        }
+
+        [Test]
+        public void Verify_alias_reverse_mapping()
+        {
+            TestMapper sut = new TestMapper(_db, _identityManager);
+            String key1 = Guid.NewGuid().ToString();
+            String key2 = Guid.NewGuid().ToString();
+            var identity = sut.MapWithAutomaticCreate(key1);
+            sut.AddAlias(identity, key2);
+
+            var key = sut.ReverseMap(identity);
+            Assert.That(key, Is.EqualTo(key1));
         }
 
         private class TestMapper : AbstractIdentityTranslator<SampleAggregateId>
@@ -172,14 +201,14 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             {
             }
 
-            public SampleAggregateId MapWithAutCreate(String key)
+            public SampleAggregateId MapWithAutomaticCreate(String key)
             {
                 return base.Translate(key, true);
             }
 
-            public SampleAggregateId MapIdentity(IIdentity identity)
+            public SampleAggregateId MapWithWithoutAutomaticCreate(String key)
             {
-                return Translate(identity.AsString(), true);
+                return base.Translate(key, false);
             }
 
             public IDictionary<String, SampleAggregateId> GetMultipleMapWithoutAutoCreation(params String[] keys)
@@ -195,6 +224,11 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             public IDictionary<SampleAggregateId, String> ReverseMap(params SampleAggregateId[] ids)
             {
                 return base.GetAliases(ids);
+            }
+
+            public new void AddAlias(SampleAggregateId key, string alias)
+            {
+                base.AddAlias(key, alias);
             }
         }
     }
