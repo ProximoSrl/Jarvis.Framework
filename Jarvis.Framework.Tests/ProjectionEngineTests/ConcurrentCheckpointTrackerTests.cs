@@ -86,6 +86,23 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         }
 
         [Test]
+        public void Verify_slot_status_all_ok_with_no_checkpoints()
+        {
+            //Two projection in the same slot
+            var projection1 = new Projection(Substitute.For<ICollectionWrapper<SampleReadModel, String>>());
+            var projection2 = new Projection2(Substitute.For<ICollectionWrapper<SampleReadModel2, String>>());
+            //A projection in other slot
+            var projection3 = new Projection3(Substitute.For<ICollectionWrapper<SampleReadModel3, String>>());
+
+            var projections = new IProjection[] { projection1, projection2, projection3 };
+
+            _slotStatusCheckerSut = new SlotStatusManager(_db, projections.Select(p => p.Info).ToArray());
+            var status = _slotStatusCheckerSut.GetSlotsStatus();
+
+            Assert.That(status.AllSlots, Has.Count.EqualTo(2));
+        }
+
+        [Test]
         public void Verify_slot_status_all_ok()
         {
             //Two projection in the same slot

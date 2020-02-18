@@ -143,7 +143,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             {
                 foreach (var slot in slots)
                 {
-                    returnValue.AllSlots.Add(slot.Key);
                     if (slot.All(s => s.Checkpoint == null || s.Checkpoint.Value == 0))
                     {
                         returnValue.NewSlots.Add(slot.Key);
@@ -158,6 +157,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                         returnValue.SlotsThatNeedsRebuild.Add(slot.Key);
                     }
                 }
+            }
+
+            //Fill the all slot property, should be always valid.
+            foreach (var slot in slots)
+            {
+                returnValue.AllSlots.Add(slot.Key);
             }
             return returnValue;
         }
