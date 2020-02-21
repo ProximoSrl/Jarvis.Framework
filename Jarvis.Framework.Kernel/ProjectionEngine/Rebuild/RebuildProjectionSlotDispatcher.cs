@@ -3,13 +3,10 @@ using Jarvis.Framework.Kernel.Events;
 using Jarvis.Framework.Kernel.MultitenantSupport;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 using Jarvis.Framework.Kernel.Support;
-using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.Logging;
-using Jarvis.Framework.Shared.Support;
 using Metrics;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -84,7 +81,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
             var chkpoint = unwindedEvent.CheckpointToken;
             if (chkpoint > LastCheckpointDispatched)
             {
-                if (_logger.IsDebugEnabled) _logger.DebugFormat("Discharded event {0} commit {1} because last checkpoint dispatched for slot {2} is {3}.", unwindedEvent.CommitId, unwindedEvent.CheckpointToken, SlotName, _maxCheckpointDispatched);
+                if (_logger.IsDebugEnabled)
+                {
+                    _logger.DebugFormat("Discharded event {0} commit {1} because last checkpoint dispatched for slot {2} is {3}.", unwindedEvent.CommitId, unwindedEvent.CheckpointToken, SlotName, _maxCheckpointDispatched);
+                }
+
                 return;
             }
 
@@ -124,6 +125,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                     _metrics.Inc(cname, eventName, elapsedticks);
 
                     if (_logger.IsDebugEnabled)
+                    {
                         _logger.DebugFormat("[{3}] [{4}] Handled checkpoint {0}: {1} > {2}",
                             unwindedEvent.CheckpointToken,
                             unwindedEvent.PartitionId,
@@ -131,6 +133,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                             SlotName,
                             cname
                         );
+                    }
                 }
             }
             catch (Exception ex)

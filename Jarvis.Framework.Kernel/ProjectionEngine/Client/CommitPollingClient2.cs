@@ -145,7 +145,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             //prepare single poller thread.
             CreateTplChain();
 
-            _innerSubscription = new JarvisFrameworkLambdaSubscription(DispatchChunk);
+            _innerSubscription = new JarvisFrameworkLambdaSubscription(DispatchChunk, _id);
 
             _innerClient = new PollingClient(
                 _persistence,
