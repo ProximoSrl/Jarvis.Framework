@@ -1,5 +1,6 @@
 ﻿using NStore.Core.Persistence;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.Store
@@ -7,6 +8,7 @@ namespace Jarvis.Framework.Shared.Store
     public class JarvisFrameworkLambdaSubscription : ISubscription
     {
         private readonly ChunkProcessor _fn;
+        private readonly string _lambdaName;
         private long _failedPosition;
 
         public bool ReadCompleted { get; private set; }
@@ -35,15 +37,20 @@ namespace Jarvis.Framework.Shared.Store
 
         public IChunk LastDispatchedChunk { get; set; }
 
-        public JarvisFrameworkLambdaSubscription(ChunkProcessor fn)
+        public JarvisFrameworkLambdaSubscription(ChunkProcessor fn, String lambdaName)
         {
             _fn = fn;
+            _lambdaName = lambdaName;
             _failedPosition = 0;
             LastException = null;
+            Metrics.Metric.Gauge($"fw-lambda-subscription-{_lambdaName}", () => _numOfChunksProcessed, Metrics.Unit.Items);
         }
+
+        private Int64 _numOfChunksProcessed = 0;
 
         public Task<bool> OnNextAsync(IChunk chunk)
         {
+            Interlocked.Increment(ref _numOfChunksProcessed);
             _failedPosition = 0;
             //Reset the last exception, this will be reset again if we generate other errors.
             LastException = null;

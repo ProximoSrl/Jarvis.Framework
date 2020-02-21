@@ -105,7 +105,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 				}
 
 				return true;
-			});
+			}, "unwinder");
 
 			var sequencer = new NStoreSequencer(
 				startToken - 1,

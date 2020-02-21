@@ -1,9 +1,9 @@
-﻿using Jarvis.Framework.Kernel.MultitenantSupport;
+﻿using Jarvis.Framework.Kernel.Engine;
+using Jarvis.Framework.Kernel.MultitenantSupport;
+using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 using Metrics;
 using System;
 using System.Collections.Generic;
-using Jarvis.Framework.Kernel.ProjectionEngine.Client;
-using Jarvis.Framework.Kernel.Engine;
 
 namespace Jarvis.Framework.Kernel.Support
 {
@@ -12,7 +12,7 @@ namespace Jarvis.Framework.Kernel.Support
     /// </summary>
     public static class KernelMetricsHelper
     {
-        private const String _checkpointToDispatchRebuildGaugeName ="checkpoint-to-dispatch";
+        private const String _checkpointToDispatchRebuildGaugeName = "checkpoint-to-dispatch";
 
         private const String _commitPollingClientBufferSizeGaugeName = "polling-client-buffer-size";
 
@@ -30,7 +30,9 @@ namespace Jarvis.Framework.Kernel.Support
         {
             //These stats are valid only during a rebuild and not during standard working.
             if (!RebuildSettings.ShouldRebuild)
+            {
                 return;
+            }
 
             String gaugeName;
             if (!String.IsNullOrEmpty(slotName))
@@ -67,6 +69,8 @@ namespace Jarvis.Framework.Kernel.Support
         }
 
         private static readonly Dictionary<string, Meter> CommitDispatchedBySlot = new Dictionary<string, Meter>();
+        private static readonly Dictionary<string, Meter> CommitDispatchedByAtomicReadmodel = new Dictionary<string, Meter>();
+
         private static readonly Dictionary<string, Meter> RebuildCommitDispatchedBySlot = new Dictionary<string, Meter>();
         private static readonly Dictionary<string, Meter> RebuildEventDispatchedByBucket = new Dictionary<string, Meter>();
 
@@ -77,6 +81,31 @@ namespace Jarvis.Framework.Kernel.Support
                 var meter = Metric.Meter("projection-chunk-dispatched-" + slotName, Unit.Items);
                 CommitDispatchedBySlot[slotName] = meter;
             }
+        }
+
+        public static void MarkCommitDispatchedCount(String slotName, Int32 count)
+        {
+            CommitDispatchedBySlot[slotName].Mark(count);
+            projectionDispatchMeter.Mark(count);
+        }
+
+        /// <summary>
+        /// Each aggregateId can have one or more readmodel to project, we want to have a meter that tells us
+        /// how many commit we are dispatching for each commit and what is the timer.
+        /// </summary>
+        /// <param name="aggregateIdType"></param>
+        public static void CreateMeterForAtomicReadmodelDispatcherCount(String aggregateIdType)
+        {
+            if (!CommitDispatchedByAtomicReadmodel.ContainsKey(aggregateIdType))
+            {
+                var meter = Metric.Meter("atomicreadmodel-dispatched-commit-" + aggregateIdType, Unit.Items);
+                CommitDispatchedByAtomicReadmodel[aggregateIdType] = meter;
+            }
+        }
+
+        public static void MarkCommitDispatchedAtomicReadmodelCount(String aggregateIdType, Int32 count)
+        {
+            CommitDispatchedByAtomicReadmodel[aggregateIdType].Mark(count);
         }
 
         public static void CreateMeterForRebuildDispatcherBuffer(string slotName, Func<Double> getBufferDispatchCount)
@@ -99,6 +128,16 @@ namespace Jarvis.Framework.Kernel.Support
             Metric.Gauge("rebuild-buffer-STAGE1-" + bucketKey, provider, Unit.Items);
         }
 
+        internal static void CreateGaugeForAtomicProjectionFirstBuffer(Func<Double> provider)
+        {
+            Metric.Gauge("atomic-projection-input-buffer", provider, Unit.Items);
+        }
+
+        internal static void CreateGaugeForAtomicProjectionEnhancerBuffer(Func<Double> provider)
+        {
+            Metric.Gauge("atomic-projection-enhance-buffer", provider, Unit.Items);
+        }
+
         public static void CreateMeterForRebuildEventCompleted(string bucketKey)
         {
             if (!RebuildEventDispatchedByBucket.ContainsKey(bucketKey))
@@ -107,12 +146,6 @@ namespace Jarvis.Framework.Kernel.Support
                 CommitDispatchedBySlot[bucketKey] = meter;
             }
         }
-
-        public static void MarkCommitDispatchedCount(String slotName, Int32 count)
-        {
-            CommitDispatchedBySlot[slotName].Mark(count);
-			projectionDispatchMeter.Mark(count);
-		}
 
         public static void MarkEventInRebuildDispatchedCount(String slotName, Int32 count)
         {
@@ -128,13 +161,13 @@ namespace Jarvis.Framework.Kernel.Support
         private static readonly Counter projectionCounter = Metric.Counter("prj-time", Unit.Custom("ticks"));
         private static readonly Counter projectionSlotCounter = Metric.Counter("prj-slot-time", Unit.Custom("ticks"));
         private static readonly Counter projectionEventCounter = Metric.Counter("prj-event-time", Unit.Custom("ticks"));
-		private static readonly Counter projectionSlowEventCounter = Metric.Counter("prj-slow-event", Unit.Custom("ms"));
+        private static readonly Counter projectionSlowEventCounter = Metric.Counter("prj-slow-event", Unit.Custom("ms"));
 
-		private static readonly Counter projectionCounterRebuild = Metric.Counter("prj-time-rebuild", Unit.Custom("ticks"));
+        private static readonly Counter projectionCounterRebuild = Metric.Counter("prj-time-rebuild", Unit.Custom("ticks"));
         private static readonly Counter projectionSlotCounterRebuild = Metric.Counter("prj-slot-time-rebuild", Unit.Custom("ticks"));
         private static readonly Counter projectionEventCounterRebuild = Metric.Counter("prj-event-time-rebuild", Unit.Custom("ticks"));
 
-		private static readonly Meter projectionDispatchMeter = Metric.Meter("projection-chunk-dispatched-TOTAL", Unit.Items, TimeUnit.Seconds);
+        private static readonly Meter projectionDispatchMeter = Metric.Meter("projection-chunk-dispatched-TOTAL", Unit.Items, TimeUnit.Seconds);
 
         /// <summary>
         /// During rebuild, this is the count of ALL Slot dispatched event, each event is counted multiple times.
@@ -146,17 +179,26 @@ namespace Jarvis.Framework.Kernel.Support
             projectionCounter.Increment(projectionName, ticks);
             projectionSlotCounter.Increment(slotName, ticks);
             projectionEventCounter.Increment(eventName, ticks);
-			if (milliseconds > 50)
-			{
-				projectionSlowEventCounter.Increment($"{projectionName}/{eventName}", milliseconds);
-			}
-		}
+            if (milliseconds > 50)
+            {
+                projectionSlowEventCounter.Increment($"{projectionName}/{eventName}", milliseconds);
+            }
+        }
 
         public static void IncrementProjectionCounterRebuild(String projectionName, String slotName, String eventName, Int64 milliseconds)
         {
             projectionCounterRebuild.Increment(projectionName, milliseconds);
             projectionSlotCounterRebuild.Increment(slotName, milliseconds);
             projectionEventCounterRebuild.Increment(eventName, milliseconds);
+        }
+
+        /* ----------------------- Atomic projection related metrics ----------------------------- */
+
+        private static readonly Counter atomicProjectionCounterRebuild = Metric.Counter("atomic-projection-time", Unit.Custom("ticks"));
+
+        public static void IncrementProjectionCounterAtomicProjection(String aggregateId, Int64 milliseconds)
+        {
+            atomicProjectionCounterRebuild.Increment(aggregateId, milliseconds);
         }
     }
 }
