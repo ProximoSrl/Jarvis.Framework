@@ -20,13 +20,12 @@
         <dependency id="NStore.Persistence.Mongo" version="0.8.3" />
         
         <dependency id="MongoDB.Driver" version="2.7.3" />
-        <dependency id="Newtonsoft.Json" version="11.0.2" />
-        <dependency id="Microsoft.Tpl.Dataflow" version="4.5.24" />
-        <dependency id="System.Threading.Tasks.Dataflow" version="4.8.0" />
+        <dependency id="Newtonsoft.Json" version="12.0.3" />
+        <dependency id="System.Threading.Tasks.Dataflow" version="4.11.0" />
 
         <dependency id="Castle.Core" version="4.4.0" />
-        <dependency id="Castle.LoggingFacility" version="5.0.0" />
-        <dependency id="Castle.Windsor" version="5.0.0" />
+        <dependency id="Castle.LoggingFacility" version="5.0.1" />
+        <dependency id="Castle.Windsor" version="5.0.1" />
 
         <dependency id="Metrics" version="0.5.0.1000" />
       </group>
@@ -37,7 +36,7 @@
 
       <group targetFramework="netstandard2.0">
         <dependency id="Fasterflect.Netstandard" version="1.0.8" />
-        <dependency id="Microsoft.Extensions.Caching.Memory" version="2.1.2" />
+        <dependency id="Microsoft.Extensions.Caching.Memory" version="3.1.2" />
       </group>
 
     </dependencies>
