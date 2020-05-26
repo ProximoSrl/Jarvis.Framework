@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Jarvis.Framework.Bus.Rebus.Integration.Logging;
+using Rebus.Configuration;
 
 namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 {
@@ -21,6 +23,8 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 
         public List<ExplicitSubscription> ExplicitSubscriptions { get; set; }
 
+        public Action<LoggingConfigurer> LoggingConfiguration { get; set; }
+
         /// <summary>
         /// This is the priority for the startable component that will
         /// start the bus. Remember that bus registration is a two phase
@@ -37,6 +41,8 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
             EndpointsMap = new Dictionary<string, string>();
             ExplicitSubscriptions = new List<ExplicitSubscription>();
             StartBusPriority = JarvisStartableFacility.Priorities.Normal;
+
+            LoggingConfiguration = l => l.Log4Net();
         }
 
     }

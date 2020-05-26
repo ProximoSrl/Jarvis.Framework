@@ -74,7 +74,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
         {
            
             var busConfiguration = global::Rebus.Configuration.Configure.With(new WindsorContainerAdapter(_container))
-                .Logging(l => l.Log4Net())
+                .Logging(Configuration.LoggingConfiguration)
                 .Serialization(c => c.Use(CustomSerializer))
                 .Timeouts(t => t.StoreInMongoDb(_connectionString, Prefix + "-timeouts", Logger))
                 .Subscriptions(s => s.StoreInMongoDb(_connectionString, Prefix + "-subscriptions", Logger))
