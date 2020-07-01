@@ -20,11 +20,11 @@
     <PackageReference Include="Castle.Windsor" Version="5.0.1" />
     <PackageReference Include="Metrics" Version="0.5.4.1001" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
-    <PackageReference Include="MongoDB.Driver" Version="2.7.3" />
+    <PackageReference Include="MongoDB.Driver" Version="2.10.4" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
-    <PackageReference Include="NStore.Core" Version="0.8.3" />
-    <PackageReference Include="NStore.Domain" Version="0.8.3" />
-    <PackageReference Include="NStore.Persistence.Mongo" Version="0.8.3" />
+    <PackageReference Include="NStore.Core" Version="0.10.0" />
+    <PackageReference Include="NStore.Domain" Version="0.10.0" />
+    <PackageReference Include="NStore.Persistence.Mongo" Version="0.10.0" />
   </ItemGroup>
 
    <ItemGroup Condition=" '$(TargetFramework)' == 'net461' ">
