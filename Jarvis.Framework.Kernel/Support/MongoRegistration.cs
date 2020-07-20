@@ -166,9 +166,25 @@ namespace Jarvis.Framework.Kernel.Support
 			RegisterMessages(assembly);
 			RegisterAggregateSnapshot(assembly);
 			RegisterPlainObject(assembly);
+			RegisterAllRegistrator(assembly);
 		}
 
-		private static void RegisterMessages(Assembly assembly)
+        private static void RegisterAllRegistrator(Assembly assembly)
+        {
+			var allRegistrators = assembly.GetTypes().Where(x =>
+					x.IsClass
+					&& !x.IsAbstract
+					&& typeof(IMongoRegistrator).IsAssignableFrom(x)
+			   ).ToArray();
+
+            foreach (var registratorType in allRegistrators)
+            {
+				var registrator = (IMongoRegistrator)Activator.CreateInstance(registratorType);
+				registrator.Register();
+            }
+        }
+
+        private static void RegisterMessages(Assembly assembly)
 		{
 			var allMessages = assembly.GetTypes().Where(x =>
 					x.IsClass
