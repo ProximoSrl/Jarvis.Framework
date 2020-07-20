@@ -174,12 +174,12 @@ namespace Jarvis.Framework.Kernel.Support
 			var allRegistrators = assembly.GetTypes().Where(x =>
 					x.IsClass
 					&& !x.IsAbstract
-					&& typeof(IMongoRegistrator).IsAssignableFrom(x)
+					&& typeof(IMongoMappingRegistrator).IsAssignableFrom(x)
 			   ).ToArray();
 
             foreach (var registratorType in allRegistrators)
             {
-				var registrator = (IMongoRegistrator)Activator.CreateInstance(registratorType);
+				var registrator = (IMongoMappingRegistrator)Activator.CreateInstance(registratorType);
 				registrator.Register();
             }
         }

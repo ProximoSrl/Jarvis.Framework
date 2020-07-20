@@ -1,6 +1,6 @@
 ﻿namespace Jarvis.Framework.Kernel.Support
 {
-    public interface IMongoRegistrator 
+    public interface IMongoMappingRegistrator
     {
         void Register();
     }
