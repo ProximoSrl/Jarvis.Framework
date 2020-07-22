@@ -3,6 +3,10 @@ using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.Commands
 {
+    /// <summary>
+    /// Interface for a bus capable to send command to a well known executor. Caller
+    /// process always known the destination of the command.
+    /// </summary>
     public interface ICommandBus
     {
 		/// <summary>
