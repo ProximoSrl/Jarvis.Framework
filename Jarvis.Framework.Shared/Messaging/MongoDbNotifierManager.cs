@@ -32,8 +32,16 @@ namespace Jarvis.Framework.Shared.Messaging
                     .Ascending("PolledList"),
                 new CreateIndexOptions<NotificationMessage>()
                 {
-                    Name = "PollerFor" + _pollerId,
-                    //PartialFilterExpression = Builders<NotificationMessage>.Filter.Nin("PolledList", _pollerId),
+                    Name = "PollingIndex"
+                }));
+
+            _notificationCollection.Indexes.CreateOne(new CreateIndexModel<NotificationMessage>(
+                Builders<NotificationMessage>.IndexKeys
+                    .Ascending(n => n.ExpireDate),
+                new CreateIndexOptions<NotificationMessage>()
+                {
+                    Name = "ExpiringIndex",
+                    ExpireAfter = TimeSpan.Zero,
                 }));
             _pollerId = pollerId;
         }
@@ -114,11 +122,15 @@ namespace Jarvis.Framework.Shared.Messaging
 
         private class NotificationMessage
         {
-            public NotificationMessage(object message)
+            public NotificationMessage(object message, TimeSpan? timeToLive = null)
             {
                 Id = ObjectId.GenerateNewId();
                 TimeStamp = DateTime.UtcNow;
                 Message = message;
+
+                //A standard notification expire after 7 days, there is no need to keep more information in the database.
+                var ts = timeToLive ?? TimeSpan.FromDays(7);
+                ExpireDate = DateTime.UtcNow.Add(ts);
             }
 
             public ObjectId Id { get; private set; }
@@ -126,6 +138,8 @@ namespace Jarvis.Framework.Shared.Messaging
             public DateTime TimeStamp { get; private set; }
 
             public Object Message { get; private set; }
+
+            public DateTime ExpireDate { get; set; }
 
             [BsonElement]
             private String[] PolledList { get; set; } = Array.Empty<string>();
