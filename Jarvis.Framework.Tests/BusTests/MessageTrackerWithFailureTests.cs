@@ -30,13 +30,40 @@ namespace Jarvis.Framework.Tests.BusTests
     /// <summary>
     /// This tests the handler for the bus.
     /// </summary>
-    [TestFixture]
+    [NonParallelizable]
+    [TestFixture("msmq")]
+    [TestFixture("mongodb")]
     public class MessageTrackerWithFailureTests
     {
-        private const int RebusMaxRetry = 3;
+        private const int RebusMaxRetry = 5;
         private IBus _bus;
         private WindsorContainer _container;
         private IMongoCollection<TrackedMessageModel> _messages;
+
+        private readonly string _transportType;
+
+        public MessageTrackerWithFailureTests(string transportType)
+        {
+            _transportType = transportType;
+        }
+
+        private BusBootstrapper CreateBusBootstrapper(MongoDbMessagesTracker tracker, JarvisRebusConfiguration configuration)
+        {
+            if (_transportType == "msmq")
+            {
+                return new MsmqTransportJarvisTestBusBootstrapper(
+                    _container,
+                    configuration,
+                    tracker);
+            }
+            else
+            {
+                return new MongoDbTransportJarvisTestBusBootstrapper(
+                    _container,
+                    configuration,
+                    tracker);
+            }
+        }
 
         [OneTimeSetUp]
         public void TestFixtureSetUp()
@@ -46,6 +73,8 @@ namespace Jarvis.Framework.Tests.BusTests
             var logUrl = new MongoUrl(connectionString);
             var logClient = logUrl.CreateClient(false);
             var logDb = logClient.GetDatabase(logUrl.DatabaseName);
+            logDb.Drop();
+
             _messages = logDb.GetCollection<TrackedMessageModel>("messages");
 
             JarvisRebusConfiguration configuration = new JarvisRebusConfiguration(connectionString, "test")
@@ -66,10 +95,7 @@ namespace Jarvis.Framework.Tests.BusTests
             };
 
             MongoDbMessagesTracker tracker = new MongoDbMessagesTracker(logDb);
-            JarvisTestBusBootstrapper bb = new JarvisTestBusBootstrapper(
-                _container,
-                configuration,
-                tracker);
+            BusBootstrapper bb = CreateBusBootstrapper(tracker, configuration);
 
             bb.Start();
             var rebusConfigurer = _container.Resolve<RebusConfigurer>();
@@ -99,6 +125,7 @@ namespace Jarvis.Framework.Tests.BusTests
         [SetUp]
         public void SetUp()
         {
+
             _messages.Drop();
         }
 
@@ -236,7 +263,7 @@ namespace Jarvis.Framework.Tests.BusTests
             //cycle until we found handled message on tracking
             TrackedMessageModel track;
             DateTime startTime = DateTime.Now;
-            {
+            do {
                 Thread.Sleep(200);
                 track = _messages.AsQueryable().SingleOrDefault(t => t.MessageId == sampleMessage.MessageId.ToString()
                     && t.Completed == true);
@@ -341,10 +368,10 @@ namespace Jarvis.Framework.Tests.BusTests
             {
                 Thread.Sleep(200);
                 track = _messages.AsQueryable().SingleOrDefault(t => t.MessageId == sampleMessage.MessageId.ToString()
-                    && t.Completed == true);
+                    && t.ExecutionCount >= RebusMaxRetry);
             }
             while (
-                    track == null && DateTime.Now.Subtract(startTime).TotalSeconds < 4
+                    track == null && DateTime.Now.Subtract(startTime).TotalSeconds < 5
             );
 
             if (track == null)
@@ -365,7 +392,7 @@ namespace Jarvis.Framework.Tests.BusTests
             Assert.That(track.Completed, Is.True);
             Assert.That(track.Success, Is.False);
 
-            Assert.That(track.ExecutionCount, Is.EqualTo(RebusMaxRetry), "Execution Should retry RebusMaxRetry times");
+            Assert.That(track.ExecutionCount, Is.EqualTo(RebusMaxRetry), $"{_transportType} Execution Should retry RebusMaxRetry times");
         }
     }
 }

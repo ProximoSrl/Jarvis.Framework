@@ -73,8 +73,8 @@
     <Reference Include="MongoDB.Driver.Core, Version=2.10.4.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\MongoDB.Driver.Core.2.10.4\lib\net452\MongoDB.Driver.Core.dll</HintPath>
     </Reference>
-    <Reference Include="MongoDB.Driver.GridFS, Version=2.4.4.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\MongoDB.Driver.GridFS.2.4.4\lib\net45\MongoDB.Driver.GridFS.dll</HintPath>
+    <Reference Include="MongoDB.Driver.GridFS, Version=2.10.4.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\MongoDB.Driver.GridFS.2.10.4\lib\net452\MongoDB.Driver.GridFS.dll</HintPath>
     </Reference>
     <Reference Include="MongoDB.Libmongocrypt, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\MongoDB.Libmongocrypt.1.0.0\lib\net452\MongoDB.Libmongocrypt.dll</HintPath>
@@ -107,8 +107,8 @@
     <Reference Include="Rebus.Events, Version=4.0.2.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\Rebus.Events.4.0.2\lib\net45\Rebus.Events.dll</HintPath>
     </Reference>
-    <Reference Include="Rebus.MongoDb, Version=6.0.5.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Rebus.MongoDb.6.0.5\lib\net46\Rebus.MongoDb.dll</HintPath>
+    <Reference Include="Rebus.MongoDb, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Rebus.MongoDb.6.0.1006\lib\net461\Rebus.MongoDb.dll</HintPath>
     </Reference>
     <Reference Include="Rebus.Msmq, Version=6.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\Rebus.Msmq.6.0.0\lib\net46\Rebus.Msmq.dll</HintPath>
@@ -152,7 +152,7 @@
     <Compile Include="BusTests\Handlers\AnotherSampleMessageHandler.cs" />
     <Compile Include="BusTests\Handlers\SampleMessageHandler.cs" />
     <Compile Include="BusTests\JarvisDetermineMessageOwnershipFromConfigurationManagerTests.cs" />
-    <Compile Include="BusTests\JarvisTestBusBootstrapper.cs" />
+    <Compile Include="BusTests\MsmqTransportJarvisTestBusBootstrapper.cs" />
     <Compile Include="BusTests\ListenerSubscriptionsTests.cs" />
     <Compile Include="BusTests\MessageFolder\AnotherSampleMessage.cs" />
     <Compile Include="BusTests\MessageFolder\AnotherSampleTestCommand.cs" />
