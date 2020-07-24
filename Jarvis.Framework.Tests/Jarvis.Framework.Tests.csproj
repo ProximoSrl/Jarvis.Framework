@@ -107,7 +107,7 @@
       <HintPath>..\packages\Rebus.Events.4.0.2\lib\net45\Rebus.Events.dll</HintPath>
     </Reference>
     <Reference Include="Rebus.MongoDb, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Rebus.MongoDb.6.0.1006\lib\net461\Rebus.MongoDb.dll</HintPath>
+      <HintPath>..\packages\Rebus.MongoDb.6.0.1007\lib\net461\Rebus.MongoDb.dll</HintPath>
     </Reference>
     <Reference Include="Rebus.Msmq, Version=6.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\Rebus.Msmq.6.0.0\lib\net46\Rebus.Msmq.dll</HintPath>
