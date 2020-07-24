@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Fasterflect;
+﻿using Fasterflect;
 using Jarvis.Framework.Shared.Events;
-using Jarvis.Framework.Shared.Messages;
 using Jarvis.Framework.Shared.IdentitySupport;
+using Jarvis.Framework.Shared.Messages;
+using System;
+using System.Collections.Generic;
 
 namespace Jarvis.Framework.TestHelpers
 {
@@ -21,7 +18,9 @@ namespace Jarvis.Framework.TestHelpers
         public static T AssignIssuedByForTest<T>(this T evt, String issuedBy) where T : DomainEvent
         {
             if (evt.Context == null)
+            {
                 evt.SetPropertyValue("Context", new Dictionary<String, Object>());
+            }
 
             evt.Context.Add(MessagesConstants.UserId, issuedBy);
             return evt;
