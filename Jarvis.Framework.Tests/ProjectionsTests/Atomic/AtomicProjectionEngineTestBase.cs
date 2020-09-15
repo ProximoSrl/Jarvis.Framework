@@ -23,7 +23,6 @@ using NStore.Core.InMemory;
 using NStore.Core.Logging;
 using NStore.Core.Persistence;
 using NStore.Domain;
-using NStore.Persistence.Mongo;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
@@ -280,7 +279,11 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             sut.RegisterAtomicReadModel(typeof(SimpleTestAtomicReadModel));
             sut.FlushTimeSpan = TimeSpan.FromSeconds(flushTimeInSeconds);
 
-            if (autostart) await sut.StartAsync().ConfigureAwait(false);
+            if (autostart)
+            {
+                await sut.StartAsync().ConfigureAwait(false);
+            }
+
             return sut;
         }
 
@@ -288,7 +291,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         {
         }
 
-        protected async Task<Changeset> GenerateSomeEvents()
+        protected async Task<Changeset> GenerateSomeChangesetsAndReturnLatestsChangeset()
         {
             //Three events all generated in datbase
             await GenerateCreatedEvent().ConfigureAwait(false);

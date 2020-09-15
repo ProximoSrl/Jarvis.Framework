@@ -3,6 +3,15 @@ J.A.R.V.I.S. Framework - Proximo srl (c)
 
 # Version 5
 
+
+#5.3.0
+
+- AtomicReadmodel: Catchup readmodel to the latest version in CollectionWrapper.
+
+# 5.2.0
+
+- AtomicReadmodel: Before and after events handler
+
 # 5.1.0
 
 - Updated references

@@ -3,9 +3,6 @@ using Jarvis.Framework.Shared.Helpers;
 using Jarvis.Framework.Shared.ReadModel.Atomic;
 using NStore.Core.Persistence;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
@@ -42,6 +39,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             var subscription = new AtomicReadModelSubscription<TModel>(_commitEnhancer, readmodel, cs => cs.GetChunkPosition() > positionUpTo);
             await _persistence.ReadForwardAsync(id, 0, subscription, Int64.MaxValue).ConfigureAwait(false);
             return readmodel;
+        }
+
+        public Task CatchupAsync<TModel>(TModel readModel) where TModel : IAtomicReadModel
+        {
+            var subscription = new AtomicReadModelSubscription<TModel>(_commitEnhancer, readModel, cs => false);
+            return _persistence.ReadForwardAsync(readModel.Id, readModel.AggregateVersion + 1, subscription, Int64.MaxValue);
         }
     }
 }

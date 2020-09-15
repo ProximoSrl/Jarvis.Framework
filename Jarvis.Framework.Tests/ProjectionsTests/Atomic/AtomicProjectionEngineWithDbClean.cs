@@ -27,7 +27,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         {
             Int32 newCheckpoint = 110;
             var csAtomic = await GenerateAtomicAggregateCreatedEvent().ConfigureAwait(false);
-            await GenerateSomeEvents().ConfigureAwait(false);
+            await GenerateSomeChangesetsAndReturnLatestsChangeset().ConfigureAwait(false);
             await GenerateEmptyUntil(newCheckpoint).ConfigureAwait(false);
 
             //And finally check if everything is projected
@@ -52,7 +52,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 
             //ok, we do not want the main projection engine to register the new projection, then it should be projected with a different poller.
             _aggregateIdSeed++;
-            await GenerateSomeEvents().ConfigureAwait(false);
+            await GenerateSomeChangesetsAndReturnLatestsChangeset().ConfigureAwait(false);
 
             GetTrackerAndWaitForChangesetToBeProjected("SimpleAtomicAggregateReadModel");
             GetTrackerAndWaitForChangesetToBeProjected("SimpleTestAtomicReadModel");

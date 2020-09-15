@@ -64,13 +64,13 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         [Test]
         public async Task Register_and_project_basic_readmodel()
         {
-            Changeset changeset = await GenerateSomeEvents().ConfigureAwait(false);
+            Changeset changeset = await GenerateSomeChangesetsAndReturnLatestsChangeset().ConfigureAwait(false);
 
             //And finally check if everything is projected
             await CreateSutAndStartProjectionEngineAsync().ConfigureAwait(false);
 
             //we need to wait to understand if it was projected
-            GetTrackerAndWaitForChangesetToBeProjected( "SimpleTestAtomicReadModel");
+            GetTrackerAndWaitForChangesetToBeProjected("SimpleTestAtomicReadModel");
 
             //ok readmodel should be projected
             var evt = changeset.Events[0] as DomainEvent;
@@ -100,13 +100,13 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         public async Task Project_readmodel_than_change_signature_verify_projection_of_new_events_fixes_readmodel()
         {
             //first step, create some events, project them
-            await GenerateSomeEvents().ConfigureAwait(false);
+            await GenerateSomeChangesetsAndReturnLatestsChangeset().ConfigureAwait(false);
 
             //And finally check if everything is projected
             var sut = await CreateSutAndStartProjectionEngineAsync().ConfigureAwait(false);
 
             //we need to wait to understand if it was projected
-            GetTrackerAndWaitForChangesetToBeProjected( "SimpleTestAtomicReadModel");
+            GetTrackerAndWaitForChangesetToBeProjected("SimpleTestAtomicReadModel");
 
             await sut.StopAsync().ConfigureAwait(false);
 
@@ -119,7 +119,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 
             await CreateSutAndStartProjectionEngineAsync().ConfigureAwait(false);
             //wait again for the next changeset to be projected.
-            GetTrackerAndWaitForChangesetToBeProjected( "SimpleTestAtomicReadModel");
+            GetTrackerAndWaitForChangesetToBeProjected("SimpleTestAtomicReadModel");
 
             //ok readmodel should be projected and even if the recover thread is not started, it should be updated
             var evt = changeset.Events[0] as DomainEvent;
@@ -132,7 +132,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         [Test]
         public async Task Verify_flush_has_always_last_version_dispatched_even_if_readmodel_does_not_consume_event()
         {
-            await GenerateSomeEvents().ConfigureAwait(false);
+            await GenerateSomeChangesetsAndReturnLatestsChangeset().ConfigureAwait(false);
 
             //Generate a changeset, that has an event that was not handled by the readmodel.
             await GenerateInvalidatedEvent().ConfigureAwait(false);
@@ -141,7 +141,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             await CreateSutAndStartProjectionEngineAsync(1).ConfigureAwait(false);
 
             //we need to wait to understand if it was projected
-            GetTrackerAndWaitForChangesetToBeProjected( "SimpleTestAtomicReadModel");
+            GetTrackerAndWaitForChangesetToBeProjected("SimpleTestAtomicReadModel");
 
             //now we need to monitor for checkpoint collection to be populated. 
             DateTime startWait = DateTime.UtcNow;
@@ -173,7 +173,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         [Test]
         public async Task Verify_flush_has_always_last_version_dispatched_even_with_events_of_other_aggregates()
         {
-            await GenerateSomeEvents().ConfigureAwait(false);
+            await GenerateSomeChangesetsAndReturnLatestsChangeset().ConfigureAwait(false);
 
             //Generate a changeset, that has an event that was not handled by the readmodel.
             await GenerateAtomicAggregateCreatedEvent().ConfigureAwait(false);
@@ -182,7 +182,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             await CreateSutAndStartProjectionEngineAsync(1).ConfigureAwait(false);
 
             //we need to wait to understand if it was projected
-            GetTrackerAndWaitForChangesetToBeProjected( "SimpleTestAtomicReadModel");
+            GetTrackerAndWaitForChangesetToBeProjected("SimpleTestAtomicReadModel");
 
             //now we need to monitor for checkpoint collection to be populated. 
             DateTime startWait = DateTime.UtcNow;
@@ -214,13 +214,13 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         [Test]
         public async Task Verify_checkpoint_are_flushed()
         {
-            await GenerateSomeEvents().ConfigureAwait(false);
+            await GenerateSomeChangesetsAndReturnLatestsChangeset().ConfigureAwait(false);
 
             //And finally check if everything is projected
             await CreateSutAndStartProjectionEngineAsync(1).ConfigureAwait(false);
 
             //we need to wait to understand if it was projected
-            GetTrackerAndWaitForChangesetToBeProjected( "SimpleTestAtomicReadModel");
+            GetTrackerAndWaitForChangesetToBeProjected("SimpleTestAtomicReadModel");
 
             //now we need to monitor for checkpoint collection to be populated. 
             DateTime startWait = DateTime.UtcNow;

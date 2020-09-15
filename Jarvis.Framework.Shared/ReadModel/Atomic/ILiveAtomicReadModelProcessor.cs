@@ -31,5 +31,17 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
         /// <returns></returns>
         Task<TModel> ProcessAsyncUntilChunkPosition<TModel>(String id, Int64 positionUpTo)
             where TModel : IAtomicReadModel;
+
+        /// <summary>
+        /// If you have a readmodel in memory but you are not sure if it is the result of most
+        /// up-to-date projection (maybe projection service is slow or stopped) you can call
+        /// this method to query NStore and reapply newer events if present. At the end of the call
+        /// <paramref name="reamdModel"/> is up-to-date with the latest commit in aggregate stream
+        /// </summary>
+        /// <param name="reamdModel">Readmodel to catchup, if there are newer events not still projected
+        /// at the end of this method this reamodel will be modified applying missing events.</param>
+        /// <returns></returns>
+        Task CatchupAsync<TModel>(TModel readModel)
+            where TModel : IAtomicReadModel;
     }
 }

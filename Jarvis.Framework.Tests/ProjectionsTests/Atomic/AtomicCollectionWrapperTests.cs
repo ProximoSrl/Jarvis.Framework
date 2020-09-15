@@ -13,7 +13,6 @@ using MongoDB.Driver;
 using NStore.Core.Persistence;
 using NUnit.Framework;
 using System;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
@@ -105,7 +104,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 
             //now try to resave with insert true, but without any change, no exception
             //should be raised.
-            await _sut.UpsertAsync(rm).ConfigureAwait(false);
+            Assert.DoesNotThrowAsync(() => _sut.UpsertAsync(rm));
         }
 
         [Test]
@@ -242,6 +241,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             var evtTouch = GenerateTouchedEvent(false);
             rm.ProcessChangeset(evtTouch);
             await _sut.UpsertAsync(rm).ConfigureAwait(false);
+
             //check
             var reloaded = await _sut.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
             Assert.That(reloaded, Is.Not.Null);
@@ -285,6 +285,39 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             Assert.That(reloaded, Is.Not.Null);
             Assert.That(reloaded.TouchCount, Is.EqualTo(1));
             Assert.That(reloaded.ProjectedPosition, Is.EqualTo(evtTouch.GetChunkPosition()));
+        }
+
+        [Test]
+        public async Task Ability_to_catchup_events()
+        {
+            //Arrange create the readmodel, and process some events, then persist those events.
+            var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
+            var evt = GenerateCreatedEvent(false);
+            rm.ProcessChangeset(evt);
+            var evtTouch = GenerateTouchedEvent(false);
+            rm.ProcessChangeset(evtTouch);
+
+            //do not forget to persist the readmodel
+            await _sut.UpsertAsync(rm).ConfigureAwait(false);
+
+            //now generate another event that is not projected
+            var extraTouchEvent = GenerateTouchedEvent(false);
+
+            //Check
+            //first of all verify that standard read does not read last event.
+            var reloaded = await _sut.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
+
+            Assert.That(reloaded, Is.Not.Null);
+            Assert.That(reloaded.AggregateVersion, Is.EqualTo(evtTouch.AggregateVersion));
+            var actualTouchCount = reloaded.TouchCount;
+
+            //now we need to load with catchup
+            var reloadedWithCatchup = await _sut.FindOneByIdAndCatchupAsync(rm.Id).ConfigureAwait(false);
+
+            //Assert
+            Assert.That(reloadedWithCatchup, Is.Not.Null);
+            Assert.That(reloadedWithCatchup.AggregateVersion, Is.EqualTo(extraTouchEvent.AggregateVersion));
+            Assert.That(reloadedWithCatchup.TouchCount, Is.EqualTo(actualTouchCount + 1));
         }
 
         [Test]
