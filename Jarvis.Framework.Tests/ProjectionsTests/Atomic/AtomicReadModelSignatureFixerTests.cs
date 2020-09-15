@@ -6,9 +6,6 @@ using Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support;
 using NStore.Domain;
 using NUnit.Framework;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -21,7 +18,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         public async Task Verify_basic_fix_for_readmodel()
         {
             //Arrange: Generate some commit and project them 
-            Changeset changeset = await GenerateSomeEvents().ConfigureAwait(false);
+            Changeset changeset = await GenerateSomeChangesetsAndReturnLatestsChangeset().ConfigureAwait(false);
             var engine = await CreateSutAndStartProjectionEngineAsync().ConfigureAwait(false);
             GetTrackerAndWaitForChangesetToBeProjected("SimpleTestAtomicReadModel");
             await engine.StopAsync().ConfigureAwait(false);
@@ -52,7 +49,9 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             {
                 var record = collection.FindOneById(firstEvent.AggregateId.AsString());
                 if (record != null && conditionToAssert(record))
+                {
                     return; //Assertion is correct
+                }
 
                 Thread.Sleep(100);
             }

@@ -18,9 +18,27 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
     public interface IAtomicCollectionReader<TModel>
          where TModel : IAtomicReadModel
     {
+        /// <summary>
+        /// Allow standard IQueryable interface
+        /// </summary>
+        /// <returns></returns>
         IQueryable<TModel> AsQueryable();
 
+        /// <summary>
+        /// Find a readmodel by id and does some checking like automatic rebuild
+        /// of superseded readmodel, etc.
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
         Task<TModel> FindOneByIdAsync(String id);
+
+        /// <summary>
+        /// This is similar to <see cref="FindOneByIdAsync(string)"/> but it will re-query event stream
+        /// to project extra events. This ensure that you got the must up-to-date readmodel.
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        Task<TModel> FindOneByIdAndCatchupAsync(string id);
 
         Task<IEnumerable<TModel>> FindManyAsync(System.Linq.Expressions.Expression<Func<TModel, bool>> filter, bool fixVersion = false);
     }

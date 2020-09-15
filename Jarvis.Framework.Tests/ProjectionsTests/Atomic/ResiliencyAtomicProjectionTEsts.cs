@@ -16,7 +16,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             SimpleTestAtomicReadModel.TouchMax = 1; //we want at maximum one touch.
 
             //first step, create two touch events, the second one generates a problem
-            Changeset changeset = await GenerateSomeEvents().ConfigureAwait(false);
+            Changeset changeset = await GenerateSomeChangesetsAndReturnLatestsChangeset().ConfigureAwait(false);
 
             _aggregateIdSeed++; //start working on another aggregate
             var secondAggregateChangeset = await GenerateCreatedEvent().ConfigureAwait(false);

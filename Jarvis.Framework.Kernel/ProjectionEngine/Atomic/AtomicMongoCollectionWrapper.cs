@@ -107,6 +107,17 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             return rm;
         }
 
+        public async Task<TModel> FindOneByIdAndCatchupAsync(string id)
+        {
+            var rm = await FindOneByIdAsync(id).ConfigureAwait(false);
+            if (rm == null)
+            {
+                return null;
+            }
+            await _liveAtomicReadModelProcessor.CatchupAsync(rm).ConfigureAwait(false);
+            return rm;
+        }
+
         public async Task<IEnumerable<TModel>> FindManyAsync(System.Linq.Expressions.Expression<Func<TModel, bool>> filter, bool fixVersion = false)
         {
             var rms = await _collection.FindAsync(filter).ConfigureAwait(false);
@@ -239,9 +250,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 });
         }
 
-        public IMongoCollection<TModel> Collection => _collection;
+        IMongoCollection<TModel> IAtomicMongoCollectionWrapper<TModel>.Collection => _collection;
 
-        public IMongoQueryable AsMongoQueryable()
+        IMongoQueryable IAtomicMongoCollectionWrapper<TModel>.AsMongoQueryable()
         {
             return _collection.AsQueryable();
         }
