@@ -1,16 +1,4 @@
-﻿using System.Configuration;
-using System.Linq;
-using System.Threading.Tasks;
-using Jarvis.Framework.Shared.IdentitySupport;
-using MongoDB.Driver;
-using NUnit.Framework;
-using Jarvis.Framework.Shared.Helpers;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System;
-using MongoDB.Bson;
-
-namespace Jarvis.Framework.Tests.ServicesTests
+﻿namespace Jarvis.Framework.Tests.ServicesTests
 {
     [TestFixture]
     public class CounterServiceTests
@@ -78,7 +66,7 @@ namespace Jarvis.Framework.Tests.ServicesTests
         [Test]
         public void Reserve_slot_return_correct_reservation()
         {
-             _service.GetNext("test");
+            _service.GetNext("test");
             var reservation = _service.Reserve("test", 100);
             Assert.That(reservation.StartIndex, Is.EqualTo(2));
             Assert.That(reservation.EndIndex, Is.EqualTo(101));

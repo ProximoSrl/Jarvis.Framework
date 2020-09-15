@@ -1,20 +1,8 @@
-﻿using System;
-using System.Configuration;
-using Jarvis.Framework.Tests.Support;
-using MongoDB.Driver;
-using NSubstitute;
-using NUnit.Framework;
-using Jarvis.Framework.Shared.Helpers;
-using System.Linq;
-using Jarvis.Framework.Kernel.Engine;
-using System.Threading.Tasks;
-using NStore.Core.Streams;
-using NStore.Domain;
-using NStore.Core.Logging;
+﻿using Jarvis.Framework.Tests.Support;
 
 namespace Jarvis.Framework.Tests.EngineTests
 {
-	[TestFixture]
+    [TestFixture]
     public class EngineSetupTests
     {
         private EventStoreFactoryTest _factory;

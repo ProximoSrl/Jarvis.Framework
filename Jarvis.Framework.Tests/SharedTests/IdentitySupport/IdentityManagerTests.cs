@@ -1,16 +1,4 @@
-﻿using Jarvis.Framework.Shared.IdentitySupport;
-using Jarvis.Framework.Tests.Support;
-using MongoDB.Bson;
-using MongoDB.Driver;
-using NUnit.Framework;
-using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
-using Jarvis.Framework.Shared.Helpers;
+﻿using Jarvis.Framework.Tests.Support;
 
 namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
 {

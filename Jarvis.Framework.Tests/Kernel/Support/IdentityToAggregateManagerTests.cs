@@ -1,33 +1,24 @@
-﻿using Jarvis.Framework.Kernel.Engine;
-using Jarvis.Framework.Kernel.Support;
-using Jarvis.Framework.Tests.EngineTests;
-using NUnit.Framework;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Jarvis.Framework.Tests.EngineTests;
 
 namespace Jarvis.Framework.Tests.Kernel.Support
 {
-	[TestFixture]
-	public class IdentityToAggregateManagerTests
-	{
-		private IdentityToAggregateManager _sut;
+    [TestFixture]
+    public class IdentityToAggregateManagerTests
+    {
+        private IdentityToAggregateManager _sut;
 
-		[SetUp]
-		public void SetUp()
-		{
-			_sut = new IdentityToAggregateManager();
-		}
+        [SetUp]
+        public void SetUp()
+        {
+            _sut = new IdentityToAggregateManager();
+        }
 
-		[Test]
-		public void Verify_basic_scan()
-		{
-			_sut.ScanAssemblyForAggregateRoots(Assembly.GetExecutingAssembly());
-			var type = _sut.GetAggregateFromId(new SampleAggregateId(1));
-			Assert.That(type, Is.EqualTo(typeof(SampleAggregate)));
-		}
-	}
+        [Test]
+        public void Verify_basic_scan()
+        {
+            _sut.ScanAssemblyForAggregateRoots(Assembly.GetExecutingAssembly());
+            var type = _sut.GetAggregateFromId(new SampleAggregateId(1));
+            Assert.That(type, Is.EqualTo(typeof(SampleAggregate)));
+        }
+    }
 }

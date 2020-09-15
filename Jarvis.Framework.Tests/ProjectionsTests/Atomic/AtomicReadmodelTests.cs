@@ -1,10 +1,5 @@
-﻿using Jarvis.Framework.Shared.Events;
-using Jarvis.Framework.Shared.Helpers;
-using Jarvis.Framework.Tests.EngineTests;
+﻿using Jarvis.Framework.Tests.EngineTests;
 using Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support;
-using NUnit.Framework;
-using System;
-using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 {
@@ -151,7 +146,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         [Test]
         public async Task Verify_basic_properties()
         {
-            var cs = await GenerateCreatedEvent(issuedBy : "admin").ConfigureAwait(false);
+            var cs = await GenerateCreatedEvent(issuedBy: "admin").ConfigureAwait(false);
             var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
             rm.ProcessChangeset(cs);
 

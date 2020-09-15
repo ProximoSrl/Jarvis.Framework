@@ -1,15 +1,4 @@
-﻿using Castle.Windsor;
-using Jarvis.Framework.Kernel.Engine;
-using NStore.Core.InMemory;
-using NStore.Core.Snapshots;
-using NStore.Core.Streams;
-using NStore.Domain;
-using NUnit.Framework;
-using System;
-using System.Linq;
-using System.Threading.Tasks;
-
-namespace Jarvis.Framework.Tests.EngineTests.AggregateTests
+﻿namespace Jarvis.Framework.Tests.EngineTests.AggregateTests
 {
     [TestFixture]
     public class AggregateRepositoryTests
@@ -79,7 +68,7 @@ namespace Jarvis.Framework.Tests.EngineTests.AggregateTests
             await sut.SaveAsync(aggregate, Guid.NewGuid().ToString()).ConfigureAwait(false); //Save snapshot version 1
 
             //repo without snapshot
-            var otherRepo  = new Repository(new AggregateFactoryEx(container.Kernel), new StreamsFactory(memoryPersistence));
+            var otherRepo = new Repository(new AggregateFactoryEx(container.Kernel), new StreamsFactory(memoryPersistence));
             aggregate = await otherRepo.GetByIdAsync<AggregateTestSampleAggregate1>("AggregateTestSampleAggregate1_42").ConfigureAwait(false);
             aggregate.Touch();
             aggregate.SampleEntity.AddValue(10);

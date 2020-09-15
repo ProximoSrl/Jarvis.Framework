@@ -1,14 +1,4 @@
-﻿using Castle.Core.Logging;
-using Jarvis.Framework.Kernel.ProjectionEngine;
-using Jarvis.Framework.Shared.Helpers;
-using Jarvis.Framework.TestHelpers;
-using Jarvis.Framework.Tests.ProjectionEngineTests;
-using MongoDB.Driver;
-using NUnit.Framework;
-using System;
-using System.Configuration;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using Jarvis.Framework.Tests.ProjectionEngineTests;
 
 namespace Jarvis.Framework.Tests.ProjectionsTests
 {

@@ -1,6 +1,4 @@
-﻿using Jarvis.Framework.Shared.ReadModel.Atomic;
-using Jarvis.Framework.Tests.EngineTests;
-using System;
+﻿using Jarvis.Framework.Tests.EngineTests;
 
 namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support
 {

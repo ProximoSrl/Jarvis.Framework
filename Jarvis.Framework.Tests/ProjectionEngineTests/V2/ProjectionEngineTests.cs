@@ -1,18 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Linq;
-using System.Threading;
-using Jarvis.Framework.Kernel.Events;
-using Jarvis.Framework.Kernel.ProjectionEngine;
-using Jarvis.Framework.Shared.IdentitySupport;
-using Jarvis.Framework.Shared.Messages;
-using Jarvis.Framework.Shared.ReadModel;
-using Jarvis.Framework.TestHelpers;
-using Jarvis.Framework.Tests.EngineTests;
-using NUnit.Framework;
-using Jarvis.Framework.Shared.Helpers;
-using System.Threading.Tasks;
+﻿using Jarvis.Framework.Tests.EngineTests;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
@@ -55,7 +41,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             var reader = new MongoReader<SampleReadModel, string>(Database);
             var aggregate = await Repository.GetByIdAsync<SampleAggregate>(new SampleAggregateId(1)).ConfigureAwait(false);
             aggregate.Create();
-            await Repository.SaveAsync(aggregate,Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
+            await Repository.SaveAsync(aggregate, Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
             Thread.Sleep(50);
             await Engine.UpdateAndWaitAsync().ConfigureAwait(false);
             Assert.AreEqual(1, reader.AllSortedById.Count());
@@ -81,7 +67,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             var reader = new MongoReader<SampleReadModel, string>(Database);
             var aggregate = await Repository.GetByIdAsync<SampleAggregate>(new SampleAggregateId(1)).ConfigureAwait(false);
             aggregate.Create();
-           await Repository.SaveAsync(aggregate,Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
+            await Repository.SaveAsync(aggregate, Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
             Thread.Sleep(50);
             await Engine.UpdateAndWaitAsync().ConfigureAwait(false);
             Assert.AreEqual(1, reader.AllSortedById.Count());

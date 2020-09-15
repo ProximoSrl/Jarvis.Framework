@@ -1,10 +1,4 @@
-﻿using System;
-using Jarvis.Framework.Shared.IdentitySupport;
-using NUnit.Framework;
-using System.Diagnostics;
-using System.Collections.Generic;
-
-namespace Jarvis.Framework.Tests.EngineTests
+﻿namespace Jarvis.Framework.Tests.EngineTests
 {
     [TestFixture]
     public class IdentityConverterTests

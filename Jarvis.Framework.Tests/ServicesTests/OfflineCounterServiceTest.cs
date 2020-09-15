@@ -1,16 +1,4 @@
-﻿using Jarvis.Framework.Shared.IdentitySupport;
-using MongoDB.Driver;
-using NUnit.Framework;
-using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Jarvis.Framework.Shared.Helpers;
-using Jarvis.Framework.Shared.Exceptions;
-
-namespace Jarvis.Framework.Tests.ServicesTests
+﻿namespace Jarvis.Framework.Tests.ServicesTests
 {
     [TestFixture]
     public class OfflineCounterServiceTests

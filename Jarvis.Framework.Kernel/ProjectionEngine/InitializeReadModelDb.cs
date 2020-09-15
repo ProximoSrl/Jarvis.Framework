@@ -1,6 +1,6 @@
-﻿using System.Collections.Generic;
-using Castle.Core.Logging;
+﻿using Castle.Core.Logging;
 using Jarvis.Framework.Kernel.Events;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
@@ -8,7 +8,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
     public class InitializeReadModelDb : IInitializeReadModelDb
     {
         readonly IEnumerable<IProjection> _projections;
-	    readonly ILogger _logger;
+        readonly ILogger _logger;
         public InitializeReadModelDb(IEnumerable<IProjection> projections, ILogger logger)
         {
             _projections = projections;
@@ -29,7 +29,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             {
                 if (drop)
                 {
-                   await projection.DropAsync().ConfigureAwait(false);
+                    await projection.DropAsync().ConfigureAwait(false);
                 }
                 await projection.SetUpAsync().ConfigureAwait(false);
             }

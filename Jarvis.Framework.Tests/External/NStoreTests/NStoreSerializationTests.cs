@@ -1,13 +1,8 @@
 ﻿using Jarvis.Framework.Tests.Support;
-using MongoDB.Bson;
-using NStore.Domain;
-using NUnit.Framework;
-using System;
-using System.Configuration;
 
 namespace Jarvis.Framework.Tests.External.NStoreTests
 {
-	[TestFixture]
+    [TestFixture]
     public class NStoreSerializationTests
     {
         [Test]

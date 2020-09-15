@@ -1,11 +1,26 @@
+
+/* Unmerged change from project 'Jarvis.Framework.Kernel (netstandard2.0)'
+Before:
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using Jarvis.Framework.Shared.ReadModel;
 using MongoDB.Bson;
-using MongoDB.Driver;
+After:
 using Jarvis.Framework.Shared.Helpers;
+using Jarvis.Collections.Generic;
+using System.Bson;
+using MongoDB.Driver;
+using System;
+using System.Collections.Generic;
+*/
+using Jarvis.Framework.Shared.ReadModel;
+using MongoDB.Driver;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
@@ -14,7 +29,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
     {
         Task<Boolean> IndexExistsAsync(String name);
 
-        Task CreateIndexAsync(String name, IndexKeysDefinition<TModel> keys,  CreateIndexOptions options = null);
+        Task CreateIndexAsync(String name, IndexKeysDefinition<TModel> keys, CreateIndexOptions options = null);
 
         Task InsertBatchAsync(IEnumerable<TModel> values);
 
@@ -46,7 +61,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         /// <returns></returns>
         Task FindByPropertyAsync<Tvalue>(Expression<Func<TModel, Tvalue>> propertySelector, Tvalue value, Func<TModel, Task> subscription);
 
-		IQueryable<TModel> Where(Expression<Func<TModel, bool>> filter);
+        IQueryable<TModel> Where(Expression<Func<TModel, bool>> filter);
 
         Task<bool> ContainsAsync(Expression<Func<TModel, bool>> filter);
 
@@ -65,7 +80,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         Task DropAsync();
 
-        IMongoCollection<TModel>  Collection { get; }
+        IMongoCollection<TModel> Collection { get; }
 
         Task FlushAsync();
     }

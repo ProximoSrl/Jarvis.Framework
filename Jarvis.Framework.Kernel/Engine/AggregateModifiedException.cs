@@ -1,13 +1,27 @@
-﻿using Jarvis.Framework.Shared.Messages;
+﻿
+/* Unmerged change from project 'Jarvis.Framework.Kernel (netstandard2.0)'
+Before:
+using Jarvis.Framework.Shared.Messages;
+After:
+using Jarvis.Framework.Shared.Exceptions;
+using Jarvis.Framework.Shared.IdentitySupport;
+using Jarvis.Framework.Shared.Messages;
+*/
+using Jarvis.Framework.Shared.Exceptions;
+using Jarvis.Framework.Shared.IdentitySupport;
+using Jarvis.Framework.Shared.Messages;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.Serialization;
 using System.Security.Permissions;
-using System.Text;
+/* Unmerged change from project 'Jarvis.Framework.Kernel (netstandard2.0)'
+Before:
 using System.Threading.Tasks;
 using Jarvis.Framework.Shared.Exceptions;
 using Jarvis.Framework.Shared.IdentitySupport;
+After:
+using System.Threading.Tasks;
+*/
+
 
 namespace Jarvis.Framework.Kernel.Engine
 {

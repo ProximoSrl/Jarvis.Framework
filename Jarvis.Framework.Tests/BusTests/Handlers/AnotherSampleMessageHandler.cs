@@ -1,8 +1,4 @@
 ﻿using Jarvis.Framework.Tests.BusTests.MessageFolder;
-using Rebus.Handlers;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.BusTests.Handlers
 {

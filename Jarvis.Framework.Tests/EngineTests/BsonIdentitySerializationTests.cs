@@ -1,15 +1,4 @@
-﻿using System;
-using System.Diagnostics;
-using Jarvis.Framework.Shared.Events;
-using Jarvis.Framework.Shared.IdentitySupport;
-using Jarvis.Framework.Shared.IdentitySupport.Serialization;
-using Jarvis.Framework.TestHelpers;
-using MongoDB.Bson;
-using MongoDB.Bson.Serialization;
-using NUnit.Framework;
-using Jarvis.Framework.Kernel.Support;
-
-namespace Jarvis.Framework.Tests.EngineTests
+﻿namespace Jarvis.Framework.Tests.EngineTests
 {
     [TestFixture]
     [Category("mongo_serialization")]
@@ -17,7 +6,7 @@ namespace Jarvis.Framework.Tests.EngineTests
     {
         private readonly SampleAggregateId _sampleAggregateId = new SampleAggregateId(1);
 
-		private const string Expected =
+        private const string Expected =
             "{ \"MessageId\" : \"fc3e5f0a-c4f0-47d5-91cf-a1c87fee600f\", \"AggregateId\" : \"SampleAggregate_1\" }";
 
         [OneTimeSetUp]

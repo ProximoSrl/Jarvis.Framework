@@ -1,13 +1,4 @@
-﻿using System;
-using System.Configuration;
-using NUnit.Framework;
-using Jarvis.Framework.Kernel.Support;
-using Jarvis.Framework.Shared.IdentitySupport;
-using System.IO;
-using System.Reflection;
-using Jarvis.Framework.TestHelpers;
-
-namespace Jarvis.Framework.Tests
+﻿namespace Jarvis.Framework.Tests
 {
     [SetUpFixture]
     public class GlobalSetup

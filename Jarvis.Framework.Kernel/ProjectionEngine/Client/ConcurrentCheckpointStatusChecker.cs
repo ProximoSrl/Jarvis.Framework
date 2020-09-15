@@ -1,10 +1,7 @@
 ﻿using MongoDB.Bson;
 using MongoDB.Driver;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 {
@@ -33,13 +30,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             var checkpointString = checkpointToken;
             var behindProjections = _checkpoints
                 .Find(
-                    Builders< Checkpoint>.Filter.And(
+                    Builders<Checkpoint>.Filter.And(
                         Builders<Checkpoint>.Filter.Eq(x => x.Active, true),
                         Builders<Checkpoint>.Filter.Ne(x => x.Id, "VERSION"),
                         Builders<Checkpoint>.Filter.Or(
                             Builders<Checkpoint>.Filter.Lt(x => x.Current, checkpointString),
                             Builders<Checkpoint>.Filter.Eq("Current", BsonNull.Value)
-                        )  
+                        )
                     )
                 )
                 .Project(Builders<Checkpoint>.Projection.Include("_id"));

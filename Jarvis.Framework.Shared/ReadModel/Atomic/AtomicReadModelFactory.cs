@@ -35,9 +35,9 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
             if (!_factoryFunctions.TryGetValue(type, out Func<String, IAtomicReadModel> factoryFunc))
             {
                 var constructor = type.GetConstructor(new Type[] { typeof(String) });
-                _factoryFunctions[type] = _ => (IAtomicReadModel) constructor.CreateInstance(new Object[] { _ });
+                _factoryFunctions[type] = _ => (IAtomicReadModel)constructor.CreateInstance(new Object[] { _ });
             }
-            return (IAtomicReadModel) _factoryFunctions[type](id);
+            return (IAtomicReadModel)_factoryFunctions[type](id);
         }
 
         public AtomicReadModelFactory AddFactory<T>(Func<String, IAtomicReadModel> function)

@@ -1,20 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Linq;
-using System.Threading;
-using Jarvis.Framework.Kernel.Events;
-using Jarvis.Framework.Kernel.ProjectionEngine;
-using Jarvis.Framework.Shared.IdentitySupport;
-using Jarvis.Framework.Shared.Messages;
-using Jarvis.Framework.Shared.ReadModel;
-using Jarvis.Framework.TestHelpers;
-using Jarvis.Framework.Tests.EngineTests;
-
-using NUnit.Framework;
-using Jarvis.Framework.Shared.Helpers;
-using MongoDB.Driver;
-using System.Threading.Tasks;
+﻿using Jarvis.Framework.Tests.EngineTests;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
@@ -71,8 +55,8 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 
             var lastPosition = await GetLastPositionAsync().ConfigureAwait(false);
 
-             //need to wait for at least one checkpoint written to database.
-             DateTime startTime = DateTime.Now;
+            //need to wait for at least one checkpoint written to database.
+            DateTime startTime = DateTime.Now;
             while (!_checkpoints.FindAll().Any()
                 && DateTime.Now.Subtract(startTime).TotalMilliseconds < 2000) //2 seconds timeout is fine
             {

@@ -1,15 +1,4 @@
-﻿using MongoDB.Bson;
-using MongoDB.Driver;
-using NUnit.Framework;
-using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Jarvis.Framework.Shared.Helpers;
-
-namespace Jarvis.Framework.Tests.SharedTests.Helpers
+﻿namespace Jarvis.Framework.Tests.SharedTests.Helpers
 {
     [TestFixture]
     public class MongoDriverHelperTests
@@ -103,7 +92,7 @@ namespace Jarvis.Framework.Tests.SharedTests.Helpers
         public void verify_save_with_empty_object_id_throws()
         {
             MongoDriverHelperTestsClassWithObjectId obj = new MongoDriverHelperTestsClassWithObjectId() { Name = "A" };
-            Assert.That(() =>_collectionObjectId.Save(obj, obj.Id),
+            Assert.That(() => _collectionObjectId.Save(obj, obj.Id),
                 Throws.Exception.With.Message.Contains("Cannot save with null objectId"));
         }
     }

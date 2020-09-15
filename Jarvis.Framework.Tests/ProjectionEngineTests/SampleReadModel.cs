@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using Jarvis.Framework.Shared.ReadModel;
-using Jarvis.Framework.Tests.SharedTests;
 using Jarvis.Framework.Tests.SharedTests.IdentitySupport;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests
@@ -37,8 +33,8 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
     {
         public String Value { get; set; }
 
-		public Int32 Counter { get; set; }
-	}
+        public Int32 Counter { get; set; }
+    }
 
     public class SampleReadModelPollableTest : PollableReadModel<TestId>
     {

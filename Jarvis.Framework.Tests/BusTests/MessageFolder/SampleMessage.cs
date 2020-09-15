@@ -1,6 +1,3 @@
-using System;
-using Jarvis.Framework.Shared.Messages;
-
 namespace Jarvis.Framework.Tests.BusTests.MessageFolder
 {
     public class SampleMessage : IMessage

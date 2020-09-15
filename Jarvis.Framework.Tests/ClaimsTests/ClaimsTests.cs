@@ -1,7 +1,4 @@
-﻿using Jarvis.Framework.Shared.Claims;
-using NUnit.Framework;
-
-namespace Jarvis.Framework.Tests.ClaimsTests
+﻿namespace Jarvis.Framework.Tests.ClaimsTests
 {
     [RequiredClaim("role", "admin")]
     public class RequireAdminRoleCommand

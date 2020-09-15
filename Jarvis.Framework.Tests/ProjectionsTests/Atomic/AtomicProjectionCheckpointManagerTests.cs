@@ -1,11 +1,4 @@
-﻿using Jarvis.Framework.Kernel.ProjectionEngine.Atomic;
-using Jarvis.Framework.Shared.Exceptions;
-using Jarvis.Framework.Shared.Helpers;
-using Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support;
-using MongoDB.Driver;
-using NUnit.Framework;
-using System.Configuration;
-using System.Threading.Tasks;
+﻿using Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support;
 
 namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 {

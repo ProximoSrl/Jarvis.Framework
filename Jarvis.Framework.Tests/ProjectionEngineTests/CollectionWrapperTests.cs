@@ -1,20 +1,6 @@
-﻿using Fasterflect;
-using Jarvis.Framework.Kernel.ProjectionEngine;
-using Jarvis.Framework.Shared.Events;
-using Jarvis.Framework.Shared.Messages;
-using Jarvis.Framework.Tests.EngineTests;
+﻿using Jarvis.Framework.Tests.EngineTests;
 using Jarvis.Framework.Tests.SharedTests.IdentitySupport;
 using Jarvis.Framework.Tests.Support;
-using MongoDB.Driver;
-using NUnit.Framework;
-using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Linq;
-using System.Threading.Tasks;
-using Jarvis.Framework.Shared.Helpers;
-using NSubstitute;
-using Jarvis.Framework.Shared;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests
 {

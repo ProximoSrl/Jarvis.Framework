@@ -1,6 +1,4 @@
-﻿using Jarvis.Framework.Shared.Commands;
-
-namespace Jarvis.Framework.Tests.BusTests.MessageFolder
+﻿namespace Jarvis.Framework.Tests.BusTests.MessageFolder
 {
     public class SampleTestCommand : Command
     {

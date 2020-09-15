@@ -1,10 +1,23 @@
-﻿using System.Collections.Generic;
+﻿
+/* Unmerged change from project 'Jarvis.Framework.Kernel (netstandard2.0)'
+Before:
+using System.Collections.Generic;
 using System.Linq;
 using Jarvis.Framework.Shared.ReadModel;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using System.Threading.Tasks;
+After:
+using Jarvis.Framework.Shared.ReadModel;
+using MongoDB.Bson;
+using MongoDB.Framework.Shared.ReadModel;
 using MongoDB.Driver.Linq;
+using MongoDB.Generic;
+*/
+using Jarvis.Driver;
+using MongoDB.Driver;
+using System.Collections.Driver.Linq;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
 {
@@ -17,13 +30,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             _storage = factory.GetCollection<TModel, TKey>();
         }
 
-        public IQueryable<TModel> AllUnsorted {
+        public IQueryable<TModel> AllUnsorted
+        {
             get { return _storage.All; }
         }
 
         public IQueryable<TModel> AllSortedById
         {
-            get { return _storage.All.OrderBy(x=>x.Id); }
+            get { return _storage.All.OrderBy(x => x.Id); }
         }
 
         public Task<TModel> FindOneByIdAsync(TKey id)
@@ -36,13 +50,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             return _storage.FindOneById(id);
         }
 
-        public IMongoCollection<TModel> Collection {
-            get { return _storage.Collection;  }
+        public IMongoCollection<TModel> Collection
+        {
+            get { return _storage.Collection; }
         }
 
-		public IMongoQueryable<TModel> MongoQueryable
-		{
-			get { return _storage.Collection.AsQueryable(); }
-		}
-	}
+        public IMongoQueryable<TModel> MongoQueryable
+        {
+            get { return _storage.Collection.AsQueryable(); }
+        }
+    }
 }

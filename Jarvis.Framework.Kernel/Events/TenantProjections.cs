@@ -1,11 +1,27 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
+﻿
+/* Unmerged change from project 'Jarvis.Framework.Kernel (netstandard2.0)'
+Before:
+using System;
+After:
+using Fasterflect;
+*/
+using Jarvis.Framework.Shared.MultitenantSupport;
+using Jarvis.Framework.Kernel.ProjectionEngine;
+using Jarvis.Framework.Shared.Events;
+using Jarvis.Framework.Shared.MultitenantSupport;
+/* Unmerged change from project 'Jarvis.Framework.Kernel (netstandard2.0)'
+Before:
 using Fasterflect;
 using Jarvis.Framework.Kernel.ProjectionEngine;
 using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.MultitenantSupport;
+After:
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+*/
+
 
 namespace Jarvis.Framework.Kernel.Events
 {

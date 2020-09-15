@@ -1,13 +1,4 @@
-﻿using Jarvis.Framework.Kernel.Support;
-using Jarvis.Framework.Shared.Events;
-using Jarvis.Framework.Tests.EngineTests;
-using NUnit.Framework;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Jarvis.Framework.Tests.EngineTests;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 {
@@ -56,7 +47,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             }
         }
 
-        private class TestProjectionTouched 
+        private class TestProjectionTouched
         {
             public void On(SampleAggregateTouched e)
             {
@@ -100,15 +91,15 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         }
 
         [Test]
-		public void verify_get_poco_event_handled()
-		{
-			ProjectionEventInspector sut = new ProjectionEventInspector();
-			sut.AddAssembly(Assembly.GetExecutingAssembly());
-			sut.InspectProjectionForEvents(typeof(ProjectionWithPoco));
-			Assert.That(sut.EventHandled, Is.EquivalentTo(new[] { typeof(SampleAggregateCreated), typeof(PocoPayloadObject) }));
-		}
+        public void verify_get_poco_event_handled()
+        {
+            ProjectionEventInspector sut = new ProjectionEventInspector();
+            sut.AddAssembly(Assembly.GetExecutingAssembly());
+            sut.InspectProjectionForEvents(typeof(ProjectionWithPoco));
+            Assert.That(sut.EventHandled, Is.EquivalentTo(new[] { typeof(SampleAggregateCreated), typeof(PocoPayloadObject) }));
+        }
 
-		[Test]
+        [Test]
         public void verify_get_basic_event_handled_even_if_no_interface_is_declared()
         {
             ProjectionEventInspector sut = new ProjectionEventInspector();

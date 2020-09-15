@@ -1,18 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Linq;
-using System.Threading;
-using Jarvis.Framework.Kernel.Events;
-using Jarvis.Framework.Kernel.ProjectionEngine;
-using Jarvis.Framework.Shared.IdentitySupport;
-using Jarvis.Framework.Shared.Messages;
-using Jarvis.Framework.Shared.ReadModel;
-using Jarvis.Framework.TestHelpers;
-using Jarvis.Framework.Tests.EngineTests;
-
-using NUnit.Framework;
-using System.Threading.Tasks;
+﻿using Jarvis.Framework.Tests.EngineTests;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
@@ -49,11 +35,11 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
         {
             var aggregate = await Repository.GetByIdAsync<SampleAggregate>(new SampleAggregateId(1)).ConfigureAwait(false);
             aggregate.Create();
-            await Repository.SaveAsync(aggregate,Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
+            await Repository.SaveAsync(aggregate, Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
 
             aggregate = await Repository.GetByIdAsync<SampleAggregate>(new SampleAggregateId(2)).ConfigureAwait(false);
             aggregate.Create();
-            await Repository.SaveAsync(aggregate,Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
+            await Repository.SaveAsync(aggregate, Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
 
             var lastPosition = await GetLastPositionAsync().ConfigureAwait(false);
 
@@ -67,7 +53,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 
             aggregate = await Repository.GetByIdAsync<SampleAggregate>(new SampleAggregateId(3)).ConfigureAwait(false);
             aggregate.Create();
-            await Repository.SaveAsync(aggregate,Guid.NewGuid().ToString(), h => { });
+            await Repository.SaveAsync(aggregate, Guid.NewGuid().ToString(), h => { });
 
             lastPosition = await GetLastPositionAsync().ConfigureAwait(false);
             await Engine.UpdateAndWaitAsync().ConfigureAwait(false);

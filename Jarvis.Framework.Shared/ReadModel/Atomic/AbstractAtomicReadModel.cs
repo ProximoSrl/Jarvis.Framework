@@ -5,7 +5,6 @@ using NStore.Domain;
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.ReadModel.Atomic
 {
@@ -130,7 +129,7 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
 
         protected abstract Int32 GetVersion();
 
-        protected virtual void BeforeEventProcessing(DomainEvent domainEvent) 
+        protected virtual void BeforeEventProcessing(DomainEvent domainEvent)
         {
         }
 

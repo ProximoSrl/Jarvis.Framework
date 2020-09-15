@@ -1,5 +1,4 @@
 ﻿using Jarvis.Framework.Shared.Exceptions;
-using Jarvis.Framework.Shared.Logging;
 using Jarvis.Framework.Shared.Support;
 using MongoDB.Bson;
 using MongoDB.Bson.IO;
@@ -72,8 +71,8 @@ namespace Jarvis.Framework.Shared.Helpers
         public static void Save<T, Tid>(this IMongoCollection<T> collection, T objToSave, Tid objectId)
         {
             if (ObjectId.Empty.Equals(objectId))
-				throw new ArgumentException("Cannot save with null objectId", nameof(objectId));
-			collection.ReplaceOne(
+                throw new ArgumentException("Cannot save with null objectId", nameof(objectId));
+            collection.ReplaceOne(
                    Builders<T>.Filter.Eq("_id", objectId),
                    objToSave,
                    new UpdateOptions { IsUpsert = true });
@@ -82,7 +81,7 @@ namespace Jarvis.Framework.Shared.Helpers
         public static Task SaveAsync<T, Tid>(this IMongoCollection<T> collection, T objToSave, Tid objectId)
         {
             if (ObjectId.Empty.Equals(objectId))
-                throw new ArgumentException( "Cannot save with null objectId", nameof(objectId));
+                throw new ArgumentException("Cannot save with null objectId", nameof(objectId));
             return collection.ReplaceOneAsync(
                    Builders<T>.Filter.Eq("_id", objectId),
                    objToSave,
@@ -115,7 +114,7 @@ namespace Jarvis.Framework.Shared.Helpers
             }
         }
 
-        public static async Task< Boolean> IndexExistsAsync<T>(this IMongoCollection<T> collection, String indexName)
+        public static async Task<Boolean> IndexExistsAsync<T>(this IMongoCollection<T> collection, String indexName)
         {
             var indexesQuery = await collection.Indexes.ListAsync().ConfigureAwait(false);
             var indexes = await indexesQuery.ToListAsync().ConfigureAwait(false);

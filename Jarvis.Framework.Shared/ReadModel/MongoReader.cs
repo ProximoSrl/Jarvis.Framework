@@ -1,9 +1,23 @@
-﻿using System.Collections.Generic;
+﻿
+/* Unmerged change from project 'Jarvis.Framework.Shared (net461)'
+Before:
+using System.Collections.Generic;
 using System.Linq;
-using MongoDB.Bson;
+After:
+using System.Collections.Shared.Helpers;
+*/
+using Jarvis.Framework.Shared.Helpers;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
+
+/* Unmerged change from project 'Jarvis.Framework.Shared (net461)'
+Before:
 using Jarvis.Framework.Shared.Helpers;
+After:
+using Jarvis.Collections.Generic;
+using System.Linq;
+*/
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.ReadModel
@@ -46,9 +60,9 @@ namespace Jarvis.Framework.Shared.ReadModel
             get { return _collection ?? (_collection = _readmodelDb.GetCollection<TModel>(CollectionName)); }
         }
 
-		public virtual IMongoQueryable<TModel> MongoQueryable
-		{
-			get { return Collection.AsQueryable(); }
-		}
-	}
+        public virtual IMongoQueryable<TModel> MongoQueryable
+        {
+            get { return Collection.AsQueryable(); }
+        }
+    }
 }

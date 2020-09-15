@@ -1,5 +1,3 @@
-using Jarvis.Framework.Shared.IdentitySupport;
-
 namespace Jarvis.Framework.Tests.ProjectionsTests
 {
     public class MyAggregateId : EventStoreIdentity

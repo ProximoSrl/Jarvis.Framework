@@ -1,11 +1,5 @@
-﻿using Jarvis.Framework.Shared.Helpers;
-using Jarvis.Framework.Tests.EngineTests;
+﻿using Jarvis.Framework.Tests.EngineTests;
 using Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support;
-using MongoDB.Bson;
-using MongoDB.Driver;
-using NUnit.Framework;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 {
@@ -33,7 +27,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             var evtTouch = GenerateTouchedEvent(false);
             rm.ProcessChangeset(evtTouch);
             Assert.That(rm.TouchCount, Is.EqualTo(1));
-            await _sut.UpsertAsync( rm).ConfigureAwait(false);
+            await _sut.UpsertAsync(rm).ConfigureAwait(false);
 
             //ok now in db we have an older version, lets update version
             SimpleTestAtomicReadModel.FakeSignature = 2;
@@ -58,7 +52,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 
             //ok now go to the database and alter the document
             var doc = _mongoBsonCollection.FindOneById(rm.Id);
-            doc ["ExtraProperty"] = 42;
+            doc["ExtraProperty"] = 42;
             _mongoBsonCollection.ReplaceOne(
                 Builders<BsonDocument>.Filter.Eq("_id", rm.Id),
                 doc);
@@ -85,7 +79,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 
             //I want to reload and autocorrect, reprojecting again everything.
             GenerateSut();
-            var reloaded = await _sut.FindManyAsync(_ => _.Id == rm1.Id || _.Id==rm2.Id, true).ConfigureAwait(false);
+            var reloaded = await _sut.FindManyAsync(_ => _.Id == rm1.Id || _.Id == rm2.Id, true).ConfigureAwait(false);
 
             Assert.That(reloaded, Is.Not.Null);
             var rmList = reloaded.ToList();
@@ -172,7 +166,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             rm.ProcessChangeset(evt);
             var evtTouch = GenerateTouchedEvent(false);
             rm.ProcessChangeset(evtTouch);
-            await _sut.UpsertAsync( rm).ConfigureAwait(false);
+            await _sut.UpsertAsync(rm).ConfigureAwait(false);
 
             //ok now in db we have an older version, lets update version
             SimpleTestAtomicReadModel.FakeSignature = 2;

@@ -1,12 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using Jarvis.Framework.Kernel.Engine;
+using Jarvis.Framework.Shared.Helpers;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using Jarvis.Framework.Shared.Helpers;
 using MongoDB.Driver.Core.Clusters;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
-using Jarvis.Framework.Kernel.Engine;
 
 namespace Jarvis.Framework.Kernel.Support
 {
@@ -61,7 +61,7 @@ namespace Jarvis.Framework.Kernel.Support
         {
             try
             {
-                if (Interlocked.CompareExchange(ref _isRetrievingData, 1, 0) == 0 
+                if (Interlocked.CompareExchange(ref _isRetrievingData, 1, 0) == 0
                     && DateTime.Now.Subtract(lastPoll).TotalSeconds > _pollingIntervalInSeconds)
                 {
                     if (_eventStoreDatabase.Client.Cluster.Description.State != ClusterState.Connected ||
@@ -97,7 +97,7 @@ namespace Jarvis.Framework.Kernel.Support
                         .Match(pipeline[0])
                         .Project(pipeline[1])
                         .Group(pipeline[2])
-                        .ToList(); 
+                        .ToList();
                     foreach (BsonDocument metric in allCheckpoints)
                     {
                         var slotName = metric["_id"].AsString;

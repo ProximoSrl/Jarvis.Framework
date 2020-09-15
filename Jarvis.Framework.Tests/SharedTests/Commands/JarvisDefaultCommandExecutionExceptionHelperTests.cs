@@ -1,18 +1,4 @@
-﻿using Castle.Core.Logging;
-using Jarvis.Framework.Shared.Commands;
-using Jarvis.Framework.Shared.Exceptions;
-using Jarvis.Framework.Shared.Messages;
-using Jarvis.Framework.Shared.ReadModel;
-using Jarvis.Framework.Tests.EngineTests;
-using NStore.Core.Streams;
-using NSubstitute;
-using NUnit.Framework;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Jarvis.Framework.Tests.EngineTests;
 
 namespace Jarvis.Framework.Tests.SharedTests.Commands
 {
@@ -48,7 +34,7 @@ namespace Jarvis.Framework.Tests.SharedTests.Commands
         public void Retry_when_too_manyconcurrency_exception_is_thrown(Boolean wrapInAggregateException)
         {
             Exception cex = PrepareConcurrencyException(wrapInAggregateException);
-            var result = sut.Handle(cex, command, MaximumNumberOfRetry +1, out retry, out replyCommand);
+            var result = sut.Handle(cex, command, MaximumNumberOfRetry + 1, out retry, out replyCommand);
             Assert.IsTrue(result, "Concurrency exception is handled, no need to rethrow");
             Assert.IsFalse(retry, "Too many retry, we should stop retrying execution.");
         }

@@ -11,7 +11,7 @@ namespace Jarvis.Framework.Shared.ReadModel
 
         DateTime LastModified { get; set; }
 
-		bool BuiltFromEvent(DomainEvent evt);
+        bool BuiltFromEvent(DomainEvent evt);
 
         void AddEvent(Guid id);
 

@@ -1,10 +1,4 @@
-using System;
-using Castle.MicroKernel.Registration;
-using Castle.Windsor;
-using Jarvis.Framework.Kernel.MultitenantSupport;
-using Jarvis.Framework.Shared.MultitenantSupport;
 using Jarvis.Framework.Tests.EngineTests;
-using NUnit.Framework;
 
 namespace Jarvis.Framework.Tests.MultitenantSupportTests
 {

@@ -1,11 +1,4 @@
-﻿using NStore.Core.Logging;
-using NStore.Core.Persistence;
-using NStore.Persistence.Mongo;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-
-namespace Jarvis.Framework.Tests.Support
+﻿namespace Jarvis.Framework.Tests.Support
 {
     public class EventStoreFactoryTest
     {

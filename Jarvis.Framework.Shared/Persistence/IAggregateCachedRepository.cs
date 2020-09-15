@@ -1,16 +1,16 @@
-﻿using System;
-using Jarvis.Framework.Shared.IdentitySupport;
+﻿using Jarvis.Framework.Shared.IdentitySupport;
 using NStore.Domain;
+using System;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.Persistence
 {
-	/// <summary>
-	/// This is a really reduced repository that wraps access to a single entity, it is useful
-	/// because it can be cached for a single aggregate.
-	/// </summary>
-	/// <typeparam name="TAggregate"></typeparam>
-	public interface IAggregateCachedRepository<TAggregate> : IDisposable where TAggregate : class, IAggregate
+    /// <summary>
+    /// This is a really reduced repository that wraps access to a single entity, it is useful
+    /// because it can be cached for a single aggregate.
+    /// </summary>
+    /// <typeparam name="TAggregate"></typeparam>
+    public interface IAggregateCachedRepository<TAggregate> : IDisposable where TAggregate : class, IAggregate
     {
         TAggregate Aggregate { get; }
 

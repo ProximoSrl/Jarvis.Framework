@@ -2,8 +2,6 @@
 using MongoDB.Driver.Core.Events;
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Jarvis.Framework.Shared.Support
 {
@@ -85,7 +83,7 @@ namespace Jarvis.Framework.Shared.Support
         {
             settings.ClusterConfigurator = clusterConfigurator =>
             {
-                clusterConfigurator.Subscribe<CommandStartedEvent>(e => 
+                clusterConfigurator.Subscribe<CommandStartedEvent>(e =>
                 {
                     if (MongoQueryInterptorConsumer == NullMongoQueryInterptorConsumer.Instance)
                         return;

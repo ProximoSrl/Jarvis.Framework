@@ -9,7 +9,7 @@
     "S2743:Static fields should not be used in generic types",
     Justification = "MSpec")]
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage(
-    "Sonar Code Smell", 
+    "Sonar Code Smell",
     "S3459:Unassigned members should be removed",
     Justification = "<Pending>")]
 

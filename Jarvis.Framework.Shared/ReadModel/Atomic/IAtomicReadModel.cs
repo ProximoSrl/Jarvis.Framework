@@ -8,7 +8,7 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
         /// <summary>
         /// This is the id of the atomic readmodel.
         /// </summary>
-        String Id { get;  }
+        String Id { get; }
 
         /// <summary>
         /// <para>

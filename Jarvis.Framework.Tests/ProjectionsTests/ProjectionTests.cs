@@ -1,13 +1,4 @@
-﻿using System.Configuration;
-using System.Linq;
-using Jarvis.Framework.Kernel.ProjectionEngine;
-using Jarvis.Framework.TestHelpers;
-using MongoDB.Driver;
-using NUnit.Framework;
-using Jarvis.Framework.Shared.Helpers;
-using System.Threading.Tasks;
-
-namespace Jarvis.Framework.Tests.ProjectionsTests
+﻿namespace Jarvis.Framework.Tests.ProjectionsTests
 {
     [TestFixture]
     public class ProjectionTests
@@ -130,7 +121,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
             var update = new InsertEvent() { Text = "one" };
             update.AssignIdForTest(insert.AggregateId);
 
-           await _collection.InsertAsync(insert, new MyReadModel()
+            await _collection.InsertAsync(insert, new MyReadModel()
             {
                 Id = insert.AggregateId.AsString(),
                 Text = "created"

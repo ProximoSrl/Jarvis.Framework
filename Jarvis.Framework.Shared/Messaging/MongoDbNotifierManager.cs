@@ -63,7 +63,7 @@ namespace Jarvis.Framework.Shared.Messaging
             return Task.CompletedTask;
         }
 
-        public Boolean ForcePoll() 
+        public Boolean ForcePoll()
         {
             return InnerPolling();
         }

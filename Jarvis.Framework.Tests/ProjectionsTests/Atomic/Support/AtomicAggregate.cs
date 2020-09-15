@@ -1,9 +1,4 @@
-﻿using Jarvis.Framework.Kernel.Engine;
-using Jarvis.Framework.Shared.Events;
-using Jarvis.Framework.Shared.IdentitySupport;
-using Jarvis.Framework.Shared.ReadModel.Atomic;
-
-namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support
+﻿namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support
 {
     /// <summary>
     /// Another aggregate used to test atomic readmodels.

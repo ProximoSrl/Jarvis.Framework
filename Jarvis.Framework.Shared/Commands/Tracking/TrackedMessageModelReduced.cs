@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Jarvis.Framework.Shared.Commands.Tracking
+﻿namespace Jarvis.Framework.Shared.Commands.Tracking
 {
     /// <summary>
     /// Returns information about <see cref="TrackedMessageModel"/>

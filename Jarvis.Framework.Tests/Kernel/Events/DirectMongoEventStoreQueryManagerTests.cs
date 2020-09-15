@@ -1,17 +1,9 @@
-﻿using Jarvis.Framework.Kernel.Engine;
-using Jarvis.Framework.Kernel.Events;
-using Jarvis.Framework.Tests.EngineTests;
+﻿using Jarvis.Framework.Tests.EngineTests;
 using Jarvis.Framework.Tests.Support;
-using NStore.Domain;
-using NUnit.Framework;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.Kernel.Events
 {
-	[TestFixture]
+    [TestFixture]
     public class DirectMongoEventStoreQueryManagerTests
     {
         private DirectMongoEventStoreQueryManager sut;

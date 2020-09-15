@@ -1,9 +1,4 @@
-﻿using System.Linq;
-using Jarvis.Framework.Kernel.ProjectionEngine;
-using Jarvis.Framework.Shared.ReadModel;
-using NUnit.Framework;
-
-namespace Jarvis.Framework.Tests.ProjectionsTests
+﻿namespace Jarvis.Framework.Tests.ProjectionsTests
 {
     [TestFixture]
     public class RebuildContextTests
@@ -65,12 +60,13 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
         [Test]
         public void clear_should_remove_all_models()
         {
-            var model = new SampleReadModelWithStringKey(){
+            var model = new SampleReadModelWithStringKey()
+            {
                 Id = "a"
             };
-            
+
             _inmemoryCollection.Save(model);
-            
+
             _inmemoryCollection.Clear();
 
             Assert.AreEqual(0, _inmemoryCollection.GetAll().Count());

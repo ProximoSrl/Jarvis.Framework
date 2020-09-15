@@ -1,9 +1,4 @@
-﻿using Jarvis.Framework.Shared.Events;
-using Jarvis.Framework.Shared.Helpers;
-using Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support;
-using NStore.Domain;
-using NUnit.Framework;
-using System.Threading.Tasks;
+﻿using Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support;
 
 namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 {
@@ -25,7 +20,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             var sut = await CreateSutAndStartProjectionEngineAsync().ConfigureAwait(false);
 
             //we need to wait to understand if it was projected
-            GetTrackerAndWaitForChangesetToBeProjected( "SimpleTestAtomicReadModel");
+            GetTrackerAndWaitForChangesetToBeProjected("SimpleTestAtomicReadModel");
 
             //First readmodel have only one touch
             var evt = changeset.Events[0] as DomainEvent;
@@ -44,7 +39,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             var anotherchangeset = await GenerateTouchedEvent().ConfigureAwait(false);
 
             //we need to wait to understand if it was projected
-            GetTrackerAndWaitForChangesetToBeProjected( "SimpleTestAtomicReadModel");
+            GetTrackerAndWaitForChangesetToBeProjected("SimpleTestAtomicReadModel");
 
             await sut.StopAsync().ConfigureAwait(false);
 

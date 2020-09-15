@@ -25,7 +25,8 @@ namespace Jarvis.Framework.Kernel.MultitenantSupport
         }
 
         public TenantId Id { get; private set; }
-        public IWindsorContainer Container {
+        public IWindsorContainer Container
+        {
             get
             {
                 throw new System.NotImplementedException();

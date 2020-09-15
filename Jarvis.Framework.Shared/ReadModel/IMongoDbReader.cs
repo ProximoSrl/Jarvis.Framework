@@ -1,7 +1,14 @@
-﻿using System.Collections.Generic;
+﻿
+/* Unmerged change from project 'Jarvis.Framework.Shared (net461)'
+Before:
+using System.Collections.Generic;
+using MongoDB.Bson;
+After:
 using MongoDB.Bson;
 using MongoDB.Driver;
+*/
 using MongoDB.Driver.Linq;
+using System.Collections.Generic;
 
 namespace Jarvis.Framework.Shared.ReadModel
 {
@@ -9,6 +16,6 @@ namespace Jarvis.Framework.Shared.ReadModel
     {
         IMongoCollection<TModel> Collection { get; }
 
-		IMongoQueryable<TModel> MongoQueryable { get;  }
+        IMongoQueryable<TModel> MongoQueryable { get; }
     }
 }

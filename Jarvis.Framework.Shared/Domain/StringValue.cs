@@ -4,9 +4,9 @@ namespace Jarvis.Framework.Shared.Domain
 {
     [Serializable]
 #pragma warning disable S4035 // Classes implementing "IEquatable<T>" should be sealed
-	public abstract class StringValue : IEquatable<StringValue>
+    public abstract class StringValue : IEquatable<StringValue>
 #pragma warning restore S4035 // Classes implementing "IEquatable<T>" should be sealed
-	{
+    {
         string _value;
 
         public bool Equals(StringValue other)

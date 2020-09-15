@@ -1,14 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.IdentitySupport
 {
-	/// <summary>
-	/// Generic exception in identity managament
-	/// </summary>
+    /// <summary>
+    /// Generic exception in identity managament
+    /// </summary>
     [Serializable]
     public class JarvisFrameworkIdentityException : Exception
     {

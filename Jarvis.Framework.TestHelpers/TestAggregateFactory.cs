@@ -1,17 +1,17 @@
-﻿using System;
-using Fasterflect;
+﻿using Fasterflect;
 using Jarvis.Framework.Kernel.Engine;
 using Jarvis.Framework.Shared.IdentitySupport;
 using NStore.Core.Snapshots;
+using System;
 
 namespace Jarvis.Framework.TestHelpers
 {
-	public static class TestAggregateFactory
+    public static class TestAggregateFactory
     {
         public static T Create<T, TId, TState>(TState initialState, IIdentity identity, Int32 version)
             where T : AggregateRoot<TState, TId>
             where TState : JarvisAggregateState, new()
-			where TId : EventStoreIdentity
+            where TId : EventStoreIdentity
         {
             if (identity == null)
                 throw new ArgumentNullException(nameof(identity));

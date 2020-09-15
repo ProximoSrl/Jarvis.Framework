@@ -5,7 +5,7 @@
 // a specific target and scoped to a namespace, type, member, etc.
 
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage(
-	"Design",
-	"RCS1170:Use read-only auto-implemented property.",
-	Justification = "We use normally this style to save private property to mongo")]
+    "Design",
+    "RCS1170:Use read-only auto-implemented property.",
+    Justification = "We use normally this style to save private property to mongo")]
 

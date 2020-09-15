@@ -1,16 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.Messages
 {
-	/// <summary>
-	/// Static class used to identify typical headers that can be used in 
-	/// the header of the command and thus replicated into the headers
-	/// of the Changeset.
-	/// </summary>
+    /// <summary>
+    /// Static class used to identify typical headers that can be used in 
+    /// the header of the command and thus replicated into the headers
+    /// of the Changeset.
+    /// </summary>
     public static class MessagesConstants
     {
         public const String SagaIdHeader = "sagaId";
@@ -27,11 +23,11 @@ namespace Jarvis.Framework.Shared.Messages
         /// is executed with a different handler this header is not honored.</remarks>
         public const String IfVersionEqualsTo = "if-version-equals-to";
 
-		/// <summary>
-		/// When offline system push a command to main system to synchronize, this header
-		/// will contain the list of events that were generated offline due to that command.
-		/// </summary>
-		public const String OfflineEvents = "offline-events";
+        /// <summary>
+        /// When offline system push a command to main system to synchronize, this header
+        /// will contain the list of events that were generated offline due to that command.
+        /// </summary>
+        public const String OfflineEvents = "offline-events";
 
         /// <summary>
         /// With enties I do not know where to distpach a command directly from its type, so 

@@ -1,17 +1,4 @@
-﻿using Castle.Core.Logging;
-using Jarvis.Framework.Kernel.Events;
-using Jarvis.Framework.Kernel.ProjectionEngine;
-using Jarvis.Framework.Kernel.ProjectionEngine.Rebuild;
-using Jarvis.Framework.Tests.EngineTests;
-using NSubstitute;
-using NUnit.Framework;
-using System;
-using System.Threading.Tasks;
-using Jarvis.Framework.TestHelpers;
-using Fasterflect;
-using Jarvis.Framework.Shared.Helpers;
-using Jarvis.Framework.Shared.Logging;
-using Jarvis.Framework.Kernel.Support;
+﻿using Jarvis.Framework.Tests.EngineTests;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 {
@@ -25,14 +12,14 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         public void InitSut()
         {
             var config = new ProjectionEngineConfig();
-            projections = new []{ new Projection(Substitute.For<ICollectionWrapper<SampleReadModel, String>>()) };
+            projections = new[] { new Projection(Substitute.For<ICollectionWrapper<SampleReadModel, String>>()) };
             sut = new RebuildProjectionSlotDispatcher(
                 NullLogger.Instance,
                 slotName,
                 config,
                 projections,
                 4,
-				NullLoggerThreadContextManager.Instance);
+                NullLoggerThreadContextManager.Instance);
 
             //Needed to avoid crash on wrong metrics dispatch.
             KernelMetricsHelper.CreateMeterForRebuildDispatcherBuffer(slotName, () => 0);
@@ -50,9 +37,9 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             Assert.That(sut.Finished, Is.False);
             await DispatchEventAsync(4).ConfigureAwait(false);
             Assert.That(sut.Finished, Is.False);
-			await sut.DispatchEventAsync(UnwindedDomainEvent.LastEvent).ConfigureAwait(false);
-			Assert.That(sut.Finished, Is.True);
-		}
+            await sut.DispatchEventAsync(UnwindedDomainEvent.LastEvent).ConfigureAwait(false);
+            Assert.That(sut.Finished, Is.True);
+        }
 
         private async Task<SampleAggregateCreated> DispatchEventAsync(Int64 checkpointToken)
         {
@@ -64,11 +51,11 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             evt.AssignIdForTest(new SampleAggregateId(1));
             evt.SetPropertyValue(d => d.CheckpointToken, checkpointToken);
 
-			UnwindedDomainEvent uevt = new UnwindedDomainEvent();
-			uevt.PartitionId = evt.AggregateId;
-			uevt.CheckpointToken = checkpointToken;
-			uevt.Event = evt;
-			uevt.EventType = evt.GetType().Name;
+            UnwindedDomainEvent uevt = new UnwindedDomainEvent();
+            uevt.PartitionId = evt.AggregateId;
+            uevt.CheckpointToken = checkpointToken;
+            uevt.Event = evt;
+            uevt.EventType = evt.GetType().Name;
 
             await sut.DispatchEventAsync(uevt).ConfigureAwait(false);
             return evt;

@@ -1,10 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using MongoDB.Bson;
+﻿using Jarvis.Framework.Shared.Helpers;
 using MongoDB.Driver;
-using MongoDB.Driver.Linq;
+using System;
+using System.Collections.Generic;
+
+/* Unmerged change from project 'Jarvis.Framework.Kernel (netstandard2.0)'
+Before:
 using Jarvis.Framework.Shared.Helpers;
+After:
+using System;
+using System.Collections.Generic;
+using System.Helpers;
+*/
+using System.Linq;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.RecycleBin
 {
@@ -51,7 +58,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.RecycleBin
             _collection = db.GetCollection<RecycleBinSlot>("RecycleBin");
         }
 
-        public IQueryable<RecycleBinSlot> Slots {
+        public IQueryable<RecycleBinSlot> Slots
+        {
             get { return _collection.AsQueryable(); }
         }
 
@@ -80,7 +88,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.RecycleBin
 
         public void SetUp()
         {
-        
+
         }
     }
 }

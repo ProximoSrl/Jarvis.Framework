@@ -1,15 +1,11 @@
-﻿using Castle.Core.Logging;
-using Jarvis.Framework.Kernel.Events;
+﻿using Jarvis.Framework.Kernel.Events;
 using Jarvis.Framework.Shared.Helpers;
 using Jarvis.Framework.Shared.Support;
 using MongoDB.Driver;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 {
@@ -126,8 +122,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             var allCheckpoint = _allCheckpoints
                 .ToDictionary(c => c.Id, c => c);
             var slots = _projectionInfo
-				.Where(_ => !_.OfflineProjection || OfflineMode.Enabled) //skip projection for offline when offline is not enabled
-				.GroupBy(
+                .Where(_ => !_.OfflineProjection || OfflineMode.Enabled) //skip projection for offline when offline is not enabled
+                .GroupBy(
                 p => p.SlotName,
                 p => new
                 {
@@ -195,10 +191,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             List<ProjectionChangeInfo> retValue = new List<ProjectionChangeInfo>();
             foreach (var projection in _projectionInfo)
             {
-				if (projection.OfflineProjection && !OfflineMode.Enabled)
-				{
-					continue; //This is a projection only needed for offline mode.
-				}
+                if (projection.OfflineProjection && !OfflineMode.Enabled)
+                {
+                    continue; //This is a projection only needed for offline mode.
+                }
                 ProjectionChangeInfo projectionChangeInfo = new ProjectionChangeInfo(projection.CommonName, projection.SlotName, projection.Signature, projection.OfflineProjection);
                 var checkpoint = _allCheckpoints.SingleOrDefault(c => c.Id == projection.CommonName);
                 if (checkpoint == null)
