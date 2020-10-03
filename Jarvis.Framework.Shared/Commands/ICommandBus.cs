@@ -9,13 +9,13 @@ namespace Jarvis.Framework.Shared.Commands
     /// </summary>
     public interface ICommandBus
     {
-		/// <summary>
-		/// Invia un comando
-		/// </summary>
-		/// <param name="command">comando</param>
-		/// <param name="impersonatingUser">utente di contesto</param>
-		/// <returns>comando</returns>
-		Task<ICommand> SendAsync(ICommand command, string impersonatingUser = null);
+        /// <summary>
+        /// Invia un comando
+        /// </summary>
+        /// <param name="command">comando</param>
+        /// <param name="impersonatingUser">utente di contesto</param>
+        /// <returns>comando</returns>
+        Task<ICommand> SendAsync(ICommand command, string impersonatingUser = null);
 
         /// <summary>
         /// Schedula l'invio di un comando

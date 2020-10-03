@@ -1,23 +1,23 @@
-﻿using System;
-using System.Collections.Generic;
-using Jarvis.Framework.Shared.IdentitySupport;
+﻿using Jarvis.Framework.Shared.IdentitySupport;
 using Jarvis.Framework.Shared.Messages;
-using Newtonsoft.Json;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Bson.Serialization.Options;
+using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
 
 namespace Jarvis.Framework.Shared.Commands
 {
-	/// <summary>
-	/// This is a generic interface for ICommand
-	/// </summary>
+    /// <summary>
+    /// This is a generic interface for ICommand
+    /// </summary>
     public interface ICommand : IMessage
     {
-		/// <summary>
-		/// This method will set a string value in the command header. 
-		/// </summary>
-		/// <param name="key"></param>
-		/// <param name="value"></param>
+        /// <summary>
+        /// This method will set a string value in the command header. 
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
         void SetContextData(string key, string value);
 
         string GetContextData(string key, string defaultValue);
@@ -113,7 +113,7 @@ namespace Jarvis.Framework.Shared.Commands
     [Serializable]
     public abstract class Command<TIdentity> : Command,
         IAggregateCommand,
-        ICommand<TIdentity> 
+        ICommand<TIdentity>
         where TIdentity : IIdentity
     {
         protected Command()

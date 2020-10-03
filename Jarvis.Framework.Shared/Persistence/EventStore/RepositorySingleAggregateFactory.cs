@@ -1,11 +1,11 @@
 #if NETSTANDARD
-using System;
-using System.Collections.Generic;
-using System.Threading;
 using Jarvis.Framework.Shared.IdentitySupport;
 using Metrics;
 using Microsoft.Extensions.Caching.Memory;
 using NStore.Domain;
+using System;
+using System.Collections.Generic;
+using System.Threading;
 
 namespace Jarvis.Framework.Shared.Persistence.EventStore
 {

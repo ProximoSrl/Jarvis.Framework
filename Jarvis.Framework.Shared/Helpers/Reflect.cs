@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.Helpers
 {
@@ -32,7 +28,7 @@ namespace Jarvis.Framework.Shared.Helpers
             return obj;
         }
 
-		private static string GetPropertyName(Expression expression)
+        private static string GetPropertyName(Expression expression)
         {
             if (expression == null) return "";
 
@@ -74,18 +70,18 @@ namespace Jarvis.Framework.Shared.Helpers
             return "";
         }
 
-		public static bool IsSubclassOfRawGeneric(this Type generic, Type toCheck)
-		{
-			while (toCheck != null && toCheck != typeof(object))
-			{
-				var cur = toCheck.IsGenericType ? toCheck.GetGenericTypeDefinition() : toCheck;
-				if (generic == cur)
-				{
-					return true;
-				}
-				toCheck = toCheck.BaseType;
-			}
-			return false;
-		}
-	}
+        public static bool IsSubclassOfRawGeneric(this Type generic, Type toCheck)
+        {
+            while (toCheck != null && toCheck != typeof(object))
+            {
+                var cur = toCheck.IsGenericType ? toCheck.GetGenericTypeDefinition() : toCheck;
+                if (generic == cur)
+                {
+                    return true;
+                }
+                toCheck = toCheck.BaseType;
+            }
+            return false;
+        }
+    }
 }

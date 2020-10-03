@@ -1,8 +1,8 @@
-﻿using System;
-using Jarvis.Framework.Shared.Exceptions;
+﻿using Jarvis.Framework.Shared.Exceptions;
 using Jarvis.Framework.Shared.Helpers;
 using Jarvis.Framework.Shared.MultitenantSupport;
 using MongoDB.Driver;
+using System;
 
 namespace Jarvis.Framework.Shared.IdentitySupport
 {
@@ -107,7 +107,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
     public class MultitenantCounterService : ICounterService
     {
-		private readonly ITenantAccessor _tenantAccessor;
+        private readonly ITenantAccessor _tenantAccessor;
 
         public MultitenantCounterService(ITenantAccessor tenantAccessor)
         {

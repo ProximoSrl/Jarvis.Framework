@@ -1,7 +1,7 @@
-﻿using System;
+﻿using Jarvis.Framework.Shared.IdentitySupport;
+using System;
 using System.Runtime.Serialization;
 using System.Security.Permissions;
-using Jarvis.Framework.Shared.IdentitySupport;
 
 namespace Jarvis.Framework.Shared.Exceptions
 {
@@ -29,7 +29,7 @@ namespace Jarvis.Framework.Shared.Exceptions
         }
 
         public DomainException(IIdentity id, string message)
-            :this(id != null ? id.ToString() : "", message)
+            : this(id != null ? id.ToString() : "", message)
         {
         }
 

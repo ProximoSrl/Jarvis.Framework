@@ -1,6 +1,6 @@
-using System;
 using Castle.Windsor;
 using Jarvis.Framework.Shared.IdentitySupport;
+using System;
 
 namespace Jarvis.Framework.Shared.MultitenantSupport
 {

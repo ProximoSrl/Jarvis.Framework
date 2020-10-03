@@ -1,6 +1,6 @@
-﻿using System;
+﻿using MongoDB.Bson;
+using System;
 using System.Collections.Generic;
-using MongoDB.Bson;
 
 namespace Jarvis.Framework.Shared.IdentitySupport.Serialization
 {

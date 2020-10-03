@@ -2,9 +2,9 @@ using System;
 
 namespace Jarvis.Framework.Shared.Messages
 {
-	public interface IMessage
-	{
+    public interface IMessage
+    {
         Guid MessageId { get; }
-	    string Describe();
-	}
+        string Describe();
+    }
 }

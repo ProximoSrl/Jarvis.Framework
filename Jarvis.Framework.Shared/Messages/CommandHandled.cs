@@ -68,25 +68,25 @@ namespace Jarvis.Framework.Shared.Messages
         }
     }
 
-	public class CommitProjected : IMessage
-	{
-		public Guid CommitId { get; private set; }
-		public string ClientId { get; set; }
-		public string IssuedBy { get; private set; }
+    public class CommitProjected : IMessage
+    {
+        public Guid CommitId { get; private set; }
+        public string ClientId { get; set; }
+        public string IssuedBy { get; private set; }
 
-		public Guid MessageId {get; private set;}
+        public Guid MessageId { get; private set; }
 
-		public CommitProjected(string issuedBy, Guid commitId, string clientId)
+        public CommitProjected(string issuedBy, Guid commitId, string clientId)
         {
             IssuedBy = issuedBy;
             CommitId = commitId;
             ClientId = clientId;
-			MessageId = Guid.NewGuid();
+            MessageId = Guid.NewGuid();
         }
 
-		public string Describe()
-		{
-			return $"Projected commit {CommitId}";
-		}
-	}
+        public string Describe()
+        {
+            return $"Projected commit {CommitId}";
+        }
+    }
 }

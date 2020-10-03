@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-using MongoDB.Bson;
-using MongoDB.Driver;
+﻿using MongoDB.Driver;
 using MongoDB.Driver.Linq;
 
 namespace Jarvis.Framework.Shared.ReadModel
@@ -9,6 +7,6 @@ namespace Jarvis.Framework.Shared.ReadModel
     {
         IMongoCollection<TModel> Collection { get; }
 
-		IMongoQueryable<TModel> MongoQueryable { get;  }
+        IMongoQueryable<TModel> MongoQueryable { get; }
     }
 }
