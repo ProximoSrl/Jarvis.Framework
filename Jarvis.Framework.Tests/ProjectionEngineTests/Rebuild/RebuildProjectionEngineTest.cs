@@ -1,9 +1,39 @@
-﻿using Jarvis.Framework.Tests.EngineTests;
+﻿using Jarvis.Framework.Shared.IdentitySupport;
+using MongoDB.Driver;
+using NUnit.Framework;
+using System;
+using System.Collections.Generic;
+using System.Configuration;
+using System.Linq;
+using System.Threading.Tasks;
+using Jarvis.Framework.Shared.Helpers;
+using Jarvis.Framework.Tests.EngineTests;
+using NSubstitute;
+using Castle.Core.Logging;
+using Jarvis.Framework.TestHelpers;
+using Jarvis.Framework.Kernel.ProjectionEngine.Rebuild;
+using Jarvis.Framework.Kernel.ProjectionEngine.Client;
+using Jarvis.Framework.Shared.IdentitySupport.Serialization;
+using Jarvis.Framework.Shared.ReadModel;
+using Jarvis.Framework.Kernel.Events;
+using Jarvis.Framework.Kernel.ProjectionEngine;
+using Jarvis.Framework.Shared.MultitenantSupport;
+using Jarvis.Framework.Shared.Messages;
+using System.Threading;
+using Jarvis.Framework.Kernel.Support;
+using System.Reflection;
+using MongoDB.Bson;
+using Jarvis.Framework.Kernel.Engine;
+using NStore.Core.Persistence;
+using NStore.Domain;
+using NStore.Core.Logging;
+using NStore.Core.Streams;
+using Jarvis.Framework.Shared.Logging;
 using Jarvis.Framework.Tests.Support;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 {
-    [TestFixture]
+	[TestFixture]
     public abstract class RebuildProjectionEngineBaseTests
     {
         private string _eventStoreConnectionString;
@@ -158,7 +188,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             //prepare the tracker
             ConcurrentCheckpointTracker thisTracker = new ConcurrentCheckpointTracker(_db);
             thisTracker.SetUp(new[] { _projection }, 1, false);
-            await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection.Info.SlotName, new[] { _projection.Info.CommonName }, 2); //Set the projection as dispatched
+			await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection.Info.SlotName, new[] { _projection.Info.CommonName }, 2); //Set the projection as dispatched
 
             var status = await sut.RebuildAsync().ConfigureAwait(false);
             WaitForFinish(status);
@@ -207,8 +237,8 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             //prepare the tracker
             ConcurrentCheckpointTracker thisTracker = new ConcurrentCheckpointTracker(_db);
             thisTracker.SetUp(new[] { _projection1, _projection3 }, 1, false);
-            await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection1.Info.SlotName, new[] { _projection1.Info.CommonName }, 2);
-            await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection3.Info.SlotName, new[] { _projection3.Info.CommonName }, 1);
+			await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection1.Info.SlotName, new[] { _projection1.Info.CommonName }, 2);
+			await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection3.Info.SlotName, new[] { _projection3.Info.CommonName }, 1);
 
             var status = await sut.RebuildAsync().ConfigureAwait(false);
             WaitForFinish(status);
@@ -251,8 +281,8 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 
             ConcurrentCheckpointTracker thisTracker = new ConcurrentCheckpointTracker(_db);
             thisTracker.SetUp(new IProjection[] { _projection1, _projection3 }, 1, false);
-            await thisTracker.UpdateSlotAndSetCheckpointAsync(((IProjection)_projection1).Info.SlotName, new[] { ((IProjection)_projection1).Info.CommonName }, 1);
-            await thisTracker.UpdateSlotAndSetCheckpointAsync(((IProjection)_projection3).Info.SlotName, new[] { ((IProjection)_projection3).Info.CommonName }, 1);
+			await thisTracker.UpdateSlotAndSetCheckpointAsync(((IProjection)_projection1).Info.SlotName, new[] { ((IProjection)_projection1).Info.CommonName }, 1);
+			await thisTracker.UpdateSlotAndSetCheckpointAsync(((IProjection)_projection3).Info.SlotName, new[] { ((IProjection)_projection3).Info.CommonName }, 1);
 
             //now change signature.
             _projection3.Signature = "Modified";
@@ -294,7 +324,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             ConcurrentCheckpointTracker thisTracker = new ConcurrentCheckpointTracker(_db);
             thisTracker.SetUp(new[] { _projection1, _projection3 }, 1, false);
             await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection1.Info.SlotName, new[] { _projection1.Info.CommonName }, 1);
-            await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection3.Info.SlotName, new[] { _projection3.Info.CommonName }, 1);
+			await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection3.Info.SlotName, new[] { _projection3.Info.CommonName }, 1);
 
             RebuildStatus status = await sut.RebuildAsync();
             WaitForFinish(status);

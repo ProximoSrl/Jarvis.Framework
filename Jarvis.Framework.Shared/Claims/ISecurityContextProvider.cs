@@ -1,6 +1,6 @@
-﻿using Jarvis.Framework.Shared.Support;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using Jarvis.Framework.Shared.Support;
 
 namespace Jarvis.Framework.Shared.Claims
 {

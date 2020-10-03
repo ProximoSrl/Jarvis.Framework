@@ -1,6 +1,6 @@
-﻿using Jarvis.Framework.Shared.Messages;
+﻿using System.Diagnostics;
+using Jarvis.Framework.Shared.Messages;
 using Newtonsoft.Json;
-using System.Diagnostics;
 
 namespace Jarvis.Framework.TestHelpers
 {
@@ -18,11 +18,11 @@ namespace Jarvis.Framework.TestHelpers
             var serialized = JsonConvert.SerializeObject(
                 dto,
                 new JsonSerializerSettings()
-                {
-                    TypeNameHandling = TypeNameHandling.All,
-                    Formatting = Formatting.Indented
-                });
-            Debug.WriteLine((string)serialized);
+                    {
+                        TypeNameHandling = TypeNameHandling.All,
+                        Formatting = Formatting.Indented
+                    });
+            Debug.WriteLine((string) serialized);
 
             return serialized;
 
@@ -31,10 +31,10 @@ namespace Jarvis.Framework.TestHelpers
         public static object Deserialize(string json)
         {
             var deserialized = JsonConvert.DeserializeObject(json, new JsonSerializerSettings()
-            {
-                TypeNameHandling = TypeNameHandling.All,
-                ContractResolver = new MessagesContractResolver()
-            });
+                {
+                    TypeNameHandling = TypeNameHandling.All,
+                    ContractResolver = new MessagesContractResolver()
+                });
 
             return deserialized;
         }

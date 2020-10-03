@@ -1,4 +1,5 @@
-﻿using Jarvis.Framework.Tests.EngineTests;
+﻿using Jarvis.Framework.Shared.Commands;
+using Jarvis.Framework.Tests.EngineTests;
 
 namespace Jarvis.Framework.Tests.BusTests.MessageFolder
 {

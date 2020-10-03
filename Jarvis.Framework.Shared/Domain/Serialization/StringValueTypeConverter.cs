@@ -1,20 +1,20 @@
-﻿using Fasterflect;
-using Jarvis.Framework.Shared.Helpers;
-using System;
-using System.Collections.Concurrent;
+﻿using System;
 using System.ComponentModel;
 using System.Globalization;
+using Fasterflect;
+using Jarvis.Framework.Shared.Helpers;
+using System.Collections.Concurrent;
 
 namespace Jarvis.Framework.Shared.Domain.Serialization
 {
     public class StringValueTypeConverter<T> : TypeConverter where T : StringValue
     {
 #pragma warning disable S2743 // We know that this is a static field in generic class, but it is used as cache.
-        private static readonly ConcurrentDictionary<Type, FastReflectionHelper.ObjectActivator> _activators
-          = new ConcurrentDictionary<Type, FastReflectionHelper.ObjectActivator>();
+		private static readonly ConcurrentDictionary<Type, FastReflectionHelper.ObjectActivator> _activators
+		  = new ConcurrentDictionary<Type, FastReflectionHelper.ObjectActivator>();
 #pragma warning restore S2743
 
-        public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType)
+		public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType)
         {
             if (sourceType == typeof(string))
             {

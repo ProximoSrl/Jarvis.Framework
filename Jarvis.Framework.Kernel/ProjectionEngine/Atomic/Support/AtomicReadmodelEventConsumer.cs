@@ -1,4 +1,5 @@
 ﻿using Castle.Core.Logging;
+using Castle.Windsor;
 using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.IdentitySupport;
 using Jarvis.Framework.Shared.ReadModel.Atomic;

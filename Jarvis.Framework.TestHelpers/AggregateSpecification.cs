@@ -1,11 +1,11 @@
-﻿using Fasterflect;
+﻿using System.Collections.Generic;
+using System.Linq;
+using Fasterflect;
 using Jarvis.Framework.Kernel.Engine;
 using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.IdentitySupport;
 using Machine.Specifications;
 using NStore.Domain;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace Jarvis.Framework.TestHelpers
 {
@@ -14,7 +14,7 @@ namespace Jarvis.Framework.TestHelpers
     public abstract class AggregateSpecification<TAggregate, TState, TId>
         where TAggregate : AggregateRoot<TState, TId>
         where TState : JarvisAggregateState, new()
-        where TId : EventStoreIdentity
+		where TId : EventStoreIdentity
     {
         private static TAggregate _aggregate;
 
@@ -34,7 +34,7 @@ namespace Jarvis.Framework.TestHelpers
         {
             get
             {
-                var agg = (IEventSourcedAggregate)Aggregate;
+                var agg = (IEventSourcedAggregate) Aggregate;
                 return agg.GetChangeSet().Events.Cast<DomainEvent>();
             }
         }
@@ -47,7 +47,7 @@ namespace Jarvis.Framework.TestHelpers
 
         protected static TState State
         {
-            get { return (TState)_aggregate.GetPropertyValue("InternalState"); }
+            get { return (TState) _aggregate.GetPropertyValue("InternalState"); }
         }
 
         protected static void Create(IIdentity id)
@@ -65,14 +65,14 @@ namespace Jarvis.Framework.TestHelpers
             return UncommittedEvents.Any(x => x.GetType() == typeof(T));
         }
 
-        protected static T RaisedEvent<T>() where T : DomainEvent
+        protected static T RaisedEvent<T>() where T:DomainEvent
         {
-            return (T)UncommittedEvents.Single(x => x.GetType() == typeof(T));
+            return (T) UncommittedEvents.Single(x => x.GetType() == typeof (T));
         }
 
-        protected static IEnumerable<T> AllRaisedEvents<T>() where T : DomainEvent
-        {
-            return UncommittedEvents.OfType<T>();
-        }
+	    protected static IEnumerable<T> AllRaisedEvents<T>() where T : DomainEvent
+	    {
+			return UncommittedEvents.OfType<T>();
+		}
     }
 }

@@ -1,16 +1,16 @@
-﻿using Castle.Core.Logging;
-using Jarvis.Framework.Shared.Exceptions;
-using Jarvis.Framework.Shared.Helpers;
+﻿using System;
+using Castle.Core.Logging;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
-using System;
+using Jarvis.Framework.Shared.Helpers;
+using Jarvis.Framework.Shared.Exceptions;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace Jarvis.Framework.Shared.IdentitySupport
 {
-    public interface IIdentityTranslator
+	public interface IIdentityTranslator
     {
     }
 
@@ -83,12 +83,12 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             MapIdentity(alias, key);
         }
 
-        protected String GetAlias(TKey key)
-        {
-            if (key == null) throw new ArgumentNullException(nameof(key));
-            var alias = _collection.Find(Builders<MappedIdentity>.Filter.Eq("AggregateId", key.AsString())).FirstOrDefault();
-            return alias?.ExternalKey;
-        }
+		protected String GetAlias(TKey key)
+		{
+			if (key == null) throw new ArgumentNullException(nameof(key));
+			var alias = _collection.Find(Builders<MappedIdentity>.Filter.Eq("AggregateId", key.AsString())).FirstOrDefault();
+			return alias?.ExternalKey;
+		}
 
         /// <summary>
         /// Return reverse mapping for multiple aliases.
@@ -103,7 +103,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             return _collection
                 .Find(Builders<MappedIdentity>.Filter.In("AggregateId", keys))
                 .ToEnumerable()
-                .ToDictionary(_ => _.AggregateId, _ => _.ExternalKey);
+                .ToDictionary(_ => _.AggregateId, _ =>  _.ExternalKey);
         }
 
         /// <summary>

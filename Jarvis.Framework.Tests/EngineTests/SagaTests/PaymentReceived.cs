@@ -1,14 +1,17 @@
-﻿namespace Jarvis.Framework.Tests.EngineTests.SagaTests
+﻿using System;
+using Jarvis.Framework.Shared.Events;
+
+namespace Jarvis.Framework.Tests.EngineTests.SagaTests
 {
-    public class PaymentReceived : DomainEvent
-    {
-        public string BillId { get; protected set; }
+	public class PaymentReceived : DomainEvent
+	{
+		public string BillId { get; protected set; }
         public OrderId OrderId { get; protected set; }
 
-        public PaymentReceived(OrderId orderId, Guid billId)
-        {
-            OrderId = orderId;
+		public PaymentReceived(OrderId orderId, Guid billId)
+		{
+			OrderId = orderId;
             BillId = billId.ToString();
-        }
-    }
+		}
+	}
 }

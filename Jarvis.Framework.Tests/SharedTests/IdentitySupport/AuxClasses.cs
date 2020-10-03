@@ -1,4 +1,12 @@
-﻿namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
+﻿using Jarvis.Framework.Shared.IdentitySupport;
+using MongoDB.Driver;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
 {
     public class TestMapper : AbstractIdentityTranslator<TestId>
     {

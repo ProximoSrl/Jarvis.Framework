@@ -1,4 +1,23 @@
-﻿namespace Jarvis.Framework.Tests.Support
+﻿using System;
+using System.Collections.Generic;
+using MongoDB.Driver;
+using Jarvis.Framework.Shared.Helpers;
+using System.Configuration;
+using Jarvis.Framework.Shared.IdentitySupport;
+using System.Reflection;
+using Jarvis.Framework.Shared.IdentitySupport.Serialization;
+using MongoDB.Bson.Serialization;
+using NSubstitute;
+using Jarvis.Framework.Kernel.Engine;
+using NStore.Domain;
+using NStore.Core.Logging;
+using NStore.Core.Streams;
+using NStore.Core.Persistence;
+using System.Threading.Tasks;
+using System.Linq;
+using MongoDB.Bson;
+
+namespace Jarvis.Framework.Tests.Support
 {
     public static class TestHelper
     {

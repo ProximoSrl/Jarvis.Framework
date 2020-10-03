@@ -8,7 +8,7 @@ namespace Jarvis.Framework.Shared.Messages
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
     public class TimeToBeReceivedAttribute : Attribute
     {
-        private readonly string _hmsString;
+		private readonly string _hmsString;
 
         public TimeToBeReceivedAttribute(string hmsString)
         {

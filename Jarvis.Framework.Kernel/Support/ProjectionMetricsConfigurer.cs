@@ -1,8 +1,8 @@
-﻿using Castle.Core;
+﻿using System;
+using System.Linq;
+using Castle.Core;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 using Metrics;
-using System;
-using System.Linq;
 
 namespace Jarvis.Framework.Kernel.Support
 {
@@ -47,7 +47,7 @@ namespace Jarvis.Framework.Kernel.Support
             {
                 gaugeName = CheckpointBehind;
             }
-
+          
             Metric.Gauge(gaugeName, valueProvider, Unit.Items);
         }
 
@@ -80,7 +80,7 @@ namespace Jarvis.Framework.Kernel.Support
 
         public void Stop()
         {
-
+            
         }
     }
 }

@@ -1,4 +1,7 @@
-﻿using Jarvis.Framework.Tests.EngineTests;
+﻿using Jarvis.Framework.Shared.IdentitySupport;
+using Jarvis.Framework.Tests.EngineTests;
+using NUnit.Framework;
+using System;
 
 namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
 {

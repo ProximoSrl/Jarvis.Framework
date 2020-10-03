@@ -29,7 +29,7 @@ namespace Jarvis.Framework.Shared.Support
 
         public static void MarkSecurityException(ICommand command)
         {
-            RaiseSecurityExceptionEventHappened(command);
+            RaiseSecurityExceptionEventHappened( command);
             SecurityExceptions.Increment();
         }
 

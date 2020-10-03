@@ -1,4 +1,9 @@
-﻿namespace Jarvis.Framework.Tests.ProjectionsTests
+﻿using System;
+using Jarvis.Framework.Shared.Exceptions;
+using Jarvis.Framework.Shared.ReadModel;
+using NUnit.Framework;
+
+namespace Jarvis.Framework.Tests.ProjectionsTests
 {
     [TestFixture]
     public class ReadModelTests

@@ -1,8 +1,7 @@
-﻿using Jarvis.Framework.Shared.ReadModel;
-using System;
+﻿using System;
 using System.Linq;
-using System;
-using System.Linq;
+using Jarvis.Framework.Shared.Events;
+using Jarvis.Framework.Shared.ReadModel;
 
 namespace Jarvis.Framework.Shared.Messages
 {

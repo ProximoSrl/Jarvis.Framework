@@ -1,9 +1,11 @@
-﻿namespace Jarvis.Framework.Tests.EngineTests.Unfolder
+﻿using NUnit.Framework;
+
+namespace Jarvis.Framework.Tests.EngineTests.Unfolder
 {
-    /// <summary>
-    /// TODO NSTORE: Please use the StreamProcessor from NSTORE 
-    /// </summary>
-    [TestFixture]
+	/// <summary>
+	/// TODO NSTORE: Please use the StreamProcessor from NSTORE 
+	/// </summary>
+	[TestFixture]
     public class EventUnfolderTests
     {
         //private TestProjector sut;
@@ -242,7 +244,7 @@
     //        sut = new QueryModelRepository(_factory, _eventStore, _persister);
     //    }
 
-
+     
     //    [Test]
     //    public void verify_snapshot_check_version()
     //    {

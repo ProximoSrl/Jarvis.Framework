@@ -1,4 +1,6 @@
-﻿using Jarvis.Framework.Shared.IdentitySupport;
+﻿using Castle.MicroKernel;
+using Castle.Windsor;
+using Jarvis.Framework.Shared.IdentitySupport;
 using Jarvis.Framework.Shared.ReadModel.Atomic;
 using NStore.Domain;
 using System;

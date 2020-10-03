@@ -1,6 +1,7 @@
 ﻿using Castle.Core.Logging;
 using Jarvis.Framework.Shared.Exceptions;
 using Jarvis.Framework.Shared.Messages;
+using Jarvis.Framework.Shared.ReadModel;
 using Jarvis.Framework.Shared.Support;
 using NStore.Core.Streams;
 using System;

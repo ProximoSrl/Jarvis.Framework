@@ -2,6 +2,8 @@
 using Jarvis.Framework.Shared.IdentitySupport;
 using NStore.Domain;
 using System;
+using System.Collections.Generic;
+using System.Text;
 
 namespace Jarvis.Framework.Shared.Helpers
 {

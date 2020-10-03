@@ -1,5 +1,6 @@
 
 using NStore.Core.Persistence;
+using NStore.Persistence;
 
 namespace Jarvis.Framework.Kernel.Engine.Projections
 {

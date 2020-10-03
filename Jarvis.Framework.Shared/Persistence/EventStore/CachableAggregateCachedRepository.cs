@@ -1,19 +1,19 @@
-﻿using Jarvis.Framework.Shared.IdentitySupport;
+﻿using System;
+using Jarvis.Framework.Shared.IdentitySupport;
 using NStore.Domain;
-using System;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.Persistence.EventStore
 {
 #pragma warning disable S3881 // "IDisposable" should be implemented correctly
 
-    /// <summary>
-    /// This class implement the <see cref="IAggregateCachedRepository{TAggregate}"/>
-    /// interface that can be stored in cache. It does not dispose wrapped repository
-    /// and let outer code to manage lifecycle of the wrapped repository to be reused.
-    /// </summary>
-    /// <typeparam name="TAggregate"></typeparam>
-    public class CachableAggregateCachedRepository<TAggregate> :
+	/// <summary>
+	/// This class implement the <see cref="IAggregateCachedRepository{TAggregate}"/>
+	/// interface that can be stored in cache. It does not dispose wrapped repository
+	/// and let outer code to manage lifecycle of the wrapped repository to be reused.
+	/// </summary>
+	/// <typeparam name="TAggregate"></typeparam>
+	public class CachableAggregateCachedRepository<TAggregate> :
 #pragma warning restore S3881 // "IDisposable" should be implemented correctly
         IAggregateCachedRepository<TAggregate> where TAggregate : class, IAggregate
     {

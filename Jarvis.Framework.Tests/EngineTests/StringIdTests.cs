@@ -1,4 +1,7 @@
-﻿namespace Jarvis.Framework.Tests.EngineTests
+﻿using Jarvis.Framework.Shared.Domain;
+using NUnit.Framework;
+
+namespace Jarvis.Framework.Tests.EngineTests
 {
     [TestFixture]
     public class StringIdTests

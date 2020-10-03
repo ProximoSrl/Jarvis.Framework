@@ -1,4 +1,10 @@
-﻿namespace Jarvis.Framework.Tests.DomainTests
+﻿using Jarvis.Framework.Shared.Domain.Serialization;
+using Jarvis.Framework.Shared.IdentitySupport;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
+using NUnit.Framework;
+
+namespace Jarvis.Framework.Tests.DomainTests
 {
     [TestFixture]
     [Category("mongo_serialization")]

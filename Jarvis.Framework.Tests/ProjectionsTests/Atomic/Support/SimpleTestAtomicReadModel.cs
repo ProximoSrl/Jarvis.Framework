@@ -1,4 +1,10 @@
-﻿using Jarvis.Framework.Tests.EngineTests;
+﻿using Jarvis.Framework.Kernel.ProjectionEngine.Atomic;
+using Jarvis.Framework.Shared.Events;
+using Jarvis.Framework.Shared.ReadModel.Atomic;
+using Jarvis.Framework.Tests.EngineTests;
+using MongoDB.Driver;
+using System;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support
 {

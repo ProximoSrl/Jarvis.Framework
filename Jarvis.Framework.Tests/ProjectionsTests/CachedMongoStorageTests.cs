@@ -1,4 +1,15 @@
-﻿using Jarvis.Framework.Tests.ProjectionEngineTests;
+﻿using Jarvis.Framework.Kernel.ProjectionEngine;
+using Jarvis.Framework.Tests.ProjectionEngineTests;
+using MongoDB.Driver;
+using NUnit.Framework;
+using System;
+using System.Collections.Generic;
+using System.Configuration;
+using System.Diagnostics;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using Jarvis.Framework.Shared.Helpers;
 
 namespace Jarvis.Framework.Tests.ProjectionsTests
 {

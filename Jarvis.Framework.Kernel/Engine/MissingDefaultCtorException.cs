@@ -2,7 +2,7 @@
 
 namespace Jarvis.Framework.Kernel.Engine
 {
-    [Serializable]
+	[Serializable]
     public class MissingDefaultCtorException : Exception
     {
         public MissingDefaultCtorException(Type t)

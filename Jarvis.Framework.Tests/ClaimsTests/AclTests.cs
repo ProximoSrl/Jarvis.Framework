@@ -1,11 +1,15 @@
-﻿namespace Jarvis.Framework.Tests.ClaimsTests
+﻿using Jarvis.Framework.Kernel.Engine;
+using Jarvis.Framework.Shared.Claims;
+using NUnit.Framework;
+
+namespace Jarvis.Framework.Tests.ClaimsTests
 {
     [TestFixture]
     public class AclTests
     {
         readonly Claim[] _claims = new[]
             {
-                Claim.For("user", "User_1"),
+                Claim.For("user", "User_1"), 
                 Claim.For("group", "Group_1")
             };
 
@@ -39,7 +43,7 @@
         {
             var acl = new AccessControlList(new[] { "group", "user" });
             acl.Set("read", Claim.For("group", "Group_1"), GrantType.Allowed);
-            var grant = acl.GetGrantAccess("read", new[] { Claim.For("group", "Group_2") });
+            var grant = acl.GetGrantAccess("read", new []{Claim.For("group", "Group_2")});
             Assert.AreEqual(GrantType.Inherited, grant);
         }
 
@@ -49,7 +53,7 @@
             var acl = new AccessControlList(new[] { "group", "user" });
             acl.Set("read", Claim.For("group", "Group_1"), GrantType.Allowed);
             acl.Set("read", Claim.For("group", "Group_2"), GrantType.Denied);
-
+            
             var grant = acl.GetGrantAccess("read", new[] { Claim.For("group", "Group_2") });
             Assert.AreEqual(GrantType.Denied, grant);
         }
@@ -65,14 +69,14 @@
                     Claim.For("group", "Group_2"),
                     Claim.For("group", "Group_1")
             });
-
+            
             Assert.AreEqual(GrantType.Denied, grant);
         }
 
         [Test]
         public void denied_on_conflicting_grants_inverted_order()
         {
-            var acl = new AccessControlList(new[] { "group", "user" });
+            var acl = new AccessControlList(new []{"group", "user"});
             acl.Set("read", Claim.For("group", "Group_1"), GrantType.Denied);
             acl.Set("read", Claim.For("group", "Group_2"), GrantType.Allowed);
 

@@ -29,7 +29,7 @@ namespace Jarvis.Framework.Shared.Support
             }
         }
 
-        private readonly ConcurrentDictionary<Int32, object> _lockDict =
+        private readonly ConcurrentDictionary<Int32, object> _lockDict = 
             new ConcurrentDictionary<Int32, object>();
 
         /// <summary>
@@ -81,7 +81,7 @@ namespace Jarvis.Framework.Shared.Support
 
         private Int32 GetKey(Int64 identityValue)
         {
-            return (Int32)identityValue % DefaultModulus;
+            return (Int32) identityValue % DefaultModulus;
         }
     }
 }

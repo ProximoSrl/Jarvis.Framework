@@ -1,4 +1,12 @@
-﻿using Jarvis.Framework.Tests.BusTests.MessageFolder;
+﻿using Jarvis.Framework.Shared.Helpers;
+using Jarvis.Framework.Tests.BusTests.MessageFolder;
+using Rebus.Handlers;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.BusTests.Handlers
 {

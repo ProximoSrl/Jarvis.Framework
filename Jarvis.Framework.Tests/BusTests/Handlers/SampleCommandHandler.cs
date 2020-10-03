@@ -1,4 +1,8 @@
-﻿using Jarvis.Framework.Tests.BusTests.MessageFolder;
+﻿using System.Threading;
+using Jarvis.Framework.Tests.BusTests.MessageFolder;
+using Jarvis.Framework.Kernel.Commands;
+using Jarvis.Framework.Shared.Commands;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.BusTests.Handlers
 {

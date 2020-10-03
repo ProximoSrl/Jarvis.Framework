@@ -1,4 +1,17 @@
-﻿using Jarvis.Framework.Tests.EngineTests;
+﻿using System;
+using System.Collections.Generic;
+using System.Configuration;
+using System.Linq;
+using System.Threading;
+using Jarvis.Framework.Kernel.Events;
+using Jarvis.Framework.Kernel.ProjectionEngine;
+using Jarvis.Framework.Shared.IdentitySupport;
+using Jarvis.Framework.Shared.Messages;
+using Jarvis.Framework.Shared.ReadModel;
+using Jarvis.Framework.TestHelpers;
+using Jarvis.Framework.Tests.EngineTests;
+using NUnit.Framework;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
@@ -24,7 +37,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 
         protected override IEnumerable<IProjection> BuildProjections()
         {
-            var writer = new CollectionWrapper<SampleReadModel, string>(StorageFactory, new NotifyToNobody());
+            var writer = new CollectionWrapper<SampleReadModel, string>(StorageFactory,new NotifyToNobody());
             var writer2 = new CollectionWrapper<SampleReadModel2, string>(StorageFactory, new NotifyToNobody());
 
             yield return new Projection(writer);

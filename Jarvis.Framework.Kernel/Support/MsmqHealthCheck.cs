@@ -132,7 +132,7 @@ namespace Jarvis.Framework.Kernel.Support
             public const int MQ_DENY_NONE = 0;
 
             [DllImport("mqrt.dll")]
-            internal static extern int MQMgmtGetInfo([MarshalAs(UnmanagedType.BStr)] string computerName, [MarshalAs(UnmanagedType.BStr)] string objectName, ref MQMGMTPROPS mgmtProps);
+            internal static extern int MQMgmtGetInfo([MarshalAs(UnmanagedType.BStr)]string computerName, [MarshalAs(UnmanagedType.BStr)]string objectName, ref MQMGMTPROPS mgmtProps);
 
             public const byte VT_NULL = 1;
             public const byte VT_UI4 = 19;

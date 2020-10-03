@@ -1,3 +1,9 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using MongoDB.Bson.Serialization;
+
 namespace Jarvis.Framework.Tests.DomainTests
 {
     public static class BsonClassMapHelper
@@ -22,10 +28,10 @@ namespace Jarvis.Framework.Tests.DomainTests
         public static void Clear()
         {
             var cm = GetClassMap();
-            if (cm != null)
-            {
-                cm.Clear();
-            }
-        }
+            if(cm != null)
+			{
+				cm.Clear();
+			}
+		}
     }
 }

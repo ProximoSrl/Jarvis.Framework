@@ -1,9 +1,31 @@
-﻿using Jarvis.Framework.Tests.EngineTests;
+﻿using System;
+using System.Configuration;
+using Jarvis.Framework.Kernel.Engine;
+using Jarvis.Framework.Shared.IdentitySupport;
+using MongoDB.Driver;
+using NSubstitute;
+using NUnit.Framework;
+using Jarvis.Framework.Shared.Helpers;
+using Jarvis.Framework.Shared.IdentitySupport.Serialization;
+using Jarvis.Framework.Tests.EngineTests;
+using Castle.Windsor;
+using Castle.Facilities.TypedFactory;
+using Castle.MicroKernel.Registration;
+using Jarvis.Framework.Shared.Messages;
+using MongoDB.Bson;
+using Jarvis.Framework.Kernel.Events;
+using System.Threading.Tasks;
+using Jarvis.Framework.Shared.Persistence;
+using Jarvis.Framework.Shared.Persistence.EventStore;
+using NStore.Domain;
+using NStore.Core.Persistence;
+using NStore.Core.Logging;
+using NStore.Core.Streams;
 using Jarvis.Framework.Tests.Support;
 
 namespace Jarvis.Framework.Tests.Kernel.Commands
 {
-    [TestFixture]
+	[TestFixture]
     public class RepositoryCommandHandlerTests
     {
         private TouchSampleAggregateHandler _sut;

@@ -1,10 +1,10 @@
+using System;
+using System.Collections.Generic;
+using System.Linq.Expressions;
 using Jarvis.Framework.Kernel.Events;
 using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.ReadModel;
 using MongoDB.Driver;
-using System;
-using System.Collections.Generic;
-using System.Linq.Expressions;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine

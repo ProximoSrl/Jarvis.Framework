@@ -1,4 +1,14 @@
-﻿using Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support;
+﻿using Fasterflect;
+using Jarvis.Framework.Kernel.ProjectionEngine.Atomic;
+using Jarvis.Framework.Shared.Helpers;
+using Jarvis.Framework.TestHelpers;
+using Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support;
+using NStore.Core.Persistence;
+using NStore.Domain;
+using NUnit.Framework;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 {
@@ -24,7 +34,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             _sut = await CreateSutAndStartProjectionEngineAsync().ConfigureAwait(false);
 
             //we need to wait to understand if it was projected
-            GetTrackerAndWaitForChangesetToBeProjected("SimpleTestAtomicReadModel");
+            GetTrackerAndWaitForChangesetToBeProjected( "SimpleTestAtomicReadModel");
 
             await _sut.StopAsync().ConfigureAwait(false);
 

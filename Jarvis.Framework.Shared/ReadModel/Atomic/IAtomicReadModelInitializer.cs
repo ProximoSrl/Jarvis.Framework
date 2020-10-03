@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using Castle.Core;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.ReadModel.Atomic
 {

@@ -1,4 +1,8 @@
-﻿namespace Jarvis.Framework.Shared.Commands.Tracking
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace Jarvis.Framework.Shared.Commands.Tracking
 {
     public class TrackedMessageModelPaginated
     {

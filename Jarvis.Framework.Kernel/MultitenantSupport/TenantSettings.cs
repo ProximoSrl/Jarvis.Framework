@@ -1,4 +1,5 @@
 using Jarvis.Framework.Shared.IdentitySupport;
+using Jarvis.Framework.Shared.Logging;
 using Jarvis.Framework.Shared.MultitenantSupport;
 using Jarvis.Framework.Shared.Support;
 using MongoDB.Driver;

@@ -1,8 +1,8 @@
-using Fasterflect;
-using Jarvis.Framework.Shared.Helpers;
-using Newtonsoft.Json;
 using System;
+using Newtonsoft.Json;
+using Fasterflect;
 using System.Collections.Concurrent;
+using Jarvis.Framework.Shared.Helpers;
 
 namespace Jarvis.Framework.Shared.Domain.Serialization
 {

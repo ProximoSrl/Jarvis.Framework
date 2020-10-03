@@ -1,6 +1,16 @@
-﻿using Jarvis.Framework.Tests.EngineTests;
+﻿using Jarvis.Framework.Kernel.ProjectionEngine;
+using Jarvis.Framework.Shared.Messages;
+using Jarvis.Framework.Tests.EngineTests;
 using Jarvis.Framework.Tests.SharedTests.IdentitySupport;
 using Jarvis.Framework.Tests.Support;
+using MongoDB.Driver;
+using NUnit.Framework;
+using System;
+using System.Configuration;
+using System.Linq;
+using Fasterflect;
+using Jarvis.Framework.Shared.Events;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests
 {
@@ -28,7 +38,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         }
 
         [OneTimeTearDown]
-        public void TestFixtureTearDown()
+        public void  TestFixtureTearDown()
         {
             _client.DropDatabase(_db.DatabaseNamespace.DatabaseName);
         }
@@ -36,7 +46,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         private Int32 _seed = 0;
 
         [Test]
-        public async Task Verify_population_of_basic_properties_on_insert()
+        public async Task  Verify_population_of_basic_properties_on_insert()
         {
             var rm = CreateNew();
             SampleAggregateCreated evt = HandleEvent(new SampleAggregateCreated());
@@ -48,7 +58,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         }
 
         [Test]
-        public async Task Verify_population_of_basic_properties_on_update()
+        public async Task  Verify_population_of_basic_properties_on_update()
         {
             var rm = CreateNew();
             var evt = HandleEvent(new SampleAggregateCreated());
@@ -66,7 +76,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         }
 
         [Test]
-        public async Task Verify_population_of_basic_properties_on_upsert_insert()
+        public async Task  Verify_population_of_basic_properties_on_upsert_insert()
         {
             var rm = CreateNew();
             var evt = HandleEvent(new SampleAggregateCreated());
@@ -78,7 +88,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         }
 
         [Test]
-        public async Task Verify_population_of_basic_properties_on_upsert_update()
+        public async Task  Verify_population_of_basic_properties_on_upsert_update()
         {
             var rm = CreateNew();
             var evt = HandleEvent(new SampleAggregateCreated());
@@ -96,7 +106,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         }
 
         [Test]
-        public async Task Verify_population_of_basic_properties_on_find_and_modify()
+        public async Task  Verify_population_of_basic_properties_on_find_and_modify()
         {
             var rm = CreateNew();
             var evt = HandleEvent(new SampleAggregateCreated());
@@ -113,7 +123,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         }
 
         [Test]
-        public async Task Verify_delete_of_readmodel()
+        public async Task  Verify_delete_of_readmodel()
         {
             var rm = CreateNew();
             var evt = HandleEvent(new SampleAggregateCreated());

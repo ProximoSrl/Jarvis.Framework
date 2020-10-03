@@ -1,20 +1,20 @@
-using Castle.Core.Logging;
-using Jarvis.Framework.Kernel.Engine;
-using Jarvis.Framework.Kernel.Events;
-using Jarvis.Framework.Kernel.Support;
-using Jarvis.Framework.Shared.Helpers;
-using MongoDB.Driver;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using Castle.Core.Logging;
+using Jarvis.Framework.Kernel.Events;
+using Jarvis.Framework.Kernel.Support;
+using MongoDB.Driver;
+using Jarvis.Framework.Shared.Helpers;
+using Jarvis.Framework.Kernel.Engine;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 {
     public class ConcurrentCheckpointTracker : IConcurrentCheckpointTracker
     {
-        private readonly IMongoCollection<Checkpoint> _checkpoints;
+		private readonly IMongoCollection<Checkpoint> _checkpoints;
 
         private ConcurrentDictionary<string, Int64> _checkpointTracker;
 
@@ -23,10 +23,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         /// </summary>
         private ConcurrentDictionary<string, Int64> _checkpointSlotTracker;
 
-        /// <summary>
-        /// Key is the id of the projection and value is the name of the slot
-        /// projection belongs to.
-        /// </summary>
+		/// <summary>
+		/// Key is the id of the projection and value is the name of the slot
+		/// projection belongs to.
+		/// </summary>
         private ConcurrentDictionary<String, String> _projectionToSlot;
 
         /// <summary>
@@ -199,14 +199,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         public async Task UpdateSlotAndSetCheckpointAsync(
             string slotName,
-            IEnumerable<String> projectionNameList,
-            Int64 valueCheckpointToken)
+			IEnumerable<String> projectionNameList,
+			Int64 valueCheckpointToken)
         {
             await _checkpoints.UpdateManyAsync(
                    Builders<Checkpoint>.Filter.Eq("Slot", slotName),
                    Builders<Checkpoint>.Update
-                    .Set(_ => _.Current, valueCheckpointToken)
-                    .Set(_ => _.Value, valueCheckpointToken)
+					.Set(_ => _.Current, valueCheckpointToken)
+					.Set(_ => _.Value, valueCheckpointToken)
             ).ConfigureAwait(false);
             foreach (var projectionName in projectionNameList)
             {
@@ -214,22 +214,22 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             }
         }
 
-        public async Task UpdateProjectionCheckpointAsync(
-            string projectionName,
-            Int64 checkpointToken)
-        {
-            await _checkpoints.UpdateOneAsync(
-                       Builders<Checkpoint>.Filter.Eq(_ => _.Id, projectionName),
-                       Builders<Checkpoint>.Update
-                        .Set(_ => _.Current, checkpointToken)
-                        .Set(_ => _.Value, checkpointToken)
-                ).ConfigureAwait(false);
+		public async Task UpdateProjectionCheckpointAsync(
+			string projectionName,
+			Int64 checkpointToken)
+		{
+			await _checkpoints.UpdateOneAsync(
+					   Builders<Checkpoint>.Filter.Eq(_ => _.Id, projectionName),
+					   Builders<Checkpoint>.Update
+						.Set(_ => _.Current, checkpointToken)
+						.Set(_ => _.Value, checkpointToken)
+				).ConfigureAwait(false);
 
-            //Now update in-memory cache
-            _checkpointTracker.AddOrUpdate(projectionName, key => checkpointToken, (key, currentValue) => checkpointToken);
-        }
+			//Now update in-memory cache
+			_checkpointTracker.AddOrUpdate(projectionName, key => checkpointToken, (key, currentValue) => checkpointToken);
+		}
 
-        public Int64 GetCurrent(IProjection projection)
+		public Int64 GetCurrent(IProjection projection)
         {
             var checkpoint = _checkpoints.FindOneById(projection.Info.CommonName);
             if (checkpoint == null)
@@ -238,15 +238,15 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             return checkpoint.Current ?? 0;
         }
 
-        public Int64 GetCheckpoint(IProjection projection)
-        {
-            var id = projection.Info.CommonName;
-            if (_checkpointTracker.ContainsKey(id))
-                return _checkpointTracker[id];
-            return 0;
-        }
+		public Int64 GetCheckpoint(IProjection projection)
+		{
+			var id = projection.Info.CommonName;
+			if (_checkpointTracker.ContainsKey(id))
+				return _checkpointTracker[id];
+			return 0;
+		}
 
-        public CheckPointReplayStatus GetCheckpointStatus(string projectionName, Int64 checkpoint)
+		public CheckPointReplayStatus GetCheckpointStatus(string projectionName, Int64 checkpoint)
         {
             Int64 lastDispatched = _checkpointTracker[projectionName];
 

@@ -1,4 +1,13 @@
-﻿using Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support;
+﻿using Jarvis.Framework.Kernel.ProjectionEngine.Atomic;
+using Jarvis.Framework.Shared.Events;
+using Jarvis.Framework.Shared.Helpers;
+using Jarvis.Framework.Shared.ReadModel.Atomic;
+using Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support;
+using NStore.Domain;
+using NUnit.Framework;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 {

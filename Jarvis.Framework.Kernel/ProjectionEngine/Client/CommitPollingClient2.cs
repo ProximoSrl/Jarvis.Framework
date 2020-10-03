@@ -273,7 +273,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
                 if (chunk.PartitionId.StartsWith("system.empty"))
                 {
-                    if (_logger.IsDebugEnabled) _logger.DebugFormat("CommitPollingClient {0}: CommitPollingClient2: Found empty commit - {1}", _id, chunk.Position);
+                    if (_logger.IsDebugEnabled)  _logger.DebugFormat("CommitPollingClient {0}: CommitPollingClient2: Found empty commit - {1}", _id, chunk.Position);
                 }
                 else
                 {

@@ -1,4 +1,9 @@
-﻿using Jarvis.Framework.Tests.EngineTests;
+﻿using Castle.Windsor;
+using Jarvis.Framework.Kernel.MultitenantSupport;
+using Jarvis.Framework.Kernel.MultitenantSupport.Exceptions;
+using Jarvis.Framework.Shared.MultitenantSupport;
+using Jarvis.Framework.Tests.EngineTests;
+using NUnit.Framework;
 
 namespace Jarvis.Framework.Tests.MultitenantSupportTests
 {

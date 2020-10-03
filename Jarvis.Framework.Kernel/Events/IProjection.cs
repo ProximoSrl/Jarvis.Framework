@@ -1,7 +1,4 @@
-﻿
-/* Unmerged change from project 'Jarvis.Framework.Kernel (netstandard2.0)'
-Before:
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,19 +6,6 @@ using Fasterflect;
 using Jarvis.Framework.Kernel.ProjectionEngine;
 using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.MultitenantSupport;
-After:
-using Fasterflect;
-using Jarvis.Framework.Kernel.ProjectionEngine;
-using Jarvis.Framework.Shared.Events;
-using Jarvis.Framework.Shared.MultitenantSupport;
-using System;
-using System.ProjectionEngine;
-using Jarvis.Framework.Shared.Generic;
-using System.Linq;
-*/
-using Jarvis.Framework.Kernel.Collections;
-using System.Collections.MultitenantSupport;
-using System;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.Events
@@ -48,7 +32,7 @@ namespace Jarvis.Framework.Kernel.Events
         /// Gives me the priority of the Projection. at Higher numbers correspond
         /// higher priority
         /// </summary>
-        Int32 Priority { get; }
+        Int32 Priority { get;  }
 
         ProjectionInfoAttribute Info { get; }
 

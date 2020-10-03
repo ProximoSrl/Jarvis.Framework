@@ -1,4 +1,14 @@
-﻿namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
+﻿using NUnit.Framework;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using Jarvis.Framework.Kernel.Events;
+using Jarvis.Framework.Shared.IdentitySupport;
+using Jarvis.Framework.Shared.Helpers;
+
+namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
     [TestFixture("2")]
     public class ProjectionEnginePollWithNotInitializedEngine : ProjectionEngineBasicTestBase

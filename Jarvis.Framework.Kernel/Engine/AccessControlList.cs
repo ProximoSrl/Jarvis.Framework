@@ -1,6 +1,6 @@
-﻿using Jarvis.Framework.Shared.Claims;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
+using Jarvis.Framework.Shared.Claims;
 
 namespace Jarvis.Framework.Kernel.Engine
 {
@@ -76,7 +76,7 @@ namespace Jarvis.Framework.Kernel.Engine
                         }
                     }
 
-                    if (allowed)
+                    if (allowed) 
                         return GrantType.Allowed;
 
                     if (weakGrant != GrantType.Inherited)

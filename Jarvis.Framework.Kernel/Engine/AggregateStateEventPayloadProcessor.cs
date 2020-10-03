@@ -3,15 +3,15 @@ using NStore.Core.Processing;
 
 namespace Jarvis.Framework.Kernel.Engine
 {
-    public sealed class AggregateStateEventPayloadProcessor : IPayloadProcessor
-    {
-        public static readonly IPayloadProcessor Instance = new AggregateStateEventPayloadProcessor();
+	public sealed class AggregateStateEventPayloadProcessor : IPayloadProcessor
+	{
+		public static readonly IPayloadProcessor Instance = new AggregateStateEventPayloadProcessor();
 
-        private AggregateStateEventPayloadProcessor()
-        {
-        }
+		private AggregateStateEventPayloadProcessor()
+		{
+		}
 
-        public object Process(object state, object payload)
+		public object Process(object state, object payload)
         {
             InnerApplyPayload(state, payload);
 

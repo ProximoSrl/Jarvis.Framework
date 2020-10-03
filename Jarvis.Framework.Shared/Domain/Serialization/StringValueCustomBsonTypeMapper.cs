@@ -1,6 +1,6 @@
-﻿using MongoDB.Bson;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using MongoDB.Bson;
 
 namespace Jarvis.Framework.Shared.Domain.Serialization
 {

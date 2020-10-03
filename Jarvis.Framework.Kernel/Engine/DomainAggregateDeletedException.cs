@@ -1,6 +1,6 @@
-﻿using Jarvis.Framework.Shared.Exceptions;
+﻿using System;
+using Jarvis.Framework.Shared.Exceptions;
 using Jarvis.Framework.Shared.IdentitySupport;
-using System;
 
 namespace Jarvis.Framework.Kernel.Engine
 {

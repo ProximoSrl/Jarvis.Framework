@@ -1,4 +1,6 @@
-﻿namespace Jarvis.Framework.Shared.IdentitySupport
+﻿using System;
+
+namespace Jarvis.Framework.Shared.IdentitySupport
 {
     public interface IIdentityGenerator
     {

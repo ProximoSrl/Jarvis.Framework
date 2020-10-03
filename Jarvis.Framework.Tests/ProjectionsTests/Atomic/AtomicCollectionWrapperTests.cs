@@ -1,5 +1,19 @@
-﻿using Jarvis.Framework.Tests.EngineTests;
+﻿using Castle.Facilities.TypedFactory;
+using Castle.MicroKernel.Registration;
+using Castle.Windsor;
+using Jarvis.Framework.Kernel.ProjectionEngine.Atomic;
+using Jarvis.Framework.Kernel.ProjectionEngine.Client;
+using Jarvis.Framework.Shared.Events;
+using Jarvis.Framework.Shared.Helpers;
+using Jarvis.Framework.Shared.IdentitySupport;
+using Jarvis.Framework.Shared.ReadModel.Atomic;
+using Jarvis.Framework.Tests.EngineTests;
 using Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support;
+using MongoDB.Driver;
+using NStore.Core.Persistence;
+using NUnit.Framework;
+using System;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 {

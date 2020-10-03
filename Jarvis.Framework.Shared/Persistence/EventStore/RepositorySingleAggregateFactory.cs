@@ -1,11 +1,11 @@
 #if NETSTANDARD
+using System;
+using System.Collections.Generic;
+using System.Threading;
 using Jarvis.Framework.Shared.IdentitySupport;
 using Metrics;
 using Microsoft.Extensions.Caching.Memory;
 using NStore.Domain;
-using System;
-using System.Collections.Generic;
-using System.Threading;
 
 namespace Jarvis.Framework.Shared.Persistence.EventStore
 {
@@ -159,23 +159,23 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
 
 #else
 
-using Jarvis.Framework.Shared.IdentitySupport;
-using Metrics;
-using NStore.Domain;
 using System;
 using System.Runtime.Caching;
 using System.Threading;
+using Jarvis.Framework.Shared.IdentitySupport;
+using Metrics;
+using NStore.Domain;
 
 namespace Jarvis.Framework.Shared.Persistence.EventStore
 {
-    public class AggregateCachedRepositoryFactory : IAggregateCachedRepositoryFactory
+	public class AggregateCachedRepositoryFactory : IAggregateCachedRepositoryFactory
     {
         private static readonly MemoryCache Cache = new MemoryCache("RepositorySingleAggregateFactory");
 
         private static readonly Counter CacheHitCounter = Metric.Counter("RepositorySingleEntityCacheHits", Unit.Calls);
         private static readonly Counter CacheMissCounter = Metric.Counter("RepositorySingleEntityCacheMisses", Unit.Calls);
 
-        readonly CacheItemPolicy _cachePolicy;
+		readonly CacheItemPolicy _cachePolicy;
 
         private class CacheEntry
         {
@@ -192,10 +192,10 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
         private void RemovedCallback(CacheEntryRemovedArguments arguments)
         {
             var cacheEntry = arguments.CacheItem.Value as CacheEntry;
-            if (cacheEntry != null && cacheEntry.RepositoryEx != null && !cacheEntry.InUse)
-            {
-                _repositoryFactory.Release(cacheEntry.RepositoryEx);
-            }
+			if (cacheEntry != null && cacheEntry.RepositoryEx != null && !cacheEntry.InUse)
+			{
+				_repositoryFactory.Release(cacheEntry.RepositoryEx);
+			}
         }
 
         private readonly IRepositoryFactory _repositoryFactory;
@@ -213,19 +213,19 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
         /// it does not prevent two thread to execute at the same moment on the same aggregateId.
         /// </param>
         public AggregateCachedRepositoryFactory(
-            IRepositoryFactory repositoryFactory,
+			IRepositoryFactory repositoryFactory,
             Boolean cacheDisabled = false)
         {
             _repositoryFactory = repositoryFactory;
             _cacheDisabled = cacheDisabled;
-            _cachePolicy = new CacheItemPolicy()
-            {
-                SlidingExpiration = TimeSpan.FromMinutes(10),
-                RemovedCallback = RemovedCallback
-            };
-        }
+			_cachePolicy = new CacheItemPolicy()
+			{
+				SlidingExpiration = TimeSpan.FromMinutes(10),
+				RemovedCallback = RemovedCallback
+			};
+		}
 
-        private Int32 _isGettingCache = 0;
+		private Int32 _isGettingCache = 0;
 
         IAggregateCachedRepository<TAggregate> IAggregateCachedRepositoryFactory.Create<TAggregate>(IIdentity id)
         {
@@ -299,8 +299,8 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
 
         private void OnException(String id, IRepository repositoryEx)
         {
-            //remove the repository from cache, this will really dispose wrapped repository
-            _repositoryFactory.Release(repositoryEx);
+			//remove the repository from cache, this will really dispose wrapped repository
+			_repositoryFactory.Release(repositoryEx);
             Cache.Remove(id);
         }
 

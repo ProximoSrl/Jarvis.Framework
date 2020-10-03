@@ -1,3 +1,7 @@
+using Jarvis.Framework.Shared.Domain;
+using Jarvis.Framework.Shared.Domain.Serialization;
+using MongoDB.Bson.Serialization.Attributes;
+
 namespace Jarvis.Framework.Tests.DomainTests
 {
     [BsonSerializer(typeof(TypedStringValueBsonSerializer<TypedStringValueLowerCase>))]

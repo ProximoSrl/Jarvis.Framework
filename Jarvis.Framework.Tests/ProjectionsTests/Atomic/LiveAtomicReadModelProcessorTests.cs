@@ -1,4 +1,9 @@
-﻿using Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support;
+﻿using Jarvis.Framework.Shared.Events;
+using Jarvis.Framework.Shared.ReadModel.Atomic;
+using Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support;
+using NUnit.Framework;
+using System;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 {
@@ -123,7 +128,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             var c3 = await GenerateTouchedEvent().ConfigureAwait(false);
 
             //Arrange: manually process some events in readmodel
-            var firstEvent = (DomainEvent)c3.Events[0];
+            var firstEvent = (DomainEvent) c3.Events[0];
             var sut = _container.Resolve<ILiveAtomicReadModelProcessor>();
             var rm = new SimpleTestAtomicReadModel(firstEvent.AggregateId);
 

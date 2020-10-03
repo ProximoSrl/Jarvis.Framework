@@ -1,4 +1,10 @@
-﻿namespace Jarvis.Framework.Tests.Kernel.Commands
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Jarvis.Framework.Tests.Kernel.Commands
 {
     class InProcessCommandBusTests
     {

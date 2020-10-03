@@ -1,6 +1,6 @@
+using System;
 using MongoDB.Bson.Serialization.Attributes;
 using Newtonsoft.Json;
-using System;
 using System.Collections.Concurrent;
 
 namespace Jarvis.Framework.Shared.IdentitySupport

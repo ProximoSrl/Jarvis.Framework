@@ -1,3 +1,8 @@
+using Jarvis.Framework.Kernel.Events;
+using Jarvis.Framework.Kernel.ProjectionEngine;
+using MongoDB.Driver;
+using System.Threading.Tasks;
+
 namespace Jarvis.Framework.Tests.ProjectionsTests
 {
     [ProjectionInfo("MyProjection")]

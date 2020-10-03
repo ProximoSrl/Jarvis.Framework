@@ -1,4 +1,16 @@
-﻿namespace Jarvis.Framework.Tests.ProjectionEngineTests
+﻿using Jarvis.Framework.Kernel.Events;
+using Jarvis.Framework.Kernel.ProjectionEngine;
+using Jarvis.Framework.Kernel.ProjectionEngine.Client;
+using Jarvis.Framework.Shared.Helpers;
+using Jarvis.Framework.Shared.Messages;
+using MongoDB.Driver;
+using NSubstitute;
+using NUnit.Framework;
+using System;
+using System.Configuration;
+using System.Linq;
+
+namespace Jarvis.Framework.Tests.ProjectionEngineTests
 {
     /// <summary>
     /// VErify both the <see cref="ConcurrentCheckpointTracker"/> and the <see cref="SlotStatusManager"/>

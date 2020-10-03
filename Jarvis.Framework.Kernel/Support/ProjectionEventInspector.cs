@@ -4,6 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.Support
 {
@@ -48,27 +50,27 @@ namespace Jarvis.Framework.Kernel.Support
                 .Where(p => p.Length == 1 && typeof(DomainEvent).IsAssignableFrom(p[0].ParameterType));
             foreach (var parameter in handlingMethods)
             {
-                foreach (var eventHandled in ScanForDomainEvent(parameter))
+                foreach (var eventHandled in  ScanForDomainEvent(parameter))
                 {
                     retValue.Add(eventHandled);
                     EventHandled.Add(eventHandled);
                 }
             }
 
-            //Now scan the IHandleMessage
-            var typesExplicitlyHandled = type
-                .GetInterfaces()
-                .Where(i => i.IsGenericType && typeof(IEventHandler<>) == i.GetGenericTypeDefinition())
-                .Select(i => i.GetGenericArguments()[0])
-                .Where(i => !i.IsAbstract);
+			//Now scan the IHandleMessage
+			var typesExplicitlyHandled = type
+				.GetInterfaces()
+				.Where(i => i.IsGenericType && typeof(IEventHandler<>) == i.GetGenericTypeDefinition())
+				.Select(i => i.GetGenericArguments()[0])
+				.Where(i => !i.IsAbstract);
 
-            foreach (var typeExplicitlyHandled in typesExplicitlyHandled)
-            {
+			foreach (var typeExplicitlyHandled in typesExplicitlyHandled)
+			{
                 retValue.Add(typeExplicitlyHandled);
                 EventHandled.Add(typeExplicitlyHandled);
-            }
+			}
             return retValue;
-        }
+		}
 
         private IEnumerable<Type> ScanForDomainEvent(ParameterInfo[] parameter)
         {

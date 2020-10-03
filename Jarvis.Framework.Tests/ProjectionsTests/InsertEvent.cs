@@ -1,3 +1,6 @@
+using Jarvis.Framework.Shared.Events;
+using Jarvis.Framework.TestHelpers;
+
 namespace Jarvis.Framework.Tests.ProjectionsTests
 {
     public class InsertEvent : DomainEvent

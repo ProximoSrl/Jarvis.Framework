@@ -1,11 +1,11 @@
 ﻿using Castle.Core.Logging;
-using Jarvis.Framework.Shared.Support;
-using NStore.Core.Logging;
 using System;
+using NStore.Core.Logging;
+using Jarvis.Framework.Shared.Support;
 
 namespace Jarvis.Framework.Shared.Logging
 {
-    public class NStoreCastleLogger : INStoreLogger
+	public class NStoreCastleLogger : INStoreLogger
     {
         private readonly ILogger _logger;
 
@@ -20,12 +20,12 @@ namespace Jarvis.Framework.Shared.Logging
 
         public bool IsInformationEnabled => _logger.IsInfoEnabled;
 
-        public IDisposable BeginScope<TState>(TState state)
-        {
-            return DisposableAction.Empty;
-        }
+		public IDisposable BeginScope<TState>(TState state)
+		{
+			return DisposableAction.Empty;
+		}
 
-        public void LogDebug(string message, params object[] args)
+		public void LogDebug(string message, params object[] args)
         {
             try
             {

@@ -1,4 +1,5 @@
-﻿using Jarvis.Framework.Shared.Support;
+﻿using Jarvis.Framework.Shared.Logging;
+using Jarvis.Framework.Shared.Support;
 using Metrics;
 using Metrics.Core;
 using MongoDB.Driver;

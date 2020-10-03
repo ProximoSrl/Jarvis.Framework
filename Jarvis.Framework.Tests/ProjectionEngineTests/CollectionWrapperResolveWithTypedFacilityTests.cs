@@ -1,4 +1,19 @@
-﻿namespace Jarvis.Framework.Tests.ProjectionEngineTests
+﻿using Castle.Facilities.TypedFactory;
+using Castle.MicroKernel;
+using Castle.MicroKernel.Registration;
+using Castle.Windsor;
+using Jarvis.Framework.Kernel.ProjectionEngine;
+using Jarvis.Framework.Shared.Helpers;
+using Jarvis.Framework.Shared.Messages;
+using Jarvis.Framework.Tests.SharedTests.IdentitySupport;
+using NUnit.Framework;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Jarvis.Framework.Tests.ProjectionEngineTests
 {
     [TestFixture]
     public class CollectionWrapperResolveWithTypedFacilityTests

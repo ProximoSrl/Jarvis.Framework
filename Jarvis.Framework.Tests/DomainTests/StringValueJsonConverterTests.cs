@@ -1,4 +1,8 @@
-﻿namespace Jarvis.Framework.Tests.DomainTests
+﻿using Jarvis.Framework.Shared.Domain.Serialization;
+using Newtonsoft.Json;
+using NUnit.Framework;
+
+namespace Jarvis.Framework.Tests.DomainTests
 {
     [TestFixture]
     public class StringValueJsonConverterTests
@@ -38,7 +42,7 @@
         [Test]
         public void should_deserialize_lowercase()
         {
-            var instance = JsonConvert.DeserializeObject<ClassWithTypedStringValueLowerCase>("{ Value:\"abc_123\"}", _settings);
+            var instance = JsonConvert.DeserializeObject<ClassWithTypedStringValueLowerCase>("{ Value:\"abc_123\"}",_settings);
             Assert.AreEqual("abc_123", (string)instance.Value);
         }
 
@@ -71,6 +75,6 @@
             var instance = JsonConvert.DeserializeObject<ClassWithTypedStringValueLowerCase>("{ AnId:null}", _settings);
             Assert.IsNull(instance.Value);
         }
-
+    
     }
 }

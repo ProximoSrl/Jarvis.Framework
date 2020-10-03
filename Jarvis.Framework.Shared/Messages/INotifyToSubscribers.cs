@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using Jarvis.Framework.Shared.Helpers;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.Messages
 {

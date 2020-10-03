@@ -1,6 +1,34 @@
-﻿using Jarvis.Framework.Tests.EngineTests;
+﻿using Castle.Core.Logging;
+using Castle.Facilities.TypedFactory;
+using Castle.MicroKernel.Registration;
+using Castle.MicroKernel.Resolvers.SpecializedResolvers;
+using Castle.Windsor;
+using Jarvis.Framework.Kernel.ProjectionEngine.Atomic;
+using Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support;
+using Jarvis.Framework.Kernel.ProjectionEngine.Client;
+using Jarvis.Framework.Shared.Events;
+using Jarvis.Framework.Shared.Helpers;
+using Jarvis.Framework.Shared.IdentitySupport;
+using Jarvis.Framework.Shared.IdentitySupport.Serialization;
+using Jarvis.Framework.Shared.Logging;
+using Jarvis.Framework.Shared.Messages;
+using Jarvis.Framework.Shared.ReadModel;
+using Jarvis.Framework.Shared.ReadModel.Atomic;
+using Jarvis.Framework.TestHelpers;
+using Jarvis.Framework.Tests.EngineTests;
 using Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support;
 using Jarvis.Framework.Tests.Support;
+using MongoDB.Driver;
+using NStore.Core.InMemory;
+using NStore.Core.Logging;
+using NStore.Core.Persistence;
+using NStore.Domain;
+using NUnit.Framework;
+using System;
+using System.Collections.Generic;
+using System.Configuration;
+using System.Threading;
+using System.Threading.Tasks;
 using static Jarvis.Framework.Tests.DomainTests.DomainEventIdentityBsonSerializationTests;
 
 namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic

@@ -1,6 +1,6 @@
-﻿using Jarvis.Framework.Shared.IdentitySupport;
+﻿using System;
+using Jarvis.Framework.Shared.IdentitySupport;
 using NStore.Domain;
-using System;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.Persistence.EventStore
@@ -16,14 +16,14 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
 #pragma warning restore S3881 // "IDisposable" should be implemented correctly
     {
         private readonly IRepository _wrappedRepository;
-        private readonly IRepositoryFactory _repositoryFactory;
+		private readonly IRepositoryFactory _repositoryFactory;
 
         public SingleUseAggregateCachedRepository(
             IRepositoryFactory repositoryFactory,
             IIdentity id)
         {
-            _repositoryFactory = repositoryFactory;
-            _wrappedRepository = _repositoryFactory.Create();
+			_repositoryFactory = repositoryFactory;
+			_wrappedRepository = _repositoryFactory.Create();
             Aggregate = _wrappedRepository.GetByIdAsync<TAggregate>(id.AsString()).Result;
         }
 
@@ -35,7 +35,7 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
         /// </summary>
         public void Dispose()
         {
-            _repositoryFactory.Release(_wrappedRepository);
+			_repositoryFactory.Release(_wrappedRepository);
         }
 
         /// <summary>

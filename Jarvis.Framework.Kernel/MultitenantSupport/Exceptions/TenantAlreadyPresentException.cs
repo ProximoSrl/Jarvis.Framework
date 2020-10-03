@@ -1,7 +1,7 @@
-﻿using Jarvis.Framework.Shared.MultitenantSupport;
-using System;
-using System.Runtime.Serialization;
+﻿using System;
+using Jarvis.Framework.Shared.MultitenantSupport;
 using System.Security.Permissions;
+using System.Runtime.Serialization;
 
 namespace Jarvis.Framework.Kernel.MultitenantSupport.Exceptions
 {

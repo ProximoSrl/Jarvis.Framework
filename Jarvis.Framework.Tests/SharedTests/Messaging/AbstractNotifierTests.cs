@@ -1,4 +1,18 @@
-﻿using Jarvis.Framework.Tests.Support;
+﻿using Castle.MicroKernel;
+using Castle.MicroKernel.Registration;
+using Castle.Windsor;
+using Jarvis.Framework.Shared.Helpers;
+using Jarvis.Framework.Shared.Messaging;
+using Jarvis.Framework.TestHelpers;
+using Jarvis.Framework.Tests.Support;
+using MongoDB.Bson.IO;
+using MongoDB.Driver;
+using NUnit.Framework;
+using NUnit.Framework.Internal;
+using System;
+using System.Collections.Generic;
+using System.Configuration;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.SharedTests.Messaging
 {
@@ -115,7 +129,7 @@ namespace Jarvis.Framework.Tests.SharedTests.Messaging
             Assert.That(callCount, Is.EqualTo(3), "MEssage not dispatched");
         }
 
-        private async Task Send(object obj)
+        private async Task Send(object obj) 
         {
             if (_notifierToTest == "abstract")
             {
@@ -125,7 +139,7 @@ namespace Jarvis.Framework.Tests.SharedTests.Messaging
             {
                 var notifier = ((MongoDbNotifierManager)_sut);
                 await notifier.Publish(obj);
-                while (!notifier.ForcePoll())
+                while (!notifier.ForcePoll()) 
                 {
                     Console.Write("Poll skipped");
                 }

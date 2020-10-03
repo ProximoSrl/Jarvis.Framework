@@ -1,4 +1,7 @@
-﻿namespace Jarvis.Framework.Tests.EngineTests.SagaTests
+﻿using Jarvis.Framework.Shared.IdentitySupport;
+using Newtonsoft.Json;
+
+namespace Jarvis.Framework.Tests.EngineTests.SagaTests
 {
     public class OrderId : EventStoreIdentity
     {

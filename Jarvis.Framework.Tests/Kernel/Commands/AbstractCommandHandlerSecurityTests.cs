@@ -1,4 +1,12 @@
-﻿#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+﻿using Jarvis.Framework.Kernel.Commands;
+using Jarvis.Framework.Shared.Claims;
+using Jarvis.Framework.Shared.Commands;
+using NSubstitute;
+using NUnit.Framework;
+using System;
+using System.Security;
+using System.Threading.Tasks;
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
 
 namespace Jarvis.Framework.Tests.Kernel.Commands
 {

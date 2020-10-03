@@ -1,7 +1,7 @@
-using Jarvis.Framework.Shared.Domain;
-using Jarvis.Framework.Shared.Domain.Serialization;
 using System;
 using System.ComponentModel;
+using Jarvis.Framework.Shared.Domain;
+using Jarvis.Framework.Shared.Domain.Serialization;
 
 namespace Jarvis.Framework.Shared.MultitenantSupport
 {
