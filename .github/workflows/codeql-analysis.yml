@@ -68,7 +68,7 @@ jobs:
         dotnet-version: 3.1.402
 
     - run: |
-        dotnet restore Jarvis.Framework.sln --configfile nuget.config
+        dotnet restore Jarvis.Framework.sln --configfile ./nuget.config
         dotnet build Jarvis.Framework.sln
         
     #- run: |
