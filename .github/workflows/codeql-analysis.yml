@@ -8,7 +8,7 @@ name: "CodeQL"
 on: 
   workflow_dispatch:
   push:
-    branches: [develop, cscanningok]
+    branches: [develop, hotfix/*, master, release/*]
   pull_request:
     # The branches below must be a subset of the branches above
     branches: [develop, master]
