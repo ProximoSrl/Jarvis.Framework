@@ -1,15 +1,9 @@
-﻿using Jarvis.Framework.Shared.Events;
+﻿using Jarvis.Framework.Kernel.ProjectionEngine.Client;
+using Jarvis.Framework.Shared.Events;
 using MongoDB.Bson;
-using MongoDB.Bson.Serialization;
+using MongoDB.Bson.Serialization.Attributes;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Fasterflect;
-using Jarvis.Framework.Shared.Helpers;
-using MongoDB.Bson.Serialization.Attributes;
-using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 {

@@ -1,7 +1,7 @@
-﻿using System.Collections.Concurrent;
-using Castle.MicroKernel;
+﻿using Castle.MicroKernel;
 using Fasterflect;
 using Jarvis.Framework.Shared.Events;
+using System.Collections.Concurrent;
 
 namespace Jarvis.Framework.Kernel.Events
 {
@@ -19,7 +19,7 @@ namespace Jarvis.Framework.Kernel.Events
         {
             var eventType = e.GetType();
             var serviceType = typeof(IEventHandler<>).MakeGenericType(eventType);
-//            using (Kernel.BeginScope())
+            //            using (Kernel.BeginScope())
             {
                 var services = Kernel.ResolveAll(serviceType);
                 foreach (var service in services)

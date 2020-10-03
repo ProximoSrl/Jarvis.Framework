@@ -32,7 +32,7 @@ namespace Jarvis.Framework.Kernel.Engine
                 if (ctor == null)
                     throw new MissingDefaultCtorException(aggregateType);
 
-                return (IAggregate) ctor.CreateInstance();
+                return (IAggregate)ctor.CreateInstance();
             }
         }
     }

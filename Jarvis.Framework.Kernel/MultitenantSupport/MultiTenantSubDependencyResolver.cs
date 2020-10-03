@@ -1,14 +1,14 @@
-using System;
 using Castle.Core;
 using Castle.MicroKernel;
 using Castle.MicroKernel.Context;
 using Castle.MicroKernel.Resolvers;
 using Jarvis.Framework.Shared.MultitenantSupport;
 using NStore.Domain;
+using System;
 
 namespace Jarvis.Framework.Kernel.MultitenantSupport
 {
-	public class MultiTenantSubDependencyResolver : ISubDependencyResolver
+    public class MultiTenantSubDependencyResolver : ISubDependencyResolver
     {
         private TenantManager _tenantManager;
         private readonly IKernel _kernel;

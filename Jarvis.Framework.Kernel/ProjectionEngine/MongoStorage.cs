@@ -1,14 +1,13 @@
+using Castle.Core.Logging;
+using Jarvis.Framework.Shared.Helpers;
+using Jarvis.Framework.Shared.ReadModel;
+using MongoDB.Driver;
+using MongoDB.Driver.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using Jarvis.Framework.Shared.ReadModel;
-using MongoDB.Bson;
-using MongoDB.Driver;
-using Jarvis.Framework.Shared.Helpers;
-using MongoDB.Driver.Linq;
 using System.Threading.Tasks;
-using Castle.Core.Logging;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
 {

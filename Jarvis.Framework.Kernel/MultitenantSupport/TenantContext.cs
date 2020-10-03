@@ -1,6 +1,5 @@
 ﻿using Jarvis.Framework.Shared.MultitenantSupport;
 using System;
-using System.Threading;
 
 #if NETFULL
 using System.Runtime.Remoting.Messaging;

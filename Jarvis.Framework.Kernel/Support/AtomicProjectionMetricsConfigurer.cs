@@ -60,7 +60,7 @@ namespace Jarvis.Framework.Kernel.Support
 
         private IMongoCollection<AbstractAtomicReadModel> GetCollection(string readmodelName)
         {
-            if (!_collectionsCache.TryGetValue(readmodelName, out var collection) )
+            if (!_collectionsCache.TryGetValue(readmodelName, out var collection))
             {
                 collection = _readmodelDb.GetCollection<AbstractAtomicReadModel>(readmodelName);
                 _collectionsCache.TryAdd(readmodelName, collection);
