@@ -7,12 +7,10 @@ name: "CodeQL"
 
 on:
   push:
-    branches: [master]
+    branches: [develop]
   pull_request:
     # The branches below must be a subset of the branches above
-    branches: [master]
-  schedule:
-    - cron: '0 15 * * 6'
+    branches: [develop, master]
 
 jobs:
   analyze:
@@ -50,12 +48,7 @@ jobs:
         # By default, queries listed here will override any specified in a config file. 
         # Prefix the list here with "+" to use these queries and those in the config file.
         # queries: ./path/to/local/query, your-org/your-repo/queries@main
-
-    # Autobuild attempts to build any compiled languages  (C/C++, C#, or Java).
-    # If this step fails, then you should remove it and run the build manually (see below)
-    - name: Autobuild
-      uses: github/codeql-action/autobuild@v1
-
+          key:  
     # ℹ️ Command-line programs to run using the OS shell.
     # 📚 https://git.io/JvXDl
 
@@ -63,6 +56,16 @@ jobs:
     #    and modify them (or add more) to build your code if your project
     #    uses a compiled language
 
+    # Now build the code with yourt standard workflow
+    - name: Setup .NET Core SDK
+      uses: actions/setup-dotnet@v1.7.2
+      with:
+        dotnet-version: 3.x
+
+    - run: |
+        dotnet restore Jarvis.Framework.sln --configfile nuget.config
+        dotnet build Jarvis.Framework.sln
+        
     #- run: |
     #   make bootstrap
     #   make release
