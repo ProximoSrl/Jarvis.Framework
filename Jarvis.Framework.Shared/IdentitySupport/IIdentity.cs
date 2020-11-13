@@ -1,3 +1,5 @@
+using System;
+
 namespace Jarvis.Framework.Shared.IdentitySupport
 {
     // https://github.com/beingtheworst/btw-samples/blob/master/E012-now-serving-dsl/sample-csharp/E012.Domain/AbstractIdentity.cs
@@ -8,7 +10,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
     /// on larger projects. Idea by Jeremie, implementation by Rinat
     /// 
     /// </summary>
-    public interface IIdentity
+    public interface IIdentity : IEquatable<IIdentity>
     {
         /// <summary>
         /// Gets the id, converted to a string.

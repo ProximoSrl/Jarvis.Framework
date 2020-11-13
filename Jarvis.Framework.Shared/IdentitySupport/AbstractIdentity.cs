@@ -93,6 +93,11 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             return false;
         }
 
+        public bool Equals(IIdentity other)
+        {
+            return this.GetType() == other.GetType() && this.AsString() == other.AsString();
+        }
+
         public static bool operator ==(AbstractIdentity<TKey> left, AbstractIdentity<TKey> right)
         {
             return Equals(left, right);
