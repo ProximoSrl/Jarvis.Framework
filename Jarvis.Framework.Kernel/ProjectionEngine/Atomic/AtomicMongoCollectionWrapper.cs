@@ -112,7 +112,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             var rm = await FindOneByIdAsync(id).ConfigureAwait(false);
             if (rm == null)
             {
-                return null;
+                //Try to project a new readmodel
+                rm = await _liveAtomicReadModelProcessor.ProcessAsync<TModel>(id, Int64.MaxValue).ConfigureAwait(false);
+                if (rm.AggregateVersion == 0)
+                {
+                    //we have an aggregate with no commit, just return null.
+                    return null;
+                }
+                return rm; //Return new projected readmodel
             }
             await _liveAtomicReadModelProcessor.CatchupAsync(rm).ConfigureAwait(false);
             return rm;

@@ -321,6 +321,37 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         }
 
         [Test]
+        public async Task Ability_to_catchup_events_when_nothing_was_still_projected()
+        {
+            //Arrange create the readmodel, and process some events, then persist those events.
+            var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
+            GenerateCreatedEvent(false);
+            var lastEvent = GenerateTouchedEvent(false);
+
+            //Check
+            //first of all verify that standard read does not read last event.
+            var reloaded = await _sut.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
+            Assert.That(reloaded, Is.Null);
+
+            //now we need to load with catchup
+            var reloadedWithCatchup = await _sut.FindOneByIdAndCatchupAsync(rm.Id).ConfigureAwait(false);
+
+            //Assert
+            Assert.That(reloadedWithCatchup, Is.Not.Null);
+            Assert.That(reloadedWithCatchup.AggregateVersion, Is.EqualTo(lastEvent.AggregateVersion));
+            Assert.That(reloadedWithCatchup.TouchCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public async Task Ability_to_catchup_events_return_null_if_aggregate_is_not_present()
+        {
+            var reloadedWithCatchup = await _sut.FindOneByIdAndCatchupAsync(new SampleAggregateId(123456789)).ConfigureAwait(false);
+
+            //Assert
+            Assert.That(reloadedWithCatchup, Is.Null);
+        }
+
+        [Test]
         public void Before_and_after_called()
         {
             var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
