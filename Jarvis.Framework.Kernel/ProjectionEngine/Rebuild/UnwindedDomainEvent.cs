@@ -1,15 +1,10 @@
-﻿using Jarvis.Framework.Shared.Events;
+﻿using Jarvis.Framework.Kernel.Engine;
+using Jarvis.Framework.Kernel.ProjectionEngine.Client;
+using Jarvis.Framework.Shared.Events;
 using MongoDB.Bson;
-using MongoDB.Bson.Serialization;
+using MongoDB.Bson.Serialization.Attributes;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Fasterflect;
-using Jarvis.Framework.Shared.Helpers;
-using MongoDB.Bson.Serialization.Attributes;
-using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 {
@@ -70,12 +65,15 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
         /// <returns></returns>
         public Object GetEvent()
         {
-            EnhanceEvent();
+            EnhanceAndUpcastEvent();
 
             return Event;
         }
 
-        public void EnhanceEvent()
+        /// <summary>
+        /// Enchance and upcast the event.
+        /// </summary>
+        public void EnhanceAndUpcastEvent()
         {
             if (_enhanced == false && Event is DomainEvent)
             {
@@ -90,6 +88,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                 domainEvent.Version = Version;
                 domainEvent.Context = Context;
                 domainEvent.CheckpointToken = CheckpointToken;
+
+                Event = StaticUpcaster.UpcastEvent(domainEvent);
             }
         }
     }

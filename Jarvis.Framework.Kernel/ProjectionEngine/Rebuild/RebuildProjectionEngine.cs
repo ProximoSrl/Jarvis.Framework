@@ -290,7 +290,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 
                         if (Logger.IsDebugEnabled) Logger.DebugFormat("TPL queued event {0}/{1} for bucket {2}", eventUnwinded.CheckpointToken, eventUnwinded.EventSequence, bucketInfo);
                         //rehydrate the event before dispatching
-                        eventUnwinded.EnhanceEvent();
+                        eventUnwinded.EnhanceAndUpcastEvent();
                         await buffer.SendAsync(eventUnwinded).ConfigureAwait(false);
 
                         dispatchedEvents++;
