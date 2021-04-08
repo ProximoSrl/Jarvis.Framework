@@ -3,6 +3,21 @@ J.A.R.V.I.S. Framework - Proximo srl (c)
 
 # Version 5
 
+# 5.3.4
+
+- Added Upcasting logic (we had everything in place but not the infrastructure for upcasting)
+
+# 5.3.3
+
+- No change, needed to bump the verison for a problem with nuget packages.
+
+# 5.3.2
+
+- AtomicReadmodel: Fix FindOneAndCatchup, that did not project anything if the first event was not already projected by the engine.
+
+# 5.3.1
+
+- Fixed builds
 
 #5.3.0
 
