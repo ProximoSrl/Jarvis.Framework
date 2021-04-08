@@ -1,4 +1,5 @@
-﻿using Jarvis.Framework.Kernel.Engine;
+﻿using Fasterflect;
+using Jarvis.Framework.Kernel.Engine;
 using Jarvis.Framework.Shared.Messages;
 using Jarvis.Framework.Shared.Store;
 using Jarvis.Framework.Shared.Support;
@@ -22,7 +23,7 @@ namespace Jarvis.Framework.Kernel.Support
         {
             var guidConversion = new ConventionPack();
             guidConversion.Add(new GuidAsStringRepresentationConvention(protectedAssemblies.ToList()));
-            ConventionRegistry.Register("guidstring", guidConversion, t => true);
+            ConventionRegistry.Register("guidstring", guidConversion, _ => true);
 
             //Register everything inside the NStore that need to have custom persistence rule.
             if (!BsonClassMap.IsClassMapRegistered(typeof(Changeset)))
@@ -37,18 +38,12 @@ namespace Jarvis.Framework.Kernel.Support
 
             if (!BsonClassMap.IsClassMapRegistered(typeof(SnapshotInfo)))
             {
-                BsonClassMap.RegisterClassMap<SnapshotInfo>(map =>
-                {
-                    map.AutoMap();
-                });
+                BsonClassMap.RegisterClassMap<SnapshotInfo>(map => map.AutoMap());
             }
 
             if (!BsonClassMap.IsClassMapRegistered(typeof(MessageReaction)))
             {
-                BsonClassMap.RegisterClassMap<MessageReaction>(map =>
-                {
-                    map.AutoMap();
-                });
+                BsonClassMap.RegisterClassMap<MessageReaction>(map => map.AutoMap());
             }
         }
 
@@ -120,42 +115,37 @@ namespace Jarvis.Framework.Kernel.Support
 
         #endregion
 
-        private static void RegisterTypes(IEnumerable<Type> types, bool useAlias = true)
+        private static void RegisterType(Type t, bool useAlias = true)
         {
             if (useAlias)
             {
-                foreach (var t in types)
+                if (!BsonClassMap.IsClassMapRegistered(t))
                 {
-                    if (!BsonClassMap.IsClassMapRegistered(t))
-                    {
-                        BsonClassMap.RegisterClassMap(new AliasClassMap(t));
-                    }
+                    BsonClassMap.RegisterClassMap(new AliasClassMap(t));
                 }
             }
             else
             {
-                foreach (var t in types)
-                {
-                    BsonClassMap.LookupClassMap(t);
-                }
+                BsonClassMap.LookupClassMap(t);
             }
 
             //now we need to map all possible messages for saga ScheduledAt
             var scheduledAtGeneric = typeof(ScheduledAt<>);
-            RegisterAllInstanceOfGenericType(types, scheduledAtGeneric);
+            RegisterAllInstanceOfGenericType(t, scheduledAtGeneric);
             var messageAndTimeoutGeneric = typeof(MessageAndTimeout<>);
-            RegisterAllInstanceOfGenericType(types, messageAndTimeoutGeneric);
+            RegisterAllInstanceOfGenericType(t, messageAndTimeoutGeneric);
         }
 
-        private static void RegisterAllInstanceOfGenericType(IEnumerable<Type> types, Type genericType)
+        private static void RegisterAllInstanceOfGenericType(Type t, Type genericType)
         {
-            foreach (var t in types)
+            var scheduledAt = genericType.MakeGenericType(t);
+            if (!BsonClassMap.IsClassMapRegistered(scheduledAt))
             {
-                var scheduledAt = genericType.MakeGenericType(t);
-                if (!BsonClassMap.IsClassMapRegistered(scheduledAt))
-                    BsonClassMap.RegisterClassMap(new GenericClassMap(scheduledAt));
+                BsonClassMap.RegisterClassMap(new GenericClassMap(scheduledAt));
             }
         }
+
+        private static HashSet<Assembly> _alreadyRegisterdAssemblies = new HashSet<Assembly>();
 
         /// <summary>
         /// Scan the assembly to find all types that needs special registration.
@@ -163,73 +153,79 @@ namespace Jarvis.Framework.Kernel.Support
         /// <param name="assembly"></param>
         public static void RegisterAssembly(Assembly assembly)
         {
-            RegisterMessages(assembly);
-            RegisterAggregateSnapshot(assembly);
-            RegisterPlainObject(assembly);
-            RegisterAllRegistrator(assembly);
+            if (!_alreadyRegisterdAssemblies.Contains(assembly))
+            {
+                var assemblyTypes = assembly.GetTypes();
+                foreach (var type in assemblyTypes)
+                {
+                    RegisterUpcasters(type);
+                    RegisterMessages(type);
+                    RegisterAggregateSnapshot(type);
+                    RegisterPlainObject(type);
+                    RegisterRegistrator(type);
+                }
+
+                _alreadyRegisterdAssemblies.Add(assembly);
+            }
         }
 
-        private static void RegisterAllRegistrator(Assembly assembly)
+        private static void RegisterRegistrator(Type type)
         {
-            var allRegistrators = assembly.GetTypes().Where(x =>
-                    x.IsClass
-                    && !x.IsAbstract
-                    && typeof(IMongoMappingRegistrator).IsAssignableFrom(x)
-               ).ToArray();
-
-            foreach (var registratorType in allRegistrators)
+            if (
+                type.IsClass
+                && !type.IsAbstract
+                && typeof(IMongoMappingRegistrator).IsAssignableFrom(type)
+             )
             {
-                var registrator = (IMongoMappingRegistrator)Activator.CreateInstance(registratorType);
+                var registrator = (IMongoMappingRegistrator)Activator.CreateInstance(regixstratorType);
                 registrator.Register();
             }
         }
 
-        private static void RegisterMessages(Assembly assembly)
+        private static void RegisterUpcasters(Type type)
         {
-            var allMessages = assembly.GetTypes().Where(x =>
-                    x.IsClass
-                    && !x.IsAbstract
-                    && typeof(IMessage).IsAssignableFrom(x)
-               ).ToArray();
+            if (!type.IsAbstract && typeof(IUpcaster).IsAssignableFrom(type))
+            {
+                var realUpcaster = (IUpcaster)type.CreateInstance();
+                StaticUpcaster.RegisterUpcaster(realUpcaster);
+            }
+        }
 
-            RegisterTypes(allMessages);
+        private static void RegisterMessages(Type type)
+        {
+            if (
+                    type.IsClass
+                    && !type.IsAbstract
+                    && typeof(IMessage).IsAssignableFrom(type)
+               )
+            {
+                RegisterType(type);
+            }
         }
 
 #pragma warning disable S125
-        private static void RegisterAggregateSnapshot(Assembly assembly)
+        private static void RegisterAggregateSnapshot(Type type)
         {
-            var allAggregateStatesObjects = assembly.GetTypes().Where(x =>
-                x.IsClass
-                && !x.IsAbstract
-                && typeof(JarvisAggregateState).IsAssignableFrom(x)
-            ).ToArray();
-
-            RegisterTypes(allAggregateStatesObjects);
-
-            var allEntityStatesObjects = assembly.GetTypes().Where(x =>
-                x.IsClass
-                && !x.IsAbstract
-                && typeof(JarvisEntityState).IsAssignableFrom(x)
-            ).ToArray();
-
-            RegisterTypes(allEntityStatesObjects);
+            if (
+                type.IsClass
+                && !type.IsAbstract
+                && (typeof(JarvisAggregateState).IsAssignableFrom(type) || typeof(JarvisEntityState).IsAssignableFrom(type))
+            )
+            {
+                RegisterType(type);
+            }
         }
 #pragma warning restore S125 // Sections of code should not be "commented out"
 
-        private static void RegisterPlainObject(Assembly assembly)
+        private static void RegisterPlainObject(Type type)
         {
-            var allPocoObjectsPersistedInMongoDatabase = assembly.GetTypes().Where(x =>
-                    x.IsClass
-                    && !x.IsAbstract
-                    && typeof(IMongoPersistedPocoObject).IsAssignableFrom(x)
-               ).ToArray();
-
-            foreach (var pocoObject in allPocoObjectsPersistedInMongoDatabase)
+            if (
+                    type.IsClass
+                    && !type.IsAbstract
+                    && typeof(IMongoPersistedPocoObject).IsAssignableFrom(type)
+                    && !BsonClassMap.IsClassMapRegistered(type))
             {
-                if (!BsonClassMap.IsClassMapRegistered(pocoObject))
-                {
-                    BsonClassMap.RegisterClassMap(new PocoClassMap(pocoObject));
-                }
+                BsonClassMap.RegisterClassMap(new PocoClassMap(type));
             }
         }
     }

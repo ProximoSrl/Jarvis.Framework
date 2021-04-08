@@ -64,12 +64,15 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
         /// <returns></returns>
         public Object GetEvent()
         {
-            EnhanceEvent();
+            EnhanceAndUpcastEvent();
 
             return Event;
         }
 
-        public void EnhanceEvent()
+        /// <summary>
+        /// Enchance and upcast the event.
+        /// </summary>
+        public void EnhanceAndUpcastEvent()
         {
             if (_enhanced == false && Event is DomainEvent)
             {
@@ -84,6 +87,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                 domainEvent.Version = Version;
                 domainEvent.Context = Context;
                 domainEvent.CheckpointToken = CheckpointToken;
+
+                Event = StaticUpcaster.UpcastEvent(domainEvent);
             }
         }
     }
