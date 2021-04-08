@@ -1,4 +1,5 @@
-﻿using Jarvis.Framework.Kernel.ProjectionEngine.Client;
+﻿using Jarvis.Framework.Kernel.Engine;
+using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 using Jarvis.Framework.Shared.Events;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;

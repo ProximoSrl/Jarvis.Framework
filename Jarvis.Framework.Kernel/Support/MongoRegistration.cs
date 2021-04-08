@@ -177,7 +177,7 @@ namespace Jarvis.Framework.Kernel.Support
                 && typeof(IMongoMappingRegistrator).IsAssignableFrom(type)
              )
             {
-                var registrator = (IMongoMappingRegistrator)Activator.CreateInstance(regixstratorType);
+                var registrator = (IMongoMappingRegistrator)Activator.CreateInstance(type);
                 registrator.Register();
             }
         }
