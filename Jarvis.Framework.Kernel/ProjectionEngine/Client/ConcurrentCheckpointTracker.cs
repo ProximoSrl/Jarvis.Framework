@@ -1,32 +1,38 @@
+using Castle.Core.Logging;
+using Jarvis.Framework.Kernel.Engine;
+using Jarvis.Framework.Kernel.Events;
+using Jarvis.Framework.Kernel.Support;
+using Jarvis.Framework.Shared.Helpers;
+using MongoDB.Driver;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using Castle.Core.Logging;
-using Jarvis.Framework.Kernel.Events;
-using Jarvis.Framework.Kernel.Support;
-using MongoDB.Driver;
-using Jarvis.Framework.Shared.Helpers;
-using Jarvis.Framework.Kernel.Engine;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 {
     public class ConcurrentCheckpointTracker : IConcurrentCheckpointTracker
     {
-		private readonly IMongoCollection<Checkpoint> _checkpoints;
+        private readonly IMongoCollection<Checkpoint> _checkpoints;
 
         private ConcurrentDictionary<string, Int64> _checkpointTracker;
+
+        /// <summary>
+        /// This contains last time a slot was flushed, this is needed for
+        /// the optimization not to flush checkpoint every dispatched event.
+        /// </summary>
+        private ConcurrentDictionary<string, DateTime> _lastFlushForEachSlot;
 
         /// <summary>
         /// Used for Metrics.NET.
         /// </summary>
         private ConcurrentDictionary<string, Int64> _checkpointSlotTracker;
 
-		/// <summary>
-		/// Key is the id of the projection and value is the name of the slot
-		/// projection belongs to.
-		/// </summary>
+        /// <summary>
+        /// Key is the id of the projection and value is the name of the slot
+        /// projection belongs to.
+        /// </summary>
         private ConcurrentDictionary<String, String> _projectionToSlot;
 
         /// <summary>
@@ -46,6 +52,15 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         private List<string> _checkpointErrors;
 
+        /// <summary>
+        /// This is the time after the checkpoint in database is updated even if 
+        /// the slot did not dispatched any events for processed commit. We need to 
+        /// flush every X seconds because if a slot does not process any events, the
+        /// checkpoint will never be updated and when the projection service restart
+        /// it will re-dispatch lots of unnecessary events.
+        /// </summary>
+        public Int32 FlushNotDispatchedLostTimeoutInSeconds { get; set; } = 60;
+
         public ConcurrentCheckpointTracker(IMongoDatabase db)
         {
             _checkpoints = db.GetCollection<Checkpoint>("checkpoints");
@@ -57,6 +72,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         private void Clear()
         {
             _checkpointTracker = new ConcurrentDictionary<string, Int64>();
+            _lastFlushForEachSlot = new ConcurrentDictionary<string, DateTime>();
             _checkpointSlotTracker = new ConcurrentDictionary<string, Int64>();
             _projectionToSlot = new ConcurrentDictionary<String, String>();
             _slotRebuildTracker = new ConcurrentDictionary<string, bool>();
@@ -199,37 +215,70 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         public async Task UpdateSlotAndSetCheckpointAsync(
             string slotName,
-			IEnumerable<String> projectionNameList,
-			Int64 valueCheckpointToken)
+            IEnumerable<String> projectionNameList,
+            Int64 valueCheckpointToken,
+            bool someEventDispatched)
         {
-            await _checkpoints.UpdateManyAsync(
-                   Builders<Checkpoint>.Filter.Eq("Slot", slotName),
-                   Builders<Checkpoint>.Update
-					.Set(_ => _.Current, valueCheckpointToken)
-					.Set(_ => _.Value, valueCheckpointToken)
-            ).ConfigureAwait(false);
+            //we do not want to update mongodb if the event was not dispatched on the slot, this
+            //because if we re-dispatch again (in case of immediate shutdown) we do not have side effects
+            bool shouldUpdateMongodb = someEventDispatched;
+
+            //if this event was not dispatched, we can simply determine if
+            //we need to flush, the need arise after a certain amount of time
+            //passed, because we could not left a slot too behind.
+            //if a slot does not dispatch the last X events, you will re-dispatch
+            //those event upon restart and if X if greater than a certain amount projection
+            //service will really be slow at startup.
+            if (!someEventDispatched)
+            {
+                if (!_lastFlushForEachSlot.TryGetValue(slotName, out var lastFlushTime))
+                {
+                    //ok we never flushed the slot, we can simply assume that time tracking starts from now.
+                    lastFlushTime = DateTime.UtcNow;
+                    _lastFlushForEachSlot[slotName] = lastFlushTime;
+                }
+
+                //ok now we have last flush time, we need to determine if we really want to flush because
+                //too much time passed. Dispatching in a certain amount of time is a safe assumption.
+                if (DateTime.UtcNow.Subtract(lastFlushTime).TotalSeconds > FlushNotDispatchedLostTimeoutInSeconds) //1 minute commit
+                {
+                    shouldUpdateMongodb = true;
+                    _lastFlushForEachSlot[slotName] = DateTime.UtcNow;
+                }
+            }
+
+            //Update slot only if it is needed, this will greatly reduce the contemption on the checkpoint collection
+            if (shouldUpdateMongodb)
+            {
+                await _checkpoints.UpdateManyAsync(
+                       Builders<Checkpoint>.Filter.Eq("Slot", slotName),
+                       Builders<Checkpoint>.Update
+                        .Set(_ => _.Current, valueCheckpointToken)
+                        .Set(_ => _.Value, valueCheckpointToken)
+                ).ConfigureAwait(false);
+            }
             foreach (var projectionName in projectionNameList)
             {
-                _checkpointTracker.AddOrUpdate(projectionName, key => valueCheckpointToken, (key, currentValue) => valueCheckpointToken);
+                _checkpointTracker.AddOrUpdate(projectionName, _ => valueCheckpointToken, (_, __) => valueCheckpointToken);
             }
         }
 
-		public async Task UpdateProjectionCheckpointAsync(
-			string projectionName,
-			Int64 checkpointToken)
-		{
-			await _checkpoints.UpdateOneAsync(
-					   Builders<Checkpoint>.Filter.Eq(_ => _.Id, projectionName),
-					   Builders<Checkpoint>.Update
-						.Set(_ => _.Current, checkpointToken)
-						.Set(_ => _.Value, checkpointToken)
-				).ConfigureAwait(false);
+        public async Task UpdateProjectionCheckpointAsync(
+            string projectionName,
+            Int64 checkpointToken)
+        {
+            await _checkpoints.UpdateOneAsync(
+                       Builders<Checkpoint>.Filter.Eq(_ => _.Id, projectionName),
+                       Builders<Checkpoint>.Update
+                        .Set(_ => _.Current, checkpointToken)
+                        .Set(_ => _.Value, checkpointToken)
+                ).ConfigureAwait(false);
 
-			//Now update in-memory cache
-			_checkpointTracker.AddOrUpdate(projectionName, key => checkpointToken, (key, currentValue) => checkpointToken);
-		}
+            //Now update in-memory cache
+            _checkpointTracker.AddOrUpdate(projectionName, key => checkpointToken, (key, currentValue) => checkpointToken);
+        }
 
-		public Int64 GetCurrent(IProjection projection)
+        public Int64 GetCurrent(IProjection projection)
         {
             var checkpoint = _checkpoints.FindOneById(projection.Info.CommonName);
             if (checkpoint == null)
@@ -238,15 +287,15 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             return checkpoint.Current ?? 0;
         }
 
-		public Int64 GetCheckpoint(IProjection projection)
-		{
-			var id = projection.Info.CommonName;
-			if (_checkpointTracker.ContainsKey(id))
-				return _checkpointTracker[id];
-			return 0;
-		}
+        public Int64 GetCheckpoint(IProjection projection)
+        {
+            var id = projection.Info.CommonName;
+            if (_checkpointTracker.ContainsKey(id))
+                return _checkpointTracker[id];
+            return 0;
+        }
 
-		public CheckPointReplayStatus GetCheckpointStatus(string projectionName, Int64 checkpoint)
+        public CheckPointReplayStatus GetCheckpointStatus(string projectionName, Int64 checkpoint)
         {
             Int64 lastDispatched = _checkpointTracker[projectionName];
 
