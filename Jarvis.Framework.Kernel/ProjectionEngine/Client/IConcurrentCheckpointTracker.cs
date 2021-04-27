@@ -50,10 +50,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         /// <param name="slotName"></param>
         /// <param name="projectionNameList">List of the projections belonging to this slot</param>
         /// <param name="valueCheckpointToken"></param>
+        /// <param name="someEventDispatched">If the chunk was dispatched, but not processed by the slot (not projection really
+        /// used events of that chunk) there is no need to update the checkpoint every chunk. This parameters indicates
+        /// if some of the events were processed or not to optimize the checkpoint.</param>
         Task UpdateSlotAndSetCheckpointAsync(
             string slotName,
             IEnumerable<String> projectionNameList,
-            Int64 valueCheckpointToken);
+            Int64 valueCheckpointToken,
+            Boolean someEventDispatched);
 
         /// <summary>
         /// Called from standard projection engine to update both value and current

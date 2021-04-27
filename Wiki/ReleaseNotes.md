@@ -7,6 +7,10 @@ J.A.R.V.I.S. Framework - Proximo srl (c)
 
 - Updated references and readme
 
+# 5.3.5
+
+- Better checkpoint handling for slots that does not handle an event in projection service
+
 # 5.3.4
 
 - Added Upcasting logic (we had everything in place but not the infrastructure for upcasting)

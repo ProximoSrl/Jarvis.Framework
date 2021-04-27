@@ -19,6 +19,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         private ConcurrentDictionary<string, Int64> _checkpointTracker;
 
         /// <summary>
+        /// This contains last time a slot was flushed, this is needed for
+        /// the optimization not to flush checkpoint every dispatched event.
+        /// </summary>
+        private ConcurrentDictionary<string, DateTime> _lastFlushForEachSlot;
+
+        /// <summary>
         /// Used for Metrics.NET.
         /// </summary>
         private ConcurrentDictionary<string, Int64> _checkpointSlotTracker;
@@ -46,6 +52,15 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         private List<string> _checkpointErrors;
 
+        /// <summary>
+        /// This is the time after the checkpoint in database is updated even if 
+        /// the slot did not dispatched any events for processed commit. We need to 
+        /// flush every X seconds because if a slot does not process any events, the
+        /// checkpoint will never be updated and when the projection service restart
+        /// it will re-dispatch lots of unnecessary events.
+        /// </summary>
+        public Int32 FlushNotDispatchedLostTimeoutInSeconds { get; set; } = 60;
+
         public ConcurrentCheckpointTracker(IMongoDatabase db)
         {
             _checkpoints = db.GetCollection<Checkpoint>("checkpoints");
@@ -57,6 +72,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         private void Clear()
         {
             _checkpointTracker = new ConcurrentDictionary<string, Int64>();
+            _lastFlushForEachSlot = new ConcurrentDictionary<string, DateTime>();
             _checkpointSlotTracker = new ConcurrentDictionary<string, Int64>();
             _projectionToSlot = new ConcurrentDictionary<String, String>();
             _slotRebuildTracker = new ConcurrentDictionary<string, bool>();
@@ -200,17 +216,50 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         public async Task UpdateSlotAndSetCheckpointAsync(
             string slotName,
             IEnumerable<String> projectionNameList,
-            Int64 valueCheckpointToken)
+            Int64 valueCheckpointToken,
+            bool someEventDispatched)
         {
-            await _checkpoints.UpdateManyAsync(
-                   Builders<Checkpoint>.Filter.Eq("Slot", slotName),
-                   Builders<Checkpoint>.Update
-                    .Set(_ => _.Current, valueCheckpointToken)
-                    .Set(_ => _.Value, valueCheckpointToken)
-            ).ConfigureAwait(false);
+            //we do not want to update mongodb if the event was not dispatched on the slot, this
+            //because if we re-dispatch again (in case of immediate shutdown) we do not have side effects
+            bool shouldUpdateMongodb = someEventDispatched;
+
+            //if this event was not dispatched, we can simply determine if
+            //we need to flush, the need arise after a certain amount of time
+            //passed, because we could not left a slot too behind.
+            //if a slot does not dispatch the last X events, you will re-dispatch
+            //those event upon restart and if X if greater than a certain amount projection
+            //service will really be slow at startup.
+            if (!someEventDispatched)
+            {
+                if (!_lastFlushForEachSlot.TryGetValue(slotName, out var lastFlushTime))
+                {
+                    //ok we never flushed the slot, we can simply assume that time tracking starts from now.
+                    lastFlushTime = DateTime.UtcNow;
+                    _lastFlushForEachSlot[slotName] = lastFlushTime;
+                }
+
+                //ok now we have last flush time, we need to determine if we really want to flush because
+                //too much time passed. Dispatching in a certain amount of time is a safe assumption.
+                if (DateTime.UtcNow.Subtract(lastFlushTime).TotalSeconds > FlushNotDispatchedLostTimeoutInSeconds) //1 minute commit
+                {
+                    shouldUpdateMongodb = true;
+                    _lastFlushForEachSlot[slotName] = DateTime.UtcNow;
+                }
+            }
+
+            //Update slot only if it is needed, this will greatly reduce the contemption on the checkpoint collection
+            if (shouldUpdateMongodb)
+            {
+                await _checkpoints.UpdateManyAsync(
+                       Builders<Checkpoint>.Filter.Eq("Slot", slotName),
+                       Builders<Checkpoint>.Update
+                        .Set(_ => _.Current, valueCheckpointToken)
+                        .Set(_ => _.Value, valueCheckpointToken)
+                ).ConfigureAwait(false);
+            }
             foreach (var projectionName in projectionNameList)
             {
-                _checkpointTracker.AddOrUpdate(projectionName, key => valueCheckpointToken, (key, currentValue) => valueCheckpointToken);
+                _checkpointTracker.AddOrUpdate(projectionName, _ => valueCheckpointToken, (_, __) => valueCheckpointToken);
             }
         }
 
