@@ -80,28 +80,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             ILogger logger,
             ILoggerThreadContextManager loggerThreadContextManager)
         {
-            if (pollingClientFactory == null)
-                throw new ArgumentNullException(nameof(pollingClientFactory));
-
-            if (checkpointTracker == null)
-                throw new ArgumentNullException(nameof(checkpointTracker));
-
             if (projections == null)
                 throw new ArgumentNullException(nameof(projections));
-
-            if (housekeeper == null)
-                throw new ArgumentNullException(nameof(housekeeper));
-
-            if (notifyCommitHandled == null)
-                throw new ArgumentNullException(nameof(notifyCommitHandled));
 
             if (config == null)
                 throw new ArgumentNullException(nameof(config));
 
-            if (persistence == null)
-                throw new ArgumentNullException(nameof(persistence));
-
-            _persistence = persistence;
+            _persistence = persistence ?? throw new ArgumentNullException(nameof(persistence));
 
             _logger = logger;
             _loggerThreadContextManager = loggerThreadContextManager;
@@ -114,10 +99,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
             _engineFatalErrors = new ConcurrentBag<string>();
 
-            _pollingClientFactory = pollingClientFactory;
-            _checkpointTracker = checkpointTracker;
-            _housekeeper = housekeeper;
-            _notifyCommitHandled = notifyCommitHandled;
+            _pollingClientFactory = pollingClientFactory ?? throw new ArgumentNullException(nameof(pollingClientFactory));
+            _checkpointTracker = checkpointTracker ?? throw new ArgumentNullException(nameof(checkpointTracker));
+            _housekeeper = housekeeper ?? throw new ArgumentNullException(nameof(housekeeper));
+            _notifyCommitHandled = notifyCommitHandled ?? throw new ArgumentNullException(nameof(notifyCommitHandled));
             _config = config;
 
             if (_config.Slots[0] != "*")
@@ -368,7 +353,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             if (lastCheckpointDispatched[slotName] + 1 != chkpoint && lastCheckpointDispatched[slotName] > 0)
             {
                 _logger.DebugFormat("Sequence of commit not consecutive (probably holes), last dispatched {0} receiving {1}",
-                  lastCheckpointDispatched[slotName], chkpoint);
+                lastCheckpointDispatched[slotName], chkpoint);
             }
             lastCheckpointDispatched[slotName] = chkpoint;
 
@@ -387,6 +372,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
             //now it is time to dispatch the commit, we will dispatch each projection 
             //and for each projection we dispatch all the events present in changeset
+            bool someProjectionProcessedTheEvent = false;
             foreach (var projection in projections)
             {
                 var cname = projection.Info.CommonName;
@@ -413,9 +399,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                             //pay attention, stopwatch consumes time.
                             var sw = new Stopwatch();
                             sw.Start();
-                            await projection
+                            var eventProcessed = await projection
                                 .HandleAsync(eventMessage, checkpointStatus.IsRebuilding)
                                 .ConfigureAwait(false);
+
+                            someProjectionProcessedTheEvent |= eventProcessed;
                             sw.Stop();
                             ticks = sw.ElapsedTicks;
                             KernelMetricsHelper.IncrementProjectionCounter(cname, slotName, eventName, ticks, sw.ElapsedMilliseconds);
@@ -471,7 +459,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             await _checkpointTracker.UpdateSlotAndSetCheckpointAsync(
                 slotName,
                 projections.Select(_ => _.Info.CommonName),
-                chunk.Position).ConfigureAwait(false);
+                chunk.Position,
+                someEventDispatched: someProjectionProcessedTheEvent).ConfigureAwait(false);
             KernelMetricsHelper.MarkCommitDispatchedCount(slotName, 1);
 
             await _notifyCommitHandled.SetDispatched(slotName, chunk).ConfigureAwait(false);

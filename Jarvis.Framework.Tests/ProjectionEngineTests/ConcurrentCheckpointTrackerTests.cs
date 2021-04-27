@@ -9,6 +9,7 @@ using NUnit.Framework;
 using System;
 using System.Configuration;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests
 {
@@ -254,6 +255,84 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             _slotStatusCheckerSut = new SlotStatusManager(_db, projections.Select(p => p.Info).ToArray());
             var status = _slotStatusCheckerSut.GetSlotsStatus();
             Assert.That(status.SlotsThatNeedsRebuild, Has.Count.EqualTo(1));
+        }
+
+        [Test]
+        public async Task Verify_dispatched_event_are_flushed()
+        {
+            //Two projection in the same slot
+            var projection1 = new Projection(Substitute.For<ICollectionWrapper<SampleReadModel, String>>());
+
+            var projections = new IProjection[] { projection1 };
+
+            _concurrentCheckpointTrackerSut = new ConcurrentCheckpointTracker(_db);
+            _concurrentCheckpointTrackerSut.SetUp(projections, 1, false);
+            await _concurrentCheckpointTrackerSut.UpdateSlotAndSetCheckpointAsync("default", new[] { "Projection" }, 891, true).ConfigureAwait(false);
+
+            var allDbCheckpoints = _checkPoints.AsQueryable().Where(c => c.Slot == "default").ToList();
+            Assert.That(allDbCheckpoints.Single().Slot, Is.EqualTo("default"));
+            Assert.That(allDbCheckpoints.Single().Current, Is.EqualTo(891));
+            Assert.That(allDbCheckpoints.Single().Value, Is.EqualTo(891));
+        }
+
+        [Test]
+        public async Task Verify_non_dispatched_event_are__not_written_to_disk()
+        {
+            //Two projection in the same slot
+            var projection1 = new Projection(Substitute.For<ICollectionWrapper<SampleReadModel, String>>());
+
+            var projections = new IProjection[] { projection1 };
+
+            _concurrentCheckpointTrackerSut = new ConcurrentCheckpointTracker(_db);
+            _concurrentCheckpointTrackerSut.SetUp(projections, 1, false);
+            await _concurrentCheckpointTrackerSut.UpdateSlotAndSetCheckpointAsync("default", new[] { "Projection" }, 891, true).ConfigureAwait(false);
+
+            //now update slot, but tell the manager that you do not dispatched the event.
+            await _concurrentCheckpointTrackerSut.UpdateSlotAndSetCheckpointAsync("default", new[] { "Projection" }, 892, false).ConfigureAwait(false);
+            var allDbCheckpoints = _checkPoints.AsQueryable().Where(c => c.Slot == "default").ToList();
+            Assert.That(allDbCheckpoints.Single().Slot, Is.EqualTo("default"));
+            Assert.That(allDbCheckpoints.Single().Current, Is.EqualTo(891));
+            Assert.That(allDbCheckpoints.Single().Value, Is.EqualTo(891));
+
+            //in memory checkpoint should be updated.
+            Assert.That(_concurrentCheckpointTrackerSut.GetCheckpoint(projections[0]), Is.EqualTo(892));
+        }
+
+        [Test]
+        public async Task Verify_non_dispatched_event_are_written_to_disk_after_timeout()
+        {
+            //Two projection in the same slot
+            var projection1 = new Projection(Substitute.For<ICollectionWrapper<SampleReadModel, String>>());
+
+            var projections = new IProjection[] { projection1 };
+
+            _concurrentCheckpointTrackerSut = new ConcurrentCheckpointTracker(_db);
+            _concurrentCheckpointTrackerSut.SetUp(projections, 1, false);
+            _concurrentCheckpointTrackerSut.FlushNotDispatchedLostTimeoutInSeconds = 1; //flush after one second
+            await _concurrentCheckpointTrackerSut.UpdateSlotAndSetCheckpointAsync("default", new[] { "Projection" }, 891, true).ConfigureAwait(false);
+
+            //now update slot, but tell the manager that you do not dispatched the event.
+            await _concurrentCheckpointTrackerSut.UpdateSlotAndSetCheckpointAsync("default", new[] { "Projection" }, 892, false).ConfigureAwait(false);
+            var allDbCheckpoints = _checkPoints.AsQueryable().Where(c => c.Slot == "default").ToList();
+            Assert.That(allDbCheckpoints.Single().Slot, Is.EqualTo("default"));
+            Assert.That(allDbCheckpoints.Single().Current, Is.EqualTo(891));
+            Assert.That(allDbCheckpoints.Single().Value, Is.EqualTo(891));
+
+            //in memory checkpoint should be updated.
+            Assert.That(_concurrentCheckpointTrackerSut.GetCheckpoint(projections[0]), Is.EqualTo(892));
+
+            //now wait, then retry to write
+            await Task.Delay(1500).ConfigureAwait(false); //not spectactular but works :D
+            await _concurrentCheckpointTrackerSut.UpdateSlotAndSetCheckpointAsync("default", new[] { "Projection" }, 893, false).ConfigureAwait(false);
+
+            //Now everything should be flushed.
+            allDbCheckpoints = _checkPoints.AsQueryable().Where(c => c.Slot == "default").ToList();
+            Assert.That(allDbCheckpoints.Single().Slot, Is.EqualTo("default"));
+            Assert.That(allDbCheckpoints.Single().Current, Is.EqualTo(893));
+            Assert.That(allDbCheckpoints.Single().Value, Is.EqualTo(893));
+
+            //in memory checkpoint should be updated.
+            Assert.That(_concurrentCheckpointTrackerSut.GetCheckpoint(projections[0]), Is.EqualTo(893));
         }
 
         [Test]

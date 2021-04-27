@@ -358,7 +358,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                             await _checkpointTracker.UpdateSlotAndSetCheckpointAsync(
                                 dispatcher.SlotName,
                                 dispatcher.Projections.Select(p => p.Info.CommonName),
-                                dispatcher.LastCheckpointDispatched).ConfigureAwait(false);
+                                dispatcher.LastCheckpointDispatched,
+                                someEventDispatched : true //we are in rebuild, this is the last flush, surely we dispatched something.
+                            ).ConfigureAwait(false);
 
                             dispatcherWaitingToFinish.Remove(dispatcher);
                             Logger.InfoFormat("Rebuild ended for slot {0}", dispatcher.SlotName);
