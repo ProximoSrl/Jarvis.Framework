@@ -38,8 +38,8 @@ namespace Jarvis.Framework.Tests.EngineTests
             Assert.AreEqual(1L, identity.Id);
         }
 
-        [Test, Explicit]
-        public void Conver_lots_of_identities()
+        //[Test, Explicit]
+        public void Convert_lots_of_identities()
         {
             Stopwatch timer = new Stopwatch();
             List<String> test = new List<String>();

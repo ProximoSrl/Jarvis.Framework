@@ -22,7 +22,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         /// This contains last time a slot was flushed, this is needed for
         /// the optimization not to flush checkpoint every dispatched event.
         /// </summary>
-        private ConcurrentDictionary<string, DateTime> _lastFlushForEachSlot;
+        private ConcurrentDictionary<string, FlushSlotInfo> _lastFlushForEachSlot;
 
         /// <summary>
         /// Used for Metrics.NET.
@@ -42,7 +42,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         private ConcurrentDictionary<String, Boolean> _slotRebuildTracker;
 
         /// <summary>
-        /// Useful for Metrics.Net, I need to keep track of maximum value of 
+        /// Useful for Metrics.Net, I need to keep track of maximum value of
         /// dispatched commit for each slot. For the rebuild to be considered
         /// finished, all projection needs to reach this number,
         /// </summary>
@@ -53,8 +53,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         private List<string> _checkpointErrors;
 
         /// <summary>
-        /// This is the time after the checkpoint in database is updated even if 
-        /// the slot did not dispatched any events for processed commit. We need to 
+        /// This is the time after the checkpoint in database is updated even if
+        /// the slot did not dispatched any events for processed commit. We need to
         /// flush every X seconds because if a slot does not process any events, the
         /// checkpoint will never be updated and when the projection service restart
         /// it will re-dispatch lots of unnecessary events.
@@ -64,7 +64,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         public ConcurrentCheckpointTracker(IMongoDatabase db)
         {
             _checkpoints = db.GetCollection<Checkpoint>("checkpoints");
-            _checkpoints.Indexes.CreateOne(Builders<Checkpoint>.IndexKeys.Ascending(x => x.Slot));
+            _checkpoints.Indexes.CreateOne(
+                    new CreateIndexModel<Checkpoint>(
+                        Builders<Checkpoint>.IndexKeys.Ascending(x => x.Slot)
+                    )
+                );
             Logger = NullLogger.Instance;
             Clear();
         }
@@ -72,7 +76,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         private void Clear()
         {
             _checkpointTracker = new ConcurrentDictionary<string, Int64>();
-            _lastFlushForEachSlot = new ConcurrentDictionary<string, DateTime>();
+            _lastFlushForEachSlot = new ConcurrentDictionary<string, FlushSlotInfo>();
             _checkpointSlotTracker = new ConcurrentDictionary<string, Int64>();
             _projectionToSlot = new ConcurrentDictionary<String, String>();
             _slotRebuildTracker = new ConcurrentDictionary<string, bool>();
@@ -120,7 +124,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             {
                 var eventsVersion = _checkpoints.FindOneById(EventStoreFactory.PartitionCollectionName);
                 if (eventsVersion != null)
+                {
                     projectionStartFormCheckpointValue = eventsVersion.Value;
+                }
             }
 
             //set all projection to active = false
@@ -144,17 +150,24 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             foreach (var slot in projections.Select(p => p.Info.SlotName).Distinct())
             {
                 var slotName = slot;
-                if (setupMetrics) KernelMetricsHelper.SetCheckpointCountToDispatch(slot, () => GetCheckpointCount(slotName));
+                if (setupMetrics)
+                {
+                    KernelMetricsHelper.SetCheckpointCountToDispatch(slot, () => GetCheckpointCount(slotName));
+                }
+
                 _checkpointSlotTracker[slot] = 0;
                 _slotRebuildTracker[slot] = false;
             }
 
-            if (setupMetrics) KernelMetricsHelper.SetCheckpointCountToDispatch("", GetCheckpointMaxCount);
+            if (setupMetrics)
+            {
+                KernelMetricsHelper.SetCheckpointCountToDispatch("", GetCheckpointMaxCount);
+            }
         }
 
         private double GetCheckpointMaxCount()
         {
-            return _checkpointSlotTracker.Select(k => k.Value).Max();
+            return _checkpointSlotTracker.Max(k => k.Value);
         }
 
         private double GetCheckpointCount(string slotName)
@@ -231,36 +244,77 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             //service will really be slow at startup.
             if (!someEventDispatched)
             {
-                if (!_lastFlushForEachSlot.TryGetValue(slotName, out var lastFlushTime))
+                if (!_lastFlushForEachSlot.TryGetValue(slotName, out var lastFlushInfo))
                 {
                     //ok we never flushed the slot, we can simply assume that time tracking starts from now.
-                    lastFlushTime = DateTime.UtcNow;
-                    _lastFlushForEachSlot[slotName] = lastFlushTime;
+                    lastFlushInfo = new FlushSlotInfo()
+                    {
+                        LastFlush = DateTime.UtcNow,
+                        PendingFlush = true,
+                    };
+                    _lastFlushForEachSlot[slotName] = lastFlushInfo;
                 }
+
+                //flush is pending and we store actual checkpoint token.
+                lastFlushInfo.PendingFlush = true;
+                lastFlushInfo.ActualCheckpoint = valueCheckpointToken;
 
                 //ok now we have last flush time, we need to determine if we really want to flush because
                 //too much time passed. Dispatching in a certain amount of time is a safe assumption.
-                if (DateTime.UtcNow.Subtract(lastFlushTime).TotalSeconds > FlushNotDispatchedLostTimeoutInSeconds) //1 minute commit
+                if (DateTime.UtcNow.Subtract(lastFlushInfo.LastFlush).TotalSeconds > FlushNotDispatchedLostTimeoutInSeconds) //time elapsed
                 {
                     shouldUpdateMongodb = true;
-                    _lastFlushForEachSlot[slotName] = DateTime.UtcNow;
+                    lastFlushInfo.LastFlush = DateTime.UtcNow;
+                    //we are going to flush pending flush become false.
+                    lastFlushInfo.PendingFlush = false;
                 }
             }
 
             //Update slot only if it is needed, this will greatly reduce the contemption on the checkpoint collection
             if (shouldUpdateMongodb)
             {
-                await _checkpoints.UpdateManyAsync(
-                       Builders<Checkpoint>.Filter.Eq("Slot", slotName),
-                       Builders<Checkpoint>.Update
-                        .Set(_ => _.Current, valueCheckpointToken)
-                        .Set(_ => _.Value, valueCheckpointToken)
-                ).ConfigureAwait(false);
+                await UpdateSlotCheckpointInMongodbAsync(slotName, valueCheckpointToken).ConfigureAwait(false);
             }
             foreach (var projectionName in projectionNameList)
             {
                 _checkpointTracker.AddOrUpdate(projectionName, _ => valueCheckpointToken, (_, __) => valueCheckpointToken);
             }
+        }
+
+        /// <summary>
+        /// Persist on disk checkpoint of a slot in mongodb.
+        /// </summary>
+        /// <param name="slotName"></param>
+        /// <param name="valueCheckpointToken"></param>
+        /// <returns></returns>
+        private Task UpdateSlotCheckpointInMongodbAsync(string slotName, long valueCheckpointToken)
+        {
+            return _checkpoints.UpdateManyAsync(
+                    Builders<Checkpoint>.Filter.Eq("Slot", slotName),
+                    Builders<Checkpoint>.Update
+                        .Set(_ => _.Current, valueCheckpointToken)
+                        .Set(_ => _.Value, valueCheckpointToken)
+            );
+        }
+
+        /// <summary>
+        /// Persist on disk checkpoint of a slot in mongodb but only if for some reason
+        /// saved version is older than actual version
+        /// </summary>
+        /// <param name="slotName"></param>
+        /// <param name="valueCheckpointToken"></param>
+        /// <returns></returns>
+        private Task SafeUpdateSlotCheckpointInMongodbAsync(
+            string slotName,
+            long valueCheckpointToken)
+        {
+            return _checkpoints.UpdateManyAsync(
+                    Builders<Checkpoint>.Filter.Eq(c => c.Slot, slotName) &
+                    Builders<Checkpoint>.Filter.Lt(c => c.Current, valueCheckpointToken),
+                    Builders<Checkpoint>.Update
+                        .Set(_ => _.Current, valueCheckpointToken)
+                        .Set(_ => _.Value, valueCheckpointToken)
+            );
         }
 
         public async Task UpdateProjectionCheckpointAsync(
@@ -275,14 +329,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                 ).ConfigureAwait(false);
 
             //Now update in-memory cache
-            _checkpointTracker.AddOrUpdate(projectionName, key => checkpointToken, (key, currentValue) => checkpointToken);
+            _checkpointTracker.AddOrUpdate(projectionName, _ => checkpointToken, (_, __) => checkpointToken);
         }
 
         public Int64 GetCurrent(IProjection projection)
         {
             var checkpoint = _checkpoints.FindOneById(projection.Info.CommonName);
             if (checkpoint == null)
+            {
                 return 0;
+            }
 
             return checkpoint.Current ?? 0;
         }
@@ -291,7 +347,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         {
             var id = projection.Info.CommonName;
             if (_checkpointTracker.ContainsKey(id))
+            {
                 return _checkpointTracker[id];
+            }
+
             return 0;
         }
 
@@ -308,6 +367,32 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             bool isReplay = currentCheckpointValue <= lastDispatchedValue || RebuildSettings.ContinuousRebuild;
             _checkpointSlotTracker[_projectionToSlot[projectionName]] = _higherCheckpointToDispatchInRebuild - currentCheckpointValue;
             return new CheckPointReplayStatus(isLast, isReplay);
+        }
+
+        public async Task FlushCheckpointAsync()
+        {
+            //Safe iterate in all values that have pending flush, then update safely slot with the actual value in memory
+            try
+            {
+                foreach (var slot in _lastFlushForEachSlot.Where(f => f.Value.PendingFlush))
+                {
+                    await SafeUpdateSlotCheckpointInMongodbAsync(slot.Key, slot.Value.ActualCheckpoint).ConfigureAwait(false);
+                    slot.Value.PendingFlush = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.ErrorFormat(ex, "Error during flush of checkpoints");
+            }
+        }
+
+        private class FlushSlotInfo
+        {
+            public DateTime LastFlush { get; set; }
+
+            public Boolean PendingFlush { get; set; }
+
+            public long ActualCheckpoint { get; set; }
         }
     }
 }
