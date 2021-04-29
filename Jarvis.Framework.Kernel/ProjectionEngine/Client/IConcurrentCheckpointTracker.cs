@@ -69,5 +69,15 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         Task UpdateProjectionCheckpointAsync(
             string projectionName,
             Int64 checkpointToken);
+
+        /// <summary>
+        /// If the caller needs checkpoint to be flushed on disk, you can periodically call this function.
+        /// This is needed because if a slot does not dispatch any event, the checkpoint record is not
+        /// updated until a certain amount of time passed and at least another event is dispatched.
+        /// If the caller wants the checkpoint to be updated, they can optionally call this method to
+        /// force flush the value.
+        /// </summary>
+        /// <returns></returns>
+        Task FlushCheckpointAsync();
     }
 }
