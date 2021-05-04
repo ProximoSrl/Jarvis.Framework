@@ -43,7 +43,7 @@ namespace Jarvis.Framework.Kernel.Support
             HashSet<Type> retValue = new HashSet<Type>();
             var allMethods = type.GetMethods(BindingFlags.Instance | BindingFlags.FlattenHierarchy | BindingFlags.Public | BindingFlags.NonPublic);
             var handlingMethods = allMethods
-                .Where(m => m.Name == "On" & m.IsAbstract == false)
+                .Where(m => m.Name == "On" & !m.IsAbstract)
                 .Select(m => m.GetParameters())
                 .Where(p => p.Length == 1 && typeof(DomainEvent).IsAssignableFrom(p[0].ParameterType));
             foreach (var parameter in handlingMethods)

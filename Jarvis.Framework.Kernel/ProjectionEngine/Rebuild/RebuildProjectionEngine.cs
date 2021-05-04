@@ -85,7 +85,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
             {
                 foreach (var prj in _allProjections)
                 {
-                    if (Logger.IsDebugEnabled) Logger.DebugFormat("Projection: {0}", prj.GetType().FullName);
+                    if (Logger.IsDebugEnabled)
+                    {
+                        Logger.DebugFormat("Projection: {0}", prj.GetType().FullName);
+                    }
                 }
 
                 if (_allProjections.Length == 0)
@@ -108,7 +111,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
         /// <returns></returns>
         public async Task<RebuildStatus> RebuildAsync()
         {
-            if (Logger.IsInfoEnabled) Logger.InfoFormat("Starting rebuild projection engine on tenant {0}", _config.TenantId);
+            if (Logger.IsInfoEnabled)
+            {
+                Logger.InfoFormat("Starting rebuild projection engine on tenant {0}", _config.TenantId);
+            }
+
             DumpProjections();
 
             await _eventUnwinder.UnwindAsync().ConfigureAwait(false);
@@ -232,19 +239,29 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
             List<SlotGuaranteedDeliveryBroadcastBlock.SlotInfo<UnwindedDomainEvent>> consumers)
         {
             if (buffer == null)
+            {
                 throw new ArgumentNullException(nameof(buffer));
+            }
 
             if (broadcaster == null)
+            {
                 throw new ArgumentNullException(nameof(broadcaster));
+            }
 
             if (dispatchers == null)
+            {
                 throw new ArgumentNullException(nameof(dispatchers));
+            }
 
             if (consumers == null)
+            {
                 throw new ArgumentNullException(nameof(consumers));
+            }
 
             if (allEventTypesHandledByAllSlots == null)
+            {
                 throw new ArgumentNullException(nameof(allEventTypesHandledByAllSlots));
+            }
 
             Stopwatch sw = Stopwatch.StartNew();
 
@@ -286,7 +303,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                     {
                         _pollError = null;
 
-                        if (Logger.IsDebugEnabled) Logger.DebugFormat("TPL queued event {0}/{1} for bucket {2}", eventUnwinded.CheckpointToken, eventUnwinded.EventSequence, bucketInfo);
+                        if (Logger.IsDebugEnabled)
+                        {
+                            Logger.DebugFormat("TPL queued event {0}/{1} for bucket {2}", eventUnwinded.CheckpointToken, eventUnwinded.EventSequence, bucketInfo);
+                        }
                         //rehydrate the event before dispatching
                         eventUnwinded.EnhanceAndUpcastEvent();
                         await buffer.SendAsync(eventUnwinded).ConfigureAwait(false);
@@ -326,7 +346,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                 List<RebuildProjectionSlotDispatcher> dispatcherWaitingToFinish = dispatchers.ToList();
                 while (dispatcherWaitingToFinish.Count > 0)
                 {
-                    if (Logger.IsDebugEnabled) Logger.DebugFormat("Waiting for {0} slot to finish events", dispatcherWaitingToFinish.Count);
+                    if (Logger.IsDebugEnabled)
+                    {
+                        Logger.DebugFormat("Waiting for {0} slot to finish events", dispatcherWaitingToFinish.Count);
+                    }
+
                     Int32 i = dispatcherWaitingToFinish.Count - 1;
                     while (i >= 0)
                     {
@@ -357,7 +381,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                                 dispatcher.SlotName,
                                 dispatcher.Projections.Select(p => p.Info.CommonName),
                                 dispatcher.LastCheckpointDispatched,
-                                someEventDispatched : true //we are in rebuild, this is the last flush, surely we dispatched something.
+                                someEventDispatched: true //we are in rebuild, this is the last flush, surely we dispatched something.
                             ).ConfigureAwait(false);
 
                             dispatcherWaitingToFinish.Remove(dispatcher);
@@ -366,7 +390,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 
                         i--;
                     }
-                    if (dispatcherWaitingToFinish.Count > 0) Thread.Sleep(2000);
+                    if (dispatcherWaitingToFinish.Count > 0)
+                    {
+                        Thread.Sleep(2000);
+                    }
                 }
                 sw.Stop();
                 Logger.InfoFormat("Bucket {0} finished dispathing all events for slots: {1}", bucketInfo, dispatchers.Select(d => d.SlotName).Aggregate((s1, s2) => s1 + ", " + s2));
@@ -406,7 +433,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                 .Limit(1)
                 .FirstOrDefault();
 
-            if (lastCommit == null) return 0;
+            if (lastCommit == null)
+            {
+                return 0;
+            }
 
             return lastCommit["_id"].AsInt64;
         }

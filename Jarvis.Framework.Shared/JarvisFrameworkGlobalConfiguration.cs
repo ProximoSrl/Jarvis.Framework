@@ -18,6 +18,8 @@ namespace Jarvis.Framework.Shared
 
         public static Boolean AtomicProjectionEngineOptimizedCatchup { get; private set; }
 
+        public static Boolean ProjectionServiceSkipUnhandledEvents { get; private set; }
+
         static JarvisFrameworkGlobalConfiguration()
         {
             MetricsEnabled = true;
@@ -63,6 +65,11 @@ namespace Jarvis.Framework.Shared
         public static void DisableAtomicProjectionEngineOptimizedCatchup()
         {
             AtomicProjectionEngineOptimizedCatchup = false;
+        }
+
+        public static void SkipUnhandledEventsForProjectionService()
+        {
+            ProjectionServiceSkipUnhandledEvents = true;
         }
     }
 }

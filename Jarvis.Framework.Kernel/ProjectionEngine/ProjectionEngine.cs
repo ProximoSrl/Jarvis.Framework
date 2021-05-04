@@ -3,6 +3,7 @@ using Jarvis.Framework.Kernel.Events;
 using Jarvis.Framework.Kernel.MultitenantSupport;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 using Jarvis.Framework.Kernel.Support;
+using Jarvis.Framework.Shared;
 using Jarvis.Framework.Shared.Exceptions;
 using Jarvis.Framework.Shared.Logging;
 using Jarvis.Framework.Shared.Messages;
@@ -49,6 +50,20 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         private readonly IProjection[] _allProjections;
 
         /// <summary>
+        /// For each slot name (key) it contains an hashset of all event types that
+        /// were handled by at least one projection
+        /// </summary>
+        private Dictionary<string, HashSet<Type>> _handledEventPerSlot;
+
+        /// <summary>
+        /// Same of <see cref="_handledEventPerSlot"/> but we have name of single
+        /// projection for each key, so we can determine for really crowded slots
+        /// like the default, to dispatch event only to projections that really
+        /// handles that event.
+        /// </summary>
+        private Dictionary<String, HashSet<Type>> _handledEventPerProjection;
+
+        /// <summary>
         /// this is a list of all FATAL error occurred in projection engine. A fatal
         /// error means that some slot is stopped and so there should be an health
         /// check that fails.
@@ -81,16 +96,19 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             ILoggerThreadContextManager loggerThreadContextManager)
         {
             if (projections == null)
+            {
                 throw new ArgumentNullException(nameof(projections));
+            }
 
             if (config == null)
+            {
                 throw new ArgumentNullException(nameof(config));
+            }
 
             _persistence = persistence ?? throw new ArgumentNullException(nameof(persistence));
 
             _logger = logger;
             _loggerThreadContextManager = loggerThreadContextManager;
-
             var configErrors = config.Validate();
             if (!String.IsNullOrEmpty(configErrors))
             {
@@ -140,7 +158,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             {
                 foreach (var prj in _allProjections)
                 {
-                    if (_logger.IsDebugEnabled) _logger.DebugFormat("Projection: {0}", prj.GetType().FullName);
+                    if (_logger.IsDebugEnabled)
+                    {
+                        _logger.DebugFormat("Projection: {0}", prj.GetType().FullName);
+                    }
                 }
 
                 if (_allProjections.Length == 0)
@@ -161,16 +182,24 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         public async Task StartAsync()
         {
-            if (_logger.IsDebugEnabled) _logger.DebugFormat("Starting projection engine on tenant {0}", _config.TenantId);
+            if (_logger.IsDebugEnabled)
+            {
+                _logger.DebugFormat("Starting projection engine on tenant {0}", _config.TenantId);
+            }
 
             await StartPollingAsync().ConfigureAwait(false);
-            if (_logger.IsDebugEnabled) _logger.Debug("Projection engine started");
+            if (_logger.IsDebugEnabled)
+            {
+                _logger.Debug("Projection engine started");
+            }
         }
 
         public async Task PollAsync()
         {
             if (!Initialized)
+            {
                 return; //Poller still not initialized.
+            }
 
             foreach (var client in _clients)
             {
@@ -180,9 +209,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         public void Stop()
         {
-            if (_logger.IsDebugEnabled) _logger.Debug("Stopping projection engine");
+            if (_logger.IsDebugEnabled)
+            {
+                _logger.Debug("Stopping projection engine");
+            }
+
             StopPolling();
-            if (_logger.IsDebugEnabled) _logger.Debug("Projection engine stopped");
+            if (_logger.IsDebugEnabled)
+            {
+                _logger.Debug("Projection engine stopped");
+            }
         }
 
         public async Task StartWithManualPollAsync(Boolean immediatePoll = true)
@@ -244,11 +280,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 var client = _pollingClientFactory.Create(_persistence, pollerId);
                 allClients.Add(client);
                 _bucketToClient.Add(bucket, client);
-                client.Configure(GetStartGlobalCheckpoint(bucket.Slots), 4000);
+                client.Configure(GetStartGlobalCheckpoint(bucket.Slots), bucket.BufferSize);
             }
 
             _clients = allClients.ToArray();
 
+            //Scan all events for every slot and projection
+            _handledEventPerSlot = new Dictionary<string, HashSet<Type>>();
+            _handledEventPerProjection = new Dictionary<string, HashSet<Type>>();
             foreach (var slotName in allSlots)
             {
                 KernelMetricsHelper.CreateMeterForDispatcherCountSlot(slotName);
@@ -261,6 +300,15 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                     b.Slots.Any(s => s.Equals(slotName, StringComparison.OrdinalIgnoreCase))) ??
                     _config.BucketInfo.Single(b => b.Slots[0] == "*");
                 var client = _bucketToClient[slotBucket];
+                var projections = _projectionsBySlot[name];
+                var inspector = new ProjectionEventInspector();
+                foreach (var projection in projections)
+                {
+                    var projectionHandledEvents = inspector.InspectProjectionForEvents(projection.GetType());
+                    _handledEventPerProjection[projection.Info.CommonName] = projectionHandledEvents;
+                }
+                _handledEventPerSlot[name] = inspector.EventHandled;
+
                 client.AddConsumer($"SLOT: {slotName}", commit => DispatchCommitAsync(commit, name, startCheckpoint));
             }
 
@@ -283,7 +331,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         {
             Int64 min = Int64.MaxValue;
             if (RebuildSettings.ShouldRebuild)
+            {
                 throw new JarvisFrameworkEngineException("Projection engine is not used anymore for rebuild. Rebuild is done with the specific RebuildProjectionEngine");
+            }
 
             if (_projectionsBySlot.TryGetValue(slotName, out var projections))
             {
@@ -327,22 +377,66 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         private readonly ConcurrentDictionary<String, Int64> lastCheckpointDispatched =
             new ConcurrentDictionary<string, long>();
 
-        private async Task DispatchCommitAsync(IChunk chunk, string slotName, Int64 startCheckpoint)
+        private async Task DispatchCommitAsync(
+            IChunk chunk,
+            string slotName,
+            Int64 startCheckpoint)
         {
+            object[] events = GetArrayOfObjectFromChunk(chunk);
+
+            Boolean shouldDispatch;
+            if (JarvisFrameworkGlobalConfiguration.ProjectionServiceSkipUnhandledEvents)
+            {
+                //ok we need to dispatch this chunk only if one of the events is handled by this slot.
+                var handledEvents = _handledEventPerSlot[slotName];
+                shouldDispatch = false;
+                foreach (var @event in events)
+                {
+                    if (handledEvents.Contains(@event.GetType()))
+                    {
+                        shouldDispatch = true;
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                shouldDispatch = true;
+            }
+
+            var projections = _projectionsBySlot[slotName];
+
+            if (!shouldDispatch)
+            {
+                //signal to checkpoint tracker that we completed dispatching without having dispatched anything.
+                await _checkpointTracker.UpdateSlotAndSetCheckpointAsync(
+                   slotName,
+                   projections.Select(_ => _.Info.CommonName),
+                   chunk.Position,
+                   someEventDispatched: false).ConfigureAwait(false);
+                KernelMetricsHelper.MarkCommitDispatchedCount(slotName, 1);
+                return;
+            }
+
             Interlocked.Increment(ref _countOfConcurrentDispatchingCommit);
 
             _loggerThreadContextManager.SetContextProperty("commit", $"{chunk.OperationId}/{chunk.Position}");
 
-            if (_logger.IsDebugEnabled) _logger.DebugFormat("Dispatching checkpoit {0} on tenant {1}", chunk.Position, _config.TenantId);
+            if (_logger.IsDebugEnabled)
+            {
+                _logger.DebugFormat("Dispatching checkpoit {0} on tenant {1}", chunk.Position, _config.TenantId);
+            }
+
             TenantContext.Enter(_config.TenantId);
             var chkpoint = chunk.Position;
 
-            if (!lastCheckpointDispatched.ContainsKey(slotName))
+            if (!lastCheckpointDispatched.TryGetValue(slotName, out var lastCheckpointDispatchedForSlot))
             {
                 lastCheckpointDispatched[slotName] = 0;
+                lastCheckpointDispatchedForSlot = 0;
             }
 
-            if (lastCheckpointDispatched[slotName] >= chkpoint)
+            if (lastCheckpointDispatchedForSlot >= chkpoint)
             {
                 var error = String.Format("Sequence broken, last checkpoint for slot {0} was {1} and now we dispatched {2}",
                         slotName, lastCheckpointDispatched[slotName], chkpoint);
@@ -350,10 +444,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 throw new JarvisFrameworkEngineException(error);
             }
 
-            if (lastCheckpointDispatched[slotName] + 1 != chkpoint && lastCheckpointDispatched[slotName] > 0)
+            if (_logger.IsDebugEnabled && lastCheckpointDispatchedForSlot + 1 != chkpoint && lastCheckpointDispatchedForSlot > 0)
             {
-                _logger.DebugFormat("Sequence of commit not consecutive (probably holes), last dispatched {0} receiving {1}",
-                lastCheckpointDispatched[slotName], chkpoint);
+                _logger.DebugFormat("Sequence of commit not consecutive (probably holes), last dispatched {0} receiving {1}", lastCheckpointDispatchedForSlot, chkpoint);
             }
             lastCheckpointDispatched[slotName] = chkpoint;
 
@@ -364,10 +457,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 return;
             }
 
-            var projections = _projectionsBySlot[slotName];
-
-            object[] events = GetArrayOfObjectFromChunk(chunk);
-
             var eventCount = events.Length;
 
             //now it is time to dispatch the commit, we will dispatch each projection 
@@ -376,6 +465,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             foreach (var projection in projections)
             {
                 var cname = projection.Info.CommonName;
+                var handledEvents = _handledEventPerProjection[cname];
                 Object eventMessage = null;
                 try
                 {
@@ -383,37 +473,41 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                     for (int index = 0; index < eventCount; index++)
                     {
                         eventMessage = events[index];
+                        if (JarvisFrameworkGlobalConfiguration.ProjectionServiceSkipUnhandledEvents
+                            && !handledEvents.Contains(eventMessage.GetType()))
+                        {
+                            //this projection does not handle the event, so we can skip dispatching.
+                            continue;
+                        }
 
-                        var message = eventMessage as IMessage;
-                        string eventName = eventMessage.GetType().Name;
-                        _loggerThreadContextManager.SetContextProperty("evType", eventName);
-                        _loggerThreadContextManager.SetContextProperty("evMsId", message?.MessageId);
-                        _loggerThreadContextManager.SetContextProperty("evCheckpointToken", chunk.Position);
+                        //_loggerThreadContextManager.SetContextProperty("evType", eventName);
+                        //_loggerThreadContextManager.SetContextProperty("evMsId", message?.MessageId);
+                        _loggerThreadContextManager.SetContextProperty("evCheckpointToken", $"{chunk.Position}/{index}");
                         _loggerThreadContextManager.SetContextProperty("prj", cname);
 
                         var checkpointStatus = _checkpointTracker.GetCheckpointStatus(cname, chunk.Position);
-                        long ticks = 0;
 
                         try
                         {
-                            //pay attention, stopwatch consumes time.
-                            var sw = new Stopwatch();
-                            sw.Start();
+                            ////pay attention, stopwatch consumes time.
+                            //var sw = new Stopwatch();
+                            //sw.Start();
                             var eventProcessed = await projection
                                 .HandleAsync(eventMessage, checkpointStatus.IsRebuilding)
                                 .ConfigureAwait(false);
 
                             someProjectionProcessedTheEvent |= eventProcessed;
-                            sw.Stop();
-                            ticks = sw.ElapsedTicks;
-                            KernelMetricsHelper.IncrementProjectionCounter(cname, slotName, eventName, ticks, sw.ElapsedMilliseconds);
+                            //sw.Stop();
+                            //ticks = sw.ElapsedTicks;
+                            //KernelMetricsHelper.IncrementProjectionCounter(cname, slotName, eventName, ticks, sw.ElapsedMilliseconds);
 
                             if (_logger.IsDebugEnabled)
                             {
+                                string eventName = eventMessage.GetType().Name;
                                 _logger.DebugFormat("[Slot:{3}] [Projection {4}] Handled checkpoint {0}: {1} > {2}",
                                     chunk.Position,
                                     chunk.PartitionId,
-                                    $"eventName: {eventName} [event N°{index}]",
+                                    $"eventName: {eventMessage.GetType().Name} [event N°{index}]",
                                     slotName,
                                     cname
                                 );
@@ -424,14 +518,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                             var error = String.Format("[Slot: {3} Projection: {4}] Failed checkpoint: {0} StreamId: {1} Event Name: {2}",
                                 chunk.Position,
                                 chunk.PartitionId,
-                                eventName,
+                                eventMessage.GetType().Name,
                                 slotName,
                                 cname);
                             _logger.Fatal(error, ex);
                             _engineFatalErrors.Add(String.Format("{0}\n{1}", error, ex));
                             throw;
                         }
-
                     } //End of event cycle
                 }
                 catch (Exception ex)
@@ -443,8 +536,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 }
                 finally
                 {
-                    _loggerThreadContextManager.ClearContextProperty("evType");
-                    _loggerThreadContextManager.ClearContextProperty("evMsId");
+                    //_loggerThreadContextManager.ClearContextProperty("evType");
+                    //_loggerThreadContextManager.ClearContextProperty("evMsId");
                     _loggerThreadContextManager.ClearContextProperty("evCheckpointToken");
                     _loggerThreadContextManager.ClearContextProperty("prj");
                 }
@@ -503,16 +596,26 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         public async Task UpdateAsync()
         {
-            if (_logger.IsDebugEnabled) _logger.DebugFormat("Update triggered on tenant {0}", _config.TenantId);
+            if (_logger.IsDebugEnabled)
+            {
+                _logger.DebugFormat("Update triggered on tenant {0}", _config.TenantId);
+            }
+
             await PollAsync().ConfigureAwait(false);
         }
 
         public async Task UpdateAndWaitAsync()
         {
             if (!Initialized)
+            {
                 throw new JarvisFrameworkEngineException("Projection engine was not inited, pleas call the InnerStartWithManualPollAsync method if you want to poll manually");
+            }
 
-            if (_logger.IsDebugEnabled) _logger.DebugFormat("Polling from {0}", _config.EventStoreConnectionString);
+            if (_logger.IsDebugEnabled)
+            {
+                _logger.DebugFormat("Polling from {0}", _config.EventStoreConnectionString);
+            }
+
             int retryCount = 0;
             long lastDispatchedCheckpoint = 0;
 
@@ -522,7 +625,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
                 if (checkpointId > 0)
                 {
-                    if (_logger.IsDebugEnabled) _logger.DebugFormat("Last checkpoint is {0}", checkpointId);
+                    if (_logger.IsDebugEnabled)
+                    {
+                        _logger.DebugFormat("Last checkpoint is {0}", checkpointId);
+                    }
 
                     await PollAsync().ConfigureAwait(false);
                     await Task.Delay(1000).ConfigureAwait(false);
@@ -540,7 +646,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                         checkpointId = await _persistence.ReadLastPositionAsync().ConfigureAwait(false);
                         if (checkpointId == dispatched)
                         {
-                            if (_logger.IsDebugEnabled) _logger.Debug("Polling done!");
+                            if (_logger.IsDebugEnabled)
+                            {
+                                _logger.Debug("Polling done!");
+                            }
+
                             return;
                         }
                     }
@@ -562,7 +672,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 }
                 else
                 {
-                    if (_logger.IsDebugEnabled) _logger.Debug("Event store is empty");
+                    if (_logger.IsDebugEnabled)
+                    {
+                        _logger.Debug("Event store is empty");
+                    }
+
                     return;
                 }
             }
@@ -575,7 +689,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             HealthChecks.RegisterHealthCheck("Projection Engine Errors", () =>
             {
                 if (_engineFatalErrors.Count == 0)
+                {
                     return HealthCheckResult.Healthy("No error in projection engine");
+                }
 
                 return HealthCheckResult.Unhealthy("Error occurred in projection engine: " + String.Join("\n\n", _engineFatalErrors));
             });
