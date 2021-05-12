@@ -1,7 +1,9 @@
-﻿using Jarvis.Framework.Kernel.Engine;
+﻿using App.Metrics;
+using App.Metrics.Meter;
+using Jarvis.Framework.Kernel.Engine;
 using Jarvis.Framework.Kernel.MultitenantSupport;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
-using Metrics;
+using Jarvis.Framework.Shared.Support;
 using System;
 using System.Collections.Generic;
 
@@ -23,7 +25,7 @@ namespace Jarvis.Framework.Kernel.Support
 
         public static void SetProjectionEngineCurrentDispatchCount(Func<double> valueProvider)
         {
-            Metric.Gauge(_projectionEngineCurrentDispatchCount, valueProvider, Unit.Custom(EventStoreFactory.PartitionCollectionName));
+            MetricsHelper.CreateGauge(_projectionEngineCurrentDispatchCount, valueProvider, Unit.Custom(EventStoreFactory.PartitionCollectionName));
         }
 
         public static void SetCheckpointCountToDispatch(String slotName, Func<double> valueProvider)
@@ -47,7 +49,7 @@ namespace Jarvis.Framework.Kernel.Support
             {
                 gaugeName = "t[" + TenantContext.CurrentTenantId + "]" + gaugeName;
             }
-            Metric.Gauge(gaugeName, valueProvider, Unit.Items);
+            MetricsHelper.CreateGauge(gaugeName, valueProvider, Unit.Items);
         }
 
         public static void SetCommitPollingClientBufferSize(String pollerName, Func<double> valueProvider)
@@ -65,7 +67,7 @@ namespace Jarvis.Framework.Kernel.Support
             {
                 gaugeName = "t[" + TenantContext.CurrentTenantId + "]" + gaugeName;
             }
-            Metric.Gauge(gaugeName, valueProvider, Unit.Items);
+            MetricsHelper.CreateGauge(gaugeName, valueProvider, Unit.Items);
         }
 
         private static readonly Dictionary<string, Meter> CommitDispatchedBySlot = new Dictionary<string, Meter>();
@@ -78,7 +80,7 @@ namespace Jarvis.Framework.Kernel.Support
         {
             if (!CommitDispatchedBySlot.ContainsKey(slotName))
             {
-                var meter = Metric.Meter("projection-chunk-dispatched-" + slotName, Unit.Items);
+                var meter = Metric.Meter("projection-chunk-dispatched-" + slotName, Unit.Items, TimeUnit.Milliseconds);
                 CommitDispatchedBySlot[slotName] = meter;
             }
         }
@@ -86,7 +88,6 @@ namespace Jarvis.Framework.Kernel.Support
         public static void MarkCommitDispatchedCount(String slotName, Int32 count)
         {
             CommitDispatchedBySlot[slotName].Mark(count);
-            projectionDispatchMeter.Mark(count);
         }
 
         /// <summary>
@@ -98,7 +99,7 @@ namespace Jarvis.Framework.Kernel.Support
         {
             if (!CommitDispatchedByAtomicReadmodel.ContainsKey(aggregateIdType))
             {
-                var meter = Metric.Meter("atomicreadmodel-dispatched-commit-" + aggregateIdType, Unit.Items);
+                var meter = Metric.Meter("atomicreadmodel-dispatched-commit-" + aggregateIdType, Unit.Items, TimeUnit.Milliseconds);
                 CommitDispatchedByAtomicReadmodel[aggregateIdType] = meter;
             }
         }
@@ -112,7 +113,7 @@ namespace Jarvis.Framework.Kernel.Support
         {
             if (!RebuildCommitDispatchedBySlot.ContainsKey(slotName))
             {
-                var meter = Metric.Meter("projection-rebuild-event-dispatched-" + slotName, Unit.Items);
+                var meter = Metric.Meter("projection-rebuild-event-dispatched-" + slotName, Unit.Items, TimeUnit.Milliseconds);
                 RebuildCommitDispatchedBySlot[slotName] = meter;
             }
             Metric.Gauge("rebuild-buffer-STAGE3 (Action slot " + slotName + ")", getBufferDispatchCount, Unit.Items);
@@ -142,7 +143,7 @@ namespace Jarvis.Framework.Kernel.Support
         {
             if (!RebuildEventDispatchedByBucket.ContainsKey(bucketKey))
             {
-                var meter = Metric.Meter("rebuild-event-processed-" + bucketKey, Unit.Items);
+                var meter = Metric.Meter("rebuild-event-processed-" + bucketKey, Unit.Items, TimeUnit.Milliseconds);
                 CommitDispatchedBySlot[bucketKey] = meter;
             }
         }

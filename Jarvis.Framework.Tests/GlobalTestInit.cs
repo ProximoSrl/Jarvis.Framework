@@ -6,6 +6,8 @@ using Jarvis.Framework.Shared.IdentitySupport;
 using System.IO;
 using System.Reflection;
 using Jarvis.Framework.TestHelpers;
+using Jarvis.Framework.Shared.Support;
+using App.Metrics;
 
 namespace Jarvis.Framework.Tests
 {
@@ -15,6 +17,8 @@ namespace Jarvis.Framework.Tests
         [OneTimeSetUp]
         public void Global_initialization_of_all_tests()
         {
+            MetricsHelper.InitMetrics(new MetricsBuilder());
+
             //Nunit3 fix for test adapter of visual studio, it uses visual studio test directory
             Environment.CurrentDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 

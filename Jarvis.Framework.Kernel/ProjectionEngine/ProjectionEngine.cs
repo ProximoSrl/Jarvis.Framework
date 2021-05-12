@@ -4,10 +4,10 @@ using Jarvis.Framework.Kernel.MultitenantSupport;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 using Jarvis.Framework.Kernel.Support;
 using Jarvis.Framework.Shared.Exceptions;
+using Jarvis.Framework.Shared.HealthCheck;
 using Jarvis.Framework.Shared.Logging;
 using Jarvis.Framework.Shared.Messages;
 using Jarvis.Framework.Shared.Support;
-using Metrics;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
 using NStore.Core.Persistence;
@@ -568,7 +568,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             }
         }
 
-        #region Healt Checks
+        #region Health Checks
 
         private void RegisterHealthCheck()
         {

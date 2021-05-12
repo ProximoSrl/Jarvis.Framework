@@ -1,4 +1,6 @@
-﻿using Castle.Core.Logging;
+﻿using App.Metrics;
+using App.Metrics.Health;
+using Castle.Core.Logging;
 using Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 using Jarvis.Framework.Kernel.Support;
@@ -7,6 +9,7 @@ using Jarvis.Framework.Shared.Exceptions;
 using Jarvis.Framework.Shared.Helpers;
 using Jarvis.Framework.Shared.ReadModel.Atomic;
 using Jarvis.Framework.Shared.Store;
+using Jarvis.Framework.Shared.Support;
 using NStore.Core.Logging;
 using NStore.Core.Persistence;
 using NStore.Domain;
@@ -68,7 +71,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// </summary>
         public TimeSpan FlushTimeSpan { get; set; }
 
-        private Timer _flushTimer;
+        private System.Timers.Timer _flushTimer;
 
         public IAtomicReadModelInitializer[] AllReadModelSetup { get; set; }
 
@@ -114,17 +117,17 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
             Logger.Info("Created Atomic Projection Engine");
             MaximumDifferenceForCatchupPoller = 20000;
-
-            Metrics.HealthChecks.RegisterHealthCheck("AtomicProjectionEngine", GetHealthCheck);
+       
+            Metric.RegisterHealthCheck("AtomicProjectionEngine", GetHealthCheck);
 
             _maxCommitInStream = _persistence.ReadLastPositionAsync().Result;
         }
 
-        private Metrics.HealthCheckResult GetHealthCheck()
+        private HealthCheckResult GetHealthCheck()
         {
             if (_engineExceptions.Count == 0)
             {
-                return Metrics.HealthCheckResult.Healthy();
+                return HealthCheckResult.Healthy();
             }
 
             StringBuilder errors = new StringBuilder();
@@ -132,7 +135,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             {
                 errors.AppendLine($"Error: {ex.Key}: {ex.Value}");
             }
-            return Metrics.HealthCheckResult.Unhealthy("Error in Atomic Projection Engine: " + errors.ToString());
+            return HealthCheckResult.Unhealthy("Error in Atomic Projection Engine: " + errors.ToString());
         }
 
         /// <summary>
@@ -213,7 +216,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 }
             }
 
-            _flushTimer = new Timer(FlushTimeSpan.TotalMilliseconds);
+            _flushTimer = new System.Timers.Timer(FlushTimeSpan.TotalMilliseconds);
             _flushTimer.Elapsed += FlushTimerElapsed;
             _flushTimer.Start();
 
@@ -391,7 +394,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 BoundedCapacity = 4000,
             };
             var localBuffer = buffer = new BufferBlock<AtomicDispatchChunk>(bufferOptions);
-            Metrics.Metric.Gauge("atomic-projection-buffer", () => localBuffer.Count, Metrics.Unit.Items);
+            Metric.Gauge("atomic-projection-buffer", () => localBuffer.Count, Unit.Items);
 
             ExecutionDataflowBlockOptions enhancerExecutionOptions = new ExecutionDataflowBlockOptions
             {
@@ -404,7 +407,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 return c;
             }, enhancerExecutionOptions);
             buffer.LinkTo(enhancer, new DataflowLinkOptions() { PropagateCompletion = true });
-            Metrics.Metric.Gauge("atomic-projection-enhancer-buffer", () => enhancer.InputCount, Metrics.Unit.Items);
+            Metric.Gauge("atomic-projection-enhancer-buffer", () => enhancer.InputCount, Unit.Items);
 
             ExecutionDataflowBlockOptions consumerExecutionOptions = new ExecutionDataflowBlockOptions
             {
@@ -417,7 +420,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 //Ok I have a list of atomic projection, we need to create projector for every item.
                 var blocks = item.Value;
                 var consumer = new ActionBlock<AtomicDispatchChunk>(InnerDispatch(item, blocks), consumerExecutionOptions);
-                Metrics.Metric.Gauge("atomic-projection-consumer-buffer-" + item.Key.Name, () => consumer.InputCount, Metrics.Unit.Items);
+                Metric.Gauge("atomic-projection-consumer-buffer-" + item.Key.Name, () => consumer.InputCount, Unit.Items);
                 KernelMetricsHelper.CreateMeterForAtomicReadmodelDispatcherCount(item.Key.Name);
                 consumers.Add(consumer);
             }

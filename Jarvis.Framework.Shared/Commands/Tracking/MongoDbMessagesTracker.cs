@@ -1,9 +1,13 @@
-﻿using Castle.Core.Logging;
+﻿using App.Metrics;
+using App.Metrics.Counter;
+using App.Metrics.Meter;
+using App.Metrics.Timer;
+using Castle.Core.Logging;
 using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.Exceptions;
 using Jarvis.Framework.Shared.Helpers;
 using Jarvis.Framework.Shared.Messages;
-using Metrics;
+using Jarvis.Framework.Shared.Support;
 using MongoDB.Driver;
 using NStore.Core.Streams;
 using System;
@@ -24,11 +28,25 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
             }
         }
 
-        private static readonly Timer queueTimer = Metric.Timer("CommandWaitInQueue", Unit.Commands);
-        private static readonly Timer totalExecutionTimer = Metric.Timer("CommandTotalExecution", Unit.Commands);
-        private static readonly Counter queueCounter = Metric.Counter("CommandsWaitInQueue", Unit.Custom("ms"));
-        private static readonly Counter totalExecutionCounter = Metric.Counter("CommandsTotalExecution", Unit.Custom("ms"));
-        private static readonly Meter errorMeter = Metric.Meter("CommandFailures", Unit.Commands);
+        private static readonly TimerOptions QueueTimer = new TimerOptions
+        {
+            Name = "CommandWaitInQueue",
+            MeasurementUnit = Unit.Requests,
+            DurationUnit = TimeUnit.Milliseconds,
+            RateUnit = TimeUnit.Milliseconds
+        };
+
+        private static readonly CounterOptions QueueCounter = new CounterOptions()
+        {
+            Name = "CommandsWaitInQueue",
+            MeasurementUnit = Unit.Commands
+        };
+
+        private static readonly MeterOptions ErrorMeter = new MeterOptions
+        {
+            Name = "CommandFailures",
+            MeasurementUnit = Unit.Commands
+        };
 
         public ILogger Logger { get; set; }
 
@@ -192,11 +210,8 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
                                 var queueTime = firstExecutionValue.Subtract(trackMessage.StartedAt).TotalMilliseconds;
 
                                 var messageType = trackMessage.Message.GetType().Name;
-                                queueTimer.Record((Int64)queueTime, TimeUnit.Milliseconds, messageType);
-                                queueCounter.Increment(messageType, (Int64)queueTime);
-
-                                totalExecutionTimer.Record((Int64)queueTime, TimeUnit.Milliseconds, messageType);
-                                totalExecutionCounter.Increment(messageType, (Int64)queueTime);
+                                MetricsHelper.Timer.Time(QueueTimer, (long) queueTime);
+                                MetricsHelper.Counter.Increment(QueueCounter,  (Int64)queueTime, messageType);
                             }
                             else
                             {
@@ -269,7 +284,7 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
                         .Set(x => x.Completed, true),
                     new UpdateOptions() { IsUpsert = true }
                 );
-                errorMeter.Mark();
+                MetricsHelper.Meter.Mark(ErrorMeter);
             }
             catch (Exception iex)
             {

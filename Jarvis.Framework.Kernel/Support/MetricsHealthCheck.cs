@@ -1,6 +1,5 @@
-﻿using Jarvis.Framework.Shared.Support;
-using Metrics;
-using Metrics.Core;
+﻿using Jarvis.Framework.Shared.HealthCheck;
+using Jarvis.Framework.Shared.Support;
 using MongoDB.Driver;
 using System;
 using System.Linq;

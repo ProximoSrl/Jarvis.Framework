@@ -2,8 +2,7 @@
 
 using Castle.Core.Logging;
 using Jarvis.Framework.Shared.Exceptions;
-using Metrics;
-using Metrics.Core;
+using Jarvis.Framework.Shared.HealthCheck;
 using System;
 using System.ComponentModel;
 using System.Messaging;

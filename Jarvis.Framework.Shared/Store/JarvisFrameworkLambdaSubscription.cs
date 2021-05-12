@@ -1,4 +1,6 @@
-﻿using NStore.Core.Persistence;
+﻿using App.Metrics;
+using Jarvis.Framework.Shared.Support;
+using NStore.Core.Persistence;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -43,7 +45,8 @@ namespace Jarvis.Framework.Shared.Store
             _lambdaName = lambdaName;
             _failedPosition = 0;
             LastException = null;
-            Metrics.Metric.Gauge($"fw-lambda-subscription-{_lambdaName}", () => _numOfChunksProcessed, Metrics.Unit.Items);
+            
+            MetricsHelper.CreateGauge($"fw-lambda-subscription-{_lambdaName}", () => _numOfChunksProcessed, Unit.Items);
         }
 
         private Int64 _numOfChunksProcessed = 0;

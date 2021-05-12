@@ -27,7 +27,7 @@
         <dependency id="Castle.LoggingFacility" version="5.0.1" />
         <dependency id="Castle.Windsor" version="5.0.1" />
 
-        <dependency id="Metrics" version="0.5.0.1000" />
+        <dependency id="App.Metrics" version="4.2.0" />
       </group>
     
       <group targetFramework="net461">

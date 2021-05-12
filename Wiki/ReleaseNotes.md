@@ -6,6 +6,7 @@ J.A.R.V.I.S. Framework - Proximo srl (c)
 # 5.4.0
 
 - Updated references and readme
+- Moved to app.metrics, consult breaking changes in [dedicated wiki page](Metrics/metrics.md)
 
 # 5.3.5
 

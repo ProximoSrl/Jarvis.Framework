@@ -1,6 +1,8 @@
-﻿using Castle.Core;
+﻿using App.Metrics;
+using Castle.Core;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
-using Metrics;
+using Jarvis.Framework.Shared.HealthCheck;
+using Jarvis.Framework.Shared.Support;
 using System;
 using System.Linq;
 

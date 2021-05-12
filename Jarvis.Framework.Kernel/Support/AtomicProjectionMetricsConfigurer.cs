@@ -1,11 +1,13 @@
-﻿using Castle.Core;
+﻿using App.Metrics;
+using Castle.Core;
 using Castle.Core.Logging;
 using Jarvis.Framework.Kernel.Engine;
 using Jarvis.Framework.Kernel.ProjectionEngine.Atomic;
+using Jarvis.Framework.Shared.HealthCheck;
 using Jarvis.Framework.Shared.Helpers;
 using Jarvis.Framework.Shared.ReadModel;
 using Jarvis.Framework.Shared.ReadModel.Atomic;
-using Metrics;
+using Jarvis.Framework.Shared.Support;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using System;
