@@ -324,6 +324,30 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         }
 
         [Test]
+        public async Task Verify_non_dispatched_event_can_be_flushed_even_at_startup()
+        {
+            //Two projection in the same slot
+            var projection1 = new Projection(Substitute.For<ICollectionWrapper<SampleReadModel, String>>());
+
+            var projections = new IProjection[] { projection1 };
+
+            _concurrentCheckpointTrackerSut = new ConcurrentCheckpointTracker(_db);
+            _concurrentCheckpointTrackerSut.SetUp(projections, 1, false);
+
+            //We dispatch a single event not tracked, current is still null, then we want to flush
+            await _concurrentCheckpointTrackerSut.UpdateSlotAndSetCheckpointAsync("default", new[] { "Projection" }, 892, false).ConfigureAwait(false);
+            await _concurrentCheckpointTrackerSut.FlushCheckpointAsync().ConfigureAwait(false);
+
+            var allDbCheckpoints = _checkPoints.AsQueryable().Where(c => c.Slot == "default").ToList();
+            Assert.That(allDbCheckpoints.Single().Slot, Is.EqualTo("default"));
+            Assert.That(allDbCheckpoints.Single().Current, Is.EqualTo(892));
+            Assert.That(allDbCheckpoints.Single().Value, Is.EqualTo(892));
+
+            //in memory checkpoint should be updated.
+            Assert.That(_concurrentCheckpointTrackerSut.GetCheckpoint(projections[0]), Is.EqualTo(892));
+        }
+
+        [Test]
         public async Task Verify_non_dispatched_event_are_written_to_disk_after_timeout()
         {
             //Two projection in the same slot

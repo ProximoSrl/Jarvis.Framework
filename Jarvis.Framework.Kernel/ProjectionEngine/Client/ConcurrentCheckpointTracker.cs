@@ -310,7 +310,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         {
             return _checkpoints.UpdateManyAsync(
                     Builders<Checkpoint>.Filter.Eq(c => c.Slot, slotName) &
-                    Builders<Checkpoint>.Filter.Lt(c => c.Current, valueCheckpointToken),
+                    (
+                        Builders<Checkpoint>.Filter.Lt(c => c.Current, valueCheckpointToken) |
+                        Builders<Checkpoint>.Filter.Eq(c => c.Current, null)
+                    ),
                     Builders<Checkpoint>.Update
                         .Set(_ => _.Current, valueCheckpointToken)
                         .Set(_ => _.Value, valueCheckpointToken)
