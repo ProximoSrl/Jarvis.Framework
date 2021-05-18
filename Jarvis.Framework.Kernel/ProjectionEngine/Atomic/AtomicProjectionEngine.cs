@@ -1,11 +1,11 @@
 ﻿using App.Metrics;
-using App.Metrics.Health;
 using Castle.Core.Logging;
 using Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 using Jarvis.Framework.Kernel.Support;
 using Jarvis.Framework.Shared;
 using Jarvis.Framework.Shared.Exceptions;
+using Jarvis.Framework.Shared.HealthCheck;
 using Jarvis.Framework.Shared.Helpers;
 using Jarvis.Framework.Shared.ReadModel.Atomic;
 using Jarvis.Framework.Shared.Store;

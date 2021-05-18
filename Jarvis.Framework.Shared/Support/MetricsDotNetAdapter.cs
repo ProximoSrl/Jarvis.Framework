@@ -1,6 +1,5 @@
 ﻿using App.Metrics;
 using App.Metrics.Counter;
-using App.Metrics.Health;
 using App.Metrics.Histogram;
 using App.Metrics.Meter;
 using App.Metrics.Timer;
@@ -159,26 +158,6 @@ namespace Jarvis.Framework.Shared.Support
         public static void RegisterHealthCheck(string name, Func<HealthCheck.HealthCheckResult> getHealthCheck)
         {
             HealthChecks.RegisterHealthCheck(name, getHealthCheck);
-        }
-
-        /// <summary>
-        /// Register health check with the old wrapper.
-        /// </summary>
-        /// <param name="name"></param>
-        /// <param name="getHealthCheck"></param>
-        public static void RegisterHealthCheck(string name, Func<App.Metrics.Health.HealthCheckResult> getHealthCheck)
-        {
-            HealthChecks.RegisterHealthCheck(name, () => ToLegacyHealthCheckResult(getHealthCheck()));
-        }
-
-        public static HealthCheck.HealthCheckResult ToLegacyHealthCheckResult(App.Metrics.Health.HealthCheckResult healthCheckResult) 
-        {
-            if (healthCheckResult.Status == HealthCheckStatus.Healthy)
-            {
-                return HealthCheck.HealthCheckResult.Healthy(healthCheckResult.Message);
-            }
-
-            return HealthCheck.HealthCheckResult.Unhealthy(healthCheckResult.Message);
         }
     }
 }

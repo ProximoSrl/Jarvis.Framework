@@ -57,9 +57,6 @@
     <Reference Include="App.Metrics.Formatters.Json, Version=4.2.0.0, Culture=neutral, PublicKeyToken=0d5193a913d1b812, processorArchitecture=MSIL">
       <HintPath>..\packages\App.Metrics.Formatters.Json.4.2.0\lib\net461\App.Metrics.Formatters.Json.dll</HintPath>
     </Reference>
-    <Reference Include="App.Metrics.Health.Abstractions, Version=3.2.0.0, Culture=neutral, PublicKeyToken=0d5193a913d1b812, processorArchitecture=MSIL">
-      <HintPath>..\packages\App.Metrics.Health.Abstractions.3.2.0\lib\netstandard2.0\App.Metrics.Health.Abstractions.dll</HintPath>
-    </Reference>
     <Reference Include="Castle.Core, Version=4.0.0.0, Culture=neutral, PublicKeyToken=407dd0808d44fbdc, processorArchitecture=MSIL">
       <HintPath>..\packages\Castle.Core.4.4.1\lib\net45\Castle.Core.dll</HintPath>
     </Reference>
