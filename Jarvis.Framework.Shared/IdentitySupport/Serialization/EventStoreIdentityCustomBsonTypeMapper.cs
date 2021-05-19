@@ -6,7 +6,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport.Serialization
 {
     public class EventStoreIdentityCustomBsonTypeMapper : ICustomBsonTypeMapper
     {
-        private static HashSet<Type> _registrations = new HashSet<Type>();
+        private static readonly HashSet<Type> _registrations = new HashSet<Type>();
         public bool TryMapToBsonValue(object value, out BsonValue bsonValue)
         {
             if (value is EventStoreIdentity)

@@ -145,7 +145,7 @@ namespace Jarvis.Framework.Kernel.Support
             }
         }
 
-        private static HashSet<Assembly> _alreadyRegisterdAssemblies = new HashSet<Assembly>();
+        private static readonly HashSet<Assembly> _alreadyRegisterdAssemblies = new HashSet<Assembly>();
 
         /// <summary>
         /// Scan the assembly to find all types that needs special registration.

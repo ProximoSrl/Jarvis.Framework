@@ -1,5 +1,4 @@
 ﻿using App.Metrics;
-using App.Metrics.Meter;
 using Jarvis.Framework.Kernel.Engine;
 using Jarvis.Framework.Kernel.MultitenantSupport;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
@@ -167,8 +166,6 @@ namespace Jarvis.Framework.Kernel.Support
         private static readonly Counter projectionCounterRebuild = Metric.Counter("prj-time-rebuild", Unit.Custom("ticks"));
         private static readonly Counter projectionSlotCounterRebuild = Metric.Counter("prj-slot-time-rebuild", Unit.Custom("ticks"));
         private static readonly Counter projectionEventCounterRebuild = Metric.Counter("prj-event-time-rebuild", Unit.Custom("ticks"));
-
-        private static readonly Meter projectionDispatchMeter = Metric.Meter("projection-chunk-dispatched-TOTAL", Unit.Items, TimeUnit.Seconds);
 
         /// <summary>
         /// During rebuild, this is the count of ALL Slot dispatched event, each event is counted multiple times.

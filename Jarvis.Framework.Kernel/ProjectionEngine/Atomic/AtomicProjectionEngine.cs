@@ -117,7 +117,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
             Logger.Info("Created Atomic Projection Engine");
             MaximumDifferenceForCatchupPoller = 20000;
-       
+
             Metric.RegisterHealthCheck("AtomicProjectionEngine", GetHealthCheck);
 
             _maxCommitInStream = _persistence.ReadLastPositionAsync().Result;

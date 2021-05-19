@@ -210,8 +210,8 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
                                 var queueTime = firstExecutionValue.Subtract(trackMessage.StartedAt).TotalMilliseconds;
 
                                 var messageType = trackMessage.Message.GetType().Name;
-                                MetricsHelper.Timer.Time(QueueTimer, (long) queueTime);
-                                MetricsHelper.Counter.Increment(QueueCounter,  (Int64)queueTime, messageType);
+                                MetricsHelper.Timer.Time(QueueTimer, (long)queueTime);
+                                MetricsHelper.Counter.Increment(QueueCounter, (Int64)queueTime, messageType);
                             }
                             else
                             {
@@ -308,7 +308,7 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
 
         #region Queries
 
-        private static SortDefinition<TrackedMessageModel> OrederByCreationDateDescending = Builders<TrackedMessageModel>.Sort.Descending(m => m.StartedAt);
+        private static readonly SortDefinition<TrackedMessageModel> OrederByCreationDateDescending = Builders<TrackedMessageModel>.Sort.Descending(m => m.StartedAt);
 
         public List<TrackedMessageModel> GetByIdList(IEnumerable<String> idList)
         {

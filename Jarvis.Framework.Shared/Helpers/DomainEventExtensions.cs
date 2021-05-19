@@ -9,7 +9,7 @@ namespace Jarvis.Framework.Shared.Helpers
 {
     public static class DomainEventExtensions
     {
-        private static Guid[] Empty = new Guid[0];
+        private static readonly Guid[] Empty = new Guid[0];
 
         /// <summary>
         /// When an event was generated offline, and its command is replayed on the 
