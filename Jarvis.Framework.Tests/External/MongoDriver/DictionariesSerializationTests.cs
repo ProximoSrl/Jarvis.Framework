@@ -25,7 +25,6 @@ namespace Jarvis.Framework.Tests.External.MongoDriver
             var url = new MongoUrl(connectionString);
             var client = new MongoClient(url);
             db = client.GetDatabase(url.DatabaseName);
-
         }
 
         private class TestClassWithHeadersAsConcreteDictionary

@@ -44,7 +44,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
             Converters = new JsonConverter[]
             {
                 new StringValueJsonConverter()
-            }
+            },
         };
 
         protected BusBootstrapper(
@@ -80,11 +80,14 @@ at least configure one assembly with messages to be dispatched.";
             var mongoClient = mongoUrl.CreateClient(false);
 
             _mongoDatabase = mongoClient.GetDatabase(mongoUrl.DatabaseName);
-            Logger = NullLogger.Instance;
+            var factory = container.Resolve<ILoggerFactory>();
+            Logger = factory.Create(GetType());
 
             // PRXM
             JsonSerializerSettingsForRebus.ContractResolver = new MessagesContractResolver();
             JsonSerializerSettingsForRebus.ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor;
+            JsonSerializerSettingsForRebus.SerializationBinder = new JarvisFrameworkRebusSerializationBinder(factory.Create(typeof(JarvisFrameworkRebusSerializationBinder)));
+
             _messagesTracker = messagesTracker;
             // PRXM
         }
