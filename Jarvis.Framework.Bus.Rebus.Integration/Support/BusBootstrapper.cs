@@ -121,7 +121,7 @@ at least configure one assembly with messages to be dispatched.";
         {
             var router = new JarvisRebusConfigurationManagerRouterHelper(JarvisRebusConfiguration);
 
-            var busConfiguration = global::Rebus.Config.Configure.With(new CastleWindsorContainerAdapter(_container))
+            var busConfiguration = Configure.With(new CastleWindsorContainerAdapter(_container))
                 .Serialization(c => c.UseNewtonsoftJson(JsonSerializerSettingsForRebus))
                 .Subscriptions(s => s.StoreInMongoDb(_mongoDatabase, JarvisRebusConfiguration.Prefix + "-subscriptions", isCentralized: JarvisRebusConfiguration.CentralizedConfiguration))
                 .Events(e => e.BeforeMessageSent += BeforeMessageSent);
