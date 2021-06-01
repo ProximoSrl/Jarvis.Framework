@@ -1,6 +1,7 @@
 ﻿using Castle.Core.Logging;
 using Jarvis.Framework.Shared.Exceptions;
 using Jarvis.Framework.Shared.Support;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using System;
 using System.Runtime.CompilerServices;
@@ -81,6 +82,12 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
                 if (_logger.IsDebugEnabled) _logger.DebugFormat("JarvisFrameworkRebusSerializationBinder: BindToType {0}/{1} -> {2}", assemblyName, typeName, type.FullName);
                 return type;
             }
+            //catch (JsonSerializationException sex) 
+            //{
+            //    //ok we have problem in serialization, it could be that some
+            //    _logger.ErrorFormat(sex, "JarvisFrameworkRebusSerializationBinder: BindToType ERROR {0}/{1}", assemblyName, typeName);
+            //    return Type.GetType(typeName, true); 
+            //}
             catch (Exception ex)
             {
                 _logger.ErrorFormat(ex, "JarvisFrameworkRebusSerializationBinder: BindToType ERROR {0}/{1}", assemblyName, typeName);

@@ -28,7 +28,6 @@ J.A.R.V.I.S. Framework - Proximo srl (c)
 
 - Fixed builds
 
-
 # 5.3.0
 
 - AtomicReadmodel: Catchup readmodel to the latest version in CollectionWrapper.
