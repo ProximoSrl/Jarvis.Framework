@@ -1,51 +1,60 @@
-J.A.R.V.I.S. Framework - Proximo srl (c)
+# J.A.R.V.I.S. Framework - Proximo srl (c)
 ====
+## Version 6
 
-# Version 5
+### 6.0.0
 
-# 5.4.0
+- Tested and used with .NET core projects.
+- Removed Metrics.NET in favor of [App Metrics](https://www.app-metrics.io/)
+- Support usage of Rebus MongoDb transport
+- Support for Domain Event upcaster.
+- Reference updated
+
+## Version 5
+
+### 5.4.0
 
 - Updated references and readme
 - Moved to app.metrics, consult breaking changes in [dedicated wiki page](Metrics/metrics.md)
 
-# 5.3.5
+### 5.3.5
 
 - Better checkpoint handling for slots that does not handle an event in projection service
 
-# 5.3.4
+### 5.3.4
 
 - Added Upcasting logic (we had everything in place but not the infrastructure for upcasting)
 
-# 5.3.3
+### 5.3.3
 
 - No change, needed to bump the verison for a problem with nuget packages.
 
-# 5.3.2
+### 5.3.2
 
 - AtomicReadmodel: Fix FindOneAndCatchup, that did not project anything if the first event was not already projected by the engine.
 
-# 5.3.1
+### 5.3.1
 
 - Fixed builds
 
-# 5.3.0
+### 5.3.0
 
 - AtomicReadmodel: Catchup readmodel to the latest version in CollectionWrapper.
 
-# 5.2.0
+### 5.2.0
 
 - AtomicReadmodel: Before and after events handler
 
-# 5.1.0
+### 5.1.0
 
 - Updated references
 - Global option to have a better catchup for atomic readmodels (JarvisFrameworkGlobalConfiguration.AtomicProjectionEngineOptimizedCatchup)
 
-# 5.0.1
+### 5.0.1
 
 - Fixed query for tracking message model pending plus other fix in message tracking area.
 
-# 5.0.0
+### 5.0.0
 
 - Refactor of Tracking Message Model (see breaking changes)
 
@@ -82,7 +91,7 @@ Main modification is: Moved framework to .NETStandard.
 - Upgraded project for .NET standard
 - Changed TransformForNotification in CollectionWrapper to use also the event that generates change in the readmodel.
 
-## Version 3:
+## Version 3
 
 ### 3.3.0
 
@@ -101,7 +110,6 @@ Main modification is: Moved framework to .NETStandard.
 
 - Introduced interface ICounterServiceWithOffset
 - DotNetCore support.
-
 
 ## 3.0.0
 
