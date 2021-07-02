@@ -50,7 +50,8 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
         protected BusBootstrapper(
             IWindsorContainer container,
             JarvisRebusConfiguration configuration,
-            IMessagesTracker messagesTracker)
+            IMessagesTracker messagesTracker,
+            Boolean useCustomJarvisFrameworkBinder)
         {
             if (configuration == null)
             {
@@ -86,8 +87,10 @@ at least configure one assembly with messages to be dispatched.";
             // PRXM
             JsonSerializerSettingsForRebus.ContractResolver = new MessagesContractResolver();
             JsonSerializerSettingsForRebus.ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor;
-            JsonSerializerSettingsForRebus.SerializationBinder = new JarvisFrameworkRebusSerializationBinder(factory.Create(typeof(JarvisFrameworkRebusSerializationBinder)));
-
+            if (useCustomJarvisFrameworkBinder)
+            {
+                JsonSerializerSettingsForRebus.SerializationBinder = new JarvisFrameworkRebusSerializationBinder(factory.Create(typeof(JarvisFrameworkRebusSerializationBinder)));
+            }
             _messagesTracker = messagesTracker;
             // PRXM
         }
