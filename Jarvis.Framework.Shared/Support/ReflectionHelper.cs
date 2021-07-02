@@ -25,18 +25,32 @@ namespace Jarvis.Framework.Shared.Support
 
         private static void ManageGenericArgument(Type type, StringBuilder sb)
         {
-            var arguments = type.GetGenericArguments();
-            if (type.IsNested)
+            //if this is an array we simple want to handle base type then append [] at the end.
+            var examinedType = type;
+            if (type.IsArray)
+            {
+                examinedType = type.GetElementType();
+            }
+
+            if (examinedType.IsNested)
             {
                 sb.Append($"{type.Namespace}.{GetNestedTypeList(type.DeclaringType)}+{type.Name}");
             }
             else
             {
-                sb.Append($"{type.Namespace}.{type.Name}");
+                if (examinedType.Namespace == null)
+                {
+                    sb.Append($"{examinedType.Name}");
+                }
+                else
+                {
+                    sb.Append($"{examinedType.Namespace}.{examinedType.Name}");
+                }
             }
 
-            if (type.IsGenericType)
+            if (examinedType.IsGenericType)
             {
+                var arguments = examinedType.GetGenericArguments();
                 sb.Append("[");
                 foreach (var typeArgument in arguments)
                 {
@@ -48,12 +62,16 @@ namespace Jarvis.Framework.Shared.Support
                 sb.Length -= 1;
                 sb.Append("]");
             }
+            if (type.IsArray) 
+            {
+                sb.Append("[]");
+            }
         }
 
         private static String GetNestedTypeList(Type firstContainingType)
         {
             Stack<Type> stack = new Stack<Type>();
-            while (firstContainingType != null) 
+            while (firstContainingType != null)
             {
                 stack.Push(firstContainingType);
                 firstContainingType = firstContainingType.DeclaringType;
@@ -61,7 +79,7 @@ namespace Jarvis.Framework.Shared.Support
 
             StringBuilder sb = new StringBuilder();
 
-            while (stack.Count > 0) 
+            while (stack.Count > 0)
             {
                 sb.Append(stack.Pop().Name);
                 sb.Append("+");
