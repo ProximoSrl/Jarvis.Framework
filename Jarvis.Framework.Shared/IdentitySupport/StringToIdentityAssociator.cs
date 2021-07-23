@@ -238,9 +238,16 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                 bool isMongoException = ex is MongoWriteException || ex is MongoWriteConcernException;
                 if (isMongoException && ex.Message.Contains("E11000 duplicate key"))
                 {
-                    //grab record by key or id, one of them conflicted
+                    //grab record by key or id, or the one that conflicted, remember that with concurrency
+                    //it could be possible that another thread removed the key.
                     var existing = _collection.FindOneById(idKey) ??
-                        _collection.Find(Builders<Association>.Filter.Eq(a => a.Id, id)).Single();
+                        _collection.Find(Builders<Association>.Filter.Eq(a => a.Id, id)).SingleOrDefault();
+                    if (existing == null)
+                    {
+                        //The key conflicted, but I'm unable to find conflict record in db, another thread removed it? I cannot associate
+                        if (_logger.IsWarnEnabled) _logger.WarnFormat("Mapping between {0} and {1} was probably removed by a different thread removed by a different thread, abort!", key, id);
+                        return false;
+                    }
                     if (existing.Id == id && existing.Key == idKey)
                     {
                         if (_logger.IsDebugEnabled) _logger.DebugFormat("Mapping between {0} and {1} is already existing and is allowed!", key, id);
