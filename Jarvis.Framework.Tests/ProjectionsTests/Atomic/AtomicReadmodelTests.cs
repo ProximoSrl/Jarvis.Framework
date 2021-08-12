@@ -168,5 +168,22 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             Assert.That(rm.LastModify, Is.EqualTo(((DomainEvent)cs.Events[0]).CommitStamp));
             Assert.That(rm.AggregateVersion, Is.EqualTo(cs.AggregateVersion));
         }
+
+        [Test]
+        public async Task When_event_is_not_handled_reamodel_should_not_marked_as_changed()
+        {
+            var cs = await GenerateCreatedEvent(issuedBy: "admin").ConfigureAwait(false);
+            var rm = new SimpleAtomicReadmodelWithSingleEventHandled(new SampleAggregateId(_aggregateIdSeed));
+
+            Assert.That(rm.AggregateVersion, Is.EqualTo(0), "Uninitialized Atomic reamodel should have 0 as version");
+
+            var processed = rm.ProcessChangeset(cs);
+            Assert.That(processed, Is.False, "That readmodel does not process Created event so it should communicate that the event is not handled");
+
+            cs = await GenerateTouchedEvent(issuedBy: "admin2").ConfigureAwait(false);
+            processed = rm.ProcessChangeset(cs);
+
+            Assert.IsTrue(processed, "Touched event should be processed");
+        }
     }
 }
