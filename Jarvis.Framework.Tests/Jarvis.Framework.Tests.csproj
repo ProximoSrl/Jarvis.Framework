@@ -220,6 +220,7 @@
     <Compile Include="ProjectionsTests\Atomic\Support\AtomicAggregate.cs" />
     <Compile Include="ProjectionsTests\Atomic\Support\AnotherSimpleTestAtomicReadModel.cs" />
     <Compile Include="ProjectionsTests\Atomic\AtomicReadmodelVersionLoaderTests.cs" />
+    <Compile Include="ProjectionsTests\Atomic\Support\SimpleAtomicReadmodelWithSingleEventHandled.cs" />
     <Compile Include="ProjectionsTests\Atomic\Support\SimpleTestAtomicReadModelWrong.cs" />
     <Compile Include="ProjectionsTests\Atomic\Support\SimpleTestAtomicReadModel.cs" />
     <Compile Include="ProjectionsTests\CachedMongoStorageTests.cs" />
