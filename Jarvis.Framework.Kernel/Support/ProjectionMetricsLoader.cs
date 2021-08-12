@@ -7,9 +7,17 @@ using Jarvis.Framework.Shared.Helpers;
 using MongoDB.Driver.Core.Clusters;
 using System.Threading;
 using Jarvis.Framework.Kernel.Engine;
+using Jarvis.Framework.Kernel.ProjectionEngine.Client;
+using Jarvis.Framework.Kernel.Events;
+using System.Reflection;
 
 namespace Jarvis.Framework.Kernel.Support
 {
+    /// <summary>
+    /// Get status of projection, it will make use of the concurrent checkpoint
+    /// tracker if we are running inside a projection service, we will read stale
+    /// database information if we are outside of the projection engine.
+    /// </summary>
     public class ProjectionStatusLoader : IProjectionStatusLoader
     {
         private readonly int _pollingIntervalInSeconds;
@@ -20,9 +28,21 @@ namespace Jarvis.Framework.Kernel.Support
         private readonly IMongoDatabase _eventStoreDatabase;
         private readonly IMongoDatabase _readModelDatabase;
 
-        private DateTime lastPoll = DateTime.MinValue;
+        private DateTime _lastPoll = DateTime.MinValue;
         private Int32 _isRetrievingData = 0;
         private Int64 _lastDelay;
+
+        /// <summary>
+        /// This is an optional dependency, if we are into the process that runs projection
+        /// engine we can read data from memory
+        /// </summary>
+        public IConcurrentCheckpointTracker ConcurrentCheckpointTracker { get; set; }
+
+        /// <summary>
+        /// This will be different from null if we are in projection engine process and
+        /// we have Concurrent Checkpoint tracker configured.
+        /// </summary>
+        public IProjection[] AllProjections { get; set; }
 
         public ProjectionStatusLoader(
             IMongoDatabase eventStoreDatabase,
@@ -57,71 +77,137 @@ namespace Jarvis.Framework.Kernel.Support
             return _lastDelay;
         }
 
+        private Dictionary<string, IProjection> _sampleProjectionPerSlot;
+
+        private void InitProjectionDictionary()
+        {
+            if (_sampleProjectionPerSlot == null)
+            {
+                if (AllProjections == null)
+                {
+                    _sampleProjectionPerSlot = new Dictionary<string, IProjection>();
+                }
+                else
+                {
+                    //We need to have a single projection for each slot to query the status to the
+                    //Concurrent checkpoint tracker
+                    _sampleProjectionPerSlot = AllProjections
+                        .Select(p => new
+                        {
+                            Projection = p,
+                            Slot = p.GetType().GetCustomAttribute<ProjectionInfoAttribute>().SlotName
+                        })
+                        .GroupBy(e => e.Slot)
+                        .ToDictionary(e => e.Key, e => e.First().Projection);
+                }
+            }
+        }
+
         private void GetMetricValue()
         {
-            try
+            if (Interlocked.CompareExchange(ref _isRetrievingData, 1, 0) == 0)
             {
-                if (Interlocked.CompareExchange(ref _isRetrievingData, 1, 0) == 0 
-                    && DateTime.Now.Subtract(lastPoll).TotalSeconds > _pollingIntervalInSeconds)
+                try
                 {
-                    if (_eventStoreDatabase.Client.Cluster.Description.State != ClusterState.Connected ||
-                        _readModelDatabase.Client.Cluster.Description.State != ClusterState.Connected)
+                    if (DateTime.Now.Subtract(_lastPoll).TotalSeconds > _pollingIntervalInSeconds)
                     {
-                        //database is down, we cannot read values.
-                        lastPoll = DateTime.Now;
-                        return;
-                    }
-
-                    _lastDelay = 0;
-
-                    var lastCommitDoc = _commitsCollection
-                        .FindAll()
-                        .Sort(Builders<BsonDocument>.Sort.Descending("_id"))
-                        .Project(Builders<BsonDocument>.Projection.Include("_id"))
-                        .FirstOrDefault();
-                    if (lastCommitDoc == null) return;
-
-                    var lastCommit = lastCommitDoc["_id"].AsInt64;
-
-                    BsonDocument[] pipeline =
-                    {
-                            BsonDocument.Parse(@"{""Active"": true}"),
-                            BsonDocument.Parse(@"{""Slot"" : 1, ""Current"" : 1}"),
-                            BsonDocument.Parse(@"{""_id"" : ""$Slot"", ""Current"" : {$min : ""$Current""}}")
-                        };
-
-                    var options = new AggregateOptions();
-                    options.AllowDiskUse = true;
-                    options.UseCursor = true;
-                    var allCheckpoints = _checkpointCollection.Aggregate(options)
-                        .Match(pipeline[0])
-                        .Project(pipeline[1])
-                        .Group(pipeline[2])
-                        .ToList(); 
-                    foreach (BsonDocument metric in allCheckpoints)
-                    {
-                        var slotName = metric["_id"].AsString;
-                        Int64 current;
-                        if (!metric["Current"].IsBsonNull)
+                        //common code, grab latest commit
+                        if (_eventStoreDatabase.Client.Cluster.Description.State != ClusterState.Connected ||
+                            _readModelDatabase.Client.Cluster.Description.State != ClusterState.Connected)
                         {
-                            current = metric["Current"].AsInt64;
+                            //database is down, we cannot read values.
+                            _lastPoll = DateTime.UtcNow;
+                            return;
+                        }
+
+                        _lastDelay = 0;
+
+                        var lastCommitDoc = _commitsCollection
+                            .FindAll()
+                            .Sort(Builders<BsonDocument>.Sort.Descending("_id"))
+                            .Project(Builders<BsonDocument>.Projection.Include("_id"))
+                            .FirstOrDefault();
+                        if (lastCommitDoc == null) return;
+
+                        var lastCommit = lastCommitDoc["_id"].AsInt64;
+
+                        var someProjectionRegistered = AllProjections?.Length > 0;
+                        if (ConcurrentCheckpointTracker != null && someProjectionRegistered)
+                        {
+                            UpdateVaueQueryingConcurrentCheckpointTracker(lastCommit);
                         }
                         else
                         {
-                            current = 0;
+                            UpdateValueQueryingTheDatabase(lastCommit);
                         }
-
-                        var delay = lastCommit - current;
-                        if (delay > _lastDelay) _lastDelay = delay;
-                        _lastMetrics[slotName] = new SlotStatus(slotName, delay);
+                        _lastPoll = DateTime.UtcNow;
                     }
-                    lastPoll = DateTime.Now;
+                }
+                finally
+                {
+                    Interlocked.Exchange(ref _isRetrievingData, 0);
                 }
             }
-            finally
+        }
+
+        private void UpdateVaueQueryingConcurrentCheckpointTracker(long lastCommit)
+        {
+            //read data directly from the concurrent checkpoint tracker.
+            //first be sure to have preloaded a dictionary with slot in key and 
+            //one of the projection as value.
+            InitProjectionDictionary();
+            var allSlot = _sampleProjectionPerSlot
+                .Select(kvp => new
+                {
+                    SlotName = kvp.Key,
+                    SlotCheckpoint = ConcurrentCheckpointTracker.GetCheckpoint(kvp.Value)
+                });
+
+            foreach (var slotStatus in allSlot)
             {
-                Interlocked.Exchange(ref _isRetrievingData, 0);
+                UpdateSlot(lastCommit, slotStatus.SlotName, slotStatus.SlotCheckpoint);
             }
+        }
+
+        private void UpdateValueQueryingTheDatabase(long lastCommit)
+        {
+            BsonDocument[] pipeline =
+            {
+                BsonDocument.Parse(@"{""Active"": true}"),
+                BsonDocument.Parse(@"{""Slot"" : 1, ""Current"" : 1}"),
+                BsonDocument.Parse(@"{""_id"" : ""$Slot"", ""Current"" : {$min : ""$Current""}}")
+            };
+
+            var options = new AggregateOptions();
+            options.AllowDiskUse = true;
+            options.UseCursor = true;
+            var allCheckpoints = _checkpointCollection.Aggregate(options)
+                .Match(pipeline[0])
+                .Project(pipeline[1])
+                .Group(pipeline[2])
+                .ToList();
+            foreach (BsonDocument metric in allCheckpoints)
+            {
+                var slotName = metric["_id"].AsString;
+                Int64 current;
+                if (!metric["Current"].IsBsonNull)
+                {
+                    current = metric["Current"].AsInt64;
+                }
+                else
+                {
+                    current = 0;
+                }
+
+                UpdateSlot(lastCommit, slotName, current);
+            }
+        }
+
+        private void UpdateSlot(long lastCommit, string slotName, long current)
+        {
+            var delay = lastCommit - current;
+            if (delay > _lastDelay) _lastDelay = delay;
+            _lastMetrics[slotName] = new SlotStatus(slotName, delay);
         }
     }
 }

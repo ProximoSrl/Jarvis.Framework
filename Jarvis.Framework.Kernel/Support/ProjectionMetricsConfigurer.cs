@@ -6,13 +6,18 @@ using Metrics;
 
 namespace Jarvis.Framework.Kernel.Support
 {
+    /// <summary>
+    /// This is a class to configure metrics for projections. It needs to be 
+    /// configured and installed in the very same process that runs the 
+    /// projection engine.
+    /// </summary>
     public class ProjectionMetricsConfigurer : IStartable
     {
         private readonly IProjectionStatusLoader _loader;
         private readonly int _maxSkewForSlot;
 
         /// <summary>
-        /// 
+        /// Configure the component.
         /// </summary>
         /// <param name="loader"></param>
         /// <param name="maxSkewForSlot">Maximum value tolerated for a slot 
@@ -47,7 +52,7 @@ namespace Jarvis.Framework.Kernel.Support
             {
                 gaugeName = CheckpointBehind;
             }
-          
+
             Metric.Gauge(gaugeName, valueProvider, Unit.Items);
         }
 
@@ -80,7 +85,7 @@ namespace Jarvis.Framework.Kernel.Support
 
         public void Stop()
         {
-            
+            //Intentionally left empty
         }
     }
 }

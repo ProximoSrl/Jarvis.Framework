@@ -3,6 +3,10 @@ J.A.R.V.I.S. Framework - Proximo srl (c)
 
 # Version 5
 
+# 5.3.9
+
+- Fix ProjectionStatusLoader to work in memory to read the most up-to-date projection checkpoint.
+
 # 5.3.5
 
 - Better checkpoint handling for slots that does not handle an event in projection service
