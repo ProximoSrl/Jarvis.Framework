@@ -4,18 +4,19 @@
 
 ### 6.0.0
 
+
 - Tested and used with .NET core projects.
 - Removed Metrics.NET in favor of [App Metrics](https://www.app-metrics.io/)
 - Support usage of Rebus MongoDb transport
 - Support for Domain Event upcaster.
-- Reference updated
+- Updated references and readme
+- Moved to app.metrics, consult breaking changes in [dedicated wiki page](Metrics/metrics.md)
 
 ## Version 5
 
-### 5.4.0
+# 5.3.9
 
-- Updated references and readme
-- Moved to app.metrics, consult breaking changes in [dedicated wiki page](Metrics/metrics.md)
+- Fix ProjectionStatusLoader to work in memory to read the most up-to-date projection checkpoint.
 
 ### 5.3.5
 
