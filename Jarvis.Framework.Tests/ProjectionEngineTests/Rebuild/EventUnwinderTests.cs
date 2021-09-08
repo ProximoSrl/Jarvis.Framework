@@ -20,6 +20,7 @@ using NStore.Core.Snapshots;
 using NStore.Core.Logging;
 using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Tests.Support;
+using System.Collections.Generic;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 {
@@ -72,23 +73,36 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 			_persistence = factory.BuildEventStore(_eventStoreConnectionString).Result;
 		}
 
-		protected async Task<SampleAggregateId> CreateAggregateAsync(Int64 id = 1)
-		{
-			var aggregateId = new SampleAggregateId(id);
-			var aggregate = await Repository.GetByIdAsync<SampleAggregate>(aggregateId).ConfigureAwait(false);
-			aggregate.Create();
-			await Repository.SaveAsync(aggregate, Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
-			return aggregateId;
-		}
+		protected async Task<SampleAggregateId> CreateAggregateAsync(Int64 id = 1, Dictionary<String, Object> headers = null)
+        {
+            var aggregateId = new SampleAggregateId(id);
+            var aggregate = await Repository.GetByIdAsync<SampleAggregate>(aggregateId).ConfigureAwait(false);
+            aggregate.Create();
 
-		protected async Task<SampleAggregateId> CreateAggregateAndTouchAsync(Int64 id = 1)
+            await Repository.SaveAsync(aggregate, Guid.NewGuid().ToString(), h => SetHeaders(h, headers)).ConfigureAwait(false);
+
+            return aggregateId;
+        }
+
+        protected async Task<SampleAggregateId> CreateAggregateAndTouchAsync(Int64 id = 1, Dictionary<String, Object> headers = null)
 		{
 			var aggregateId = new SampleAggregateId(id);
 			var aggregate = await Repository.GetByIdAsync<SampleAggregate>(aggregateId).ConfigureAwait(false);
 			aggregate.Create();
 			aggregate.Touch();
-			await Repository.SaveAsync(aggregate, Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
+			await Repository.SaveAsync(aggregate, Guid.NewGuid().ToString(), h => SetHeaders(h, headers)).ConfigureAwait(false);
 			return aggregateId;
+		}
+
+		private static void SetHeaders(IHeadersAccessor h, Dictionary<string, object> headers)
+		{
+			if (headers != null)
+			{
+				foreach (var item in headers)
+				{
+					h.Add(item.Key, item.Value);
+				}
+			}
 		}
 
 		[Test]
@@ -122,6 +136,29 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 			evt = allEvents.ElementAt(1);
 			Assert.That(evt.EventType, Is.EqualTo("SampleAggregateTouched"));
 			Assert.That((evt.GetEvent() as DomainEvent).AggregateId, Is.EqualTo(id));
+		}
+
+		[Test]
+		public async Task verify_unwinding_remove_commands()
+		{
+			sut.HeaderToRemove.Add(ChangesetCommonHeaders.Command);
+			var id = await CreateAggregateAndTouchAsync(42, new Dictionary<string, object>()
+			{
+				[ChangesetCommonHeaders.Command] = "this is a command"
+			}).ConfigureAwait(false);
+
+			await sut.UnwindAsync().ConfigureAwait(false);
+
+			var allEvents = sut.UnwindedCollection.FindAll().ToList();
+
+			Assert.That(allEvents.Count, Is.EqualTo(2));
+			var rawEvent = allEvents[0];
+			var evt = rawEvent.GetEvent() as DomainEvent;
+			Assert.False(evt.Context.Any(e => e.Key == ChangesetCommonHeaders.Command));
+
+			rawEvent = allEvents[1];
+			evt = rawEvent.GetEvent() as DomainEvent;
+			Assert.False(evt.Context.Any(e => e.Key == ChangesetCommonHeaders.Command));
 		}
 
 		[Test]
