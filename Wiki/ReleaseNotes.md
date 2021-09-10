@@ -4,7 +4,7 @@
 
 ### 6.0.0
 
-
+- Added AggregateVersion on standard Readmodel (non atomic)
 - Tested and used with .NET core projects.
 - Removed Metrics.NET in favor of [App Metrics](https://www.app-metrics.io/)
 - Support usage of Rebus MongoDb transport

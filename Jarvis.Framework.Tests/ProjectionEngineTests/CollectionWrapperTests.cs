@@ -1,20 +1,20 @@
 ﻿using Fasterflect;
 using Jarvis.Framework.Kernel.ProjectionEngine;
+using Jarvis.Framework.Shared;
 using Jarvis.Framework.Shared.Events;
+using Jarvis.Framework.Shared.Helpers;
 using Jarvis.Framework.Shared.Messages;
 using Jarvis.Framework.Tests.EngineTests;
 using Jarvis.Framework.Tests.SharedTests.IdentitySupport;
 using Jarvis.Framework.Tests.Support;
 using MongoDB.Driver;
+using NSubstitute;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
 using System.Threading.Tasks;
-using Jarvis.Framework.Shared.Helpers;
-using NSubstitute;
-using Jarvis.Framework.Shared;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests
 {
@@ -98,6 +98,34 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             Assert.That(all, Has.Count.EqualTo(1));
             var loaded = all[0];
             Assert.That(loaded.Value, Is.EqualTo("test2"));
+        }
+
+        [Test]
+        public async Task Verify_Correct_save_of_aggregate_version()
+        {
+            var rm = new SampleReadModelTest();
+            rm.Id = new TestId(1);
+            rm.Value = "test";
+            await sut.InsertAsync(new SampleAggregateCreated()
+            {
+                Version = 1,
+            }, rm).ConfigureAwait(false);
+
+            rm = sut.All.Single();
+            Assert.That(rm.AggregateVersion, Is.EqualTo(1));
+            Assert.That(rm.Version, Is.EqualTo(1));
+
+            //now generate another event in the very same commit
+            var touchedEvent = new SampleAggregateTouched()
+            {
+                Version = 1,
+            };
+
+            await sut.SaveAsync(touchedEvent, rm).ConfigureAwait(false);
+
+            rm = sut.All.Single();
+            Assert.That(rm.AggregateVersion, Is.EqualTo(1));
+            Assert.That(rm.Version, Is.EqualTo(2));
         }
 
         [Test]
