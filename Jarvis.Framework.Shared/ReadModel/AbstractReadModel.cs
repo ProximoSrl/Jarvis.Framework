@@ -17,7 +17,13 @@ namespace Jarvis.Framework.Shared.ReadModel
         private const int MaxEventIdToRetain = 30;
 
         public TKey Id { get; set; }
+
+        /// <inheritdoc />
         public int Version { get; set; }
+
+        /// <inheritdoc />
+        public long AggregateVersion { get; set; }
+
         public DateTime LastModified { get; set; }
 
         [JsonIgnore]
