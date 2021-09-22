@@ -16,6 +16,7 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using NStore.Core.InMemory;
 using NStore.Core.Persistence;
+using NStore.Core.Streams;
 using NStore.Domain;
 using NUnit.Framework;
 using System;
@@ -97,7 +98,11 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             evt.SetPropertyValue(d => d.AggregateId, new SampleAggregateId(_aggregateIdSeed));
             evt.SetPropertyValue(d => d.CheckpointToken, commitId);
             Changeset cs = new Changeset(_aggregateVersion++, new Object[] { evt });
-            _persistence.AppendAsync(evt.AggregateId, cs).Wait();
+
+            var streamFactory = new StreamsFactory(_persistence);
+            var stream = streamFactory.Open(evt.AggregateId);
+
+            stream.AppendAsync(cs).Wait();
             return cs;
         }
     }

@@ -165,12 +165,14 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 		public async Task verify_unwind_plain_object()
 		{
 			var poco = new PocoObject("TEST", 42);
-			await _persistence.AppendAsync("poco/42", poco).ConfigureAwait(false);
+			var streamFactory = new StreamsFactory(_persistence);
+			var stream = streamFactory.Open("poco/42");
+			await stream.AppendAsync(poco).ConfigureAwait(false);
 
 			await sut.UnwindAsync().ConfigureAwait(false);
 
 			var allEvents = sut.UnwindedCollection.FindAll();
-			Assert.That(allEvents.Count(), Is.EqualTo(1));
+			Assert.That(allEvents.CountDocuments(), Is.EqualTo(1));
 			var evt = allEvents.Single();
 			Assert.That(evt.EventType, Is.EqualTo("PocoObject"));
 			Assert.That((evt.GetEvent() as PocoObject).IntValue, Is.EqualTo(42));
@@ -189,7 +191,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 			await sut.UnwindAsync().ConfigureAwait(false);
 
 			var allEvents = sut.UnwindedCollection.FindAll();
-			Assert.That(allEvents.Count(), Is.EqualTo(1));
+			Assert.That(allEvents.CountDocuments(), Is.EqualTo(1));
 			var evt = allEvents.Single();
 			Assert.That(evt.EventType, Is.EqualTo("SampleAggregateCreated"));
 			Assert.That((evt.GetEvent() as DomainEvent).AggregateId, Is.EqualTo(aggregateId));
@@ -204,7 +206,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 			await sut.UnwindAsync().ConfigureAwait(false);
 
 			var allEvents = sut.UnwindedCollection.FindAll();
-			Assert.That(allEvents.Count(), Is.EqualTo(1));
+			Assert.That(allEvents.CountDocuments(), Is.EqualTo(1));
 			var evt = allEvents.Single();
 			Assert.That((evt.GetEvent() as DomainEvent).CheckpointToken, Is.Not.Null);
 		}
@@ -219,7 +221,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 			await sut.UnwindAsync().ConfigureAwait(false);
 
 			var allEvents = sut.UnwindedCollection.FindAll();
-			Assert.That(allEvents.Count(), Is.EqualTo(3));
+			Assert.That(allEvents.CountDocuments(), Is.EqualTo(3));
 		}
 
 		[Test]
@@ -236,7 +238,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 			await sut.UnwindAsync().ConfigureAwait(false);
 
 			var allEvents = sut.UnwindedCollection.FindAll();
-			Assert.That(allEvents.Count(), Is.EqualTo(2), "Unwinding in more than one execution missed events.");
+			Assert.That(allEvents.CountDocuments(), Is.EqualTo(2), "Unwinding in more than one execution missed events.");
 		}
 
 		#region Helpers

@@ -41,7 +41,7 @@ namespace Jarvis.Framework.Kernel.Support
         {
             var stream = _streams.Open(streamId);
             return stream
-                .Fold()
+                .Aggregate()
                 .ToIndex(versionUpTo)
                 .RunAsync<T>(StreamProcessorManagerPayloadProcessor.Instance, CancellationToken.None);
         }
