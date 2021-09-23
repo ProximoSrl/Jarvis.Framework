@@ -22,6 +22,7 @@ using MongoDB.Driver;
 using NStore.Core.InMemory;
 using NStore.Core.Logging;
 using NStore.Core.Persistence;
+using NStore.Core.Streams;
 using NStore.Domain;
 using NUnit.Framework;
 using System;
@@ -39,6 +40,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 
         protected IMongoDatabase _db;
         protected IPersistence _persistence;
+        private StreamsFactory _streamsFactory;
         protected IdentityManager _identityManager;
         protected IMongoCollection<SimpleTestAtomicReadModel> _collection;
         protected IMongoCollection<SimpleAtomicAggregateReadModel> _collectionForAtomicAggregate;
@@ -59,6 +61,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             _collectionForAtomicAggregate = GetCollection<SimpleAtomicAggregateReadModel>();
 
             _persistence = CreatePersistence();
+            _streamsFactory = new StreamsFactory(_persistence);
             _db.Drop();
 
             _identityManager = new IdentityManager(new CounterService(_db));
@@ -212,7 +215,8 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             IChunk chunk;
             do
             {
-                chunk = await _persistence.AppendAsync("Empty", null).ConfigureAwait(false);
+                var stream = _streamsFactory.Open("Empty");
+                chunk = await stream.AppendAsync(null).ConfigureAwait(false);
                 lastUsedPosition = chunk.Position;
             } while (chunk.Position < positionTo);
         }
@@ -230,7 +234,8 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             generateId = generateId ?? (p => new SampleAggregateId(p));
             evt.SetPropertyValue(d => d.AggregateId, generateId(_aggregateIdSeed));
             Changeset cs = new Changeset(_aggregateVersion++, new Object[] { evt });
-            var chunk = await _persistence.AppendAsync(evt.AggregateId, cs).ConfigureAwait(false);
+            var stream = _streamsFactory.Open(evt.AggregateId);
+            var chunk = await stream.AppendAsync(cs).ConfigureAwait(false);
             lastUsedPosition = chunk.Position;
 
             //now set checkpoint in memory to simplify testing
@@ -252,7 +257,8 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             }
 
             Changeset cs = new Changeset(_aggregateVersion++, evts);
-            var chunk = await _persistence.AppendAsync(evts[0].AggregateId, cs).ConfigureAwait(false);
+            var stream = _streamsFactory.Open(evts[0].AggregateId);
+            var chunk = await stream.AppendAsync(cs).ConfigureAwait(false);
             lastUsedPosition = chunk.Position;
             return cs;
         }

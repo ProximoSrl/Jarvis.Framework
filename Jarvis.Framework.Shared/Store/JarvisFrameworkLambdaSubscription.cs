@@ -51,7 +51,7 @@ namespace Jarvis.Framework.Shared.Store
 
         private Int64 _numOfChunksProcessed = 0;
 
-        public Task<bool> OnNextAsync(IChunk chunk)
+        public async Task<bool> OnNextAsync(IChunk chunk)
         {
             Interlocked.Increment(ref _numOfChunksProcessed);
             _failedPosition = 0;
@@ -61,7 +61,7 @@ namespace Jarvis.Framework.Shared.Store
             LastDispatchedChunk = chunk;
             try
             {
-                var retValue = _fn(chunk);
+                var retValue = await _fn(chunk).ConfigureAwait(false);
                 DispatchingFailed = false;
                 return retValue;
             }
@@ -81,7 +81,8 @@ namespace Jarvis.Framework.Shared.Store
 #pragma warning disable S4144 // Methods should not have identical implementations
         public Task CompletedAsync(long indexOrPosition)
         {
-            this.ReadCompleted = true;
+            ReadCompleted = true;
+            LastException = null;
             return Task.CompletedTask;
         }
 

@@ -1,6 +1,7 @@
 ﻿using Jarvis.Framework.Kernel.Support;
 using NStore.Core.InMemory;
 using NStore.Core.Persistence;
+using NStore.Core.Streams;
 using NStore.Domain;
 using NUnit.Framework;
 using System;
@@ -15,19 +16,22 @@ namespace Jarvis.Framework.Tests.Kernel.Support
 	public class StreamProcessorManagerTests
 	{
 		private InMemoryPersistence persistence;
-		private StreamProcessorManager sut;
+        private StreamsFactory streamfactory;
+        private StreamProcessorManager sut;
 
 		[SetUp]
 		public void SetUp()
 		{
 			persistence = new InMemoryPersistence();
+			streamfactory = new StreamsFactory(persistence);
 			sut = new StreamProcessorManager(persistence);
 		}
 
 		[Test]
 		public async Task Verify_basic_apply_of_NON_domain_events_payload()
 		{
-			await persistence.AppendAsync("partitionId", new PocoObject(2)).ConfigureAwait(false);
+			var stream = streamfactory.Open("partitionId");
+			await stream.AppendAsync(new PocoObject(2)).ConfigureAwait(false);
 			var result = await sut.ProcessAsync<SimpleProjection>("partitionId", Int32.MaxValue).ConfigureAwait(false);
 			Assert.That(result.EvtCount, Is.EqualTo(1));
 			Assert.That(result.Value, Is.EqualTo(2));
@@ -37,7 +41,8 @@ namespace Jarvis.Framework.Tests.Kernel.Support
 		public async Task Verify_basic_apply_of_changeset()
 		{
 			Changeset cs = new Changeset(1, new[] { new PocoObject(2), new PocoObject(3) });
-			await persistence.AppendAsync("partitionId", cs).ConfigureAwait(false);
+			var stream = streamfactory.Open("partitionId");
+			await stream.AppendAsync(cs).ConfigureAwait(false);
 			var result = await sut.ProcessAsync<SimpleProjection>("partitionId", Int32.MaxValue).ConfigureAwait(false);
 			Assert.That(result.EvtCount, Is.EqualTo(2));
 			Assert.That(result.Value, Is.EqualTo(5));
