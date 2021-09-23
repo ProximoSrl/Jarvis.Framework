@@ -1,9 +1,9 @@
 ﻿namespace Jarvis.Framework.Shared.Claims
 {
+    using Jarvis.Framework.Shared.Support;
     using System;
     using System.Collections.Generic;
     using System.Threading;
-    using Jarvis.Framework.Shared.Support;
 
     /// <summary>
     /// Standard implementation of <see cref="ISecurityContextManager"/> that will use

@@ -1,5 +1,5 @@
-﻿using System;
-using Jarvis.Framework.Shared.Exceptions;
+﻿using Jarvis.Framework.Shared.Exceptions;
+using System;
 
 namespace Jarvis.Framework.Kernel.Engine
 {

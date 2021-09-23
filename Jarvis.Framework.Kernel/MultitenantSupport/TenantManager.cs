@@ -1,8 +1,8 @@
-using System;
 using Castle.MicroKernel;
 using Castle.MicroKernel.Registration;
 using Jarvis.Framework.Kernel.MultitenantSupport.Exceptions;
 using Jarvis.Framework.Shared.MultitenantSupport;
+using System;
 
 namespace Jarvis.Framework.Kernel.MultitenantSupport
 {

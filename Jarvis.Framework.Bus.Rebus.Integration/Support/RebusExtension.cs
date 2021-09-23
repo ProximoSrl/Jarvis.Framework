@@ -12,7 +12,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
     public static class RebusExtension
     {
         /// <summary>
-        /// Register a specifc message in a specific queue. 
+        /// Register a specifc message in a specific queue.
         /// </summary>
         /// <param name="routingApi"></param>
         /// <param name="address">Address of destination queue, this is the producer of the message</param>
@@ -27,11 +27,13 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
             };
             Dictionary<String, String> headers = new Dictionary<string, string>();
             headers[Headers.Intent] = Headers.IntentOptions.PointToPoint;
-            return routingApi.Send(address, subscribeMessage, headers);
+            return routingApi.Send(address.ToLower(), subscribeMessage, headers);
         }
 
         /// <summary>
-        /// Given a type, this will return destination queue name.
+        /// Given a type, this will return destination queue name. It will use ToLower because if you use
+        /// mongodb as queue transport queue name is case insensitive while MSMQ is not case insenstive so
+        /// moving from MSMQ to mongotransport could generates error.
         /// </summary>
         /// <param name="jarvisRebusConfiguration"></param>
         /// <param name="type">This can be a type representing a command or it can also be any other type (like
@@ -62,7 +64,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
                 }
             }
 
-            return returnValue;
+            return returnValue.ToLower();
         }
     }
 }

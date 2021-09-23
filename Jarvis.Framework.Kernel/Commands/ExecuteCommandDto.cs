@@ -5,9 +5,6 @@ using Jarvis.Framework.Shared.Messages;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.Commands
 {
@@ -31,11 +28,11 @@ namespace Jarvis.Framework.Kernel.Commands
         }
 
         /// <summary>
-        /// Cannot create a command without using the static method.
+        /// It is needed because this object is passed with API call so it needs to
+        /// be deserializable
         /// </summary>
-        private ExecuteCommandDto()
+        public ExecuteCommandDto()
         {
-
         }
 
         public static ICommand Deserialize(ExecuteCommandDto dto)

@@ -52,6 +52,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
             );
         }
 
+        /// <summary>
+        /// This contains all the headers of the event that we want to remove.
+        /// </summary>
+        public HashSet<string> HeaderToRemove { get; set; } = new HashSet<string>();
+
         public IMongoCollection<UnwindedDomainEvent> UnwindedCollection
         {
             get { return _unwindedEventCollection; }
@@ -102,7 +107,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                 }
 
                 return true;
-            });
+            }, "unwinder");
 
             var sequencer = new NStoreSequencer(
                 startToken - 1,
@@ -154,7 +159,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                     unwinded.CommitId = chunk.OperationId;
                     unwinded.Version = commit.AggregateVersion;
                     unwinded.PartitionId = chunk.PartitionId;
-                    unwinded.Context = headers;
+
+                    var newContext = new Dictionary<String, Object>();
+                    foreach (var key in headers.Keys.Where(k => !HeaderToRemove.Contains(k)))
+                    {
+                        newContext[key] = headers[key];
+                    }
+                    unwinded.Context = newContext;
 
                     yield return unwinded;
                     ordinal++;

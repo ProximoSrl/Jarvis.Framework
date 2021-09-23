@@ -4,7 +4,7 @@ using System.Linq;
 namespace Jarvis.Framework.Shared.Claims
 {
 #pragma warning disable S3218 // Inner class members should not shadow outer class "static" or type members
-	public static class ClaimsMatcher
+    public static class ClaimsMatcher
     {
         public class AlwaysMatcher : IClaimsMatcher
         {
@@ -14,7 +14,7 @@ namespace Jarvis.Framework.Shared.Claims
             }
 
             public bool Matches(IEnumerable<Claim> claims)
-			{
+            {
                 return true;
             }
         }
@@ -142,7 +142,7 @@ namespace Jarvis.Framework.Shared.Claims
             var attributes = (ClaimAttribute[])(o.GetType().GetCustomAttributes(typeof(ClaimAttribute), true));
             if (attributes.Any())
             {
-                return new AndMatcher(attributes.Select(x=>x.Build()).ToArray());
+                return new AndMatcher(attributes.Select(x => x.Build()).ToArray());
             }
 
             return new AlwaysMatcher();

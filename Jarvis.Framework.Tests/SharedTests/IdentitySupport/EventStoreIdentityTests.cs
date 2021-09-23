@@ -46,5 +46,24 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
                 Assert.That(ie.Message, Contains.Substring("Tag expected: SampleAggregate"));
             }
         }
+
+        [Test]
+        public void Verify_equality_base() 
+        {
+            var id1 = new SampleAggregateId(42);
+            var id2 = new SampleAggregateId(42);
+            Assert.That(id1.Equals(id2));
+            Assert.That(id1 == id2);
+            Assert.That(object.Equals(id1, id2));
+        }
+
+        [Test]
+        public void Verify_equality_through_interface()
+        {
+            IIdentity id1 = (IIdentity) new SampleAggregateId(42);
+            IIdentity id2 = (IIdentity) new SampleAggregateId(42);
+            Assert.That(id1.Equals(id2));
+            Assert.That(object.Equals(id1, id2));
+        }
     }
 }

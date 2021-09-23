@@ -1,11 +1,13 @@
 #if NETSTANDARD
+using App.Metrics;
+using App.Metrics.Counter;
+using Jarvis.Framework.Shared.IdentitySupport;
+using Jarvis.Framework.Shared.Support;
+using Microsoft.Extensions.Caching.Memory;
+using NStore.Domain;
 using System;
 using System.Collections.Generic;
 using System.Threading;
-using Jarvis.Framework.Shared.IdentitySupport;
-using Metrics;
-using Microsoft.Extensions.Caching.Memory;
-using NStore.Domain;
 
 namespace Jarvis.Framework.Shared.Persistence.EventStore
 {
@@ -13,8 +15,9 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
     {
         private static readonly MemoryCache Cache = new MemoryCache(new MemoryCacheOptions());
 
-        private static readonly Counter CacheHitCounter = Metric.Counter("RepositorySingleEntityCacheHits", Unit.Calls);
-        private static readonly Counter CacheMissCounter = Metric.Counter("RepositorySingleEntityCacheMisses", Unit.Calls);
+        private static readonly CounterOptions CacheHitCounter = MetricsHelper.CreateCounter("RepositorySingleEntityCacheHits", Unit.Calls);
+        private static readonly CounterOptions CacheMissCounter = MetricsHelper.CreateCounter("RepositorySingleEntityCacheMisses", Unit.Calls);
+
         private readonly MemoryCacheEntryOptions _memoryCacheEntryOptions;
 
         private class CacheEntry
@@ -85,14 +88,14 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
                 TAggregate aggregate = null;
                 if (cached != null)
                 {
-                    CacheHitCounter.Increment();
+                    MetricsHelper.Counter.Increment(CacheHitCounter);
                     innerRepository = cached.RepositoryEx;
                 }
                 else
                 {
                     //I have nothing in cache, I'll create a new repository and since aggregate is 
                     //null it will load the entity for the first time.
-                    CacheMissCounter.Increment();
+                    MetricsHelper.Counter.Increment(CacheMissCounter);
                     innerRepository = _repositoryFactory.Create();
                 }
 
@@ -114,7 +117,10 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
                 if (Interlocked.CompareExchange(ref _isGettingCache, 1, 0) == 0)
                 {
                     cached = Cache.Get(id.AsString()) as CacheEntry;
-                    if (cached == null || cached.InUse) return null;
+                    if (cached == null || cached.InUse)
+                    {
+                        return null;
+                    }
 
                     cached.InUse = true;
                     //remover after is in use
@@ -163,8 +169,10 @@ using System;
 using System.Runtime.Caching;
 using System.Threading;
 using Jarvis.Framework.Shared.IdentitySupport;
-using Metrics;
 using NStore.Domain;
+using App.Metrics;
+using App.Metrics.Counter;
+using Jarvis.Framework.Shared.Support;
 
 namespace Jarvis.Framework.Shared.Persistence.EventStore
 {
@@ -172,8 +180,8 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
     {
         private static readonly MemoryCache Cache = new MemoryCache("RepositorySingleAggregateFactory");
 
-        private static readonly Counter CacheHitCounter = Metric.Counter("RepositorySingleEntityCacheHits", Unit.Calls);
-        private static readonly Counter CacheMissCounter = Metric.Counter("RepositorySingleEntityCacheMisses", Unit.Calls);
+        private static readonly CounterOptions CacheHitCounter = MetricsHelper.CreateCounter("RepositorySingleEntityCacheHits", Unit.Calls);
+        private static readonly CounterOptions CacheMissCounter = MetricsHelper.CreateCounter("RepositorySingleEntityCacheMisses", Unit.Calls);
 
 		readonly CacheItemPolicy _cachePolicy;
 
@@ -239,14 +247,14 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
                 TAggregate aggregate = null;
                 if (cached != null)
                 {
-                    CacheHitCounter.Increment();
+                    MetricsHelper.Counter.Increment(CacheHitCounter);
                     innerRepository = cached.RepositoryEx;
                 }
                 else
                 {
                     //I have nothing in cache, I'll create a new repository and since aggregate is 
                     //null it will load the entity for the first time.
-                    CacheMissCounter.Increment();
+                    MetricsHelper.Counter.Increment(CacheMissCounter);
                     innerRepository = _repositoryFactory.Create();
                 }
 

@@ -1,14 +1,14 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
 using Jarvis.Framework.Kernel.Events;
+using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.Messages;
 using Jarvis.Framework.Shared.ReadModel;
 using MongoDB.Driver;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
-using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
 {
@@ -139,6 +139,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
             OnSave(model, e, CollectionWrapperOperationType.Insert);
             model.Version = 1;
+            model.AggregateVersion = e.Version;
             model.LastModified = e.CommitStamp;
 
             model.AddEvent(e.MessageId);
@@ -207,6 +208,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             OnSave(model, e, CollectionWrapperOperationType.Update);
             var orignalVersion = model.Version;
             model.Version++;
+            model.AggregateVersion = e.Version;
             model.LastModified = e.CommitStamp;
             model.AddEvent(e.MessageId);
             HandlePollableReadModel(e, model);

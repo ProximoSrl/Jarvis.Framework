@@ -1,4 +1,6 @@
-﻿using Jarvis.Framework.Shared.Exceptions;
+﻿using App.Metrics;
+using Jarvis.Framework.Shared.Exceptions;
+using Jarvis.Framework.Shared.Support;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -18,6 +20,7 @@ namespace Jarvis.Framework.Kernel.Support
             {
                 options.BoundedCapacity = boundedCapacity;
             }
+            var meter = Metric.Meter($"GuaranteedDeliveryBroadcastBlock-{commitPollingClientId}", Unit.Items, TimeUnit.Milliseconds);
             var actionBlock = new ActionBlock<T>(
                 async item =>
                 {
@@ -34,9 +37,10 @@ namespace Jarvis.Framework.Kernel.Support
                             errorCount++;
                         }
                     }
+                    meter.Mark(1);
                 }, options);
 
-            actionBlock.Completion.ContinueWith(t =>
+            actionBlock.Completion.ContinueWith(_ =>
             {
                 foreach (var target in targets)
                 {

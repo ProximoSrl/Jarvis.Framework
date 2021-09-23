@@ -13,7 +13,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
         /// <param name="connectionString"></param>
         /// <param name="prefix"></param>
         public JarvisRebusConfiguration(
-            String connectionString, 
+            String connectionString,
             String prefix)
         {
             ConnectionString = connectionString;

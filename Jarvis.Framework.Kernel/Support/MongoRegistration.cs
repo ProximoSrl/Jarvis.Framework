@@ -145,7 +145,7 @@ namespace Jarvis.Framework.Kernel.Support
             }
         }
 
-        private static HashSet<Assembly> _alreadyRegisterdAssemblies = new HashSet<Assembly>();
+        private static readonly HashSet<Assembly> _alreadyRegisterdAssemblies = new HashSet<Assembly>();
 
         /// <summary>
         /// Scan the assembly to find all types that needs special registration.
@@ -162,9 +162,23 @@ namespace Jarvis.Framework.Kernel.Support
                     RegisterMessages(type);
                     RegisterAggregateSnapshot(type);
                     RegisterPlainObject(type);
+                    RegisterRegistrator(type);
                 }
 
                 _alreadyRegisterdAssemblies.Add(assembly);
+            }
+        }
+
+        private static void RegisterRegistrator(Type type)
+        {
+            if (
+                type.IsClass
+                && !type.IsAbstract
+                && typeof(IMongoMappingRegistrator).IsAssignableFrom(type)
+             )
+            {
+                var registrator = (IMongoMappingRegistrator)Activator.CreateInstance(type);
+                registrator.Register();
             }
         }
 

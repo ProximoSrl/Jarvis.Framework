@@ -1,12 +1,12 @@
-﻿using System;
+﻿using Castle.Core.Logging;
+using Fasterflect;
+using Jarvis.Framework.Shared.Exceptions;
+using Jarvis.Framework.Shared.Helpers;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using Fasterflect;
-using Jarvis.Framework.Shared.Helpers;
-using Castle.Core.Logging;
-using Jarvis.Framework.Shared.Exceptions;
 
 namespace Jarvis.Framework.Shared.IdentitySupport
 {

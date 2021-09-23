@@ -1,16 +1,16 @@
-﻿using System;
-using Castle.Core.Logging;
+﻿using Castle.Core.Logging;
+using Jarvis.Framework.Shared.Exceptions;
+using Jarvis.Framework.Shared.Helpers;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
-using Jarvis.Framework.Shared.Helpers;
-using Jarvis.Framework.Shared.Exceptions;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace Jarvis.Framework.Shared.IdentitySupport
 {
-	public interface IIdentityTranslator
+    public interface IIdentityTranslator
     {
     }
 
@@ -52,6 +52,12 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             _collection = systemDB.GetCollection<MappedIdentity>("map_" + typeof(TKey).Name.ToLower());
         }
 
+        /// <summary>
+        /// Add an aliast to a key, this is useful when you want 
+        /// multiple keys to map to the very same identity (TKey)
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="alias"></param>
         protected void AddAlias(TKey key, string alias)
         {
             if (alias == null) throw new ArgumentNullException(nameof(alias));
@@ -77,12 +83,12 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             MapIdentity(alias, key);
         }
 
-		protected String GetAlias(TKey key)
-		{
-			if (key == null) throw new ArgumentNullException(nameof(key));
-			var alias = _collection.Find(Builders<MappedIdentity>.Filter.Eq("AggregateId", key.AsString())).FirstOrDefault();
-			return alias?.ExternalKey;
-		}
+        protected String GetAlias(TKey key)
+        {
+            if (key == null) throw new ArgumentNullException(nameof(key));
+            var alias = _collection.Find(Builders<MappedIdentity>.Filter.Eq("AggregateId", key.AsString())).FirstOrDefault();
+            return alias?.ExternalKey;
+        }
 
         /// <summary>
         /// Return reverse mapping for multiple aliases.
@@ -97,7 +103,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             return _collection
                 .Find(Builders<MappedIdentity>.Filter.In("AggregateId", keys))
                 .ToEnumerable()
-                .ToDictionary(_ => _.AggregateId, _ =>  _.ExternalKey);
+                .ToDictionary(_ => _.AggregateId, _ => _.ExternalKey);
         }
 
         /// <summary>
@@ -145,11 +151,6 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             var mapped = _collection.FindOneById(externalKey);
 
             return mapped == null ? null : mapped.AggregateId;
-        }
-
-        protected TKey LinkKeys(string externalKey, TKey key)
-        {
-            return MapIdentity(externalKey, key).AggregateId;
         }
 
         private MappedIdentity MapIdentity(string externalKey, TKey key)

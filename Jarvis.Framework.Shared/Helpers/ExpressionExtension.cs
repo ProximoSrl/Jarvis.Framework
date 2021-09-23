@@ -1,12 +1,12 @@
-﻿using System;
+﻿using Fasterflect;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using Fasterflect;
 using System.Linq.Expressions;
 
 namespace Jarvis.Framework.Shared.Helpers
 {
-	public static class ExpressionExtensions
+    public static class ExpressionExtensions
     {
         public static String GetMemberName<T>(this Expression<Func<T>> source)
         {

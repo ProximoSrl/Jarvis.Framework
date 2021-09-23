@@ -7,7 +7,6 @@ using Jarvis.Framework.Shared.Exceptions;
 using Jarvis.Framework.Shared.Logging;
 using Jarvis.Framework.Shared.Messages;
 using Jarvis.Framework.Shared.MultitenantSupport;
-using Jarvis.Framework.Shared.ReadModel;
 using Newtonsoft.Json;
 using System;
 using System.Linq;

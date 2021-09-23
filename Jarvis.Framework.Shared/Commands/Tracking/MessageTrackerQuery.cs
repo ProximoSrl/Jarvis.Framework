@@ -1,8 +1,6 @@
-﻿using System;
+﻿using MongoDB.Driver;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using MongoDB.Driver;
-using MongoDB.Driver.Linq;
 
 namespace Jarvis.Framework.Shared.Commands.Tracking
 {

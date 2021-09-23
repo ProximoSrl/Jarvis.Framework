@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.Events
 {
-	public class DirectMongoEventStoreQueryManager : IEventStoreQueryManager
+    public class DirectMongoEventStoreQueryManager : IEventStoreQueryManager
     {
         private readonly IMongoCollection<BsonDocument> _collection;
 

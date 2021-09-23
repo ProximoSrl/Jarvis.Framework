@@ -27,7 +27,9 @@ using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.BusTests
 {
-    [TestFixture]
+    [NonParallelizable]
+    [TestFixture("msmq")]
+    [TestFixture("mongodb")]
     public class MessageTrackerTests
     {
         private IBus _bus;
@@ -35,6 +37,12 @@ namespace Jarvis.Framework.Tests.BusTests
         private SampleCommandHandler _handler;
         private IMongoCollection<TrackedMessageModel> _messages;
         private ICommandExecutionExceptionHelper _commandExecutionExceptionHelper;
+        private readonly string _transportType;
+
+        public MessageTrackerTests(string transportType)
+        {
+            _transportType = transportType;
+        }
 
         [OneTimeSetUp]
         public void TestFixtureSetUp()
@@ -64,11 +72,7 @@ namespace Jarvis.Framework.Tests.BusTests
             {
                 typeof(SampleMessage).Assembly,
             };
-
-            JarvisTestBusBootstrapper bb = new JarvisTestBusBootstrapper(
-                _container,
-                configuration,
-                tracker);
+            BusBootstrapper bb = CreateBusBootstrapper(tracker, configuration);
 
             TestHelper.RegisterSerializerForFlatId<SampleAggregateId>();
 
@@ -94,6 +98,24 @@ namespace Jarvis.Framework.Tests.BusTests
                     .For<IHandleMessages<SampleAggregateTestCommand>>()
                     .Instance(handlerAggregateAdapter)
             );
+        }
+
+        private BusBootstrapper CreateBusBootstrapper(MongoDbMessagesTracker tracker, JarvisRebusConfiguration configuration)
+        {
+            if (_transportType == "msmq")
+            {
+                return new MsmqTransportJarvisTestBusBootstrapper(
+                    _container,
+                    configuration,
+                    tracker);
+            }
+            else
+            {
+                return new MongoDbTransportJarvisTestBusBootstrapper(
+                    _container,
+                    configuration,
+                    tracker);
+            }
         }
 
         private void Kernel_ComponentRegistered(string key, Castle.MicroKernel.IHandler handler)

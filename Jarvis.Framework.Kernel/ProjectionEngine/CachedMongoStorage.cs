@@ -1,14 +1,13 @@
+using Fasterflect;
+using Jarvis.Framework.Shared.Exceptions;
+using Jarvis.Framework.Shared.Helpers;
+using Jarvis.Framework.Shared.ReadModel;
+using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using Jarvis.Framework.Shared.ReadModel;
-using MongoDB.Bson;
-using MongoDB.Driver;
-using Jarvis.Framework.Shared.Helpers;
-using Fasterflect;
 using System.Threading.Tasks;
-using Jarvis.Framework.Shared.Exceptions;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
 {
@@ -195,7 +194,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 _storage.FindOneById(id);
         }
 
-		public async Task FindByPropertyAsync<TValue>(
+        public async Task FindByPropertyAsync<TValue>(
             Expression<Func<TModel, TValue>> propertySelector,
             TValue value,
             Func<TModel, Task> subscription)

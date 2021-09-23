@@ -7,11 +7,25 @@ namespace Jarvis.Framework.Shared.ReadModel
     public interface IReadModelEx<TKey> : IReadModel
     {
         TKey Id { get; set; }
+
+        /// <summary>
+        /// This version is a number that is incremented each time the 
+        /// readmodel is changed, this ABSOLUTELY NOT REFLECT THE REAL VERSION
+        /// OF THE AGGREGATE. It is only an indication on how many time the
+        /// aggregate was written.
+        /// </summary>
         int Version { get; set; }
+
+        /// <summary>
+        /// This is the aggregate version, it will represent the real version
+        /// of the aggregate, and it is equal to the number of COMMITS NOT EVENTS
+        /// RAISED ON THAT AGGREGATE
+        /// </summary>
+        long AggregateVersion { get; set; }
 
         DateTime LastModified { get; set; }
 
-		bool BuiltFromEvent(DomainEvent evt);
+        bool BuiltFromEvent(DomainEvent evt);
 
         void AddEvent(Guid id);
 

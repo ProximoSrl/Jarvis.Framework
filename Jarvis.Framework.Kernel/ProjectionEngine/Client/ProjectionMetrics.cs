@@ -1,9 +1,9 @@
+using Jarvis.Framework.Kernel.Events;
+using MongoDB.Bson.Serialization.Attributes;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using Jarvis.Framework.Kernel.Events;
-using MongoDB.Bson.Serialization.Attributes;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 {
@@ -14,16 +14,17 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             public sealed class Counter
             {
                 public string Name { get; private set; }
-                
+
                 public long Calls { get; private set; }
-                
+
                 [BsonIgnore]
                 public long Elapsed { get; private set; }
 
                 [BsonElement("Elapsed")]
-                public double Seconds {
-                    get { return ((double) Elapsed/TimeSpan.TicksPerSecond); }
-                    set { Elapsed = (long) (value*TimeSpan.TicksPerSecond); }
+                public double Seconds
+                {
+                    get { return ((double)Elapsed / TimeSpan.TicksPerSecond); }
+                    set { Elapsed = (long)(value * TimeSpan.TicksPerSecond); }
                 }
 
                 public Counter(string name)
@@ -72,8 +73,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
             public void Inc(string counterName, long ticks)
             {
-                Counters.AddOrUpdate(counterName, 
-                    s => (new Counter(s)).Inc(ticks), 
+                Counters.AddOrUpdate(counterName,
+                    s => (new Counter(s)).Inc(ticks),
                     (s, counter) => counter.Inc(ticks)
                     );
             }

@@ -1,7 +1,9 @@
-﻿using Jarvis.Framework.Shared.Commands;
+﻿using App.Metrics;
+using App.Metrics.Counter;
+using App.Metrics.Timer;
+using Jarvis.Framework.Shared.Commands;
 using Jarvis.Framework.Shared.Exceptions;
 using Jarvis.Framework.Shared.Messages;
-using Metrics;
 using System;
 using System.Collections.Generic;
 
@@ -9,33 +11,58 @@ namespace Jarvis.Framework.Shared.Support
 {
     public static class SharedMetricsHelper
     {
-        private static readonly Counter ConcurrencyExceptions = Metric.Counter("Concurrency Exceptions", Unit.Events);
-        private static readonly Counter DomainExceptions = Metric.Counter("Domain Exceptions", Unit.Events);
-        private static readonly Counter SecurityExceptions = Metric.Counter("Security Exceptions", Unit.Events);
+        private static readonly CounterOptions ConcurrencyExceptions = new CounterOptions()
+        {
+            Name = "Concurrency Exceptions",
+            MeasurementUnit = Unit.Events
+        };
 
-        private static readonly Timer CommandTimer = Metric.Timer("Commands Execution", Unit.Commands);
-        private static readonly Counter CommandCounter = Metric.Counter("CommandsDuration", Unit.Custom("ms"));
+        private static readonly CounterOptions DomainExceptions = new CounterOptions()
+        {
+            Name = "Domain Exceptions",
+            MeasurementUnit = Unit.Events
+        };
+
+        private static readonly CounterOptions SecurityExceptions = new CounterOptions()
+        {
+            Name = "Security Exceptions",
+            MeasurementUnit = Unit.Events
+        };
+
+        private static readonly CounterOptions CommandsCounter = new CounterOptions()
+        {
+            Name = "CommandsDuration",
+            MeasurementUnit = Unit.Commands
+        };
+
+        private static readonly TimerOptions CommandTimer = new TimerOptions
+        {
+            Name = "Commands Execution",
+            MeasurementUnit = Unit.Requests,
+            DurationUnit = TimeUnit.Milliseconds,
+            RateUnit = TimeUnit.Milliseconds
+        };
 
         public static void MarkConcurrencyException()
         {
-            ConcurrencyExceptions.Increment();
+            MetricsHelper.Counter.Increment(ConcurrencyExceptions);
         }
 
         public static void MarkDomainException(ICommand command, DomainException exception)
         {
             RaiseDomainExceptionEventHappened(command, exception);
-            DomainExceptions.Increment();
+            MetricsHelper.Counter.Increment(DomainExceptions);
         }
 
         public static void MarkSecurityException(ICommand command)
         {
-            RaiseSecurityExceptionEventHappened( command);
-            SecurityExceptions.Increment();
+            RaiseSecurityExceptionEventHappened(command);
+            MetricsHelper.Counter.Increment(SecurityExceptions);
         }
 
         public static TimerContext StartCommandTimer(ICommand command)
         {
-            return CommandTimer.NewContext(command.GetType().Name);
+            return MetricsHelper.Timer.Time(CommandTimer);
         }
 
         /// <summary>
@@ -46,7 +73,7 @@ namespace Jarvis.Framework.Shared.Support
         public static void IncrementCommandCounter(ICommand command, TimeSpan elapsed)
         {
             RaiseCommandExecutedEventHappened(command);
-            CommandCounter.Increment(command.GetType().Name, elapsed.Milliseconds);
+            MetricsHelper.Counter.Increment(CommandsCounter);
         }
 
         /// <summary>

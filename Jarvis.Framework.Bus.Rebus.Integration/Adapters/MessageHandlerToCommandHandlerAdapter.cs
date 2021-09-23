@@ -4,7 +4,6 @@ using Jarvis.Framework.Shared.Commands;
 using Jarvis.Framework.Shared.Commands.Tracking;
 using Jarvis.Framework.Shared.Logging;
 using Jarvis.Framework.Shared.Messages;
-using Jarvis.Framework.Shared.ReadModel;
 using Rebus.Bus;
 using Rebus.Handlers;
 using System;

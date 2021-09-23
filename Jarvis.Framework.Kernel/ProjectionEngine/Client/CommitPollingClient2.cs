@@ -1,8 +1,8 @@
 ﻿using Castle.Core.Logging;
 using Jarvis.Framework.Kernel.Support;
 using Jarvis.Framework.Shared.Exceptions;
+using Jarvis.Framework.Shared.HealthCheck;
 using Jarvis.Framework.Shared.Store;
-using Metrics;
 using NStore.Core.Logging;
 using NStore.Core.Persistence;
 using System;
@@ -42,13 +42,19 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             INStoreLoggerFactory factory)
         {
             if (persistStreams == null)
+            {
                 throw new ArgumentNullException(nameof(persistStreams));
+            }
 
             if (enhancer == null)
+            {
                 throw new ArgumentNullException(nameof(enhancer));
+            }
 
             if (logger == null)
+            {
                 throw new ArgumentNullException(nameof(logger));
+            }
 
             _enhancer = enhancer;
             _consumers = new List<ITargetBlock<IChunk>>();
@@ -107,7 +113,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
             public async Task Consume(IChunk chunk)
             {
-                if (!Active) return; //consumer failed, we need to stop dispatching further commits.
+                if (!Active)
+                {
+                    return; //consumer failed, we need to stop dispatching further commits.
+                }
+
                 try
                 {
                     await _consumerAction(chunk).ConfigureAwait(false);
@@ -145,7 +155,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             //prepare single poller thread.
             CreateTplChain();
 
-            _innerSubscription = new JarvisFrameworkLambdaSubscription(DispatchChunk);
+            _innerSubscription = new JarvisFrameworkLambdaSubscription(DispatchChunk, _id);
 
             _innerClient = new PollingClient(
                 _persistence,
@@ -162,7 +172,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             if (Status != CommitPollingClientStatus.Polling)
             {
                 if (_innerClient == null)
+                {
                     throw new JarvisFrameworkEngineException($"CommitPollingClient {_id}: Cannot start polling client because you forget to call Configure First");
+                }
 
                 _innerClient.Start();
                 Status = CommitPollingClientStatus.Polling;
@@ -217,7 +229,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             if (Status == CommitPollingClientStatus.Polling)
             {
                 if (_innerClient == null)
+                {
                     throw new JarvisFrameworkEngineException($"CommitPollingClient {_id}: Cannot stop polling client because you forget to call Configure First");
+                }
 
                 if (Status != CommitPollingClientStatus.Polling)
                 {
@@ -256,7 +270,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         private double GetClientBufferSize()
         {
             if (_buffer != null)
+            {
                 return _buffer.Count;
+            }
+
             return 0;
         }
 
@@ -264,7 +281,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         {
             try
             {
-                if (_logger.IsDebugEnabled) _logger.DebugFormat("CommitPollingClient {0}: CommitPollingClient2: Dispatched chunk {1}", _id, chunk.Position);
+                if (_logger.IsDebugEnabled)
+                {
+                    _logger.DebugFormat("CommitPollingClient {0}: CommitPollingClient2: Dispatched chunk {1}", _id, chunk.Position);
+                }
+
                 if (_stopRequested.IsCancellationRequested)
                 {
                     CloseTplChain();
@@ -273,7 +294,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
                 if (chunk.PartitionId.StartsWith("system.empty"))
                 {
-                    if (_logger.IsDebugEnabled)  _logger.DebugFormat("CommitPollingClient {0}: CommitPollingClient2: Found empty commit - {1}", _id, chunk.Position);
+                    if (_logger.IsDebugEnabled)
+                    {
+                        _logger.DebugFormat("CommitPollingClient {0}: CommitPollingClient2: Found empty commit - {1}", _id, chunk.Position);
+                    }
                 }
                 else
                 {

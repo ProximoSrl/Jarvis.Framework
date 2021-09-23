@@ -1,5 +1,9 @@
 # Version 5
 
+## 5.4.0
+
+- Moved to app.metrics, consult breaking changes in [dedicated wiki page](Metrics/metrics.md)
+
 ## 5.2.0
 
 - Removed Jarvis Startable facitlities, it was moved into separate package Castle Utilities.

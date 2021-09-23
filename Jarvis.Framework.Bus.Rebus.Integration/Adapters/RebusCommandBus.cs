@@ -1,17 +1,15 @@
-﻿using System;
-using System.Security.Claims;
+﻿using Castle.Core.Logging;
 using Jarvis.Framework.Kernel.Commands;
 using Jarvis.Framework.Shared.Commands;
-using Rebus;
-using Castle.Core.Logging;
+using Jarvis.Framework.Shared.Exceptions;
 using Jarvis.Framework.Shared.Messages;
 using Rebus.Bus;
+using System;
 using System.Threading.Tasks;
-using Jarvis.Framework.Shared.Exceptions;
 
 namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
 {
-	public abstract class RebusCommandBus : ICommandBus
+    public abstract class RebusCommandBus : ICommandBus
     {
         private readonly IBus _bus;
 
@@ -109,9 +107,9 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
             }
 
             if (!UserIsAllowedToSendCommand(command, userId))
-		    {
-				throw new UserCannotSendCommandException();
-			}
+            {
+                throw new UserCannotSendCommandException();
+            }
         }
     }
 }

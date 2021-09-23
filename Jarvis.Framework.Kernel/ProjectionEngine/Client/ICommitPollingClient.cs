@@ -1,5 +1,4 @@
 ﻿using NStore.Core.Persistence;
-using NStore.Persistence;
 using System;
 using System.Threading.Tasks;
 

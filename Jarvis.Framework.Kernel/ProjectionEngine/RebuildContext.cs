@@ -1,7 +1,7 @@
-﻿using System;
+﻿using Jarvis.Framework.Shared.ReadModel;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using Jarvis.Framework.Shared.ReadModel;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
 {

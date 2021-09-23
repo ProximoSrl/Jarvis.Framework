@@ -1,6 +1,6 @@
-using System;
 using MongoDB.Bson.Serialization.Attributes;
 using Newtonsoft.Json;
+using System;
 
 namespace Jarvis.Framework.Shared.IdentitySupport
 {
@@ -12,8 +12,8 @@ namespace Jarvis.Framework.Shared.IdentitySupport
     [Serializable]
     public abstract class AbstractIdentity<TKey> : IIdentity
     {
-		[BsonIgnore]
-		[JsonIgnore]
+        [BsonIgnore]
+        [JsonIgnore]
         public TKey Id { get; set; }
 
         public virtual string AsString()
@@ -91,6 +91,11 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             }
 
             return false;
+        }
+
+        public bool Equals(IIdentity other)
+        {
+            return this.GetType() == other.GetType() && this.AsString() == other.AsString();
         }
 
         public static bool operator ==(AbstractIdentity<TKey> left, AbstractIdentity<TKey> right)

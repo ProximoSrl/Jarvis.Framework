@@ -1,333 +1,88 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="..\packages\NUnit.3.12.0\build\NUnit.props" Condition="Exists('..\packages\NUnit.3.12.0\build\NUnit.props')" />
-  <Import Project="..\packages\NUnit3TestAdapter.3.13.0\build\net35\NUnit3TestAdapter.props" Condition="Exists('..\packages\NUnit3TestAdapter.3.13.0\build\net35\NUnit3TestAdapter.props')" />
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{D5D90909-CFEF-443E-BDDE-318FE638E5C0}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Jarvis.Framework.Tests</RootNamespace>
-    <AssemblyName>Jarvis.Framework.Tests</AssemblyName>
-    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\Intranet\</SolutionDir>
-    <RestorePackages>false</RestorePackages>
-    <TargetFrameworkProfile />
-    <NuGetPackageImportStamp>
-    </NuGetPackageImportStamp>
+    <TargetFrameworks Condition="'$(DOTNETMULTITARGET)' == 'false'">net5.0</TargetFrameworks>
+    <TargetFrameworks Condition="'$(DOTNETMULTITARGET)' == 'true'">net461;net5.0</TargetFrameworks>
+    <TargetFrameworks Condition="'$(DOTNETMULTITARGET)' == ''">net461;net5.0</TargetFrameworks>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>TRACE;DEBUG;NETFULL</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <Prefer32Bit>false</Prefer32Bit>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <OutputPath>bincore\Debug\netcoreapp2.0\</OutputPath>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <Prefer32Bit>false</Prefer32Bit>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <OutputPath>bincore\Release\netcoreapp2.0\</OutputPath>
   </PropertyGroup>
+
+  <!-- <PropertyGroup Condition=" '$(TargetFramework)' == 'netcoreapp2.0'">
+    <DefineConstants>NETCORE;NETSTANDARD;NETSTANDARD2_0</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'net461'">
+    <DefineConstants>NET45;NETFULL</DefineConstants>
+  </PropertyGroup> -->
+
   <ItemGroup>
-    <Reference Include="Castle.Core, Version=4.0.0.0, Culture=neutral, PublicKeyToken=407dd0808d44fbdc, processorArchitecture=MSIL">
-      <HintPath>..\packages\Castle.Core.4.4.0\lib\net45\Castle.Core.dll</HintPath>
-    </Reference>
-    <Reference Include="Castle.Facilities.Logging, Version=5.0.0.0, Culture=neutral, PublicKeyToken=407dd0808d44fbdc, processorArchitecture=MSIL">
-      <HintPath>..\packages\Castle.LoggingFacility.5.0.0\lib\net45\Castle.Facilities.Logging.dll</HintPath>
-    </Reference>
-    <Reference Include="Castle.Windsor, Version=5.0.0.0, Culture=neutral, PublicKeyToken=407dd0808d44fbdc, processorArchitecture=MSIL">
-      <HintPath>..\packages\Castle.Windsor.5.0.0\lib\net45\Castle.Windsor.dll</HintPath>
-    </Reference>
-    <Reference Include="DnsClient, Version=1.2.0.0, Culture=neutral, PublicKeyToken=4574bb5573c51424, processorArchitecture=MSIL">
-      <HintPath>..\packages\DnsClient.1.2.0\lib\net45\DnsClient.dll</HintPath>
-    </Reference>
-    <Reference Include="Fasterflect, Version=2.1.3.0, Culture=neutral, PublicKeyToken=38d18473284c1ca7, processorArchitecture=MSIL">
-      <HintPath>..\packages\fasterflect.2.1.3\lib\net40\Fasterflect.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="Machine.Specifications, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Machine.Specifications.1.0.0\lib\net45\Machine.Specifications.dll</HintPath>
-    </Reference>
-    <Reference Include="metrics, Version=0.5.4.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\metrics.0.5.4.1001\lib\net461\metrics.dll</HintPath>
-    </Reference>
-    <Reference Include="MongoDB.Bson, Version=2.7.3.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\MongoDB.Bson.2.7.3\lib\net45\MongoDB.Bson.dll</HintPath>
-    </Reference>
-    <Reference Include="MongoDB.Driver, Version=2.7.3.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\MongoDB.Driver.2.7.3\lib\net45\MongoDB.Driver.dll</HintPath>
-    </Reference>
-    <Reference Include="MongoDB.Driver.Core, Version=2.7.3.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\MongoDB.Driver.Core.2.7.3\lib\net45\MongoDB.Driver.Core.dll</HintPath>
-    </Reference>
-    <Reference Include="Newtonsoft.Json, Version=11.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.11.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
-    </Reference>
-    <Reference Include="NStore.Core, Version=0.8.3.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NStore.Core.0.8.3\lib\net461\NStore.Core.dll</HintPath>
-    </Reference>
-    <Reference Include="NStore.Domain, Version=0.8.3.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NStore.Domain.0.8.3\lib\net461\NStore.Domain.dll</HintPath>
-    </Reference>
-    <Reference Include="NStore.Persistence.Mongo, Version=0.8.3.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NStore.Persistence.Mongo.0.8.3\lib\net461\NStore.Persistence.Mongo.dll</HintPath>
-    </Reference>
-    <Reference Include="NStore.Tpl, Version=0.8.3.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NStore.Tpl.0.8.3\lib\net461\NStore.Tpl.dll</HintPath>
-    </Reference>
-    <Reference Include="NSubstitute, Version=1.8.1.0, Culture=neutral, PublicKeyToken=92dd2e9066daa5ca, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\NSubstitute.1.8.1.0\lib\net45\NSubstitute.dll</HintPath>
-    </Reference>
-    <Reference Include="nunit.framework, Version=3.12.0.0, Culture=neutral, PublicKeyToken=2638cd05610744eb, processorArchitecture=MSIL">
-      <HintPath>..\packages\NUnit.3.12.0\lib\net45\nunit.framework.dll</HintPath>
-    </Reference>
-    <Reference Include="Rebus, Version=5.3.1.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Rebus.5.3.1\lib\net46\Rebus.dll</HintPath>
-    </Reference>
-    <Reference Include="Rebus.CastleWindsor, Version=4.1.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Rebus.Castle.Windsor.4.1.0\lib\net45\Rebus.CastleWindsor.dll</HintPath>
-    </Reference>
-    <Reference Include="Rebus.Events, Version=4.0.1.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Rebus.Events.4.0.1\lib\net45\Rebus.Events.dll</HintPath>
-    </Reference>
-    <Reference Include="Rebus.MongoDb, Version=5.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Rebus.MongoDb.5.0.0\lib\net46\Rebus.MongoDb.dll</HintPath>
-    </Reference>
-    <Reference Include="Rebus.Msmq, Version=5.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Rebus.Msmq.5.0.0\lib\net46\Rebus.Msmq.dll</HintPath>
-    </Reference>
-    <Reference Include="Serilog, Version=2.0.0.0, Culture=neutral, PublicKeyToken=24c2f752a8e58a10, processorArchitecture=MSIL">
-      <HintPath>..\packages\Serilog.2.8.0\lib\net46\Serilog.dll</HintPath>
-    </Reference>
-    <Reference Include="System" />
-    <Reference Include="System.Buffers, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Buffers.4.5.0\lib\netstandard2.0\System.Buffers.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Configuration" />
-    <Reference Include="System.Core" />
+    <PackageReference Include="App.Metrics" Version="4.2.0" />
+    <PackageReference Include="Castle.Core" Version="4.4.1" />
+    <PackageReference Include="Castle.LoggingFacility" Version="5.1.1" />
+    <PackageReference Include="Castle.Windsor" Version="5.1.1" />
+    <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+    <PackageReference Include="MongoDB.Bson" Version="2.13.1" />
+    <PackageReference Include="MongoDB.Driver" Version="2.13.1" />
+    <PackageReference Include="MongoDB.Driver.Core" Version="2.13.1" />
+    <PackageReference Include="MongoDB.Libmongocrypt" Version="1.2.3" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+    <PackageReference Include="NStore.Core" Version="0.11.0" />
+    <PackageReference Include="NStore.Domain" Version="0.11.0" />
+    <PackageReference Include="NStore.Persistence.Mongo" Version="0.11.0" />
+    <PackageReference Include="NSubstitute" Version="4.2.2" />
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="5.0.0" />
+    <PackageReference Include="NUnit" Version="3.13.2" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.0.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.11.0" />
+  </ItemGroup>
+
+  <!-- <ItemGroup Condition=" '$(TargetFramework)' == 'net461' ">
+    <PackageReference Include="fasterflect" Version="2.1.3" />
     <Reference Include="System.Messaging" />
     <Reference Include="System.Runtime.Caching" />
-    <Reference Include="System.Runtime.InteropServices.RuntimeInformation, Version=4.0.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Runtime.InteropServices.RuntimeInformation.4.3.0\lib\net45\System.Runtime.InteropServices.RuntimeInformation.dll</HintPath>
-      <Private>True</Private>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="System.Runtime.Remoting" />
-    <Reference Include="System.Threading.Tasks.Dataflow, Version=4.5.24.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.Tpl.Dataflow.4.5.24\lib\portable-net45+win8+wpa81\System.Threading.Tasks.Dataflow.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="System.Web" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
-    <Reference Include="System.Xml.Serialization" />
+    <PackageReference Include="Rebus.Msmq" Version="4.0.0" />
   </ItemGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
+    <PackageReference Include="Fasterflect.Netstandard" Version="1.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="2.0.1" />
+  </ItemGroup> -->
+
   <ItemGroup>
-    <Compile Include="BusTests\Handlers\AnotherSampleCommandHandler.cs" />
-    <Compile Include="BusTests\Handlers\AnotherSampleMessageHandler.cs" />
-    <Compile Include="BusTests\Handlers\SampleMessageHandler.cs" />
-    <Compile Include="BusTests\JarvisDetermineMessageOwnershipFromConfigurationManagerTests.cs" />
-    <Compile Include="BusTests\JarvisTestBusBootstrapper.cs" />
-    <Compile Include="BusTests\ListenerSubscriptionsTests.cs" />
-    <Compile Include="BusTests\MessageFolder\AnotherSampleMessage.cs" />
-    <Compile Include="BusTests\MessageFolder\AnotherSampleTestCommand.cs" />
-    <Compile Include="BusTests\MessageFolder\SampleAggregateTestCommand.cs" />
-    <Compile Include="BusTests\MessageFolder\SampleMessage.cs" />
-    <Compile Include="BusTests\MessageFolder\SampleMessageInFolder.cs" />
-    <Compile Include="BusTests\MessageFolder\SampleTestCommand.cs" />
-    <Compile Include="BusTests\MessageTrackerQueryManagerTest.cs" />
-    <Compile Include="BusTests\MessageTrackerWithFailureTests.cs" />
-    <Compile Include="BusTests\MessageTrackerTests.cs" />
-    <Compile Include="BusTests\MongoDbMessagesTrackerTests.cs" />
-    <Compile Include="BusTests\Handlers\SampleCommandHandler.cs" />
-    <Compile Include="BusTests\RebusBaseAssumptionTests.cs" />
-    <Compile Include="BusTests\SampleListener.cs" />
-    <Compile Include="BusTests\SampleProcessManager.cs" />
-    <Compile Include="ClaimsTests\AclTests.cs" />
-    <Compile Include="ClaimsTests\ClaimsTests.cs" />
-    <Compile Include="DomainTests\BsonClassMapHelper.cs" />
-    <Compile Include="DomainTests\ClassWithTypedStringValue.cs" />
-    <Compile Include="DomainTests\StringValueJsonConverterTests.cs" />
-    <Compile Include="DomainTests\EventstoreIdentityBsonSerializationTests.cs" />
-    <Compile Include="DomainTests\StringValueMongoTests.cs" />
-    <Compile Include="DomainTests\TypedStringValue.cs" />
-    <Compile Include="EngineTests\AggregateTests\AggregateRepositoryTests.cs" />
-    <Compile Include="EngineTests\AggregateTests\BasicEventRoutingTests.cs" />
-    <Compile Include="EngineTests\AggregateTests\SnapshotTests.cs" />
-    <Compile Include="EngineTests\AggregateTests\SupportClasses.cs" />
-    <Compile Include="EngineTests\BsonIdentitySerializationTests.cs" />
-    <Compile Include="EngineTests\EngineSetupTests.cs" />
-    <Compile Include="EngineTests\EventsDispatcherTests.cs" />
-    <Compile Include="EngineTests\Unfolder\EventUnfolderTests.cs" />
-    <Compile Include="EngineTests\IdentityConverterTests.cs" />
-    <Compile Include="EngineTests\UpcasterTests.cs" />
-    <Compile Include="External\MongoDriver\DictionariesSerializationTests.cs" />
-    <Compile Include="External\NStoreTests\NStoreSerializationTests.cs" />
-    <Compile Include="GlobalSuppressions.cs" />
-    <Compile Include="Kernel\Commands\AbstractCommandHandlerSecurityTests.cs" />
-    <Compile Include="Kernel\Commands\InProcessCommandBusTests.cs" />
-    <Compile Include="Kernel\Commands\RepositoryCommandHandlerTests.cs" />
-    <Compile Include="Kernel\Events\DirectMongoEventStoreQueryManagerTests.cs" />
-    <Compile Include="Kernel\Support\IdentityToAggregateManagerTests.cs" />
-    <Compile Include="Kernel\Support\MetricsHealthCheckExplicitTests.cs" />
-    <Compile Include="Kernel\Support\StreamProcessorManagerTests.cs" />
-    <Compile Include="EngineTests\SagaTests\BillPrinted.cs" />
-    <Compile Include="EngineTests\SagaTests\DeliverPizzaSaga2.cs" />
-    <Compile Include="EngineTests\SagaTests\DeliverPizzaSaga.cs" />
-    <Compile Include="EngineTests\SagaTests\OrderId.cs" />
-    <Compile Include="EngineTests\SagaTests\OrderPlaced.cs" />
-    <Compile Include="EngineTests\SagaTests\PaymentReceived.cs" />
-    <Compile Include="EngineTests\SagaTests\PizzaDelivered.cs" />
-    <Compile Include="EngineTests\SagaTests\SagaTests.cs" />
-    <Compile Include="EngineTests\SampleAggregate.cs" />
-    <Compile Include="EngineTests\StringIdTests.cs" />
-    <Compile Include="GlobalTestInit.cs" />
-    <Compile Include="MultitenantSupportTests\MultiTenantSubDependencyResolverTests.cs" />
-    <Compile Include="MultitenantSupportTests\TenantManagerTests.cs" />
-    <Compile Include="ProjectionEngineTests\CollectionWrapperForPollableEntitiesTests.cs" />
-    <Compile Include="ProjectionEngineTests\CollectionWrapperResolveWithTypedFacilityTests.cs" />
-    <Compile Include="ProjectionEngineTests\CollectionWrapperTests.cs" />
-    <Compile Include="ProjectionEngineTests\Rebuild\EventUnwinderTests.cs" />
-    <Compile Include="ProjectionEngineTests\Rebuild\ProjectionEventInspectorTests.cs" />
-    <Compile Include="ProjectionEngineTests\Rebuild\RebuildProjectionEngineTest.cs" />
-    <Compile Include="ProjectionEngineTests\Rebuild\RebuildProjectionSlotDispatcherTests.cs" />
-    <Compile Include="ProjectionEngineTests\V2\ProjectionEnginePollWithNotInitializedEngine.cs" />
-    <Compile Include="ProjectionsTests\Atomic\AtomicCollectionWrapperRealPersistenceTests.cs" />
-    <Compile Include="ProjectionsTests\Atomic\AtomicCollectionWrapperTests.cs" />
-    <Compile Include="ProjectionsTests\Atomic\AtomicCollectionWrapperTestsBase.cs" />
-    <Compile Include="ProjectionsTests\Atomic\AtomicProjectionCheckpointManagerTests.cs" />
-    <Compile Include="ProjectionsTests\Atomic\AtomicProjectionEngineTestBase.cs" />
-    <Compile Include="ProjectionsTests\Atomic\AtomicProjectionEngineWithDbClean.cs" />
-    <Compile Include="ProjectionsTests\Atomic\AtomicReadmodelTests.cs" />
-    <Compile Include="ProjectionsTests\Atomic\BaseAtomicProjectionTests.cs" />
-    <Compile Include="ProjectionsTests\Atomic\AtomicReadModelSignatureFixerTests.cs" />
-    <Compile Include="ProjectionsTests\Atomic\LiveAtomicReadModelProcessorTests.cs" />
-    <Compile Include="ProjectionsTests\Atomic\ResiliencyAtomicProjectionTests.cs" />
-    <Compile Include="ProjectionsTests\Atomic\Support\AtomicAggregate.cs" />
-    <Compile Include="ProjectionsTests\Atomic\Support\AnotherSimpleTestAtomicReadModel.cs" />
-    <Compile Include="ProjectionsTests\Atomic\AtomicReadmodelVersionLoaderTests.cs" />
-    <Compile Include="ProjectionsTests\Atomic\Support\SimpleAtomicReadmodelWithSingleEventHandled.cs" />
-    <Compile Include="ProjectionsTests\Atomic\Support\SimpleTestAtomicReadModelWrong.cs" />
-    <Compile Include="ProjectionsTests\Atomic\Support\SimpleTestAtomicReadModel.cs" />
-    <Compile Include="ProjectionsTests\CachedMongoStorageTests.cs" />
-    <Compile Include="ProjectionEngineTests\ConcurrentCheckpointTrackerTests.cs" />
-    <Compile Include="ProjectionEngineTests\Concurrent\AbstractConcurrentProjectionEngineTests.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="ProjectionEngineTests\Concurrent\ProjectionEnginePriorityTests.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="ProjectionEngineTests\Concurrent\ProjectionEngineTests.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="ProjectionEngineTests\Concurrent\ProjectionEngineTestsRemovedProjection.cs" />
-    <Compile Include="ProjectionEngineTests\Concurrent\ProjectionEngineTestsCheckpoints.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="ProjectionEngineTests\Concurrent\ProjectionEngineTestsPoller.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="ProjectionEngineTests\V2\ProjectionStatusLoaderTest.cs" />
-    <Compile Include="ProjectionsTests\MongoStorageTests.cs" />
-    <Compile Include="ProjectionEngineTests\V2\AbstractV2ProjectionEngineTests.cs" />
-    <Compile Include="ProjectionEngineTests\V2\ProjectionEnginePriorityTests.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="ProjectionEngineTests\V2\ProjectionEngineRebuildBaseTests.cs" />
-    <Compile Include="ProjectionEngineTests\V2\ProjectionEngineTests.cs" />
-    <Compile Include="ProjectionEngineTests\Projection.cs" />
-    <Compile Include="ProjectionEngineTests\SampleReadModel.cs" />
-    <Compile Include="ProjectionEngineTests\V2\ProjectionEngineTestsRemovedProjection.cs" />
-    <Compile Include="ProjectionEngineTests\V2\ProjectionEngineTestsCheckpoints.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="ProjectionEngineTests\V2\PollerCanStopAndRestart.cs" />
-    <Compile Include="ProjectionEngineTests\V2\ProjectionEngineTestsPoller.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="ProjectionsTests\DeleteEvent.cs" />
-    <Compile Include="ProjectionsTests\InsertEvent.cs" />
-    <Compile Include="ProjectionsTests\MyAggregateId.cs" />
-    <Compile Include="ProjectionsTests\MyProjection.cs" />
-    <Compile Include="ProjectionsTests\MyReadModel.cs" />
-    <Compile Include="ProjectionsTests\ProjectionTests.cs" />
-    <Compile Include="ProjectionsTests\ReadModelTests.cs" />
-    <Compile Include="ProjectionsTests\RebuildContextTests.cs" />
-    <Compile Include="ProjectionsTests\SpyNotifier.cs" />
-    <Compile Include="ProjectionsTests\UpdateEvent.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ServicesTests\CounterServiceTests.cs" />
-    <Compile Include="ServicesTests\OfflineCounterServiceTest.cs" />
-    <Compile Include="SharedTests\Commands\JarvisDefaultCommandExecutionExceptionHelperTests.cs" />
-    <Compile Include="SharedTests\Helpers\MongoDriverHelperTests.cs" />
-    <Compile Include="SharedTests\IdentitySupport\AbstractIdentityTranslatorTests.cs" />
-    <Compile Include="SharedTests\IdentitySupport\AuxClasses.cs" />
-    <Compile Include="SharedTests\IdentitySupport\EventStoreIdentityTests.cs" />
-    <Compile Include="SharedTests\IdentitySupport\IdentityManagerTests.cs" />
-    <Compile Include="SharedTests\IdentitySupport\IDentitySupportTests.cs" />
-    <Compile Include="SharedTests\IdentitySupport\StringToIdentityAssociatorTests.cs" />
-    <Compile Include="SharedTests\MapperTests.cs" />
-    <Compile Include="SharedTests\ReadModel\AbstractChildReadModelTests.cs" />
-    <Compile Include="Support\EventStoreFactory.cs" />
-    <Compile Include="Support\TestHelper.cs" />
+    <ProjectReference Include="..\Jarvis.Framework.Bus.Rebus.Integration\Jarvis.Framework.Bus.Rebus.Integration.csproj" />
+    <ProjectReference Include="..\Jarvis.Framework.Kernel\Jarvis.Framework.Kernel.csproj" />
+    <ProjectReference Include="..\Jarvis.Framework.Shared\Jarvis.Framework.Shared.csproj" />
+    <ProjectReference Include="..\Jarvis.Framework.TestHelpers\Jarvis.Framework.TestHelpers.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include="App.config">
-      <SubType>Designer</SubType>
-    </None>
-    <None Include="packages.config">
-      <SubType>Designer</SubType>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Jarvis.Framework.Bus.Rebus.Integration\Jarvis.Framework.Bus.Rebus.Integration.csproj">
-      <Project>{804d09ef-0e40-4c7c-8064-add92b7de03f}</Project>
-      <Name>Jarvis.Framework.Bus.Rebus.Integration</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Jarvis.Framework.Kernel\Jarvis.Framework.Kernel.csproj">
-      <Project>{203AD69F-E839-46CF-A25A-0ED22EA1ABF8}</Project>
-      <Name>Jarvis.Framework.Kernel</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Jarvis.Framework.Shared\Jarvis.Framework.Shared.csproj">
-      <Project>{70B179ED-C419-4782-B080-0D1678C90279}</Project>
-      <Name>Jarvis.Framework.Shared</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Jarvis.Framework.TestHelpers\Jarvis.Framework.TestHelpers.csproj">
-      <Project>{df7ef8cc-cda7-4299-8769-62fdd1654fb9}</Project>
-      <Name>Jarvis.Framework.TestHelpers</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
-  </ItemGroup>
-  <ItemGroup />
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
-    <PropertyGroup>
-      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
-    </PropertyGroup>
-    <Error Condition="!Exists('..\packages\NUnit3TestAdapter.3.13.0\build\net35\NUnit3TestAdapter.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\NUnit3TestAdapter.3.13.0\build\net35\NUnit3TestAdapter.props'))" />
-    <Error Condition="!Exists('..\packages\NUnit.3.12.0\build\NUnit.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\NUnit.3.12.0\build\NUnit.props'))" />
+
+  <!-- Transform app.config XML files: https://github.com/microsoft/msbuild/issues/2746 -->
+  <!-- <UsingTask TaskName="TransformXml" AssemblyFile="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Web\Microsoft.Web.Publishing.Tasks.dll" /> -->
+  <Target Name="ApplyConfigurationConfigFile" AfterTargets="PrepareForBuild" Condition="Exists('App.$(Configuration).config')">
+    <ItemGroup>
+      <AppConfigWithTargetPath Remove="App.config" />
+      <AppConfigWithTargetPath Include="$(IntermediateOutputPath)$(TargetFileName).config" TargetPath="$(TargetFileName).config" />
+      <UpToDateCheckBuilt Include="$(IntermediateOutputPath)$(TargetFileName).config" Original="App.config" />
+      <UpToDateCheckBuilt Include="$(IntermediateOutputPath)$(TargetFileName).config" Original="App.$(Configuration).config" />
+    </ItemGroup>
+    <TransformXml Source="App.config" Destination="$(IntermediateOutputPath)$(TargetFileName).config" Transform="App.$(Configuration).config" />
   </Target>
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
+  <ItemGroup Condition="Exists('App.$(Configuration).config')">
+    <CustomAdditionalCompileInputs Include="App.$(Configuration).config" />
+  </ItemGroup>
+  <!-- copy the config file as testhost.dll.config so it can be used by test projects -->
+  <Target Name="CopyCustomContent" AfterTargets="AfterBuild" Condition="Exists('App.$(Configuration).config')">
+    <Copy SourceFiles="$(IntermediateOutputPath)$(TargetFileName).config" DestinationFiles="$(OutDir)\testhost.dll.config" />
   </Target>
-  <Target Name="AfterBuild">
+  <Target Name="CopyCustomContent2" AfterTargets="AfterBuild" Condition="!Exists('App.$(Configuration).config')">
+    <Copy SourceFiles="app.config" DestinationFiles="$(OutDir)\testhost.dll.config" />
   </Target>
-  -->
+  <!-- End Transform XML files -->
 </Project>

@@ -1,10 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- <TargetFrameworks Condition="'$(DOTNETMULTITARGET)' == 'false'">netcoreapp2.0</TargetFrameworks>
-    <TargetFrameworks Condition="'$(DOTNETMULTITARGET)' == 'true'">net461;netcoreapp2.0</TargetFrameworks>
-    <TargetFrameworks Condition="'$(DOTNETMULTITARGET)' == ''">net461;netcoreapp2.0</TargetFrameworks> -->
-    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <TargetFrameworks Condition="'$(DOTNETMULTITARGET)' == 'false'">net5.0</TargetFrameworks>
+    <TargetFrameworks Condition="'$(DOTNETMULTITARGET)' == 'true'">net461;net5.0</TargetFrameworks>
+    <TargetFrameworks Condition="'$(DOTNETMULTITARGET)' == ''">net461;net5.0</TargetFrameworks>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo> 
   </PropertyGroup>
 

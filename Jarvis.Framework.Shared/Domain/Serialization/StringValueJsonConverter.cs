@@ -1,14 +1,14 @@
-using System;
-using Newtonsoft.Json;
 using Fasterflect;
-using System.Collections.Concurrent;
 using Jarvis.Framework.Shared.Helpers;
+using Newtonsoft.Json;
+using System;
+using System.Collections.Concurrent;
 
 namespace Jarvis.Framework.Shared.Domain.Serialization
 {
     public class StringValueJsonConverter : JsonConverter
     {
-        private static ConcurrentDictionary<Type, FastReflectionHelper.ObjectActivator> _activators
+        private static readonly ConcurrentDictionary<Type, FastReflectionHelper.ObjectActivator> _activators
             = new ConcurrentDictionary<Type, FastReflectionHelper.ObjectActivator>();
 
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)

@@ -1,9 +1,9 @@
-using System;
-using System.Collections.Generic;
 using Jarvis.Framework.Shared.IdentitySupport;
+using Jarvis.Framework.Shared.Messages;
 using MongoDB.Bson.Serialization.Attributes;
 using Newtonsoft.Json;
-using Jarvis.Framework.Shared.Messages;
+using System;
+using System.Collections.Generic;
 
 namespace Jarvis.Framework.Shared.Events
 {
@@ -35,16 +35,16 @@ namespace Jarvis.Framework.Shared.Events
             }
         }
 
-		/// <summary>
-		/// Indica il timestamp della commit associata all'evento
-		/// </summary>
-		[BsonIgnore]
-		public DateTime CommitStamp { get; internal set; }
+        /// <summary>
+        /// Indica il timestamp della commit associata all'evento
+        /// </summary>
+        [BsonIgnore]
+        public DateTime CommitStamp { get; internal set; }
 
-		/// <summary>
-		/// Identificativo della commit
-		/// </summary>
-		[BsonIgnore]
+        /// <summary>
+        /// Identificativo della commit
+        /// </summary>
+        [BsonIgnore]
         public String CommitId { get; internal set; }
 
         /// <summary>

@@ -1,13 +1,9 @@
-﻿using Jarvis.Framework.Shared.Messages;
+﻿using Jarvis.Framework.Shared.Exceptions;
+using Jarvis.Framework.Shared.IdentitySupport;
+using Jarvis.Framework.Shared.Messages;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.Serialization;
 using System.Security.Permissions;
-using System.Text;
-using System.Threading.Tasks;
-using Jarvis.Framework.Shared.Exceptions;
-using Jarvis.Framework.Shared.IdentitySupport;
 
 namespace Jarvis.Framework.Kernel.Engine
 {

@@ -1,11 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Jarvis.Framework.Bus.Rebus.Integration.Support;
+﻿using Jarvis.Framework.Bus.Rebus.Integration.Support;
 using Jarvis.Framework.Tests.BusTests.MessageFolder;
 using NUnit.Framework;
+using System.Collections.Generic;
 using System.Reflection;
 
 namespace Jarvis.Framework.Tests.BusTests
@@ -33,19 +29,19 @@ namespace Jarvis.Framework.Tests.BusTests
         [Test]
         public void Verify_exact_name_binding()
         {
-            Assert.That(_sut.GetEndpointFor(typeof(SampleMessage)), Is.EqualTo("test.queueA"));
+            Assert.That(_sut.GetEndpointFor(typeof(SampleMessage)), Is.EqualTo("test.queuea"));
         }
 
         [Test]
         public void Verify_namespace_binding()
         {
-            Assert.That(_sut.GetEndpointFor(typeof(AnotherSampleMessage)), Is.EqualTo("test.queueB"));
+            Assert.That(_sut.GetEndpointFor(typeof(AnotherSampleMessage)), Is.EqualTo("test.queueb"));
         }
 
         [Test]
         public void Verify__partial_namespace_binding()
         {
-            Assert.That(_sut.GetEndpointFor(typeof(SampleMessageInFolder)), Is.EqualTo("test.queueB"));
+            Assert.That(_sut.GetEndpointFor(typeof(SampleMessageInFolder)), Is.EqualTo("test.queueb"));
         }
     }
 }

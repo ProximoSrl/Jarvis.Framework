@@ -1,24 +1,22 @@
-﻿using System;
+﻿using Castle.Core.Logging;
+using Jarvis.Framework.Kernel.Engine;
+using Jarvis.Framework.Kernel.Events;
+using Jarvis.Framework.Kernel.MultitenantSupport;
+using Jarvis.Framework.Kernel.ProjectionEngine.Client;
+using Jarvis.Framework.Kernel.Support;
+using Jarvis.Framework.Shared.HealthCheck;
+using Jarvis.Framework.Shared.Logging;
+using Jarvis.Framework.Shared.Support;
+using MongoDB.Bson;
+using MongoDB.Driver;
+using MongoDB.Driver.Linq;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Castle.Core.Logging;
-using Jarvis.Framework.Kernel.Events;
-using Jarvis.Framework.Kernel.MultitenantSupport;
-using Jarvis.Framework.Kernel.ProjectionEngine.Client;
-using Jarvis.Framework.Shared.Events;
-using MongoDB.Bson;
-using MongoDB.Driver;
-using MongoDB.Driver.Linq;
-using Jarvis.Framework.Kernel.Support;
-using System.Collections.Concurrent;
 using System.Threading.Tasks.Dataflow;
-using Jarvis.Framework.Kernel.Engine;
-using Jarvis.Framework.Shared.Logging;
-using Metrics;
-using Jarvis.Framework.Shared.Support;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 {
@@ -359,7 +357,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                                 dispatcher.SlotName,
                                 dispatcher.Projections.Select(p => p.Info.CommonName),
                                 dispatcher.LastCheckpointDispatched,
-                                someEventDispatched : true //we are in rebuild, this is the last flush, surely we dispatched something.
+                                someEventDispatched: true //we are in rebuild, this is the last flush, surely we dispatched something.
                             ).ConfigureAwait(false);
 
                             dispatcherWaitingToFinish.Remove(dispatcher);
