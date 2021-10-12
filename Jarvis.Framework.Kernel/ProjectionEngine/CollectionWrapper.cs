@@ -139,7 +139,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
             OnSave(model, e, CollectionWrapperOperationType.Insert);
             model.Version = 1;
-            model.AggregateVersion = e.Version;
             model.LastModified = e.CommitStamp;
 
             model.AddEvent(e.MessageId);
@@ -208,7 +207,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             OnSave(model, e, CollectionWrapperOperationType.Update);
             var orignalVersion = model.Version;
             model.Version++;
-            model.AggregateVersion = e.Version;
             model.LastModified = e.CommitStamp;
             model.AddEvent(e.MessageId);
             HandlePollableReadModel(e, model);
