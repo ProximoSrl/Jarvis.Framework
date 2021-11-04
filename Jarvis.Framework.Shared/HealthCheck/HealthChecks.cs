@@ -105,6 +105,5 @@ namespace Jarvis.Framework.Shared.HealthCheck
         {
             checks.Clear();
         }
-
     }
 }

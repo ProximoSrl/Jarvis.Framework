@@ -52,14 +52,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         private List<string> _checkpointErrors;
 
-        /// <summary>
-        /// This is the time after the checkpoint in database is updated even if
-        /// the slot did not dispatched any events for processed commit. We need to
-        /// flush every X seconds because if a slot does not process any events, the
-        /// checkpoint will never be updated and when the projection service restart
-        /// it will re-dispatch lots of unnecessary events.
-        /// </summary>
-        public Int32 FlushNotDispatchedLostTimeoutInSeconds { get; set; } = 60;
+        /// <inheritdoc />
+        public Int32 FlushNotDispatchedTimeoutInSeconds { get; set; } = 60;
+
+        private bool DeferredFlushEnabled => FlushNotDispatchedTimeoutInSeconds > 0;
 
         public ConcurrentCheckpointTracker(IMongoDatabase db)
         {
@@ -234,15 +230,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         {
             //we do not want to update mongodb if the event was not dispatched on the slot, this
             //because if we re-dispatch again (in case of immediate shutdown) we do not have side effects
-            bool shouldUpdateMongodb = someEventDispatched;
+            //Clearly if we do not have enabled deferred flush, we should always update mongo
+            bool shouldUpdateMongodb = someEventDispatched || !DeferredFlushEnabled;
 
-            //if this event was not dispatched, we can simply determine if
-            //we need to flush, the need arise after a certain amount of time
-            //passed, because we could not left a slot too behind.
-            //if a slot does not dispatch the last X events, you will re-dispatch
-            //those event upon restart and if X if greater than a certain amount projection
-            //service will really be slow at startup.
-            if (!someEventDispatched)
+            //if we determined that we should not update mongo, we need to check if some time passed
+            //because we want to flush every X seconds even if the slot
+            if (!shouldUpdateMongodb)
             {
                 if (!_lastFlushForEachSlot.TryGetValue(slotName, out var lastFlushInfo))
                 {
@@ -261,7 +254,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
                 //ok now we have last flush time, we need to determine if we really want to flush because
                 //too much time passed. Dispatching in a certain amount of time is a safe assumption.
-                if (DateTime.UtcNow.Subtract(lastFlushInfo.LastFlush).TotalSeconds > FlushNotDispatchedLostTimeoutInSeconds) //time elapsed
+                if (DateTime.UtcNow.Subtract(lastFlushInfo.LastFlush).TotalSeconds > FlushNotDispatchedTimeoutInSeconds) //time elapsed
                 {
                     shouldUpdateMongodb = true;
                     lastFlushInfo.LastFlush = DateTime.UtcNow;
@@ -270,7 +263,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                 }
             }
 
-            //Update slot only if it is needed, this will greatly reduce the contemption on the checkpoint collection
+            //Update slot only if it is needed, this will greatly reduce the concurrency and resource lock on the checkpoint collection
             if (shouldUpdateMongodb)
             {
                 await UpdateSlotCheckpointInMongodbAsync(slotName, valueCheckpointToken).ConfigureAwait(false);
@@ -309,14 +302,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             long valueCheckpointToken)
         {
             return _checkpoints.UpdateManyAsync(
-                    Builders<Checkpoint>.Filter.Eq(c => c.Slot, slotName) &
-                    (
-                        Builders<Checkpoint>.Filter.Lt(c => c.Current, valueCheckpointToken) |
-                        Builders<Checkpoint>.Filter.Eq(c => c.Current, null)
-                    ),
-                    Builders<Checkpoint>.Update
-                        .Set(_ => _.Current, valueCheckpointToken)
-                        .Set(_ => _.Value, valueCheckpointToken)
+                Builders<Checkpoint>.Filter.Eq(c => c.Slot, slotName) &
+                (
+                    Builders<Checkpoint>.Filter.Lt(c => c.Current, valueCheckpointToken) |
+                    Builders<Checkpoint>.Filter.Eq(c => c.Current, null)
+                ),
+                Builders<Checkpoint>.Update
+                    .Set(_ => _.Current, valueCheckpointToken)
+                    .Set(_ => _.Value, valueCheckpointToken)
             );
         }
 
@@ -374,18 +367,21 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         public async Task FlushCheckpointAsync()
         {
-            //Safe iterate in all values that have pending flush, then update safely slot with the actual value in memory
-            try
+            if (DeferredFlushEnabled)
             {
-                foreach (var slot in _lastFlushForEachSlot.Where(f => f.Value.PendingFlush))
+                //Safe iterate in all values that have pending flush, then update safely slot with the actual value in memory
+                try
                 {
-                    await SafeUpdateSlotCheckpointInMongodbAsync(slot.Key, slot.Value.ActualCheckpoint).ConfigureAwait(false);
-                    slot.Value.PendingFlush = false;
+                    foreach (var slot in _lastFlushForEachSlot.Where(f => f.Value.PendingFlush))
+                    {
+                        await SafeUpdateSlotCheckpointInMongodbAsync(slot.Key, slot.Value.ActualCheckpoint).ConfigureAwait(false);
+                        slot.Value.PendingFlush = false;
+                    }
                 }
-            }
-            catch (Exception ex)
-            {
-                Logger.ErrorFormat(ex, "Error during flush of checkpoints");
+                catch (Exception ex)
+                {
+                    Logger.ErrorFormat(ex, "Error during flush of checkpoints");
+                }
             }
         }
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 
 namespace Jarvis.Framework.Shared.HealthCheck
 {
@@ -12,11 +13,13 @@ namespace Jarvis.Framework.Shared.HealthCheck
         {
             public readonly string Name;
             public readonly HealthCheckResult Check;
+            public long DurationInMilliseconds { get; set; }
 
-            public Result(string name, HealthCheckResult check)
+            public Result(string name, HealthCheckResult check, long durationInMilliseconds)
             {
                 Name = name;
                 Check = check;
+                DurationInMilliseconds = durationInMilliseconds;
             }
         }
 
@@ -49,13 +52,14 @@ namespace Jarvis.Framework.Shared.HealthCheck
 
         public Result Execute()
         {
+            Stopwatch stopwatch = Stopwatch.StartNew();
             try
             {
-                return new Result(Name, Check());
+                return new Result(Name, Check(), stopwatch.ElapsedMilliseconds);
             }
             catch (Exception x)
             {
-                return new Result(Name, HealthCheckResult.Unhealthy(x));
+                return new Result(Name, HealthCheckResult.Unhealthy(x), stopwatch.ElapsedMilliseconds);
             }
         }
     }

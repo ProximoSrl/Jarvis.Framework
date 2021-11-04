@@ -357,7 +357,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
 
             _concurrentCheckpointTrackerSut = new ConcurrentCheckpointTracker(_db);
             _concurrentCheckpointTrackerSut.SetUp(projections, 1, false);
-            _concurrentCheckpointTrackerSut.FlushNotDispatchedLostTimeoutInSeconds = 1; //flush after one second
+            _concurrentCheckpointTrackerSut.FlushNotDispatchedTimeoutInSeconds = 1; //flush after one second
             await _concurrentCheckpointTrackerSut.UpdateSlotAndSetCheckpointAsync("default", new[] { "Projection" }, 891, true).ConfigureAwait(false);
 
             //now update slot, but tell the manager that you do not dispatched the event.
