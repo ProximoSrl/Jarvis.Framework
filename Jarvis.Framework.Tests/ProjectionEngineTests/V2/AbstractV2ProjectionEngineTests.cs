@@ -148,7 +148,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
         {
             Engine?.Stop();
             if (dropCheckpoints) _checkpoints.Drop();
-            _tracker = new ConcurrentCheckpointTracker(Database);
+            _tracker = new ConcurrentCheckpointTracker(Database, 60);
             _statusChecker = new MongoDirectConcurrentCheckpointStatusChecker(Database);
 
             var tenantId = new TenantId("engine");

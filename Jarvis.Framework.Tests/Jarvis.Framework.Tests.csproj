@@ -15,46 +15,26 @@
     <OutputPath>bincore\Release\netcoreapp2.0\</OutputPath>
   </PropertyGroup>
 
-  <!-- <PropertyGroup Condition=" '$(TargetFramework)' == 'netcoreapp2.0'">
-    <DefineConstants>NETCORE;NETSTANDARD;NETSTANDARD2_0</DefineConstants>
-  </PropertyGroup>
-
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'net461'">
-    <DefineConstants>NET45;NETFULL</DefineConstants>
-  </PropertyGroup> -->
-
   <ItemGroup>
     <PackageReference Include="App.Metrics" Version="4.2.0" />
     <PackageReference Include="Castle.Core" Version="4.4.1" />
     <PackageReference Include="Castle.LoggingFacility" Version="5.1.1" />
     <PackageReference Include="Castle.Windsor" Version="5.1.1" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
-    <PackageReference Include="MongoDB.Bson" Version="2.13.1" />
-    <PackageReference Include="MongoDB.Driver" Version="2.13.1" />
-    <PackageReference Include="MongoDB.Driver.Core" Version="2.13.1" />
+    <PackageReference Include="MongoDB.Bson" Version="2.13.2" />
+    <PackageReference Include="MongoDB.Driver" Version="2.13.2" />
+    <PackageReference Include="MongoDB.Driver.Core" Version="2.13.2" />
     <PackageReference Include="MongoDB.Libmongocrypt" Version="1.2.3" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-    <PackageReference Include="NStore.Core" Version="0.11.0" />
-    <PackageReference Include="NStore.Domain" Version="0.11.0" />
-    <PackageReference Include="NStore.Persistence.Mongo" Version="0.11.0" />
+    <PackageReference Include="NStore.Core" Version="0.11.1" />
+    <PackageReference Include="NStore.Domain" Version="0.11.1" />
+    <PackageReference Include="NStore.Persistence.Mongo" Version="0.11.1" />
     <PackageReference Include="NSubstitute" Version="4.2.2" />
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="5.0.0" />
     <PackageReference Include="NUnit" Version="3.13.2" />
     <PackageReference Include="NUnit3TestAdapter" Version="4.0.0" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.11.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.0.0" />
   </ItemGroup>
-
-  <!-- <ItemGroup Condition=" '$(TargetFramework)' == 'net461' ">
-    <PackageReference Include="fasterflect" Version="2.1.3" />
-    <Reference Include="System.Messaging" />
-    <Reference Include="System.Runtime.Caching" />
-    <PackageReference Include="Rebus.Msmq" Version="4.0.0" />
-  </ItemGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
-    <PackageReference Include="Fasterflect.Netstandard" Version="1.0.8" />
-    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="2.0.1" />
-  </ItemGroup> -->
 
   <ItemGroup>
     <ProjectReference Include="..\Jarvis.Framework.Bus.Rebus.Integration\Jarvis.Framework.Bus.Rebus.Integration.csproj" />

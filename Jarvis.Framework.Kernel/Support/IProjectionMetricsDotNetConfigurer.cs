@@ -8,7 +8,7 @@ namespace Jarvis.Framework.Kernel.Support
         Int64 GetMaxCheckpointToDispatch();
     }
 
-    public interface IProjectionStatusLoader : IProjectionTargetCheckpointLoader
+    public interface IProjectionStatusLoader
     {
         /// <summary>
         /// retrieve a set of metrics for slot that gives the idea
@@ -17,6 +17,11 @@ namespace Jarvis.Framework.Kernel.Support
         /// <returns></returns>
         IEnumerable<SlotStatus> GetSlotMetrics();
 
+        /// <summary>
+        /// Get status of a single slot name.
+        /// </summary>
+        /// <param name="slotName"></param>
+        /// <returns></returns>
         SlotStatus GetSlotMetric(String slotName);
     }
 

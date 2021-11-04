@@ -2,8 +2,18 @@
 ====
 ## Version 6
 
-### 6.0.0
+### 6.0.2
 
+- Update references
+- Fixed nuspec
+- Added ability to remove metrics
+- Added ability to parametrize concurrent checkpoin tracker flush strategy.
+
+### 6.0.1
+
+- Update references.
+
+### 6.0.0
 
 - Tested and used with .NET core projects.
 - Removed Metrics.NET in favor of [App Metrics](https://www.app-metrics.io/)

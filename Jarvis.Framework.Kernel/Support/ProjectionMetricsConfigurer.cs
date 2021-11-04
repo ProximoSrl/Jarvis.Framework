@@ -43,7 +43,7 @@ namespace Jarvis.Framework.Kernel.Support
         /// </summary>
         /// <param name="slotName"></param>
         /// <param name="valueProvider"></param>
-        public static void SetCheckpointBehind(String slotName, Func<Double> valueProvider)
+        public static void CreateCheckpointBehindGauge(String slotName, Func<Double> valueProvider)
         {
             String gaugeName;
             if (!string.IsNullOrEmpty(slotName))
@@ -64,25 +64,22 @@ namespace Jarvis.Framework.Kernel.Support
             foreach (var stat in stats)
             {
                 var slotName = stat.Name;
-                SetCheckpointBehind(stat.Name, () => _loader.GetSlotMetric(slotName).CommitBehind);
-                HealthChecks.RegisterHealthCheck("Slot-" + slotName, CheckSlotHealth(slotName));
+                CreateCheckpointBehindGauge(stat.Name, () => _loader.GetSlotMetric(slotName).CommitBehind);
+                HealthChecks.RegisterHealthCheck("Slot-" + slotName, () => CheckSlotHealth(slotName));
             }
-            SetCheckpointBehind("ALLSLOT", () => _loader.GetSlotMetrics().Max(d => d.CommitBehind));
+            CreateCheckpointBehindGauge("ALLSLOT", () => _loader.GetSlotMetrics().Max(d => d.CommitBehind));
         }
 
-        private Func<HealthCheckResult> CheckSlotHealth(string slotName)
+        private HealthCheckResult CheckSlotHealth(string slotName)
         {
-            return () =>
-            {
-                if (RebuildSettings.ShouldRebuild)
-                    return HealthCheckResult.Healthy("Slot " + slotName + " is rebuilding");
+            if (RebuildSettings.ShouldRebuild)
+                return HealthCheckResult.Healthy("Slot " + slotName + " is rebuilding");
 
-                var behind = _loader.GetSlotMetric(slotName).CommitBehind;
-                if (behind > _maxSkewForSlot)
-                    return HealthCheckResult.Unhealthy("Slot " + slotName + " behind:" + behind);
-                else
-                    return HealthCheckResult.Healthy("Slot " + slotName + " behind:" + behind);
-            };
+            var behind = _loader.GetSlotMetric(slotName).CommitBehind;
+            if (behind > _maxSkewForSlot)
+                return HealthCheckResult.Unhealthy("Slot " + slotName + " behind:" + behind);
+            else
+                return HealthCheckResult.Healthy("Slot " + slotName + " behind:" + behind);
         }
 
         public void Stop()
