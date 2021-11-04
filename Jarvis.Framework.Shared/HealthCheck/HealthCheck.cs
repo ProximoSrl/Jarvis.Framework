@@ -55,7 +55,8 @@ namespace Jarvis.Framework.Shared.HealthCheck
             Stopwatch stopwatch = Stopwatch.StartNew();
             try
             {
-                return new Result(Name, Check(), stopwatch.ElapsedMilliseconds);
+                var checkResult = Check();
+                return new Result(Name, checkResult, stopwatch.ElapsedMilliseconds);
             }
             catch (Exception x)
             {

@@ -52,12 +52,22 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         private List<string> _checkpointErrors;
 
-        /// <inheritdoc />
+        /// <summary>
+        /// This is the time after the checkpoint in database is updated even if
+        /// the slot did not dispatched any events for processed commit. We need to
+        /// flush every X seconds because if a slot does not process any events, the
+        /// checkpoint will never be updated and when the projection service restart
+        /// it will re-dispatch lots of unnecessary events.
+        /// </summary>
+        /// <remarks>A negative or zero value actively disable deferred flush returning
+        /// the checkpoint to the standard / classic operation mode.</remarks>
         public Int32 FlushNotDispatchedTimeoutInSeconds { get; set; } = 60;
 
         private bool DeferredFlushEnabled => FlushNotDispatchedTimeoutInSeconds > 0;
 
-        public ConcurrentCheckpointTracker(IMongoDatabase db)
+        public ConcurrentCheckpointTracker(
+            IMongoDatabase db,
+            int flushNotDispatchedTimeoutInSeconds)
         {
             _checkpoints = db.GetCollection<Checkpoint>("checkpoints");
             _checkpoints.Indexes.CreateOne(
@@ -67,6 +77,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                 );
             Logger = NullLogger.Instance;
             Clear();
+            FlushNotDispatchedTimeoutInSeconds = flushNotDispatchedTimeoutInSeconds;
         }
 
         private void Clear()
@@ -342,9 +353,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         public Int64 GetCheckpoint(IProjection projection)
         {
             var id = projection.Info.CommonName;
-            if (_checkpointTracker.ContainsKey(id))
+            if (_checkpointTracker.TryGetValue(id, out var value))
             {
-                return _checkpointTracker[id];
+                return value;
             }
 
             return 0;

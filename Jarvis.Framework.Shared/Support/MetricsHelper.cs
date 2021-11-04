@@ -57,12 +57,15 @@ namespace Jarvis.Framework.Shared.Support
 
         public static void CreateGauge(string name, Func<double> provider, Unit unit)
         {
-            var options = new GaugeOptions()
+            if (MetricsGlobalSettings.IsGaugesEnabled)
             {
-                Name = name,
-                MeasurementUnit = unit,
-            };
-            Metrics.Measure.Gauge.SetValue(options, provider);
+                var options = new GaugeOptions()
+                {
+                    Name = name,
+                    MeasurementUnit = unit,
+                };
+                Metrics.Measure.Gauge.SetValue(options, provider);
+            }
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Jarvis.Framework.Shared.Support;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -79,13 +80,15 @@ namespace Jarvis.Framework.Shared.HealthCheck
         /// <param name="healthCheck">Custom health check to register.</param>
         public static void RegisterHealthCheck(HealthCheck healthCheck)
         {
-            checks.AddOrUpdate(healthCheck.Name, healthCheck, (key, old) => healthCheck);
+            if (MetricsGlobalSettings.IsHealthCheckEnabled)
+            {
+                checks.AddOrUpdate(healthCheck.Name, healthCheck, (key, old) => healthCheck);
+            }
         }
 
         public static void UnregisterHealthCheck(string healthCheckName)
         {
-            HealthCheck healthCheck;
-            checks.TryRemove(healthCheckName, out healthCheck);
+            checks.TryRemove(healthCheckName, out var _);
         }
 
         /// <summary>

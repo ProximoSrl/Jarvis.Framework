@@ -8,17 +8,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
     public interface IConcurrentCheckpointTracker
     {
         /// <summary>
-        /// This is the time after the checkpoint in database is updated even if
-        /// the slot did not dispatched any events for processed commit. We need to
-        /// flush every X seconds because if a slot does not process any events, the
-        /// checkpoint will never be updated and when the projection service restart
-        /// it will re-dispatch lots of unnecessary events.
-        /// </summary>
-        /// <remarks>A negative or zero value actively disable deferred flush returning
-        /// the checkpoint to the standard / classic operation mode.</remarks>
-        int FlushNotDispatchedTimeoutInSeconds { get; set; }
-
-        /// <summary>
         /// Given the name of a projection, it will return a CheckPointReplayStatus
         /// object that tells if this checkpoint was already dispatched (isrebuild).
         /// Useful only if we track progress of each projection.
