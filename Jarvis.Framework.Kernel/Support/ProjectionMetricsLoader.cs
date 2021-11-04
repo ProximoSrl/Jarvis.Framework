@@ -1,15 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using Jarvis.Framework.Kernel.Engine;
+using Jarvis.Framework.Kernel.Events;
+using Jarvis.Framework.Kernel.ProjectionEngine.Client;
+using Jarvis.Framework.Shared.Helpers;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using Jarvis.Framework.Shared.Helpers;
 using MongoDB.Driver.Core.Clusters;
-using System.Threading;
-using Jarvis.Framework.Kernel.Engine;
-using Jarvis.Framework.Kernel.ProjectionEngine.Client;
-using Jarvis.Framework.Kernel.Events;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
+using System.Threading;
 
 namespace Jarvis.Framework.Kernel.Support
 {
@@ -26,11 +26,9 @@ namespace Jarvis.Framework.Kernel.Support
 
         private readonly Dictionary<String, SlotStatus> _lastMetrics;
         private readonly IMongoDatabase _eventStoreDatabase;
-        private readonly IMongoDatabase _readModelDatabase;
 
         private DateTime _lastPoll = DateTime.MinValue;
         private Int32 _isRetrievingData = 0;
-        private Int64 _lastDelay;
 
         /// <summary>
         /// This is an optional dependency, if we are into the process that runs projection
@@ -47,10 +45,9 @@ namespace Jarvis.Framework.Kernel.Support
         public ProjectionStatusLoader(
             IMongoDatabase eventStoreDatabase,
             IMongoDatabase readModelDatabase,
-            Int32 pollingIntervalInSeconds = 5)
+            Int32 pollingIntervalInSeconds = 10)
         {
             _eventStoreDatabase = eventStoreDatabase;
-            _readModelDatabase = readModelDatabase;
             _pollingIntervalInSeconds = pollingIntervalInSeconds;
             _commitsCollection = eventStoreDatabase.GetCollection<BsonDocument>(EventStoreFactory.PartitionCollectionName);
             _checkpointCollection = readModelDatabase.GetCollection<BsonDocument>("checkpoints");
@@ -66,15 +63,11 @@ namespace Jarvis.Framework.Kernel.Support
         public SlotStatus GetSlotMetric(string slotName)
         {
             GetMetricValue();
-            if (!_lastMetrics.ContainsKey(slotName)) return SlotStatus.Null;
-
-            return _lastMetrics[slotName];
-        }
-
-        public long GetMaxCheckpointToDispatch()
-        {
-            GetMetricValue();
-            return _lastDelay;
+            if (_lastMetrics.TryGetValue(slotName, out var value))
+            {
+                return value;
+            }
+            return SlotStatus.Null;
         }
 
         private Dictionary<string, IProjection> _sampleProjectionPerSlot;
@@ -112,15 +105,12 @@ namespace Jarvis.Framework.Kernel.Support
                     if (DateTime.Now.Subtract(_lastPoll).TotalSeconds > _pollingIntervalInSeconds)
                     {
                         //common code, grab latest commit
-                        if (_eventStoreDatabase.Client.Cluster.Description.State != ClusterState.Connected ||
-                            _readModelDatabase.Client.Cluster.Description.State != ClusterState.Connected)
+                        if (_eventStoreDatabase.Client.Cluster.Description.State != ClusterState.Connected)
                         {
                             //database is down, we cannot read values.
                             _lastPoll = DateTime.UtcNow;
                             return;
                         }
-
-                        _lastDelay = 0;
 
                         var lastCommitDoc = _commitsCollection
                             .FindAll()
@@ -206,7 +196,6 @@ namespace Jarvis.Framework.Kernel.Support
         private void UpdateSlot(long lastCommit, string slotName, long current)
         {
             var delay = lastCommit - current;
-            if (delay > _lastDelay) _lastDelay = delay;
             _lastMetrics[slotName] = new SlotStatus(slotName, delay);
         }
     }

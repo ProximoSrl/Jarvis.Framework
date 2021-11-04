@@ -16,6 +16,13 @@ namespace Jarvis.Framework.Shared.Support
     {
         private readonly CounterOptions _counterOptions;
 
+        /// <summary>
+        /// Create a nuill counter that does not do anything
+        /// </summary>
+        internal Counter()
+        {
+        }
+
         public Counter(CounterOptions counterOptions)
         {
             _counterOptions = counterOptions;
@@ -23,23 +30,36 @@ namespace Jarvis.Framework.Shared.Support
 
         public void Increment(string item, long ticks)
         {
-            MetricsHelper.Counter.Increment(_counterOptions, ticks, item);
+            if (_counterOptions != null)
+            {
+                MetricsHelper.Counter.Increment(_counterOptions, ticks, item);
+            }
         }
 
         public void Increment(string item)
         {
-            MetricsHelper.Counter.Increment(_counterOptions, item);
+            if (_counterOptions != null)
+            {
+                MetricsHelper.Counter.Increment(_counterOptions, item);
+            }
         }
 
         public void Increment(long ticks)
         {
-            MetricsHelper.Counter.Increment(_counterOptions, ticks);
+            if (_counterOptions != null)
+            {
+                MetricsHelper.Counter.Increment(_counterOptions, ticks);
+            }
         }
     }
 
     public class Meter
     {
         private readonly MeterOptions _meterOptions;
+
+        public Meter()
+        {
+        }
 
         public Meter(MeterOptions meterOptions)
         {
@@ -48,7 +68,10 @@ namespace Jarvis.Framework.Shared.Support
 
         public void Mark(int amount)
         {
-            MetricsHelper.Meter.Mark(_meterOptions, amount);
+            if (_meterOptions != null)
+            {
+                MetricsHelper.Meter.Mark(_meterOptions, amount);
+            }
         }
     }
 
@@ -76,6 +99,10 @@ namespace Jarvis.Framework.Shared.Support
     {
         private readonly HistogramOptions _histogramOptions;
 
+        public Histogram()
+        {
+        }
+
         public Histogram(HistogramOptions historgramOptions)
         {
             _histogramOptions = historgramOptions;
@@ -83,12 +110,18 @@ namespace Jarvis.Framework.Shared.Support
 
         public void Update(long value)
         {
-            MetricsHelper.Histogram.Update(_histogramOptions, value);
+            if (_histogramOptions != null)
+            {
+                MetricsHelper.Histogram.Update(_histogramOptions, value);
+            }
         }
 
         public void Update(long value, string userValue)
         {
-            MetricsHelper.Histogram.Update(_histogramOptions, value, userValue);
+            if (_histogramOptions != null)
+            {
+                MetricsHelper.Histogram.Update(_histogramOptions, value, userValue);
+            }
         }
     }
 
@@ -96,39 +129,56 @@ namespace Jarvis.Framework.Shared.Support
     {
         public static Counter Counter(string counterName, Unit measurementUnit)
         {
-            return new Counter(new CounterOptions()
+            if (MetricsGlobalSettings.IsCounterEnabled)
             {
-                Name = counterName,
-                MeasurementUnit = measurementUnit,
-            });
+                return new Counter(new CounterOptions()
+                {
+                    Name = counterName,
+                    MeasurementUnit = measurementUnit,
+                });
+            }
+
+            return new Counter();
         }
 
         public static Meter Meter(string counterName, Unit measurementUnit, TimeUnit timeUnit)
         {
-            return new Meter(new MeterOptions()
+            if (MetricsGlobalSettings.IsCounterEnabled)
             {
-                Name = counterName,
-                MeasurementUnit = measurementUnit,
-                RateUnit = timeUnit,
-            });
+                return new Meter(new MeterOptions()
+                {
+                    Name = counterName,
+                    MeasurementUnit = measurementUnit,
+                    RateUnit = timeUnit,
+                });
+            }
+            return new Meter();
         }
 
         public static Meter Meter(string counterName, Unit measurementUnit)
         {
-            return new Meter(new MeterOptions()
+            if (MetricsGlobalSettings.MeterDisabled)
             {
-                Name = counterName,
-                MeasurementUnit = measurementUnit,
-            });
+                return new Meter(new MeterOptions()
+                {
+                    Name = counterName,
+                    MeasurementUnit = measurementUnit,
+                });
+            }
+            return new Meter();
         }
 
         public static Histogram Histogram(string counterName, Unit measurementUnit)
         {
-            return new Histogram(new HistogramOptions()
+            if (MetricsGlobalSettings.IsHistogramEnabled)
             {
-                Name = counterName,
-                MeasurementUnit = measurementUnit,
-            });
+                return new Histogram(new HistogramOptions()
+                {
+                    Name = counterName,
+                    MeasurementUnit = measurementUnit,
+                });
+            }
+            return new Histogram();
         }
 
         public static Timer Timer(string counterName, Unit measurementUnit, TimeUnit timeUnit)

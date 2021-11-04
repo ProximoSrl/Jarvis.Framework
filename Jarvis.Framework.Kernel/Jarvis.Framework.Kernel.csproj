@@ -19,26 +19,21 @@
     <PackageReference Include="Castle.Core" Version="4.4.1" />
     <PackageReference Include="Castle.LoggingFacility" Version="5.1.1" />
     <PackageReference Include="Castle.Windsor" Version="5.1.1" />
-    <PackageReference Include="Microsoft.Composition" Version="1.0.31" />
-    <PackageReference Include="MongoDB.Bson" Version="2.13.1" />
-    <PackageReference Include="MongoDB.Driver" Version="2.13.1" />
-    <PackageReference Include="MongoDB.Driver.Core" Version="2.13.1" />
+    <PackageReference Include="fasterflect" Version="3.0.0" />
+    <PackageReference Include="MongoDB.Bson" Version="2.13.2" />
+    <PackageReference Include="MongoDB.Driver" Version="2.13.2" />
+    <PackageReference Include="MongoDB.Driver.Core" Version="2.13.2" />
     <PackageReference Include="MongoDB.Libmongocrypt" Version="1.2.3" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-    <PackageReference Include="NStore.Core" Version="0.11.0" />
-    <PackageReference Include="NStore.Domain" Version="0.11.0" />
-    <PackageReference Include="NStore.Persistence.Mongo" Version="0.11.0" />
+    <PackageReference Include="NStore.Core" Version="0.11.1" />
+    <PackageReference Include="NStore.Domain" Version="0.11.1" />
+    <PackageReference Include="NStore.Persistence.Mongo" Version="0.11.1" />
     <PackageReference Include="System.Threading.Tasks.Dataflow" Version="5.0.0" />
   </ItemGroup>
 
    <ItemGroup Condition=" '$(TargetFramework)' == 'net461' ">
-    <PackageReference Include="fasterflect" Version="3.0.0" />
     <Reference Include="System.Messaging" />
     <Reference Include="System.Runtime.Caching" />
-  </ItemGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
-    <PackageReference Include="Fasterflect.Netstandard" Version="1.0.9" />
   </ItemGroup>
 
   <ItemGroup>
