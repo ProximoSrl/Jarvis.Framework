@@ -188,7 +188,7 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
                     .Set(x => x.Completed, true)
                     .Set(x => x.Success, true);
                 var equalityCheck = Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id);
-                if (JarvisFrameworkGlobalConfiguration.MetricsEnabled)
+                if (JarvisFrameworkGlobalConfiguration.KernelMetrics)
                 {
                     var trackMessage = Commands.FindOneAndUpdate(
                         equalityCheck,

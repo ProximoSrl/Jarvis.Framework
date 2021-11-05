@@ -4,7 +4,7 @@ namespace Jarvis.Framework.Shared
 {
     public static class JarvisFrameworkGlobalConfiguration
     {
-        public static Boolean MetricsEnabled { get; private set; }
+        public static Boolean KernelMetrics { get; private set; }
 
         /// <summary>
         /// If true the RepositoryCommandHandler will use SingleAggregateRepository cached
@@ -18,21 +18,37 @@ namespace Jarvis.Framework.Shared
 
         public static Boolean AtomicProjectionEngineOptimizedCatchup { get; private set; }
 
+        /// <summary>
+        /// Due to an anomaly in the driver.
+        /// </summary>
+        public static Boolean MongoDbAsyncDisabled { get; private set; }
+
         static JarvisFrameworkGlobalConfiguration()
         {
-            MetricsEnabled = true;
+            KernelMetrics = true;
             SingleAggregateRepositoryCacheEnabled = false;
             AtomicProjectionEngineOptimizedCatchup = true;
         }
 
-        public static void DisableMetrics()
+        public static void DisableMongoDbAsync()
         {
-            MetricsEnabled = false;
+            MongoDbAsyncDisabled = true;
         }
 
+        /// <summary>
+        /// Disable kernel metrics.
+        /// </summary>
+        public static void DisableMetrics()
+        {
+            KernelMetrics = false;
+        }
+
+        /// <summary>
+        /// Enable kernel metrics.
+        /// </summary>
         public static void EnableMetrics()
         {
-            MetricsEnabled = true;
+            KernelMetrics = true;
         }
 
         public static void DisableSingleAggregateRepositoryCache()
