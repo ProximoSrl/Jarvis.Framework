@@ -14,11 +14,11 @@
     <dependencies>
     
       <group>
-        <dependency id="NStore.Core" version="0.11.1" />
-        <dependency id="NStore.Domain" version="0.11.1" />
-        <dependency id="NStore.Persistence.Mongo" version="0.11.1" />
+        <dependency id="NStore.Core" version="0.11.2" />
+        <dependency id="NStore.Domain" version="0.11.2" />
+        <dependency id="NStore.Persistence.Mongo" version="0.11.2" />
         
-        <dependency id="MongoDB.Driver" version="2.13.2" />
+        <dependency id="MongoDB.Driver" version="2.12.4" />
         <dependency id="Newtonsoft.Json" version="13.0.1" />
 
         <dependency id="Castle.Core" version="4.4.1" />
