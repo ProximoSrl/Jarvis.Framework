@@ -2,6 +2,10 @@
 ====
 ## Version 6
 
+### 6.0.3
+
+- Added ability to disable async on ConcurrentCheckpointTracker due to a mongodb driver anomaly.
+
 ### 6.0.2
 
 - Update references
