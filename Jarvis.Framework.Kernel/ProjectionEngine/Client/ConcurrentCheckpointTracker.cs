@@ -2,6 +2,7 @@ using Castle.Core.Logging;
 using Jarvis.Framework.Kernel.Engine;
 using Jarvis.Framework.Kernel.Events;
 using Jarvis.Framework.Kernel.Support;
+using Jarvis.Framework.Shared;
 using Jarvis.Framework.Shared.Helpers;
 using MongoDB.Driver;
 using System;
@@ -277,7 +278,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             //Update slot only if it is needed, this will greatly reduce the concurrency and resource lock on the checkpoint collection
             if (shouldUpdateMongodb)
             {
-                await UpdateSlotCheckpointInMongodbAsync(slotName, valueCheckpointToken).ConfigureAwait(false);
+                if (JarvisFrameworkGlobalConfiguration.MongoDbAsyncDisabled)
+                {
+                    UpdateSlotCheckpointInMongodb(slotName, valueCheckpointToken);
+                }
+                else
+                {
+                    await UpdateSlotCheckpointInMongodbAsync(slotName, valueCheckpointToken).ConfigureAwait(false);
+                }
             }
             foreach (var projectionName in projectionNameList)
             {
@@ -287,6 +295,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         /// <summary>
         /// Persist on disk checkpoint of a slot in mongodb.
+        /// Due to an anomaly in mongodb drivers we found that async version has a problem and cause
+        /// race issues.
         /// </summary>
         /// <param name="slotName"></param>
         /// <param name="valueCheckpointToken"></param>
@@ -294,6 +304,24 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         private Task UpdateSlotCheckpointInMongodbAsync(string slotName, long valueCheckpointToken)
         {
             return _checkpoints.UpdateManyAsync(
+                    Builders<Checkpoint>.Filter.Eq("Slot", slotName),
+                    Builders<Checkpoint>.Update
+                        .Set(_ => _.Current, valueCheckpointToken)
+                        .Set(_ => _.Value, valueCheckpointToken)
+            );
+        }
+
+        /// <summary>
+        /// Persist on disk checkpoint of a slot in mongodb.
+        /// Due to an anomaly in mongodb drivers we found that async version has a problem and cause
+        /// race issues.
+        /// </summary>
+        /// <param name="slotName"></param>
+        /// <param name="valueCheckpointToken"></param>
+        /// <returns></returns>
+        private void UpdateSlotCheckpointInMongodb(string slotName, long valueCheckpointToken)
+        {
+             _checkpoints.UpdateMany(
                     Builders<Checkpoint>.Filter.Eq("Slot", slotName),
                     Builders<Checkpoint>.Update
                         .Set(_ => _.Current, valueCheckpointToken)

@@ -38,7 +38,7 @@ namespace Jarvis.Framework.Kernel.Commands
             using (var x = SecurityContextManager.SetCurrentClaims(claims))
             {
                 await OnCheckSecurityAsync(cmd).ConfigureAwait(false);
-                if (JarvisFrameworkGlobalConfiguration.MetricsEnabled)
+                if (JarvisFrameworkGlobalConfiguration.KernelMetrics)
                 {
                     using (var context = SharedMetricsHelper.StartCommandTimer(cmd))
                     {
