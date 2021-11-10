@@ -122,11 +122,9 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
                 _eventStore,
                 new AggregateFactory(),
                 new ConflictDetector(),
-                _identityConverter,
-                NSubstitute.Substitute.For<NEventStore.Logging.ILog>()
+                _identityConverter
                 );
         }
-
 
         protected void ConfigureProjectionEngine(Boolean dropCheckpoints = true)
         {

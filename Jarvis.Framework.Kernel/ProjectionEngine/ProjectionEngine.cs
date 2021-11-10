@@ -1,28 +1,24 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using Castle.Core.Logging;
+﻿using Castle.Core.Logging;
 using Jarvis.Framework.Kernel.Events;
 using Jarvis.Framework.Kernel.MultitenantSupport;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
+using Jarvis.Framework.Kernel.Support;
 using Jarvis.Framework.Shared.Events;
-using Jarvis.Framework.Shared.Logging;
-using Jarvis.Framework.Shared.MultitenantSupport;
+using Jarvis.Framework.Shared.Helpers;
+using Metrics;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
 using NEventStore;
-using NEventStore.Client;
 using NEventStore.Serialization;
-using NEventStore.Persistence;
-using Jarvis.Framework.Kernel.Support;
+using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using System.Text;
-using Jarvis.Framework.Shared.Helpers;
-using Metrics;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
 {
@@ -42,7 +38,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         private long _maxDispatchedCheckpoint = 0;
         private Int32 _countOfConcurrentDispatchingCommit = 0;
 
-        public IExtendedLogger Logger { get; set; } 
+        public IExtendedLogger Logger { get; set; }
 
         public ILoggerFactory LoggerFactory { get; set; }
 
@@ -61,7 +57,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         private readonly ConcurrentBag<String> _engineFatalErrors;
 
         public ProjectionEngine(
-			ICommitPollingClientFactory pollingClientFactory,
+            ICommitPollingClientFactory pollingClientFactory,
             IConcurrentCheckpointTracker checkpointTracker,
             IProjection[] projections,
             IHousekeeper housekeeper,
@@ -103,7 +99,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             {
                 foreach (var prj in _allProjections)
                 {
-                    if (Logger.IsDebugEnabled) Logger.DebugFormat("Projection: {0}", prj.GetType().FullName);
+                    if (Logger.IsDebugEnabled)
+                    {
+                        Logger.DebugFormat("Projection: {0}", prj.GetType().FullName);
+                    }
                 }
 
                 if (_allProjections.Length == 0)
@@ -115,16 +114,24 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         public void Start()
         {
-            if (Logger.IsDebugEnabled) Logger.DebugFormat("Starting projection engine on tenant {0}", _config.TenantId);
+            if (Logger.IsDebugEnabled)
+            {
+                Logger.DebugFormat("Starting projection engine on tenant {0}", _config.TenantId);
+            }
 
             StartPolling();
-            if (Logger.IsDebugEnabled) Logger.Debug("Projection engine started");
+            if (Logger.IsDebugEnabled)
+            {
+                Logger.Debug("Projection engine started");
+            }
         }
 
         public void Poll()
         {
             if (_clients == null)
+            {
                 return; //Poller still not initialized.
+            }
 
             foreach (var client in _clients)
             {
@@ -134,9 +141,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         public void Stop()
         {
-            if (Logger.IsDebugEnabled) Logger.Debug("Stopping projection engine");
+            if (Logger.IsDebugEnabled)
+            {
+                Logger.Debug("Stopping projection engine");
+            }
+
             StopPolling();
-            if (Logger.IsDebugEnabled) Logger.Debug("Projection engine stopped");
+            if (Logger.IsDebugEnabled)
+            {
+                Logger.Debug("Projection engine stopped");
+            }
         }
 
         public void StartWithManualPoll(Boolean immediatePoll = true)
@@ -162,7 +176,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             {
                 client.StartManualPolling(GetStartGlobalCheckpoint(), _config.PollingMsInterval, 4000, "CommitPollingClient");
             }
-            if (immediatePoll) Poll();
+            if (immediatePoll)
+            {
+                Poll();
+            }
         }
 
         void StartPolling()
@@ -190,7 +207,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
             _eventstore = Wireup
                 .Init()
-                .LogTo(t => new NEventStoreLog4NetLogger(LoggerFactory.Create(t)))
+                //.LogTo(t => new NEventStoreLog4NetLogger(LoggerFactory.Create(t)))
                 .UsingMongoPersistence(() => _config.EventStoreConnectionString, new DocumentObjectSerializer())
                 .InitializeStorageEngine()
                 .Build();
@@ -202,7 +219,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
             var allSlots = _projectionsBySlot.Keys.ToArray();
 
-            var allClients = new List<ICommitPollingClient> ();
+            var allClients = new List<ICommitPollingClient>();
             //recreate all polling clients.
             foreach (var bucket in _config.BucketInfo)
             {
@@ -247,7 +264,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             foreach (var projection in projections)
             {
                 if (_checkpointTracker.NeedsRebuild(projection))
+                {
                     return 0;
+                }
 
                 var currentValue = _checkpointTracker.GetCurrent(projection);
                 if (currentValue < min)
@@ -294,7 +313,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                             //so we need to immediately stop rebuilding.
                             projection.StopRebuild();
                         }
-                        maxCheckpointRebuilded = Math.Max(maxCheckpointRebuilded,_checkpointTracker.GetCheckpoint(projection));
+                        maxCheckpointRebuilded = Math.Max(maxCheckpointRebuilded, _checkpointTracker.GetCheckpoint(projection));
                     }
 
                     projection.SetUp();
@@ -322,7 +341,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 .Limit(1)
                 .FirstOrDefault();
 
-            if (lastCommit == null) return 0;
+            if (lastCommit == null)
+            {
+                return 0;
+            }
 
             return lastCommit["_id"].AsInt64;
         }
@@ -356,9 +378,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         {
             Interlocked.Increment(ref _countOfConcurrentDispatchingCommit);
 
-            if (Logger.IsDebugEnabled) Logger.ThreadProperties["commit"] = commit.CommitId;
+            if (Logger.IsDebugEnabled)
+            {
+                Logger.ThreadProperties["commit"] = commit.CommitId;
+            }
 
-            if (Logger.IsDebugEnabled) Logger.DebugFormat("Dispatching checkpoit {0} on tenant {1}", commit.CheckpointToken, _config.TenantId);
+            if (Logger.IsDebugEnabled)
+            {
+                Logger.DebugFormat("Dispatching checkpoit {0} on tenant {1}", commit.CheckpointToken, _config.TenantId);
+            }
+
             TenantContext.Enter(_config.TenantId);
             var chkpoint = commit.CheckpointToken;
 
@@ -405,14 +434,30 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 try
                 {
                     var evt = (DomainEvent)eventMessage.Body;
-                    if (Logger.IsDebugEnabled) Logger.ThreadProperties["evType"] = evt.GetType().Name;
-                    if (Logger.IsDebugEnabled) Logger.ThreadProperties["evMsId"] = evt.MessageId;
-                    if (Logger.IsDebugEnabled) Logger.ThreadProperties["evCheckpointToken"] = commit.CheckpointToken;
+                    if (Logger.IsDebugEnabled)
+                    {
+                        Logger.ThreadProperties["evType"] = evt.GetType().Name;
+                    }
+
+                    if (Logger.IsDebugEnabled)
+                    {
+                        Logger.ThreadProperties["evMsId"] = evt.MessageId;
+                    }
+
+                    if (Logger.IsDebugEnabled)
+                    {
+                        Logger.ThreadProperties["evCheckpointToken"] = commit.CheckpointToken;
+                    }
+
                     string eventName = evt.GetType().Name;
                     foreach (var projection in projections)
                     {
                         var cname = projection.GetCommonName();
-                        if (Logger.IsDebugEnabled) Logger.ThreadProperties["prj"] = cname;
+                        if (Logger.IsDebugEnabled)
+                        {
+                            Logger.ThreadProperties["prj"] = cname;
+                        }
+
                         var checkpointStatus = _checkpointTracker.GetCheckpointStatus(cname, commit.CheckpointToken);
 
                         bool handled;
@@ -446,6 +491,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                             _metrics.Inc(cname, eventName, ticks);
 
                             if (Logger.IsDebugEnabled)
+                            {
                                 Logger.DebugFormat("[{3}] [{4}] Handled checkpoint {0}: {1} > {2}",
                                     commit.CheckpointToken,
                                     commit.StreamId,
@@ -453,12 +499,15 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                                     slotName,
                                     cname
                                 );
+                            }
                         }
 
                         if (!checkpointStatus.IsRebuilding)
                         {
                             if (handled)
+                            {
                                 dispatchCommit = true;
+                            }
 
                             projectionToUpdate.Add(cname);
                         }
@@ -476,7 +525,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                                 );
                             }
                         }
-                        if (Logger.IsDebugEnabled) Logger.ThreadProperties["prj"] = null;
+                        if (Logger.IsDebugEnabled)
+                        {
+                            Logger.ThreadProperties["prj"] = null;
+                        }
                     }
 
                     ClearLoggerThreadPropertiesForEventDispatchLoop();
@@ -503,7 +555,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             MetricsHelper.MarkCommitDispatchedCount(slotName, 1);
 
             if (dispatchCommit)
+            {
                 _notifyCommitHandled.SetDispatched(commit);
+            }
 
             // ok in multithread wihout locks!
             if (_maxDispatchedCheckpoint < chkpoint)
@@ -518,35 +572,62 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 _maxDispatchedCheckpoint = chkpoint;
             }
 
-            if (Logger.IsDebugEnabled) Logger.ThreadProperties["commit"] = null;
+            if (Logger.IsDebugEnabled)
+            {
+                Logger.ThreadProperties["commit"] = null;
+            }
+
             Interlocked.Decrement(ref _countOfConcurrentDispatchingCommit);
         }
 
         private void ClearLoggerThreadPropertiesForEventDispatchLoop()
         {
-            if (Logger.IsDebugEnabled) Logger.ThreadProperties["evType"] = null;
-            if (Logger.IsDebugEnabled) Logger.ThreadProperties["evMsId"] = null;
-            if (Logger.IsDebugEnabled) Logger.ThreadProperties["evCheckpointToken"] = null;
-            if (Logger.IsDebugEnabled) Logger.ThreadProperties["prj"] = null;
+            if (Logger.IsDebugEnabled)
+            {
+                Logger.ThreadProperties["evType"] = null;
+            }
+
+            if (Logger.IsDebugEnabled)
+            {
+                Logger.ThreadProperties["evMsId"] = null;
+            }
+
+            if (Logger.IsDebugEnabled)
+            {
+                Logger.ThreadProperties["evCheckpointToken"] = null;
+            }
+
+            if (Logger.IsDebugEnabled)
+            {
+                Logger.ThreadProperties["prj"] = null;
+            }
         }
 
         public void Update()
         {
-            if (Logger.IsDebugEnabled) Logger.DebugFormat("Update triggered on tenant {0}", _config.TenantId);
+            if (Logger.IsDebugEnabled)
+            {
+                Logger.DebugFormat("Update triggered on tenant {0}", _config.TenantId);
+            }
+
             Poll();
         }
 
         public async Task UpdateAndWait()
         {
-            if (Logger.IsDebugEnabled) Logger.DebugFormat("Polling from {0}", _config.EventStoreConnectionString);
+            if (Logger.IsDebugEnabled)
+            {
+                Logger.DebugFormat("Polling from {0}", _config.EventStoreConnectionString);
+            }
+
             var collection = GetMongoCommitsCollection();
             int retryCount = 0;
             long lastDispatchedCheckpoint = 0;
 
             while (true)
             {
-                var last = collection  
-                    .FindAll()            
+                var last = collection
+                    .FindAll()
                     .Sort(Builders<BsonDocument>.Sort.Descending("_id"))
                     .Limit(1)
                     .Project(Builders<BsonDocument>.Projection.Include("_id"))
@@ -555,7 +636,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 if (last != null)
                 {
                     var checkpointId = last["_id"].AsInt64;
-                    if (Logger.IsDebugEnabled) Logger.DebugFormat("Last checkpoint is {0}", checkpointId);
+                    if (Logger.IsDebugEnabled)
+                    {
+                        Logger.DebugFormat("Last checkpoint is {0}", checkpointId);
+                    }
 
                     Poll();
                     await Task.Delay(1000);
@@ -570,7 +654,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                     }
                     if (checkpointId == dispatched)
                     {
-                        last =  collection
+                        last = collection
                             .FindAll()
                             .Sort(Builders<BsonDocument>.Sort.Descending("_id"))
                             .Limit(1)
@@ -580,7 +664,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                         checkpointId = last["_id"].AsInt64;
                         if (checkpointId == dispatched)
                         {
-                            if (Logger.IsDebugEnabled) Logger.Debug("Polling done!");
+                            if (Logger.IsDebugEnabled)
+                            {
+                                Logger.Debug("Polling done!");
+                            }
+
                             return;
                         }
                     }
@@ -602,7 +690,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 }
                 else
                 {
-                    if (Logger.IsDebugEnabled) Logger.Debug("Event store is empty");
+                    if (Logger.IsDebugEnabled)
+                    {
+                        Logger.Debug("Event store is empty");
+                    }
+
                     return;
                 }
             }
@@ -624,7 +716,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             HealthChecks.RegisterHealthCheck("Projection Engine Errors", () =>
             {
                 if (_engineFatalErrors.Count == 0)
+                {
                     return HealthCheckResult.Healthy("No error in projection engine");
+                }
 
                 return HealthCheckResult.Unhealthy("Error occurred in projection engine: " + String.Join("\n\n", _engineFatalErrors));
             });

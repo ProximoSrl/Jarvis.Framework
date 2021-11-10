@@ -1,24 +1,7 @@
+using Jarvis.Framework.Shared.MultitenantSupport;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using Castle.Core.Logging;
-using Jarvis.Framework.Kernel.Events;
-using Jarvis.Framework.Kernel.MultitenantSupport;
-using Jarvis.Framework.Kernel.ProjectionEngine.Client;
-using Jarvis.Framework.Shared.Events;
-using Jarvis.Framework.Shared.Logging;
-using Jarvis.Framework.Shared.MultitenantSupport;
-using MongoDB.Bson;
-using MongoDB.Driver;
-using MongoDB.Driver.Linq;
-using NEventStore;
-using NEventStore.Client;
-using NEventStore.Serialization;
-using Jarvis.Framework.Kernel.Support;
-using Jarvis.Framework.Shared.Helpers;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
 {

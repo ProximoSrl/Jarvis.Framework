@@ -1,21 +1,19 @@
 ﻿using Castle.Core.Logging;
+using Jarvis.MonitoringAgent.Common.Jarvis.MonitoringAgent.Common;
 using Jarvis.MonitoringAgentServer.Server.Data;
 using Jarvis.MonitoringAgentServer.Support;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
-using System.Text;
 using System.Threading.Tasks;
 using System.Web.Http;
-using Jarvis.MonitoringAgent.Common.Jarvis.MonitoringAgent.Common;
 
 namespace Jarvis.MonitoringAgentServer.Server.Controllers
 {
@@ -30,7 +28,7 @@ namespace Jarvis.MonitoringAgentServer.Server.Controllers
         public IMongoDatabase _mongoDatabase { get; set; }
 
         public LogController(
-            MonitoringAgentServerConfiguration configuration, 
+            MonitoringAgentServerConfiguration configuration,
             IMongoCollection<Customer> customers,
             IMongoDatabase mongoDatabase)
         {
@@ -130,8 +128,15 @@ namespace Jarvis.MonitoringAgentServer.Server.Controllers
             {
                 try
                 {
-                    if (File.Exists(fileName)) File.Delete(fileName);
-                    if (Directory.Exists(tempFolder)) Directory.Delete(tempFolder, true);
+                    if (File.Exists(fileName))
+                    {
+                        File.Delete(fileName);
+                    }
+
+                    if (Directory.Exists(tempFolder))
+                    {
+                        Directory.Delete(tempFolder, true);
+                    }
                 }
                 catch (Exception ex)
                 {

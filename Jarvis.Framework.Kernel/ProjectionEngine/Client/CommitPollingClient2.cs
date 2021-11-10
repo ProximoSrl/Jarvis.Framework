@@ -2,21 +2,15 @@
 using Jarvis.Framework.Kernel.Support;
 using Metrics;
 using NEventStore;
-using NEventStore.Client;
 using NEventStore.Persistence;
+using NEventStore.PollingClient;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 {
-
     /// <summary>
     /// Based on the new polling client of NEventStore.
     /// </summary>
@@ -61,7 +55,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             ExecutionDataflowBlockOptions consumerOptions = new ExecutionDataflowBlockOptions();
             consumerOptions.BoundedCapacity = _bufferSize;
             ConsumerActionWrapper wrapper = new ConsumerActionWrapper(consumerAction, this);
-            var actionBlock = new ActionBlock<ICommit>((Action<ICommit>) wrapper.Consume, consumerOptions);
+            var actionBlock = new ActionBlock<ICommit>((Action<ICommit>)wrapper.Consume, consumerOptions);
 
             _consumers.Add(actionBlock);
         }
@@ -76,7 +70,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             private Boolean _active;
             private String _error;
 
-  
+
             private readonly CommitPollingClient2 _owner;
 
             public ConsumerActionWrapper(Action<ICommit> consumerAction, CommitPollingClient2 owner)
@@ -91,7 +85,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
             public void Consume(ICommit commit)
             {
-                if (Active == false) return; //consumer failed.
+                if (Active == false)
+                {
+                    return; //consumer failed.
+                }
+
                 try
                 {
                     _consumerAction(commit);
@@ -133,14 +131,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
           Int32 bufferSize,
           String pollerName)
         {
-            Init(checkpointTokenFrom, intervalInMilliseconds,checkpointTokenSequenced, bufferSize, pollerName);
+            Init(checkpointTokenFrom, intervalInMilliseconds, checkpointTokenSequenced, bufferSize, pollerName);
             _innerClient.StartFrom(checkpointTokenFrom);
             Status = CommitPollingClientStatus.Polling;
         }
 
         public void StartManualPolling(Int64 checkpointTokenFrom, Int32 intervalInMilliseconds, Int32 bufferSize, String pollerName)
         {
-            Init(checkpointTokenFrom, intervalInMilliseconds, 0,bufferSize, pollerName);
+            Init(checkpointTokenFrom, intervalInMilliseconds, 0, bufferSize, pollerName);
             _innerClient.ConfigurePollingFunction();
         }
 
@@ -158,7 +156,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                 c =>
                 {
                     if (c.CheckpointToken <= checkpointTokenSequenced)
+                    {
                         return DispatchCommit(c);
+                    }
 
                     return _sequencer.Handle(c);
                 },
@@ -234,7 +234,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         private double GetClientBufferSize()
         {
             if (_buffer != null)
+            {
                 return _buffer.Count;
+            }
+
             return 0;
         }
 
@@ -322,6 +325,5 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         }
 
         #endregion
-
     }
 }

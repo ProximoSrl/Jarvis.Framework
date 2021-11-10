@@ -28,7 +28,7 @@ namespace Jarvis.Framework.Kernel.Engine
             mongoPersistenceOptions = mongoPersistenceOptions ??
                 new MongoPersistenceOptions() {};
             Wireup es = Wireup.Init()
-                    .LogTo(t => new NEventStoreLog4NetLogger(_loggerFactory.Create(t)))
+                    //.LogTo(t => new NEventStoreLog4NetLogger(_loggerFactory.Create(t)))
                     .UsingMongoPersistence(
                         () => connectionString,
                         new DocumentObjectSerializer(),

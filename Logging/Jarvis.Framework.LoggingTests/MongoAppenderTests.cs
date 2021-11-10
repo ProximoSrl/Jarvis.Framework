@@ -1,21 +1,15 @@
-﻿using System.Linq;
-using System.Linq.Expressions;
-using System.Runtime.InteropServices;
-using Jarvis.Framework.MongoAppender;
+﻿using Jarvis.Framework.MongoAppender;
 using log4net;
 using log4net.Appender;
 using log4net.Core;
-using log4net.Repository;
+using log4net.Layout;
 using log4net.Repository.Hierarchy;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using MongoDB.Driver.Linq;
 using NUnit.Framework;
-using System.Diagnostics;
 using System;
-using log4net.Layout;
-using MongoDB.Driver;
 using System.Configuration;
+using System.Linq;
 
 namespace Jarvis.Framework.LoggingTests
 {
@@ -115,14 +109,14 @@ namespace Jarvis.Framework.LoggingTests
     public class MongoAppenderTests : MongoAppenderTestsBaseClass
     {
 
-        [Test]  
+        [Test]
         public void verify_single_log()
         {
             _sut.Debug("This is a logger");
             _appender.Flush();
             Assert.That(_logCollection.Count(Builders<BsonDocument>.Filter.Empty), Is.EqualTo(1));
         }
-            
+
         [Test]
         public void verify_file_name()
         {
@@ -132,7 +126,7 @@ namespace Jarvis.Framework.LoggingTests
             Assert.That(log["fi"].ToString(), Is.StringEnding("MongoAppenderTests.cs"));
         }
 
-        [Test] 
+        [Test]
         public void verify_lots_of_log()
         {
             for (int i = 0; i < 1000; i++)

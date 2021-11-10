@@ -1,27 +1,19 @@
-﻿using System;
+﻿using Castle.Core.Logging;
+using Jarvis.Framework.Kernel.Events;
+using Jarvis.Framework.Kernel.MultitenantSupport;
+using Jarvis.Framework.Kernel.ProjectionEngine.Client;
+using Jarvis.Framework.Kernel.Support;
+using Jarvis.Framework.Shared.Events;
+using MongoDB.Bson;
+using MongoDB.Driver;
+using MongoDB.Driver.Linq;
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Castle.Core.Logging;
-using Jarvis.Framework.Kernel.Events;
-using Jarvis.Framework.Kernel.MultitenantSupport;
-using Jarvis.Framework.Kernel.ProjectionEngine.Client;
-using Jarvis.Framework.Shared.Events;
-using Jarvis.Framework.Shared.Logging;
-using Jarvis.Framework.Shared.MultitenantSupport;
-using MongoDB.Bson;
-using MongoDB.Driver;
-using MongoDB.Driver.Linq;
-using NEventStore;
-using NEventStore.Client;
-using NEventStore.Serialization;
-using NEventStore.Persistence;
-using Jarvis.Framework.Kernel.Support;
-using System.Collections.Concurrent;
-using System.Text;
-using Jarvis.Framework.Shared.Helpers;
 using System.Threading.Tasks.Dataflow;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
@@ -92,7 +84,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
             {
                 foreach (var prj in _allProjections)
                 {
-                    if (Logger.IsDebugEnabled) Logger.DebugFormat("Projection: {0}", prj.GetType().FullName);
+                    if (Logger.IsDebugEnabled)
+                    {
+                        Logger.DebugFormat("Projection: {0}", prj.GetType().FullName);
+                    }
                 }
 
                 if (_allProjections.Length == 0)
@@ -109,7 +104,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 
         public RebuildStatus Rebuild()
         {
-            if (Logger.IsInfoEnabled) Logger.InfoFormat("Starting rebuild projection engine on tenant {0}", _config.TenantId);
+            if (Logger.IsInfoEnabled)
+            {
+                Logger.InfoFormat("Starting rebuild projection engine on tenant {0}", _config.TenantId);
+            }
+
             DumpProjections();
 
             _eventUnwinder.Unwind();
@@ -239,7 +238,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                     foreach (var eventUnwinded in query.ToEnumerable())
                     {
                         var evt = eventUnwinded.GetEvent();
-                        if (_logger.IsDebugEnabled) _logger.DebugFormat("TPL queued event {0}/{1} for bucket {2}", eventUnwinded.CheckpointToken, eventUnwinded.EventSequence, bucketInfo);
+                        if (_logger.IsDebugEnabled)
+                        {
+                            _logger.DebugFormat("TPL queued event {0}/{1} for bucket {2}", eventUnwinded.CheckpointToken, eventUnwinded.EventSequence, bucketInfo);
+                        }
+
                         var task = buffer.SendAsync(evt);
                         //wait till the commit is stored in tpl queue
                         task.Wait();
@@ -273,7 +276,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                 List<RebuildProjectionSlotDispatcher> dispatcherWaitingToFinish = dispatchers.ToList();
                 while (dispatcherWaitingToFinish.Count > 0)
                 {
-                    if (_logger.IsDebugEnabled) _logger.DebugFormat("Waiting for {0} slot to finish events", dispatcherWaitingToFinish.Count);
+                    if (_logger.IsDebugEnabled)
+                    {
+                        _logger.DebugFormat("Waiting for {0} slot to finish events", dispatcherWaitingToFinish.Count);
+                    }
+
                     Int32 i = dispatcherWaitingToFinish.Count - 1;
                     while (i >= 0)
                     {
@@ -340,7 +347,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
             foreach (var projection in projections)
             {
                 if (_checkpointTracker.NeedsRebuild(projection))
+                {
                     return 0;
+                }
 
                 var currentValue = _checkpointTracker.GetCurrent(projection);
                 if (currentValue < min)
@@ -402,7 +411,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                 .Limit(1)
                 .FirstOrDefault();
 
-            if (lastCommit == null) return 0;
+            if (lastCommit == null)
+            {
+                return 0;
+            }
 
             return lastCommit["_id"].AsInt64;
         }

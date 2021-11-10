@@ -1,19 +1,12 @@
-﻿using Jarvis.Framework.Kernel.ProjectionEngine.Client;
+﻿using Castle.Core.Logging;
+using Jarvis.Framework.Shared.Events;
 using MongoDB.Driver;
 using NEventStore;
 using NEventStore.Persistence;
+using NEventStore.Serialization;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Jarvis.Framework.Shared.Helpers;
-using Jarvis.Framework.Shared.Events;
-using MongoDB.Bson;
-using Fasterflect;
-using Castle.Core.Logging;
-using Jarvis.Framework.Shared.Logging;
-using NEventStore.Serialization;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 {
@@ -40,7 +33,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
             _logger = logger;
             _eventStore = Wireup
                 .Init()
-                .LogTo(t => new NEventStoreLog4NetLogger(_logger))
+                //.LogTo(t => new NEventStoreLog4NetLogger(_logger))
                 .UsingMongoPersistence(() => _config.EventStoreConnectionString, new DocumentObjectSerializer())
                 .InitializeStorageEngine()
                 .Build();
@@ -111,7 +104,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
             {
                 _unwindedEventCollection.InsertMany(batchEventUnwind);
             }
-            
+
             _logger.InfoFormat("Unwind events ends, started from commit {0} and ended with commit {1}", startToken, checkpointToken);
         }
 
