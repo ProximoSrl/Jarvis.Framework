@@ -1,34 +1,32 @@
-﻿using Jarvis.Framework.Shared.IdentitySupport;
+﻿using Castle.Core.Logging;
+using Jarvis.Framework.Kernel.Engine;
+using Jarvis.Framework.Kernel.Events;
+using Jarvis.Framework.Kernel.ProjectionEngine;
+using Jarvis.Framework.Kernel.ProjectionEngine.Client;
+using Jarvis.Framework.Kernel.ProjectionEngine.Rebuild;
+using Jarvis.Framework.Kernel.Support;
+using Jarvis.Framework.Shared.Helpers;
+using Jarvis.Framework.Shared.IdentitySupport;
+using Jarvis.Framework.Shared.IdentitySupport.Serialization;
+using Jarvis.Framework.Shared.Messages;
+using Jarvis.Framework.Shared.MultitenantSupport;
+using Jarvis.Framework.Shared.ReadModel;
+using Jarvis.Framework.TestHelpers;
+using Jarvis.Framework.Tests.EngineTests;
 using Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using NEventStore;
+using NEventStore.Domain.Core;
+using NSubstitute;
 using NUnit.Core;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Jarvis.Framework.Shared.Helpers;
-using Jarvis.Framework.Tests.EngineTests;
-using NSubstitute;
-using Castle.Core.Logging;
-using Jarvis.Framework.Kernel.Engine;
-using NEventStore.Domain.Core;
-using Jarvis.Framework.TestHelpers;
-using Jarvis.Framework.Kernel.ProjectionEngine.Rebuild;
-using Jarvis.Framework.Kernel.ProjectionEngine.Client;
-using Jarvis.Framework.Shared.IdentitySupport.Serialization;
-using Jarvis.Framework.Shared.ReadModel;
-using Jarvis.Framework.Kernel.Events;
-using Jarvis.Framework.Kernel.ProjectionEngine;
-using Jarvis.Framework.Shared.MultitenantSupport;
-using Jarvis.Framework.Shared.Messages;
-using System.Threading;
-using Jarvis.Framework.Kernel.Support;
 using System.Reflection;
-using MongoDB.Bson;
+using System.Threading;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 {
@@ -92,7 +90,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             //now configure RebuildProjectionEngine
             _tracker = new ConcurrentCheckpointTracker(_db);
 
-          
+
             var projections = BuildProjections().ToArray();
 
             _tracker.SetUp(projections, 1, false);
@@ -120,8 +118,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
                 _eventStore,
                 new AggregateFactory(),
                 new ConflictDetector(),
-                _identityConverter,
-               NSubstitute.Substitute.For<NEventStore.Logging.ILog>()
+                _identityConverter
            );
         }
 
@@ -264,8 +261,8 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             //prepare the tracker
             ConcurrentCheckpointTracker thisTracker = new ConcurrentCheckpointTracker(_db);
             thisTracker.SetUp(new[] { _projection1, _projection3 }, 1, false);
-            thisTracker.UpdateSlotAndSetCheckpoint(_projection1.GetSlotName(), new[] { _projection1.GetCommonName() }, 2); 
-            thisTracker.UpdateSlotAndSetCheckpoint(_projection3.GetSlotName(), new[] { _projection3.GetCommonName() }, 1); 
+            thisTracker.UpdateSlotAndSetCheckpoint(_projection1.GetSlotName(), new[] { _projection1.GetCommonName() }, 2);
+            thisTracker.UpdateSlotAndSetCheckpoint(_projection3.GetSlotName(), new[] { _projection3.GetCommonName() }, 1);
 
             var status = sut.Rebuild();
             WaitForFinish(status);
@@ -362,7 +359,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             Assert.That(allRecord, Has.Count.EqualTo(1));
         }
 
-       
+
     }
 }
 

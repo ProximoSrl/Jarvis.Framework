@@ -84,20 +84,19 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             Assert.That(errors, Has.Count.EqualTo(0));
         }
 
-        [Test]
-        public void updateSlotAndSetCheckpoint_should_create_record_in_database()
-        {
-            Assert.Inconclusive("Probably this is not correct, it is better to setup the tracker and then set values");
-            var projection1 = new Projection(Substitute.For<ICollectionWrapper<SampleReadModel, String>>());
-            var projection2 = new Projection2(Substitute.For<ICollectionWrapper<SampleReadModel2, String>>());
-            var projections = new IProjection[] { projection1, projection2 };
-            _sut = new ConcurrentCheckpointTracker(_db);
-            _sut.UpdateSlotAndSetCheckpoint(projection1.GetSlotName(), projections.Select(p => p.GetCommonName()), 2);
-            var checkpoints = _checkPoints.FindAll().ToEnumerable().Where(c => c.Id != "VERSION").ToList();
-            Assert.That(checkpoints, Has.Count.EqualTo(2));
-            Assert.That(checkpoints.All(c => c.Value == 2));
-        }
-
+        //[Test]
+        //public void updateSlotAndSetCheckpoint_should_create_record_in_database()
+        //{
+        //    Assert.Inconclusive("Probably this is not correct, it is better to setup the tracker and then set values");
+        //    var projection1 = new Projection(Substitute.For<ICollectionWrapper<SampleReadModel, String>>());
+        //    var projection2 = new Projection2(Substitute.For<ICollectionWrapper<SampleReadModel2, String>>());
+        //    var projections = new IProjection[] { projection1, projection2 };
+        //    _sut = new ConcurrentCheckpointTracker(_db);
+        //    _sut.UpdateSlotAndSetCheckpoint(projection1.GetSlotName(), projections.Select(p => p.GetCommonName()), 2);
+        //    var checkpoints = _checkPoints.FindAll().ToEnumerable().Where(c => c.Id != "VERSION").ToList();
+        //    Assert.That(checkpoints, Has.Count.EqualTo(2));
+        //    Assert.That(checkpoints.All(c => c.Value == 2));
+        //}
 
         [Test]
         public void verify_slot_status_all_ok()

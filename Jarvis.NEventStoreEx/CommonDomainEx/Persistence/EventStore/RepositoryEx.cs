@@ -1,18 +1,15 @@
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using NEventStore.Domain;
 using Jarvis.NEventStoreEx.CommonDomainEx.Core;
 using NEventStore;
-using Jarvis.NEventStoreEx.Support;
+using NEventStore.Domain;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
 {
     public static class SnapshotsSettings
     {
         static readonly HashSet<Type> SnapshotOptOut = new HashSet<Type>();
-
 
         static SnapshotsSettings()
         {
@@ -43,12 +40,11 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
         public ISnapshotManager SnapshotManager { get; set; }
 
         public RepositoryEx(
-            IStoreEvents eventStore, 
-            IConstructAggregatesEx factory, 
-            IDetectConflicts conflictDetector, 
-            IIdentityConverter identityConverter,
-            NEventStore.Logging.ILog logger)
-            : base(eventStore, factory, conflictDetector, identityConverter, logger)
+            IStoreEvents eventStore,
+            IConstructAggregatesEx factory,
+            IDetectConflicts conflictDetector,
+            IIdentityConverter identityConverter)
+            : base(eventStore, factory, conflictDetector, identityConverter)
         {
             SnapshotManager = NullSnapshotManager.Instance; //Default behavior is avoid snapshot entirely.
         }
@@ -111,7 +107,9 @@ namespace Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore
         protected override ISnapshot GetSnapshot<TAggregate>(string bucketId, IIdentity id, int version)
         {
             if (SnapshotsSettings.HasOptedOut(typeof(TAggregate)))
+            {
                 return null;
+            }
 
             return SnapshotManager.Load(id.AsString(), version, typeof(TAggregate));
         }

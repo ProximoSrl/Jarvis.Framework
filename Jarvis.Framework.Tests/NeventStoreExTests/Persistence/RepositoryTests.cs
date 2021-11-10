@@ -1,34 +1,30 @@
-﻿using System;
-using System.Configuration;
-using System.Diagnostics;
-using Castle.Core.Logging;
-using NEventStore.Domain.Core;
-using Jarvis.Framework.Kernel.Commands;
-using Jarvis.Framework.Kernel.Engine;
-using Jarvis.Framework.Kernel.MultitenantSupport;
-using Jarvis.Framework.Kernel.Store;
-using Jarvis.Framework.Shared.IdentitySupport;
-using Jarvis.Framework.Shared.MultitenantSupport;
-using Jarvis.Framework.TestHelpers;
-using Jarvis.NEventStoreEx.CommonDomainEx;
-using Jarvis.NEventStoreEx.CommonDomainEx.Core;
-using Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore;
-using MongoDB.Driver;
-using NEventStore;
-using NSubstitute;
-using NUnit.Framework;
-using System.Threading.Tasks;
-using System.Threading;
-using Jarvis.Framework.Shared.Helpers;
-using Jarvis.NEventStoreEx.CommonDomainEx.Persistence;
-using MongoDB.Bson.Serialization;
-using Jarvis.Framework.Shared.IdentitySupport.Serialization;
-using Jarvis.NEventStoreEx.Support;
-using Jarvis.Framework.Tests.EngineTests;
-using Jarvis.NEventStoreEx;
-using Castle.Windsor;
+﻿using Castle.Core.Logging;
 using Castle.Facilities.TypedFactory;
 using Castle.MicroKernel.Registration;
+using Castle.Windsor;
+using Jarvis.Framework.Kernel.Engine;
+using Jarvis.Framework.Kernel.MultitenantSupport;
+using Jarvis.Framework.Shared.IdentitySupport;
+using Jarvis.Framework.Shared.IdentitySupport.Serialization;
+using Jarvis.Framework.Shared.MultitenantSupport;
+using Jarvis.Framework.TestHelpers;
+using Jarvis.Framework.Tests.EngineTests;
+using Jarvis.NEventStoreEx;
+using Jarvis.NEventStoreEx.CommonDomainEx;
+using Jarvis.NEventStoreEx.CommonDomainEx.Core;
+using Jarvis.NEventStoreEx.CommonDomainEx.Persistence;
+using Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore;
+using MongoDB.Bson.Serialization;
+using MongoDB.Driver;
+using NEventStore;
+using NEventStore.Domain.Core;
+using NSubstitute;
+using NUnit.Framework;
+using System;
+using System.Configuration;
+using System.Diagnostics;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
 {
@@ -42,7 +38,7 @@ namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
         private AggregateFactory _aggregateFactory = new AggregateFactory(null);
         private const Int32 NumberOfCommitsBeforeSnapshot = 50;
         private IAggregateCachedRepositoryFactory _aggregateCachedRepositoryFactory;
-		private WindsorContainer _container;
+        private WindsorContainer _container;
 
         [SetUp]
         public void SetUp()
@@ -63,16 +59,16 @@ namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
             _eventStore = new EventStoreFactory(loggerFactory).BuildEventStore(connectionString);
             _sut = CreateRepository();
 
-			_container = new WindsorContainer();
-			_container.AddFacility<TypedFactoryFacility>();
-			_container.Register(Component.For<IRepositoryExFactory>().AsFactory());
-			_container.Register(Component
-				.For<IRepositoryEx>()
-				.UsingFactoryMethod(() => CreateRepository())
-				.LifestyleTransient());
+            _container = new WindsorContainer();
+            _container.AddFacility<TypedFactoryFacility>();
+            _container.Register(Component.For<IRepositoryExFactory>().AsFactory());
+            _container.Register(Component
+                .For<IRepositoryEx>()
+                .UsingFactoryMethod(() => CreateRepository())
+                .LifestyleTransient());
 
-			_aggregateCachedRepositoryFactory = new AggregateCachedRepositoryFactory(
-				_container.Resolve <IRepositoryExFactory>(),
+            _aggregateCachedRepositoryFactory = new AggregateCachedRepositoryFactory(
+                _container.Resolve<IRepositoryExFactory>(),
                 false);
         }
 
@@ -82,8 +78,7 @@ namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
                 _eventStore,
                 _aggregateFactory,
                 new ConflictDetector(),
-                _identityConverter,
-                NSubstitute.Substitute.For<NEventStore.Logging.ILog>()
+                _identityConverter
             );
             repositoryEx.SnapshotManager = Substitute.For<ISnapshotManager>();
             repositoryEx.SnapshotManager.Load("", 0, typeof(SampleAggregate)).ReturnsForAnyArgs<ISnapshot>((ISnapshot)null);
@@ -128,8 +123,7 @@ namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
                     _eventStore,
                     _aggregateFactory,
                     new ConflictDetector(),
-                    _identityConverter,
-                    NSubstitute.Substitute.For<NEventStore.Logging.ILog>()))
+                    _identityConverter))
                 {
                     var loaded = repo.GetById<SampleAggregate>(sampleAggregateId);
                 }
@@ -241,9 +235,9 @@ namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
         {
             var cmd = new TouchSampleAggregate(new SampleAggregateId(1));
             cmd.SetContextData("key", "value");
-			IRepositoryExFactory factory = NSubstitute.Substitute.For<IRepositoryExFactory>();
-			factory.Create().Returns(_sut);
-			var handler = new TouchSampleAggregateHandler
+            IRepositoryExFactory factory = NSubstitute.Substitute.For<IRepositoryExFactory>();
+            factory.Create().Returns(_sut);
+            var handler = new TouchSampleAggregateHandler
             {
                 Repository = _sut,
                 AggregateFactory = _aggregateFactory,
@@ -338,19 +332,19 @@ namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
             Assert.That(reloaded.SnapshotRestoreVersion, Is.EqualTo(51));
         }
 
-		[Test]
-		public void verify_typed_factory_dispose()
-		{
-			var factory = _container.Resolve<IRepositoryExFactory>();
-			var repo = factory.Create();
-			Assert.That(repo, Is.Not.Null);
-			factory.Release(repo);
-			var realRepo = (RepositoryEx)repo;
-			Assert.That(realRepo.Disposed, Is.True);
-		}
+        [Test]
+        public void verify_typed_factory_dispose()
+        {
+            var factory = _container.Resolve<IRepositoryExFactory>();
+            var repo = factory.Create();
+            Assert.That(repo, Is.Not.Null);
+            factory.Release(repo);
+            var realRepo = (RepositoryEx)repo;
+            Assert.That(realRepo.Disposed, Is.True);
+        }
 
 
-		[Test]
+        [Test]
         public void verify_single_cached_aggregate_repository_tolerance_to_domain_exception()
         {
             var id = new SampleAggregateId(1);
@@ -392,8 +386,5 @@ namespace Jarvis.Framework.Tests.NeventStoreExTests.Persistence
                 Assert.That(Object.ReferenceEquals(repo.Aggregate, aggregate), Is.False, "Cache should be invalidated");
             }
         }
-
-
     }
-
 }

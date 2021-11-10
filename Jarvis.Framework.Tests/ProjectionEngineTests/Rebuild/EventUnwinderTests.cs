@@ -1,38 +1,31 @@
-﻿using Jarvis.Framework.Shared.IdentitySupport;
+﻿using Castle.Core.Logging;
+using Jarvis.Framework.Kernel.Engine;
+using Jarvis.Framework.Kernel.ProjectionEngine;
+using Jarvis.Framework.Kernel.ProjectionEngine.Client;
+using Jarvis.Framework.Kernel.ProjectionEngine.Rebuild;
+using Jarvis.Framework.Shared.Helpers;
+using Jarvis.Framework.Shared.IdentitySupport;
+using Jarvis.Framework.Shared.IdentitySupport.Serialization;
+using Jarvis.Framework.TestHelpers;
+using Jarvis.Framework.Tests.EngineTests;
+using Jarvis.NEventStoreEx.CommonDomainEx.Core;
 using Jarvis.NEventStoreEx.CommonDomainEx.Persistence.EventStore;
 using MongoDB.Driver;
 using NEventStore;
+using NSubstitute;
 using NUnit.Core;
 using NUnit.Framework;
 using System;
-using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Jarvis.Framework.Shared.Helpers;
-using Jarvis.Framework.Tests.EngineTests;
-using NSubstitute;
-using Castle.Core.Logging;
-using Jarvis.Framework.Kernel.Engine;
-using NEventStore.Domain.Core;
-using Jarvis.Framework.TestHelpers;
-using Jarvis.Framework.Kernel.ProjectionEngine.Rebuild;
-using Jarvis.Framework.Kernel.ProjectionEngine.Client;
-using Jarvis.Framework.Shared.IdentitySupport.Serialization;
-using Jarvis.Framework.Kernel.ProjectionEngine;
-using NEventStore.Logging;
-using Jarvis.NEventStoreEx.CommonDomainEx.Core;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 {
     [TestFixture]
-    public class EventUnwinderTests 
+    public class EventUnwinderTests
     {
-      
         string _eventStoreConnectionString;
         IdentityManager _identityConverter;
-        ILog _logger;
 
         protected RepositoryEx Repository;
         protected IStoreEvents _eventStore;
@@ -45,7 +38,6 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         [TestFixtureSetUp]
         public virtual void TestFixtureSetUp()
         {
-            _logger = NSubstitute.Substitute.For<ILog>();
             _eventStoreConnectionString = ConfigurationManager.ConnectionStrings["eventstore"].ConnectionString; ;
             var url = new MongoUrl(_eventStoreConnectionString);
             var client = new MongoClient(url);
@@ -54,7 +46,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 
             _identityConverter = new IdentityManager(new CounterService(_db));
             _identityConverter.RegisterIdentitiesFromAssembly(typeof(SampleAggregateId).Assembly);
-            
+
             ProjectionEngineConfig config = new ProjectionEngineConfig() { EventStoreConnectionString = _eventStoreConnectionString };
             CommitEnhancer commitEnhancer = new CommitEnhancer(_identityConverter);
             sut = new EventUnwinder(config, NullLogger.Instance);
@@ -73,8 +65,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
                _eventStore,
                new AggregateFactory(),
                new AlwaysConflict(),
-               _identityConverter,
-               _logger
+               _identityConverter
           );
         }
 
@@ -101,7 +92,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             return aggregateId;
         }
 
-       
+
         [Test]
         public void verify_basic_unwinding()
         {
@@ -129,11 +120,10 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             var allEvents = sut.UnwindedCollection.FindAll();
             Assert.That(allEvents.Count(), Is.EqualTo(1));
             var evt = allEvents.Single();
-            Assert.That(evt.EventType, Is.EqualTo("SampleAggregateCreated")); 
+            Assert.That(evt.EventType, Is.EqualTo("SampleAggregateCreated"));
             Assert.That(evt.GetEvent().AggregateId, Is.EqualTo(aggregateId));
             Assert.That(evt.GetEvent().Context["test.with.dot"], Is.EqualTo("BLAH"));
         }
-
 
         [Test]
         public void verify_unwinding_preserve_enhancement()
@@ -162,6 +152,4 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             Assert.That(allEvents.Count(), Is.EqualTo(3));
         }
     }
-
-  
 }
