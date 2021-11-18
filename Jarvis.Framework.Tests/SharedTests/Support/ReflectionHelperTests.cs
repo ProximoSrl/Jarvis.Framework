@@ -2,6 +2,7 @@
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 
 namespace Jarvis.Framework.Tests.SharedTests.Support
 {
@@ -36,12 +37,14 @@ namespace Jarvis.Framework.Tests.SharedTests.Support
         }
 
         [TestCase(typeof(ClassWithNested), "Jarvis.Framework.Tests.SharedTests.Support.ReflectionHelperTests+ClassWithNested")]
-        [TestCase(typeof(List<ClassWithNested>), "System.Collections.Generic.List`1[[Jarvis.Framework.Tests.SharedTests.Support.ReflectionHelperTests+ClassWithNested, Jarvis.Framework.Tests, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]")]
-        [TestCase(typeof(List<ClassWithNested.Nested>), "System.Collections.Generic.List`1[[Jarvis.Framework.Tests.SharedTests.Support.ReflectionHelperTests+ClassWithNested+Nested, Jarvis.Framework.Tests, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]")]
+        [TestCase(typeof(List<ClassWithNested>), "System.Collections.Generic.List`1[[Jarvis.Framework.Tests.SharedTests.Support.ReflectionHelperTests+ClassWithNested, Jarvis.Framework.Tests, Version={0}, Culture=neutral, PublicKeyToken=null]]")]
+        [TestCase(typeof(List<ClassWithNested.Nested>), "System.Collections.Generic.List`1[[Jarvis.Framework.Tests.SharedTests.Support.ReflectionHelperTests+ClassWithNested+Nested, Jarvis.Framework.Tests, Version={0}, Culture=neutral, PublicKeyToken=null]]")]
 
         public void Test_nested_class(Type type, String expected)
         {
             Console.WriteLine(type.FullName);
+            var actualVersion = Assembly.GetExecutingAssembly().GetName().Version;
+            expected = String.Format(expected, actualVersion.ToString());
 #if NET461_OR_GREATER
             Assert.That(expected, Is.EqualTo(type.FullName));
 #endif
