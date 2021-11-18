@@ -9,6 +9,7 @@ using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using static Jarvis.Framework.Tests.DomainTests.DomainEventIdentityBsonSerializationTests;
 
 namespace Jarvis.Framework.Tests.BusTests
@@ -149,8 +150,10 @@ namespace Jarvis.Framework.Tests.BusTests
             var serialized = JsonConvert.SerializeObject(dic, GetSettingsForTest());
 
             Console.WriteLine(serialized);
+
             //Simulate that the serialization was done by an older version of the framework.
-            var oldVersion = serialized.Replace("Jarvis.Framework.Tests, Version=1.0.0.0", "Jarvis.Framework.OldAssembly, Version=1.0.0.0");
+            var actualVersion = Assembly.GetExecutingAssembly().GetName().Version;
+            var oldVersion = serialized.Replace($"Jarvis.Framework.Tests, Version={actualVersion}", $"Jarvis.Framework.OldAssembly, Version={actualVersion}");
             Console.WriteLine(oldVersion);
 
             Assert.Throws<JsonSerializationException>(() => JsonConvert.DeserializeObject<Dictionary<String, ClassWithArray>>(oldVersion, GetSettingsForTest()));
