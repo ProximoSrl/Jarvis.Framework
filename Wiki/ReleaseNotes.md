@@ -2,6 +2,10 @@
 ====
 ## Version 6
 
+### 6.0.7
+
+- Fixed unit tests.
+
 ### 6.0.6
 
 - Better health check for commit polling client.
