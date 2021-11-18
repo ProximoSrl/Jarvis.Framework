@@ -2,6 +2,10 @@
 ====
 ## Version 6
 
+### 6.0.6
+
+- Better health check for commit polling client.
+  
 ### 6.0.3
 
 - Added ability to disable async on ConcurrentCheckpointTracker due to a mongodb driver anomaly.

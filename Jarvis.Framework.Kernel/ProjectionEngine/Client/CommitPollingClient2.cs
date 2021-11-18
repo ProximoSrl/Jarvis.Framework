@@ -101,10 +101,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                 {
                     if (string.IsNullOrEmpty(_error))
                     {
-                        return HealthCheckResult.Healthy($"Consumer {_consumerId} healthy");
+                        return HealthCheckResult.Healthy($"Consumer {_consumerId} healthy - LastDispatched: {_owner.LastDispatchedPosition}");
                     }
 
-                    return HealthCheckResult.Unhealthy($"Consumer {_consumerId} error: " + _error);
+                    return HealthCheckResult.Unhealthy($"Consumer {_consumerId} error: {_error} - LastDispatched: {_owner.LastDispatchedPosition}");
                 });
             }
 
@@ -141,6 +141,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         #region Polling
 
         private Int64 _lastDispatchedPosition;
+
+        /// <summary>
+        /// Allow from outside to read last dispatched position
+        /// </summary>
+        public Int64 LastDispatchedPosition => _lastDispatchedPosition;
 
         private readonly CancellationTokenSource _stopRequested = new CancellationTokenSource();
 
