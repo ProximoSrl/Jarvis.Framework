@@ -141,7 +141,7 @@ namespace Jarvis.Framework.Shared.Support
             return new Counter();
         }
 
-        public static Meter Meter(string counterName, Unit measurementUnit, TimeUnit timeUnit)
+        public static Meter Meter(string counterName, Unit measurementUnit, TimeUnit timeUnit = TimeUnit.Seconds)
         {
             if (MetricsGlobalSettings.IsCounterEnabled)
             {
@@ -150,19 +150,6 @@ namespace Jarvis.Framework.Shared.Support
                     Name = counterName,
                     MeasurementUnit = measurementUnit,
                     RateUnit = timeUnit,
-                });
-            }
-            return new Meter();
-        }
-
-        public static Meter Meter(string counterName, Unit measurementUnit)
-        {
-            if (MetricsGlobalSettings.IsMeterEnabled)
-            {
-                return new Meter(new MeterOptions()
-                {
-                    Name = counterName,
-                    MeasurementUnit = measurementUnit,
                 });
             }
             return new Meter();

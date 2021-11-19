@@ -2,6 +2,10 @@
 ====
 ## Version 6
 
+### 6.0.9
+
+- App.Metrics meters now uses seconds as standard time unit.
+  
 ### 6.0.8
 
 - Fixed Metrics wrapper.
