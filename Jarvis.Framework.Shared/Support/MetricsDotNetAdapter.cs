@@ -157,7 +157,7 @@ namespace Jarvis.Framework.Shared.Support
 
         public static Meter Meter(string counterName, Unit measurementUnit)
         {
-            if (MetricsGlobalSettings.MeterDisabled)
+            if (MetricsGlobalSettings.IsMeterEnabled)
             {
                 return new Meter(new MeterOptions()
                 {

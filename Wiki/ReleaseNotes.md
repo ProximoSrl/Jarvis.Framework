@@ -2,6 +2,10 @@
 ====
 ## Version 6
 
+### 6.0.8
+
+- Fixed Metrics wrapper.
+  
 ### 6.0.7
 
 - Fixed unit tests.
