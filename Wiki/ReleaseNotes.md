@@ -4,6 +4,10 @@
 
 ### 6.0.9
 
+- Fix time unit for some internal metrics
+  
+### 6.0.9
+
 - App.Metrics meters now uses seconds as standard time unit.
   
 ### 6.0.8
