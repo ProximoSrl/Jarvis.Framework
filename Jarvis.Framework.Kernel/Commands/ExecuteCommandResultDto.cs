@@ -17,14 +17,14 @@ namespace Jarvis.Framework.Kernel.Commands
         {
             Success = success;
             Error = error;
-            OriginalException = exception;
+            OriginalException = exception.ToString();
         }
 
-        public Boolean Success { get; private set; }
+        public Boolean Success { get; set; }
 
-        public String Error { get; private set; }
+        public String Error { get; set; }
 
-        public Exception OriginalException { get; set; }
+        public string OriginalException { get; set; }
 
         /// <summary>
         /// if the command is executed with an <see cref="MessagesConstants.IfVersionEqualsTo"/>

@@ -61,7 +61,7 @@ namespace Jarvis.Framework.Kernel.Commands
             catch (AggregateModifiedException ex)
             {
                 //we have a conflicting exception
-                var retValue = new ExecuteCommandResultDto(false, ex.ToString(), ex);
+                var retValue = new ExecuteCommandResultDto(false, ex.Message, ex);
                 if (dto.OfflineCheckpointTokenFrom.HasValue)
                 {
                     List<CommitShortInfo> newCommits = await GetNewCommid(dto.OfflineCheckpointTokenFrom.Value, ex.AggregateId).ConfigureAwait(false);
@@ -73,7 +73,7 @@ namespace Jarvis.Framework.Kernel.Commands
             }
             catch (Exception ex)
             {
-                return new ExecuteCommandResultDto(false, ex.ToString(), ex);
+                return new ExecuteCommandResultDto(false, ex.Message, ex);
             }
             finally
             {
