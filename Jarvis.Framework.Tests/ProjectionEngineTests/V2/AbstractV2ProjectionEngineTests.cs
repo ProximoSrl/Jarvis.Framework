@@ -1,36 +1,35 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using Castle.Core.Logging;
+using Castle.Facilities.Logging;
+using Castle.Facilities.TypedFactory;
+using Castle.MicroKernel.Registration;
+using Castle.Windsor;
+using Jarvis.Framework.Kernel.Engine;
 using Jarvis.Framework.Kernel.Events;
 using Jarvis.Framework.Kernel.ProjectionEngine;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
+using Jarvis.Framework.Shared.Helpers;
 using Jarvis.Framework.Shared.IdentitySupport;
+using Jarvis.Framework.Shared.Logging;
 using Jarvis.Framework.Shared.MultitenantSupport;
 using Jarvis.Framework.Shared.ReadModel;
+using Jarvis.Framework.Tests.EngineTests;
+using Jarvis.Framework.Tests.Support;
 using MongoDB.Driver;
+using NStore.Core.Logging;
+using NStore.Core.Persistence;
+using NStore.Core.Streams;
+using NStore.Domain;
 using NSubstitute;
 using NUnit.Framework;
-using Jarvis.Framework.Shared.Helpers;
-using Castle.Windsor;
-using Castle.Facilities.TypedFactory;
-using Castle.MicroKernel.Registration;
-using Jarvis.Framework.Tests.Support;
-using Jarvis.Framework.Tests.EngineTests;
-using System.Threading.Tasks;
-using Jarvis.Framework.Kernel.Engine;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
-using Jarvis.Framework.Shared.Logging;
-using Castle.Facilities.Logging;
-using NStore.Domain;
-using NStore.Core.Logging;
-using NStore.Core.Streams;
-using NStore.Core.Persistence;
-using NStore.Persistence.Mongo;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 {
-	public abstract class AbstractV2ProjectionEngineTests
+    public abstract class AbstractV2ProjectionEngineTests
     {
         private string _eventStoreConnectionString;
         private IdentityManager _identityConverter;
@@ -72,10 +71,10 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
                     .UsingFactoryMethod(() => new CommitEnhancer()),
                 Component
                     .For<INStoreLoggerFactory>()
-                    .ImplementedBy< NStoreCastleLoggerFactory >(),
-				Component
-					.For< ILoggerThreadContextManager >()
-					.ImplementedBy<NullLoggerThreadContextManager>(),
+                    .ImplementedBy<NStoreCastleLoggerFactory>(),
+                Component
+                    .For<ILoggerThreadContextManager>()
+                    .ImplementedBy<NullLoggerThreadContextManager>(),
                 Component
                     .For<ILogger>()
                     .Instance(NullLogger.Instance));
@@ -169,16 +168,16 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             var rebuildContext = new RebuildContext(RebuildSettings.NitroMode);
             StorageFactory = new MongoStorageFactory(Database, rebuildContext);
 
-			Engine = new ProjectionEngine(
+            Engine = new ProjectionEngine(
                 _pollingClientFactory,
-				Persistence,
-				_tracker,
+                Persistence,
+                _tracker,
                 BuildProjections().ToArray(),
                 new NullHouseKeeper(),
                 new NullNotifyCommitHandled(),
                 config,
                 NullLogger.Instance,
-				NullLoggerThreadContextManager.Instance);
+                NullLoggerThreadContextManager.Instance);
             Engine.LoggerFactory = Substitute.For<ILoggerFactory>();
             Engine.LoggerFactory.Create(Arg.Any<Type>()).Returns(NullLogger.Instance);
             await OnStartPolling().ConfigureAwait(false);

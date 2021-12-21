@@ -289,7 +289,15 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             {
                 foreach (var projection in projections)
                 {
-                    var currentValue = _checkpointTracker.GetCurrent(projection);
+                    var checkpointToken = _checkpointTracker.GetFullCheckpoint(projection);
+                    long currentValue = checkpointToken?.Current ?? 0L;
+
+                    if (checkpointToken?.Current == null && checkpointToken?.Value > 0)
+                    {
+                        throw new JarvisFrameworkEngineException(
+                            $"Slot {slotName} for projection {projection.Info.CommonName} has current value equal to null and Value equal to {checkpointToken.Value}. This identify an interrupted rebuild, the slot MUST be rebuilded");
+                    }
+
                     if (currentValue < min)
                     {
                         min = currentValue;
