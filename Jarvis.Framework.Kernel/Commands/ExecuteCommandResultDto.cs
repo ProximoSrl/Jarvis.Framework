@@ -1,5 +1,6 @@
 ﻿using Jarvis.Framework.Shared.Messages;
 using Jarvis.Framework.Shared.ReadModel;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 
@@ -13,11 +14,16 @@ namespace Jarvis.Framework.Kernel.Commands
     /// </summary>
     public class ExecuteCommandResultDto
     {
+        [JsonConstructor]
+        private ExecuteCommandResultDto()
+        {
+        }
+
         public ExecuteCommandResultDto(Boolean success, string error, Exception exception)
         {
             Success = success;
             Error = error;
-            OriginalException = exception.ToString();
+            OriginalException = exception?.ToString();
         }
 
         public Boolean Success { get; set; }
