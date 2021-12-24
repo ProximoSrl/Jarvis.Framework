@@ -74,6 +74,10 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
         protected EventStoreIdentity(string id)
         {
+            if (String.IsNullOrEmpty(id))
+            {
+                throw new ArgumentNullException(nameof(id));
+            }
             Assign(id);
         }
 
