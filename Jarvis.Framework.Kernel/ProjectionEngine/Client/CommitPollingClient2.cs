@@ -155,7 +155,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         {
             _logger.InfoFormat("CommitPollingClient {0}: Configured starting from {1} buffer {2}", _id, checkpointTokenFrom, bufferSize);
             _bufferSize = bufferSize;
-            _lastDispatchedPosition = checkpointTokenFrom - 1;
+
+            _lastDispatchedPosition = checkpointTokenFrom;
+
             LastException = null;
             //prepare single poller thread.
             CreateTplChain();

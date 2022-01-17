@@ -157,7 +157,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
                 Slots = new[] { "*" },
                 EventStoreConnectionString = _eventStoreConnectionString,
                 TenantId = tenantId,
-                BucketInfo = new List<BucketInfo>() { new BucketInfo() { Slots = new[] { "*" }, BufferSize = 10 } },
+                BucketInfo = GetBucketInformations(),
                 DelayedStartInMilliseconds = 0,
                 ForcedGcSecondsInterval = 0,
                 EngineVersion = "v2",
@@ -181,6 +181,11 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             Engine.LoggerFactory = Substitute.For<ILoggerFactory>();
             Engine.LoggerFactory.Create(Arg.Any<Type>()).Returns(NullLogger.Instance);
             await OnStartPolling().ConfigureAwait(false);
+        }
+
+        protected virtual List<BucketInfo> GetBucketInformations()
+        {
+            return new List<BucketInfo>() { new BucketInfo() { Slots = new[] { "*" }, BufferSize = 10 } };
         }
 
         protected virtual bool OnShouldUseNitro()
