@@ -367,15 +367,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             _checkpointTracker.AddOrUpdate(projectionName, _ => checkpointToken, (_, __) => checkpointToken);
         }
 
-        public Int64 GetCurrent(IProjection projection)
+        public Checkpoint GetFullCheckpoint(IProjection projection)
         {
             var checkpoint = _checkpoints.FindOneById(projection.Info.CommonName);
             if (checkpoint == null)
             {
-                return 0;
+                // we do not need to create a null checkpoint the caller can know what to do with a null checkpoint
+                return null;
             }
 
-            return checkpoint.Current ?? 0;
+            return checkpoint;
         }
 
         public Int64 GetCheckpoint(IProjection projection)

@@ -79,7 +79,7 @@ namespace Jarvis.Framework.Kernel.Support
         {
             if (!CommitDispatchedBySlot.ContainsKey(slotName))
             {
-                var meter = Metric.Meter("projection-chunk-dispatched-" + slotName, Unit.Items, TimeUnit.Milliseconds);
+                var meter = Metric.Meter("projection-chunk-dispatched-" + slotName, Unit.Items, TimeUnit.Seconds);
                 CommitDispatchedBySlot[slotName] = meter;
             }
         }
@@ -98,7 +98,7 @@ namespace Jarvis.Framework.Kernel.Support
         {
             if (!CommitDispatchedByAtomicReadmodel.ContainsKey(aggregateIdType))
             {
-                var meter = Metric.Meter("atomicreadmodel-dispatched-commit-" + aggregateIdType, Unit.Items, TimeUnit.Milliseconds);
+                var meter = Metric.Meter("atomicreadmodel-dispatched-commit-" + aggregateIdType, Unit.Items, TimeUnit.Seconds);
                 CommitDispatchedByAtomicReadmodel[aggregateIdType] = meter;
             }
         }
@@ -112,7 +112,7 @@ namespace Jarvis.Framework.Kernel.Support
         {
             if (!RebuildCommitDispatchedBySlot.ContainsKey(slotName))
             {
-                var meter = Metric.Meter("projection-rebuild-event-dispatched-" + slotName, Unit.Items, TimeUnit.Milliseconds);
+                var meter = Metric.Meter("projection-rebuild-event-dispatched-" + slotName, Unit.Items, TimeUnit.Seconds);
                 RebuildCommitDispatchedBySlot[slotName] = meter;
             }
             Metric.Gauge("rebuild-buffer-STAGE3 (Action slot " + slotName + ")", getBufferDispatchCount, Unit.Items);
@@ -142,7 +142,7 @@ namespace Jarvis.Framework.Kernel.Support
         {
             if (!RebuildEventDispatchedByBucket.ContainsKey(bucketKey))
             {
-                var meter = Metric.Meter("rebuild-event-processed-" + bucketKey, Unit.Items, TimeUnit.Milliseconds);
+                var meter = Metric.Meter("rebuild-event-processed-" + bucketKey, Unit.Items, TimeUnit.Seconds);
                 CommitDispatchedBySlot[bucketKey] = meter;
             }
         }

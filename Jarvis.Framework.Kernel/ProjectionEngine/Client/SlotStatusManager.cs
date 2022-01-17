@@ -10,7 +10,7 @@ using System.Reflection;
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 {
     /// <summary>
-    /// Slot status Manager. 
+    /// Slot status Manager.
     /// </summary>
     public class SlotStatusManager : ISlotStatusManager
     {
@@ -86,6 +86,15 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                                 retValue.Add(String.Format("Projection {0} [slot {1}] has signature {2} but checkpoint on database has signature {3}.\n REBUILD NEEDED",
                                     projectionId, slot.Key, projection.Signature, checkpoint.Signature));
                             }
+
+                            // we have a special situation where a previous rebuild stopped abruptly, we have some slot/projection with Value != null
+                            // and current == null, this is sign of an interrupted rebuild, those slot should be rebuilded
+                            if (checkpoint.Value > 0 && checkpoint.Current == null)
+                            {
+                                retValue.Add(String.Format("Projection {0} [slot {1}] had an interrupted rebuild because current is 0 and value is {2} \n REBUILD NEEDED",
+                                        projectionId, slot.Key, checkpoint.Value));
+                            }
+
                             if (checkpoint.Value > maxCheckpoint) maxCheckpoint = checkpoint.Value;
                             if (checkpoint.Value < minCheckpoint) minCheckpoint = checkpoint.Value;
                         }
@@ -150,6 +159,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                     }
                     else if (slot.Any(s => s.Checkpoint == null || s.Checkpoint.Signature != s.Projection.Signature))
                     {
+                        returnValue.SlotsThatNeedsRebuild.Add(slot.Key);
+                    }
+                    else if (slot.Any(s => s.Checkpoint?.Current == null && s.Checkpoint?.Value > 0))
+                    {
+                        // #11561: slot has some checkpoint with current equal to null and value greater than zero, it is an interrupted rebuild.
                         returnValue.SlotsThatNeedsRebuild.Add(slot.Key);
                     }
                 }

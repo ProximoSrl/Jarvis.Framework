@@ -3,13 +3,13 @@
 using System.Collections.Concurrent;
 using System.Threading;
 
-namespace System.Runtime.Remoting.Messaging
+namespace Jarvis.Framework.Shared.Support
 {
     /// <summary>
     /// Provides a way to set contextual data that flows with the call and 
     /// async context of a test or invocation.
     /// </summary>
-    public static class CallContext
+    public static class NetCoreCallContext
     {
         static ConcurrentDictionary<string, AsyncLocal<object>> state = new ConcurrentDictionary<string, AsyncLocal<object>>();
 

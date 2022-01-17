@@ -59,6 +59,16 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         }
 
         [Test]
+        public void Verify_current_null_should_be_rebuilded()
+        {
+            RebuildSettings.Init(false, false);
+            SetupOneProjectionWithCurrentNull();
+            var errors = _slotStatusCheckerSut.GetCheckpointErrors();
+            Assert.That(errors, Has.Count.EqualTo(1));
+            Assert.That(errors.ElementAt(0), Is.EqualTo("Projection Projection [slot default] had an interrupted rebuild because current is 0 and value is 42 \n REBUILD NEEDED"));
+        }
+
+        [Test]
         public void Verify_check_of_signature_change_during_rebuild()
         {
             RebuildSettings.Init(true, true);
@@ -103,6 +113,29 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             Assert.That(status.AllSlots, Has.Count.EqualTo(2));
         }
 
+        /// <summary>
+        /// This will verify the need to rebuild a slot when current is null and value is greater than zero
+        /// this identify a situation where a rebuild was interrupted
+        /// </summary>
+        [Test]
+        public void Verify_slot_status_for_interrupted_rebuilds()
+        {
+            //TSingle projection
+            var projection1 = new Projection(Substitute.For<ICollectionWrapper<SampleReadModel, String>>());
+
+            var projections = new IProjection[] { projection1 };
+            var checkpoint = new Checkpoint(projection1.Info.CommonName, 1, projection1.Info.Signature);
+            checkpoint.Value = 32;
+            checkpoint.Current = null;
+            _checkPoints.InsertMany(new[] { checkpoint });
+
+            _slotStatusCheckerSut = new SlotStatusManager(_db, projections.Select(p => p.Info).ToArray());
+            var status = _slotStatusCheckerSut.GetSlotsStatus();
+
+            Assert.That(status.AllSlots, Has.Count.EqualTo(1));
+            Assert.That(status.SlotsThatNeedsRebuild, Is.EquivalentTo(new[] { projection1.Info.SlotName}));
+        }
+
         [Test]
         public void Verify_slot_status_all_ok()
         {
@@ -116,6 +149,9 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             var checkpoint1 = new Checkpoint(projection1.Info.CommonName, 1, projection1.Info.Signature);
             var checkpoint2 = new Checkpoint(projection2.Info.CommonName, 1, projection2.Info.Signature);
             var checkpoint3 = new Checkpoint(projection3.Info.CommonName, 1, projection3.Info.Signature);
+            checkpoint1.Current = checkpoint1.Value;
+            checkpoint2.Current = checkpoint2.Value;
+            checkpoint3.Current = checkpoint3.Value;
             _checkPoints.InsertMany(new[] { checkpoint1, checkpoint2, checkpoint3 });
 
             _slotStatusCheckerSut = new SlotStatusManager(_db, projections.Select(p => p.Info).ToArray());
@@ -160,6 +196,9 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             var projections = new IProjection[] { projection1, projection2, projection3 };
             var checkpoint1 = new Checkpoint(projection1.Info.CommonName, 1, projection1.Info.Signature);
             var checkpoint2 = new Checkpoint(projection2.Info.CommonName, 1, projection2.Info.Signature);
+
+            checkpoint1.Current = checkpoint1.Value;
+            checkpoint2.Current = checkpoint2.Value;
 
             _checkPoints.InsertMany(new[] { checkpoint1, checkpoint2, });
 
@@ -504,7 +543,31 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             var projection2 = new Projection2(writer2);
             var projections = new IProjection[] { projection1, projection2 };
             var p1 = new Checkpoint(projection1.Info.CommonName, 42, projection1.Info.Signature);
+            p1.Current = p1.Value;
             p1.Slot = projection1.Info.SlotName;
+            _checkPoints.Save(p1, p1.Id);
+
+            _concurrentCheckpointTrackerSut.SetUp(projections, 1, false);
+            _slotStatusCheckerSut = new SlotStatusManager(_db, projections.Select(p => p.Info).ToArray());
+        }
+
+        /// <summary>
+        /// If a rebuild starts then stops, we have a particular situation where signature is ok, current is null
+        /// and if the slot is not marked as to rebuild, the engine will simply restart the slot redispatching everything.
+        /// </summary>
+        private void SetupOneProjectionWithCurrentNull()
+        {
+            _concurrentCheckpointTrackerSut = new ConcurrentCheckpointTracker(_db, 60);
+            var rebuildContext = new RebuildContext(false);
+            var storageFactory = new MongoStorageFactory(_db, rebuildContext);
+            var writer1 = new CollectionWrapper<SampleReadModel, string>(storageFactory, new NotifyToNobody());
+
+            var projection1 = new Projection(writer1);
+            var projections = new IProjection[] { projection1 };
+            var p1 = new Checkpoint(projection1.Info.CommonName, 42, projection1.Info.Signature);
+            p1.Slot = projection1.Info.SlotName;
+            p1.Value = 42;
+            p1.Current = null;
             _checkPoints.Save(p1, p1.Id);
 
             _concurrentCheckpointTrackerSut.SetUp(projections, 1, false);
@@ -524,9 +587,11 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             var projections = new IProjection[] { projection1, projection2 };
             var p1 = new Checkpoint(projection1.Info.CommonName, 42, projection1.Info.Signature);
             p1.Slot = projection1.Info.SlotName;
+            p1.Current = p1.Value;
             _checkPoints.Save(p1, p1.Id);
             var p2 = new Checkpoint(projection2.Info.CommonName, 42, "oldSignature");
             p2.Slot = projection2.Info.SlotName;
+            p2.Current = p2.Value;
             _checkPoints.Save(p2, p2.Id);
 
             _concurrentCheckpointTrackerSut.SetUp(projections, 1, false);
@@ -545,11 +610,13 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             var projection2 = new Projection2(writer2);
             var projections = new IProjection[] { projection1, projection2 };
             var p1 = new Checkpoint(projection1.Info.CommonName, 42, projection1.Info.Signature);
+            p1.Current = p1.Value;
             p1.Slot = projection1.Info.SlotName;
             _checkPoints.Save(p1, p1.Id);
 
             var p2 = new Checkpoint(projection2.Info.CommonName, 40, projection2.Info.Signature);
             p2.Slot = projection1.Info.SlotName;
+            p2.Current = p2.Value;
             _checkPoints.Save(p2, p2.Id);
 
             _concurrentCheckpointTrackerSut.SetUp(projections, 1, false);

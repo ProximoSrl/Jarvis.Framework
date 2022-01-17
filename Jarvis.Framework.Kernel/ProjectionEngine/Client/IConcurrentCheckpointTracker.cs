@@ -18,7 +18,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         CheckPointReplayStatus GetCheckpointStatus(string projectionName, Int64 checkpoint);
 
         /// <summary>
-        /// Get value property of checkpoint tracker
+        /// Get value property of checkpoint tracker, it is usually get from in memory cache 
         /// </summary>
         /// <param name="projection"></param>
         /// <returns></returns>
@@ -26,11 +26,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         /// <summary>
         /// Get value of Current property of checkpoint tracker, useful for projection engine
-        /// to know the minimum checkpoint to read when projection service restart.
+        /// to know the minimum checkpoint to read when projection service restart. It is get from 
+        /// the database and it reflect the last known checkpoint situation for a projection
         /// </summary>
         /// <param name="projection"></param>
         /// <returns></returns>
-        Int64 GetCurrent(IProjection projection);
+        Checkpoint GetFullCheckpoint(IProjection projection);
 
         /// <summary>
         /// Setup a projection to be tracked.
