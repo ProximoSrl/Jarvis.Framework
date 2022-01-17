@@ -212,7 +212,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                         exceptionText);
                 }
 
-                return HealthCheckResult.Healthy("Poller alive");
+                return HealthCheckResult.Healthy($"Poller alive / last dispatched position {LastDispatchedPosition}");
             });
 
             //Now register health check for the internal NES poller, to diagnose errors in polling.
