@@ -1,5 +1,6 @@
 ﻿using Jarvis.Framework.Shared.Messages;
 using Jarvis.Framework.Shared.ReadModel;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 
@@ -13,18 +14,23 @@ namespace Jarvis.Framework.Kernel.Commands
     /// </summary>
     public class ExecuteCommandResultDto
     {
+        [JsonConstructor]
+        private ExecuteCommandResultDto()
+        {
+        }
+
         public ExecuteCommandResultDto(Boolean success, string error, Exception exception)
         {
             Success = success;
             Error = error;
-            OriginalException = exception;
+            OriginalException = exception?.ToString();
         }
 
-        public Boolean Success { get; private set; }
+        public Boolean Success { get; set; }
 
-        public String Error { get; private set; }
+        public String Error { get; set; }
 
-        public Exception OriginalException { get; set; }
+        public string OriginalException { get; set; }
 
         /// <summary>
         /// if the command is executed with an <see cref="MessagesConstants.IfVersionEqualsTo"/>

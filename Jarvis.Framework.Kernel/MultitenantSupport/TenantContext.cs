@@ -1,6 +1,10 @@
 ﻿using Jarvis.Framework.Shared.MultitenantSupport;
-using System;
-using System.Runtime.Remoting.Messaging;
+
+#if NETSTANDARD
+using CurrentCallContext = Jarvis.Framework.Shared.Support.NetCoreCallContext;
+#else
+using CurrentCallContext = System.Runtime.Remoting.Messaging.CallContext;
+#endif
 
 namespace Jarvis.Framework.Kernel.MultitenantSupport
 {
@@ -10,19 +14,19 @@ namespace Jarvis.Framework.Kernel.MultitenantSupport
 
         public static void Enter(TenantId id)
         {
-            CallContext.LogicalSetData(TenantIdKey, id);
+            CurrentCallContext.LogicalSetData(TenantIdKey, id);
         }
 
         public static TenantId CurrentTenantId
         {
             get
             {
-                return (TenantId)CallContext.LogicalGetData(TenantIdKey);
+                return (TenantId)CurrentCallContext.LogicalGetData(TenantIdKey);
             }
         }
         public static void Exit()
         {
-            CallContext.LogicalSetData(TenantIdKey, null);
+            CurrentCallContext.LogicalSetData(TenantIdKey, null);
         }
     }
 }

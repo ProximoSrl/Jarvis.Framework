@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks Condition="'$(DOTNETMULTITARGET)' == 'false'">netstandard2.0</TargetFrameworks>
-    <TargetFrameworks Condition="'$(DOTNETMULTITARGET)' == 'true'">net461;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks Condition="'$(DOTNETMULTITARGET)' == 'true'">netstandard2.0;net461</TargetFrameworks>
     <TargetFrameworks Condition="'$(DOTNETMULTITARGET)' == ''">net461;netstandard2.0</TargetFrameworks> 
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>

@@ -13,11 +13,7 @@ using System.Threading;
 
 namespace Jarvis.Framework.Kernel.Support
 {
-    /// <summary>
-    /// Get status of projection, it will make use of the concurrent checkpoint
-    /// tracker if we are running inside a projection service, we will read stale
-    /// database information if we are outside of the projection engine.
-    /// </summary>
+    /// <inheritdoc />
     public class ProjectionStatusLoader : IProjectionStatusLoader
     {
         private readonly int _pollingIntervalInSeconds;

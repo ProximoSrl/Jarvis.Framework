@@ -8,6 +8,11 @@ namespace Jarvis.Framework.Kernel.Support
         Int64 GetMaxCheckpointToDispatch();
     }
 
+    /// <summary>
+    /// Get status of projection, it will make use of the concurrent checkpoint
+    /// tracker if we are running inside a projection service, we will read stale
+    /// database information if we are outside of the projection engine.
+    /// </summary>
     public interface IProjectionStatusLoader
     {
         /// <summary>

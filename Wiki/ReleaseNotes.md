@@ -2,6 +2,17 @@
 ====
 ## Version 6
 
+### 6.0.10
+
+- Better check on EventStore identity constructor
+- Fixed skewing slots in Projection engine on new projection
+- Fixed interrupting rebuild #11561
+- Fixed serialization error in command executor 
+
+### 6.0.9
+
+- Fix time unit for some internal metrics
+  
 ### 6.0.9
 
 - App.Metrics meters now uses seconds as standard time unit.

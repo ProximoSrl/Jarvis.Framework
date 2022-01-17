@@ -65,5 +65,12 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             Assert.That(id1.Equals(id2));
             Assert.That(object.Equals(id1, id2));
         }
+
+        [TestCase("")]
+        [TestCase(null)]
+        public void Argument_null_exception_is_throw(string data)
+        {
+            Assert.Throws<ArgumentNullException>(() => new SampleAggregateId(data));
+        }
     }
 }

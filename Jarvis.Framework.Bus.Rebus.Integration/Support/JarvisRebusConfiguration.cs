@@ -4,6 +4,10 @@ using System.Reflection;
 
 namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 {
+    /// <summary>
+    /// Configuration for rebus, it is necessary to have it centralized
+    /// because central rebus registration is done by the framework.
+    /// </summary>
     [Serializable]
     public class JarvisRebusConfiguration
     {
@@ -35,18 +39,28 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 
         public Dictionary<String, String> EndpointsMap { get; set; }
 
+        /// <summary>
+        /// Some configuration, like mongodb transport or specific configuration can be
+        /// required by the users, this dictionary allows for extra configuration parameter
+        /// to be stored in a single configuration service object.
+        /// </summary>
+        public Dictionary<String, String> Parameters { get; set; }
+
         public List<Assembly> AssembliesWithMessages { get; set; }
 
         public List<ExplicitSubscription> ExplicitSubscriptions { get; set; }
 
         /// <summary>
+        /// <para>
         /// This is the priority for the startable component that will
         /// start the bus. Remember that bus registration is a two phase
-        /// operation. In the first one the the IBus is registered
+        /// operation. In the first one the IBus is registered
         /// then the bus is started.
-        /// 
+        /// </para>
+        /// <para>
         /// <br />
         /// This should be a value taken from <see cref="JarvisStartableFacility.Priorities"/>
+        /// </para>
         /// </summary>
         public Int32 StartBusPriority { get; set; }
 

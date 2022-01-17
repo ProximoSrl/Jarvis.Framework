@@ -155,7 +155,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         {
             _logger.InfoFormat("CommitPollingClient {0}: Configured starting from {1} buffer {2}", _id, checkpointTokenFrom, bufferSize);
             _bufferSize = bufferSize;
-            _lastDispatchedPosition = checkpointTokenFrom - 1;
+
+            _lastDispatchedPosition = checkpointTokenFrom;
+
             LastException = null;
             //prepare single poller thread.
             CreateTplChain();
@@ -212,7 +214,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                         exceptionText);
                 }
 
-                return HealthCheckResult.Healthy("Poller alive");
+                return HealthCheckResult.Healthy($"Poller alive / last dispatched position {LastDispatchedPosition}");
             });
 
             //Now register health check for the internal NES poller, to diagnose errors in polling.

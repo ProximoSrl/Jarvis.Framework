@@ -244,7 +244,29 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 var client = _pollingClientFactory.Create(_persistence, pollerId);
                 allClients.Add(client);
                 _bucketToClient.Add(bucket, client);
-                client.Configure(GetStartGlobalCheckpoint(bucket.Slots), 4000);
+            }
+
+            // Once we created all the buckets we will simply configure all of them.
+            foreach (var bucketKeyValue in _bucketToClient)
+            {
+                var client = bucketKeyValue.Value;
+                var bucket = bucketKeyValue.Key;
+
+                var slots = bucket.Slots;
+                if (slots[0] == "*")
+                {
+                    //ok we have all bucket, it is calculated getting all the slots and removing
+                    //other slots that are in different slots.
+                    var asteriskSlots = _projectionsBySlot.Keys.ToList();
+                    foreach (var otherBucket in _bucketToClient.Keys.Where(b => b != bucket))
+                    {
+                        asteriskSlots.RemoveAll(s => otherBucket.Slots.Contains(s));
+                    }
+    
+                    slots = asteriskSlots.ToArray();
+                }
+
+                client.Configure(GetStartGlobalCheckpoint(slots), 4000);
             }
 
             _clients = allClients.ToArray();
@@ -270,11 +292,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         private Int64 GetStartGlobalCheckpoint(String[] slots)
         {
-            //if one of the slot is *, simply consider all active slots.
-            if (slots.Any(_ => _ == "*"))
-            {
-                slots = _projectionsBySlot.Keys.ToArray();
-            }
             var checkpoints = slots.Select(GetStartCheckpointForSlot).Distinct().ToArray();
             return checkpoints.Length > 0 ? checkpoints.Min() : 0;
         }
@@ -289,7 +306,15 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             {
                 foreach (var projection in projections)
                 {
-                    var currentValue = _checkpointTracker.GetCurrent(projection);
+                    var checkpointToken = _checkpointTracker.GetFullCheckpoint(projection);
+                    long currentValue = checkpointToken?.Current ?? 0L;
+
+                    if (checkpointToken?.Current == null && checkpointToken?.Value > 0)
+                    {
+                        throw new JarvisFrameworkEngineException(
+                            $"Slot {slotName} for projection {projection.Info.CommonName} has current value equal to null and Value equal to {checkpointToken.Value}. This identify an interrupted rebuild, the slot MUST be rebuilded");
+                    }
+
                     if (currentValue < min)
                     {
                         min = currentValue;
