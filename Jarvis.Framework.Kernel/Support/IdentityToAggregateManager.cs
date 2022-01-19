@@ -51,6 +51,8 @@ namespace Jarvis.Framework.Kernel.Support
             return aggregate.FirstOrDefault();
         }
 
+        private HashSet<Assembly> _scannedAssemblies = new HashSet<Assembly>();
+
         /// <summary>
         /// This scans for all types that inherits from AggregateRoot. This is needed to build a 
         /// cache that associates the type of the aggregate to the type of the id, so we can 
@@ -59,6 +61,11 @@ namespace Jarvis.Framework.Kernel.Support
         /// <param name="assemblyWithAggregates"></param>
         public void ScanAssemblyForAggregateRoots(Assembly assemblyWithAggregates)
         {
+            if (_scannedAssemblies.Contains(assemblyWithAggregates))
+            {
+                return;
+            }
+
             var sb = new StringBuilder();
             Type[] aggregateTypes = assemblyWithAggregates.GetTypes();
             var aggregateEntities = aggregateTypes
@@ -79,6 +86,8 @@ namespace Jarvis.Framework.Kernel.Support
             var errors = sb.ToString();
             if (!String.IsNullOrWhiteSpace(errors))
                 throw new JarvisFrameworkEngineException("Found identities with errors:\n" + errors);
+
+            _scannedAssemblies.Add(assemblyWithAggregates);
         }
     }
 }
