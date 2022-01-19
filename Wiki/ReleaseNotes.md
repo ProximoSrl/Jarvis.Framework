@@ -2,6 +2,10 @@
 ====
 ## Version 6
 
+### 6.0.11
+
+- Avoid scanning multiple time asembly for aggregates
+
 ### 6.0.10
 
 - Better check on EventStore identity constructor
