@@ -154,7 +154,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
                     throw;
                 }
             }
-           
+        
             catch (Exception exception)
             {
                 if (bodyString.Length > 32768)
