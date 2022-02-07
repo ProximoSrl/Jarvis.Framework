@@ -1,4 +1,5 @@
 ﻿using Castle.Core.Logging;
+using Fasterflect;
 using Jarvis.Framework.Bus.Rebus.Integration.Support;
 using Jarvis.Framework.Shared.Domain.Serialization;
 using Jarvis.Framework.Shared.Events;
@@ -28,6 +29,7 @@ namespace Jarvis.Framework.Tests.BusTests
             {
                 new StringValueJsonConverter()
             },
+            Formatting = Formatting.Indented,
             SerializationBinder = new JarvisFrameworkRebusSerializationBinder(NullLogger.Instance)
         };
 
@@ -50,6 +52,7 @@ namespace Jarvis.Framework.Tests.BusTests
             TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Full,
             ContractResolver = new MessagesContractResolver(),
             ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
+            Formatting = Formatting.Indented,
             Converters = new JsonConverter[]
             {
                 new StringValueJsonConverter()
@@ -275,10 +278,85 @@ namespace Jarvis.Framework.Tests.BusTests
             var serialized = JsonConvert.SerializeObject(classWithAnonymousType, GetSettingsForTest());
             var defaultSerialized = JsonConvert.SerializeObject(classWithAnonymousType, GetDefaultSettingsWithFullSerialization());
 
+            Console.WriteLine("CUSTOM SERIALIZATION");
             Console.WriteLine(serialized);
+
+            Console.WriteLine("\n\nDEFAULT SERIALIZATION");
             Console.WriteLine(defaultSerialized);
 
+            // if the serialization content contains netcore type, we failed...
+            Assert.That(!serialized.Contains("System.Private.CoreLib"));
+
             Assert.DoesNotThrow(() => JsonConvert.DeserializeObject<ClassWithAnonymousType>(serialized, GetSettingsForTest()));
+            var deserialized = JsonConvert.DeserializeObject<ClassWithAnonymousType>(serialized, GetSettingsForTest());
+            Assert.That(deserialized.ExtraData.GetPropertyValue("Property"), Is.EqualTo("this is a property"));
+        }
+
+        [Test]
+        public void Generic_object_serialization_with_complex_anonymous_types()
+        {
+            ClassWithAnonymousType classWithAnonymousType = new ClassWithAnonymousType()
+            {
+                DomainEvents = new[] { "foo", "bar" },
+                ExtraData = new
+                {
+                    Id ="Document_123",
+                    ContainerId = "Container_2134",
+                    CreationUser = "user_23",
+                    IsInDraft = true,
+                    Workflows = new[] { "a", "b" }
+                }
+            };
+            var serialized = JsonConvert.SerializeObject(classWithAnonymousType, GetSettingsForTest());
+            var defaultSerialized = JsonConvert.SerializeObject(classWithAnonymousType, GetDefaultSettingsWithFullSerialization());
+
+            Console.WriteLine("CUSTOM SERIALIZATION");
+            Console.WriteLine(serialized);
+
+            Console.WriteLine("\n\nDEFAULT SERIALIZATION");
+            Console.WriteLine(defaultSerialized);
+
+            // if the serialization content contains netcore type, we failed...
+            Assert.That(!serialized.Contains("System.Private.CoreLib"));
+
+            Assert.DoesNotThrow(() => JsonConvert.DeserializeObject<ClassWithAnonymousType>(serialized, GetSettingsForTest()));
+            var deserialized = JsonConvert.DeserializeObject<ClassWithAnonymousType>(serialized, GetSettingsForTest());
+            Assert.That(deserialized.ExtraData.GetPropertyValue("IsInDraft"), Is.EqualTo(true));
+            Assert.That(deserialized.ExtraData.GetPropertyValue("Workflows"), Is.EqualTo(new[] { "a", "b" }));
+        }
+
+        [Test]
+        public void Generic_object_serialization_with_complex_anonymous_types_and_linq()
+        {
+            
+            ClassWithAnonymousType classWithAnonymousType = new ClassWithAnonymousType()
+            {
+                DomainEvents = new[] { "foo", "bar" },
+                ExtraData = new
+                {
+                    Id = "Document_123",
+                    ContainerId = "Container_2134",
+                    CreationUser = "user_23",
+                    IsInDraft = true,
+                    Workflows = new[] { "a", "b" }
+                }
+            };
+            var serialized = JsonConvert.SerializeObject(classWithAnonymousType, GetSettingsForTest());
+            var defaultSerialized = JsonConvert.SerializeObject(classWithAnonymousType, GetDefaultSettingsWithFullSerialization());
+
+            Console.WriteLine("CUSTOM SERIALIZATION");
+            Console.WriteLine(serialized);
+
+            Console.WriteLine("\n\nDEFAULT SERIALIZATION");
+            Console.WriteLine(defaultSerialized);
+
+            // if the serialization content contains netcore type, we failed...
+            Assert.That(!serialized.Contains("System.Private.CoreLib"));
+
+            Assert.DoesNotThrow(() => JsonConvert.DeserializeObject<ClassWithAnonymousType>(serialized, GetSettingsForTest()));
+            var deserialized = JsonConvert.DeserializeObject<ClassWithAnonymousType>(serialized, GetSettingsForTest());
+            Assert.That(deserialized.ExtraData.GetPropertyValue("IsInDraft"), Is.EqualTo(true));
+            Assert.That(deserialized.ExtraData.GetPropertyValue("Workflows"), Is.EqualTo(new[] { "a", "b" }));
         }
 
         [Test]
