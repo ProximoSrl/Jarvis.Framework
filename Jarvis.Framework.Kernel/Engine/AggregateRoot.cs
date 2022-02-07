@@ -15,7 +15,7 @@ namespace Jarvis.Framework.Kernel.Engine
     /// </summary>
     /// <typeparam name="TState">Tipo dello stato</typeparam>
     /// <typeparam name="TId"></typeparam>
-    public abstract class AggregateRoot<TState, TId> : Aggregate<TState>, IInvariantsChecker
+    public abstract class AggregateRoot<TState, TId> : Aggregate<TState>, IInvariantsChecker, IInspectableAggregate
         where TState : JarvisAggregateState, new()
         where TId : EventStoreIdentity
     {
@@ -189,6 +189,26 @@ namespace Jarvis.Framework.Kernel.Engine
             //TODO: Consider introducing the concept of entities in NStore directly
             State.EntityStates[entity.Id] = entity.GetState();
         }
+
+        #endregion
+
+        #region Inspection
+
+        protected override void Track(object @event, object outcome)
+        {
+            base.Track(@event, outcome);
+            if (@event is DomainEvent evt)
+            {
+                _onTrackInspector(evt);
+            }
+        }
+
+        void IInspectableAggregate.SetInspectorOnRaiseEvent(Action<DomainEvent> inspector)
+        {
+            _onTrackInspector = inspector;
+        }
+
+        private Action<DomainEvent> _onTrackInspector = (_) => { };
 
         #endregion
     }
