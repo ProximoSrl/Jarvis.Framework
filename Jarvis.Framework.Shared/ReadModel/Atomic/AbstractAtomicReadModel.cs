@@ -66,22 +66,22 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
         /// <summary>
         /// User that created the object, this will be the user of the first <see cref="Changeset"/>
         /// </summary>
-        public String CreationUser { get; set; }
+        public String CreationUser { get; private set; }
 
         /// <summary>
         /// The user that generates last <see cref="Changeset"/>
         /// </summary>
-        public String LastModificationUser { get; set; }
+        public String LastModificationUser { get; private set; }
 
         /// <summary>
         /// Last modification timestamp
         /// </summary>
-        public DateTime LastModify { get; set; }
+        public DateTime LastModify { get; private set; }
 
         /// <summary>
         /// Version of the aggregate
         /// </summary>
-        public Int64 AggregateVersion { get; set; }
+        public Int64 AggregateVersion { get; private set; }
 
         /// <summary>
         /// True if some processing of events thrown an exception, the readmodel
