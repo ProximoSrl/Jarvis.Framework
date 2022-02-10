@@ -4,7 +4,10 @@
 
 ## vNext
 
+## 6.1.0
+
 - Override user id and timestamp on commands (on-behalf-of)
+- Added AggregateVersion on Standard Readmodels.
 
 ## Version 6
 
