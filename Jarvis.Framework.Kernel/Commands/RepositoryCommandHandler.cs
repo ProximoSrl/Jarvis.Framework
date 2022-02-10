@@ -154,6 +154,7 @@ namespace Jarvis.Framework.Kernel.Commands
                 CheckAggregateVersionForIfVersionEqualTo(aggregate);
 
                 var callbackResult = await callback(aggregate).ConfigureAwait(false);
+
                 if (!callbackResult.ShouldNotPersistAggregate)
                 {
                     await Repository.SaveAsync(aggregate, _commitId.ToString(), StoreCommandHeaders).ConfigureAwait(false);

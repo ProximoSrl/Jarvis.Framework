@@ -1,8 +1,10 @@
 using Fasterflect;
 using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.Helpers;
+using Jarvis.Framework.Shared.Messages;
 using NStore.Core.Persistence;
 using NStore.Domain;
+using System;
 using System.Linq;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
@@ -35,7 +37,17 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                     evt = (DomainEvent)eventMessage;
                     var headers = commit.Headers;
                     evt.CommitId = chunk.OperationId;
-                    evt.CommitStamp = commit.GetTimestamp();
+
+                    if (commit.Headers.TryGetValue(MessagesConstants.OverrideCommitTimestamp, out var timestamp)
+                        && timestamp is DateTime dateTimeTimestamp)
+                    {
+                        evt.CommitStamp = dateTimeTimestamp;
+                    }
+                    else
+                    {
+                        evt.CommitStamp = commit.GetTimestamp();
+                    }
+
                     evt.Version = commit.AggregateVersion;
                     evt.Context = headers;
                     evt.CheckpointToken = chunk.Position;

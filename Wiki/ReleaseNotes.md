@@ -1,5 +1,14 @@
 # J.A.R.V.I.S. Framework - Proximo srl (c)
+
 ====
+
+## vNext
+
+## 6.1.0
+
+- Override user id and timestamp on commands (on-behalf-of)
+- Added AggregateVersion on Standard Readmodels.
+
 ## Version 6
 
 ### 6.0.11
