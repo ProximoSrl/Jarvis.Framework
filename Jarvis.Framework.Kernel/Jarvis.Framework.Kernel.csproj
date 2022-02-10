@@ -15,14 +15,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="App.Metrics" Version="4.2.0" />
+    <PackageReference Include="App.Metrics" Version="4.3.0" />
     <PackageReference Include="Castle.Core" Version="4.4.1" />
     <PackageReference Include="Castle.LoggingFacility" Version="5.1.1" />
     <PackageReference Include="Castle.Windsor" Version="5.1.1" />
     <PackageReference Include="fasterflect" Version="3.0.0" />
-    <PackageReference Include="MongoDB.Bson" Version="2.12.4" />
-    <PackageReference Include="MongoDB.Driver" Version="2.12.4" />
-    <PackageReference Include="MongoDB.Driver.Core" Version="2.12.4" />
+    <PackageReference Include="MongoDB.Bson" Version="2.12.5" />
+    <PackageReference Include="MongoDB.Driver" Version="2.12.5" />
+    <PackageReference Include="MongoDB.Driver.Core" Version="2.12.5" />
     <PackageReference Include="MongoDB.Libmongocrypt" Version="1.2.1" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="NStore.Core" Version="0.11.2" />
