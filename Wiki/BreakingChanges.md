@@ -3,6 +3,7 @@
 ## 6.1.0
 
 - AbstractAtomicReadModel moved some property to private (you should not modify them): CreationUser, LastModificationUser, LastModify, AggregateVersion
+- Standard reamodel base class now contains AggregateVersion property
 
 ## 5.4.0
 
