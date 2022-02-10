@@ -1,5 +1,9 @@
 # Version 5
 
+## 6.1.0
+
+- AbstractAtomicReadModel moved some property to private (you should not modify them): CreationUser, LastModificationUser, LastModify, AggregateVersion
+
 ## 5.4.0
 
 - Moved to app.metrics, consult breaking changes in [dedicated wiki page](Metrics/metrics.md)
