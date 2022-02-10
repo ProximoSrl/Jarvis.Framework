@@ -1,5 +1,11 @@
 # J.A.R.V.I.S. Framework - Proximo srl (c)
+
 ====
+
+## vNext
+
+- Override user id and timestamp on commands (on-behalf-of)
+
 ## Version 6
 
 ### 6.0.11

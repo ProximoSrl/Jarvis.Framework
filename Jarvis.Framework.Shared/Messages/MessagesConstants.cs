@@ -11,8 +11,12 @@ namespace Jarvis.Framework.Shared.Messages
     {
         public const String SagaIdHeader = "sagaId";
         public const String ReplyToHeader = "reply-to";
+
         public const String UserId = "user.id";
+        public const String OnBehalfOf = "on-behalf-of";
+
         public const String CommandTimestamp = "command.timestamp";
+        public const String OverrideCommitTimestamp = "override-command-timestamp";
 
         /// <summary>
         /// If this header is present, we shuld execute the command only

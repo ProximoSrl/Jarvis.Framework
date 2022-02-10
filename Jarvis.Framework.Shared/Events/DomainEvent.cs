@@ -21,15 +21,30 @@ namespace Jarvis.Framework.Shared.Events
         }
 
         /// <summary>
-        /// Identificativo dell'utente che ha scatenato l'evento
+        /// This is the identification of the users who logically generated the
+        /// event, can be overridden with the on-behalf-of attribute.
+        /// This property directly accesses dictionary entry on the Context dictionary.
         /// </summary>
         [BsonIgnore]
         public string IssuedBy
         {
             get
             {
-                if (this.Context != null && this.Context.ContainsKey(MessagesConstants.UserId))
-                    return (string)this.Context[MessagesConstants.UserId];
+                if (this.Context == null)
+                {
+                    return null;
+                }
+
+                object message;
+                if (Context.TryGetValue(MessagesConstants.OnBehalfOf, out message))
+                {
+                    return message as String;
+                }
+
+                if (Context.TryGetValue(MessagesConstants.UserId, out message))
+                {
+                    return message as String;
+                }
 
                 return null;
             }
