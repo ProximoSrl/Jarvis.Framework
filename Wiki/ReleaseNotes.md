@@ -4,6 +4,10 @@
 
 ## vNext
 
+## 6.1.1
+
+- Restored public properties for atomic readmodel.
+
 ## 6.1.0
 
 - Override user id and timestamp on commands (on-behalf-of)
