@@ -155,7 +155,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 
                     //save all data from commit to the event unwinded to do enhance after load.
                     var headers = commit.Headers;
-                    unwinded.CommitStamp = commit.GetTimestamp();
+                    unwinded.CommitStamp = (evt as DomainEvent)?.CommitStamp ?? DateTime.MinValue;
                     unwinded.CommitId = chunk.OperationId;
                     unwinded.Version = commit.AggregateVersion;
                     unwinded.PartitionId = chunk.PartitionId;

@@ -1,10 +1,8 @@
 using Fasterflect;
 using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.Helpers;
-using Jarvis.Framework.Shared.Messages;
 using NStore.Core.Persistence;
 using NStore.Domain;
-using System;
 using System.Linq;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
@@ -38,8 +36,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                     var headers = commit.Headers;
                     evt.CommitId = chunk.OperationId;
 
-                    evt.CommitStamp = GetCommitStamp(commit);
-
                     evt.Version = commit.AggregateVersion;
                     evt.Context = headers;
                     evt.CheckpointToken = chunk.Position;
@@ -47,26 +43,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
                 evt?.SetPropertyValue(d => d.IsLastEventOfCommit, true);
             }
-        }
-
-        private DateTime GetCommitStamp(Changeset changeset)
-        {
-            if (changeset.Headers.TryGetValue(MessagesConstants.OverrideCommitTimestamp, out var timestamp))
-            {
-                // I have ovveride timestamp
-                if (timestamp is DateTime date)
-                {
-                    return date;
-                }
-                else if (timestamp is string dateString)
-                {
-                    if (DateTime.TryParse(dateString, out var parsedDate))
-                    {
-                        return parsedDate;
-                    }
-                }
-            }
-            return changeset.GetTimestamp();
         }
     }
 

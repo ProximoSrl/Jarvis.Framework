@@ -78,7 +78,6 @@ namespace Jarvis.Framework.Kernel.Engine
             //remember taht some property of the event is handled internally and are not persisted
             upcasted.AggregateId = eventToUpcast.AggregateId;
             upcasted.CommitId = eventToUpcast.CommitId;
-            upcasted.CommitStamp = eventToUpcast.CommitStamp;
             upcasted.Version = eventToUpcast.Version;
             upcasted.Context = eventToUpcast.Context;
             upcasted.CheckpointToken = eventToUpcast.CheckpointToken;
