@@ -14,7 +14,7 @@ namespace Jarvis.Framework.Shared.Commands
     public interface ICommand : IMessage
     {
         /// <summary>
-        /// This method will set a string value in the command header. 
+        /// This method will set a string value in the command header.
         /// </summary>
         /// <param name="key"></param>
         /// <param name="value"></param>
@@ -32,7 +32,7 @@ namespace Jarvis.Framework.Shared.Commands
 
     /// <summary>
     /// We need to have a simple and non generic way to understand
-    /// if a command is a command for an aggregate and what is the 
+    /// if a command is a command for an aggregate and what is the
     /// id of the aggregate.
     /// </summary>
     public interface IAggregateCommand : ICommand

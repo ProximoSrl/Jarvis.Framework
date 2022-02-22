@@ -1,10 +1,17 @@
 ﻿using Castle.Core.Logging;
+using Jarvis.Framework.Kernel.Commands;
+using Jarvis.Framework.Kernel.Engine;
+using Jarvis.Framework.Kernel.Events;
 using Jarvis.Framework.Shared;
 using Jarvis.Framework.Shared.Claims;
 using Jarvis.Framework.Shared.Commands;
+using Jarvis.Framework.Shared.Events;
+using Jarvis.Framework.Shared.IdentitySupport;
 using Jarvis.Framework.Shared.Logging;
 using Jarvis.Framework.Shared.Messages;
+using Jarvis.Framework.Shared.Persistence;
 using Jarvis.Framework.Shared.Support;
+using NStore.Domain;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -95,6 +102,22 @@ namespace Jarvis.Framework.Kernel.Commands
             {
                 LoggerThreadContextManager.ClearMarkCommandExecution();
             }
+        }
+
+        protected void StoreCommandHeaders(IHeadersAccessor headersAccessor, ICommand currentCommand)
+        {
+            foreach (var key in currentCommand.AllContextKeys)
+            {
+                headersAccessor.Add(key, currentCommand.GetContextData(key));
+            }
+            headersAccessor.Add(ChangesetCommonHeaders.Command, currentCommand);
+            headersAccessor.Add(ChangesetCommonHeaders.Timestamp, DateTime.UtcNow);
+            OnStoreCommandHeaders(headersAccessor);
+        }
+
+        protected virtual void OnStoreCommandHeaders(IHeadersAccessor headersAccessor)
+        {
+            //Do nothing, give the ability to the concrete handler to add headers to this changeset.
         }
     }
 }
