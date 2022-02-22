@@ -137,7 +137,7 @@ namespace Jarvis.Framework.Kernel.Commands
                         if (!callbackResult.ShouldNotPersistAggregate)
                         {
                             //TODO: Waiting is not a perfect solution, but we cannot await inside a lock.
-                            repo.SaveAsync(_commitId, StoreCommandHeaders).Wait();
+                            repo.SaveAsync(_commitId, h => StoreCommandHeaders(h, CurrentCommand)).Wait();
                         }
                     }
                 }
@@ -157,7 +157,7 @@ namespace Jarvis.Framework.Kernel.Commands
 
                 if (!callbackResult.ShouldNotPersistAggregate)
                 {
-                    await Repository.SaveAsync(aggregate, _commitId.ToString(), StoreCommandHeaders).ConfigureAwait(false);
+                    await Repository.SaveAsync(aggregate, _commitId.ToString(), h=> StoreCommandHeaders(h, CurrentCommand)).ConfigureAwait(false);
                 }
             }
         }
@@ -176,28 +176,12 @@ namespace Jarvis.Framework.Kernel.Commands
 
         protected Task SaveAsync(TAggregate aggregate)
         {
-            return Repository.SaveAsync(aggregate, _commitId.ToString(), StoreCommandHeaders);
+            return Repository.SaveAsync(aggregate, _commitId.ToString(), h=> StoreCommandHeaders(h, CurrentCommand));
         }
 
         protected Task<TAggregate> CreateNewAggregateAsync(IIdentity identity)
         {
             return Repository.GetByIdAsync<TAggregate>(identity.AsString());
-        }
-
-        protected void StoreCommandHeaders(IHeadersAccessor headersAccessor)
-        {
-            foreach (var key in CurrentCommand.AllContextKeys)
-            {
-                headersAccessor.Add(key, CurrentCommand.GetContextData(key));
-            }
-            headersAccessor.Add(ChangesetCommonHeaders.Command, CurrentCommand);
-            headersAccessor.Add(ChangesetCommonHeaders.Timestamp, DateTime.UtcNow);
-            OnStoreCommandHeaders(headersAccessor);
-        }
-
-        protected virtual void OnStoreCommandHeaders(IHeadersAccessor headersAccessor)
-        {
-            //Do nothing, give the ability to the concrete handler to add headers to this changeset.
         }
     }
 

@@ -4,6 +4,10 @@
 
 ## vNext
 
+## 6.2.2
+
+- Added helpers to better serialization of command headers.
+
 ## 6.1.1
 
 - Restored public properties for atomic readmodel.

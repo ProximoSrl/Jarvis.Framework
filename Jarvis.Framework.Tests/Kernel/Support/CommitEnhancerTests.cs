@@ -87,6 +87,29 @@ namespace Jarvis.Framework.Tests.Kernel.Support
             Assert.That(evt.CommitStamp, Is.EqualTo(_date1));
         }
 
+        [TestCase("o")]
+        [TestCase(null)]
+        public void Timestamp_command_override_with_string(string format)
+        {
+            var chunk = CreateTestChunk(new Object(), CreateAnEvent());
+            _payload.Add(ChangesetCommonHeaders.Timestamp, _date2);
+            if (format != null)
+            {
+                _payload.Add(MessagesConstants.OverrideCommitTimestamp, _date1.ToString(format));
+            }
+            else
+            {
+                _payload.Add(MessagesConstants.OverrideCommitTimestamp, _date1.ToString());
+            }
+
+            _sut.Enhance(chunk);
+
+            var evt = chunk.DomainEvents[0];
+
+            //no specific data, standard commit data should be used.
+            Assert.That(evt.CommitStamp, Is.EqualTo(_date1));
+        }
+
         [Test]
         public void Timestamp_command_override_error_set()
         {

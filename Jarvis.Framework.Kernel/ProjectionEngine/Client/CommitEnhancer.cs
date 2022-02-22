@@ -38,15 +38,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                     var headers = commit.Headers;
                     evt.CommitId = chunk.OperationId;
 
-                    if (commit.Headers.TryGetValue(MessagesConstants.OverrideCommitTimestamp, out var timestamp)
-                        && timestamp is DateTime dateTimeTimestamp)
-                    {
-                        evt.CommitStamp = dateTimeTimestamp;
-                    }
-                    else
-                    {
-                        evt.CommitStamp = commit.GetTimestamp();
-                    }
+                    evt.CommitStamp = GetCommitStamp(commit);
 
                     evt.Version = commit.AggregateVersion;
                     evt.Context = headers;
@@ -55,6 +47,26 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
                 evt?.SetPropertyValue(d => d.IsLastEventOfCommit, true);
             }
+        }
+
+        private DateTime GetCommitStamp(Changeset changeset)
+        {
+            if (changeset.Headers.TryGetValue(MessagesConstants.OverrideCommitTimestamp, out var timestamp))
+            {
+                // I have ovveride timestamp
+                if (timestamp is DateTime date)
+                {
+                    return date;
+                }
+                else if (timestamp is string dateString)
+                {
+                    if (DateTime.TryParse(dateString, out var parsedDate))
+                    {
+                        return parsedDate;
+                    }
+                }
+            }
+            return changeset.GetTimestamp();
         }
     }
 

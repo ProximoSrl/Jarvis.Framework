@@ -10,7 +10,7 @@ namespace Jarvis.Framework.Shared.Helpers
 {
     public static class CommandExtensions
     {
-        private static readonly JsonSerializerSettings jsonSerializerSettings = new JsonSerializerSettings
+        public static readonly JsonSerializerSettings JsonSerializerSettings = new JsonSerializerSettings
         {
             TypeNameHandling = TypeNameHandling.Auto,
             ContractResolver = new MessagesContractResolver(),
@@ -28,9 +28,20 @@ namespace Jarvis.Framework.Shared.Helpers
             EnableDiagnostics = true;
         }
 
+        /// <summary>
+        /// Special version for date to avoid serializing in json basic value.
+        /// </summary>
+        /// <param name="command"></param>
+        /// <param name="key"></param>
+        /// <param name="dateTimeValue"></param>
+        public static void SetContextData(this ICommand command, String key, DateTime dateTimeValue)
+        {
+            command.SetContextData(key, dateTimeValue.ToString("o"));
+        }
+
         public static void SetContextData(this ICommand command, String key, Object objectValue)
         {
-            var serialized = JsonConvert.SerializeObject(objectValue, jsonSerializerSettings);
+            var serialized = JsonConvert.SerializeObject(objectValue, JsonSerializerSettings);
             command.SetContextData(key, serialized);
         }
 
@@ -38,9 +49,40 @@ namespace Jarvis.Framework.Shared.Helpers
         {
             var serialized = command.GetContextData(key);
             if (string.IsNullOrEmpty(serialized))
-                return default(T);
+                return default;
 
-            return JsonConvert.DeserializeObject<T>(serialized, jsonSerializerSettings);
+            if (TryToDeserializeBasicValues(serialized, out object value))
+            {
+                return (T)value;
+            }
+
+            return JsonConvert.DeserializeObject<T>(serialized, JsonSerializerSettings);
+        }
+
+        /// <summary>
+        /// When we change default serialization for command header, using basic serialization
+        /// for standard object, we need a function that try to deserialize out value from
+        /// a standard string.
+        /// </summary>
+        /// <param name="serialized"></param>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        private static bool TryToDeserializeBasicValues(string serialized, out object value)
+        {
+            if (DateTime.TryParseExact(serialized, "o", null, System.Globalization.DateTimeStyles.None, out var dateTimeParsedValue))
+            {
+                value = dateTimeParsedValue;
+                return true;
+            }
+            else if (int.TryParse(serialized, out var intParsedValue))
+            {
+                value = intParsedValue;
+                return true;
+            }
+
+            value = default;
+            return false;
         }
 
         /// <summary>
@@ -56,7 +98,7 @@ namespace Jarvis.Framework.Shared.Helpers
             if (string.IsNullOrEmpty(value))
                 return default(T);
 
-            return JsonConvert.DeserializeObject<T>(value, jsonSerializerSettings);
+            return JsonConvert.DeserializeObject<T>(value, JsonSerializerSettings);
         }
 
         public static ICommand WithDiagnosticDescription(this ICommand command, string description)
