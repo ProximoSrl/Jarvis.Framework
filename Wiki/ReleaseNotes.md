@@ -4,6 +4,10 @@
 
 ## vNext
 
+## 6.2.3
+
+- DomainEvent CommitStamp is now a property in pure getter (not anymore set by commit enhancer).
+  
 ## 6.2.2
 
 - Added helpers to better serialization of command headers.

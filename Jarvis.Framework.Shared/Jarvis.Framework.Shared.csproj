@@ -4,6 +4,8 @@
     <TargetFrameworks Condition="'$(DOTNETMULTITARGET)' == 'true'">netstandard2.0;net461</TargetFrameworks>
     <TargetFrameworks Condition="'$(DOTNETMULTITARGET)' == ''">net461;netstandard2.0</TargetFrameworks>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <DebugType>full</DebugType>
+    <DebugSymbols>true</DebugSymbols>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard2.0'">
@@ -31,7 +33,7 @@
     <PackageReference Include="NStore.Persistence.Mongo" Version="0.11.2" />
   </ItemGroup>
 
-   <ItemGroup Condition=" '$(TargetFramework)' == 'net461' ">
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net461' ">
     <Reference Include="System.Runtime.Caching" />
     <Reference Include="System.Messaging" />
   </ItemGroup>
