@@ -56,7 +56,26 @@ namespace Jarvis.Framework.Tests.SharedTests.Events
             var changeset = new Changeset(1, new[] { sut });
             var ts = new DateTime(2020, 12, 3, 23, 21, 4);
             changeset.Add(ChangesetCommonHeaders.Timestamp, ts);
-            Assert.That(changeset.GetTimestamp(), Is.EqualTo(ts));
+            sut.Context = changeset.Headers;
+            Assert.That(sut.CommitStamp, Is.EqualTo(ts));
+        }
+
+        [Test]
+        public void Commit_timestamp_can_be_overridden()
+        {
+            var sut = new TestDomainEvent();
+            var changeset = new Changeset(1, new[] { sut });
+            var ts = new DateTime(2020, 12, 3, 23, 21, 4);
+            var ts2 = ts.AddDays(219);
+            changeset.Add(ChangesetCommonHeaders.Timestamp, ts);
+            sut.Context = changeset.Headers;
+            Assert.That(sut.CommitStamp, Is.EqualTo(ts));
+
+            //Act: add the override header
+            sut.Context.Add(MessagesConstants.OverrideCommitTimestamp, ts2);
+
+            //Assert: verify the override timestamp
+            Assert.That(sut.CommitStamp, Is.EqualTo(ts2));
         }
 
         [Test]
@@ -65,12 +84,12 @@ namespace Jarvis.Framework.Tests.SharedTests.Events
             var sut = new TestDomainEvent();
             var changeset = new Changeset(1, new[] { sut });
 
-            Assert.That(changeset.GetTimestamp(), Is.EqualTo(DateTime.MinValue));
+            Assert.That(sut.CommitStamp, Is.EqualTo(DateTime.MinValue));
 
             // now add a null value.
             changeset.Add(ChangesetCommonHeaders.Timestamp, null);
 
-            Assert.That(changeset.GetTimestamp(), Is.EqualTo(DateTime.MinValue));
+            Assert.That(sut.CommitStamp, Is.EqualTo(DateTime.MinValue));
         }
 
         private class TestDomainEvent : DomainEvent { }

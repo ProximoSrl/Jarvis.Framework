@@ -80,11 +80,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                 _enhanced = true;
                 var domainEvent = Event as DomainEvent;
 
-                domainEvent.CommitStamp = CommitStamp;
-
-                domainEvent.CommitStamp = CommitStamp;
                 domainEvent.CommitId = CommitId;
-
                 domainEvent.Version = Version;
                 domainEvent.Context = Context;
                 domainEvent.CheckpointToken = CheckpointToken;

@@ -309,9 +309,9 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         {
             var context = new Dictionary<String, Object>();
             context.Add(MessagesConstants.UserId, issuedBy);
+            context.Add(ChangesetCommonHeaders.Timestamp, DateTime.UtcNow);
 
             evt.SetPropertyValue(d => d.Context, context);
-            evt.SetPropertyValue(e => e.CommitStamp, DateTime.UtcNow);
         }
     }
 }

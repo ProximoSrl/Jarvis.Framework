@@ -89,12 +89,12 @@ namespace Jarvis.Framework.Tests.EngineTests
             var evt = new UpcastedEvent("Hello world")
                 .AssignIdForTest(new UpcastClassTestId(1));
             evt.SetPropertyValue(e => e.CommitId, Guid.NewGuid().ToString());
-            evt.SetPropertyValue(e => e.CommitStamp, DateTime.UtcNow);
             evt.SetPropertyValue(e => e.Version, 42L);
             evt.SetPropertyValue(e => e.CheckpointToken, 42L);
             evt.SetPropertyValue(e => e.Context, new Dictionary<String, Object>()
             {
-                ["truth"] = 42
+                ["truth"] = 42,
+                [ChangesetCommonHeaders.Timestamp] = DateTime.UtcNow,
             });
 
             var upcaster = new UpcastedEvent.Upcaster();
