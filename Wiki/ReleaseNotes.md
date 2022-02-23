@@ -2,13 +2,15 @@
 
 ====
 
-## vNext
+## 6.1.4
 
-## 6.2.3
+- fixed for deep copy of events context in commit enancher.
+
+## 6.1.3
 
 - DomainEvent CommitStamp is now a property in pure getter (not anymore set by commit enhancer).
   
-## 6.2.2
+## 6.1.2
 
 - Added helpers to better serialization of command headers.
 

@@ -33,7 +33,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                 foreach (var eventMessage in commit.Events.Where(m => m is DomainEvent))
                 {
                     evt = (DomainEvent)eventMessage;
-                    var headers = commit.Headers;
+                    var headers = commit.Headers?.ToDictionary(x => x.Key, x => x.Value);
                     evt.CommitId = chunk.OperationId;
 
                     evt.Version = commit.AggregateVersion;
