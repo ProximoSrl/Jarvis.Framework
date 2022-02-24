@@ -4,6 +4,7 @@ using MongoDB.Bson.Serialization.Attributes;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 namespace Jarvis.Framework.Shared.Events
 {
@@ -107,7 +108,7 @@ namespace Jarvis.Framework.Shared.Events
         /// Contesto dell'evento
         /// </summary>
         [BsonIgnore]
-        public IDictionary<string, object> Context { get; internal set; }
+        public IReadOnlyDictionary<string, object> Context { get; internal set; }
 
         /// <summary>
         /// Versione dell'aggregato al momento del raise dell'evento
