@@ -6,6 +6,10 @@
 
 ## 6.2.3
 
+- DomainEvent context is now a readonly dictionary.
+  
+## 6.2.3
+
 - DomainEvent CommitStamp is now a property in pure getter (not anymore set by commit enhancer).
   
 ## 6.2.2

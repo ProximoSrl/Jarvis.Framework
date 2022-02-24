@@ -5,13 +5,14 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 {
     public class UnwindedDomainEvent
     {
         /// <summary>
-        /// To signal end of rebuild, this special unwinded domain event is sent to the 
+        /// To signal end of rebuild, this special unwinded domain event is sent to the
         /// TPL queue.
         /// </summary>
         public readonly static UnwindedDomainEvent LastEvent = new UnwindedDomainEvent();
@@ -57,8 +58,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 
         /// <summary>
         /// <see cref="DomainEvent"/> object has a lot of BsonIgnore to avoid serialize unnecessary
-        /// properties and uses <see cref="CommitEnhancer" /> to populate these properties. 
-        /// When the object is unwinded all these properties are in the container object, then 
+        /// properties and uses <see cref="CommitEnhancer" /> to populate these properties.
+        /// When the object is unwinded all these properties are in the container object, then
         /// this object uses the same principle of commit ehnancer to set those properties with
         /// FasterFlect
         /// </summary>
@@ -82,7 +83,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 
                 domainEvent.CommitId = CommitId;
                 domainEvent.Version = Version;
-                domainEvent.Context = Context;
+                if (Context != null)
+                {
+                    domainEvent.Context = new ReadOnlyDictionary<string, object>(Context);
+                }
                 domainEvent.CheckpointToken = CheckpointToken;
 
                 Event = StaticUpcaster.UpcastEvent(domainEvent);
