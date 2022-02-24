@@ -14,8 +14,9 @@ namespace Jarvis.Framework.Tests.SharedTests.Events
         public void Verify_issued_by()
         {
             var sut = new TestDomainEvent();
-            sut.Context = new Dictionary<string, object>();
-            sut.Context.Add(MessagesConstants.UserId, "User_1234");
+            var context = new Dictionary<string, object>();
+            context.Add(MessagesConstants.UserId, "User_1234");
+            sut.Context = context;
 
             Assert.That(sut.IssuedBy, Is.EqualTo("User_1234"));
         }
@@ -24,9 +25,10 @@ namespace Jarvis.Framework.Tests.SharedTests.Events
         public void Verify_issued_by_override_by_correct_header()
         {
             var sut = new TestDomainEvent();
-            sut.Context = new Dictionary<string, object>();
-            sut.Context.Add(MessagesConstants.UserId, "User_1234");
-            sut.Context.Add(MessagesConstants.OnBehalfOf, "User_42");
+            var context = new Dictionary<string, object>();
+            context.Add(MessagesConstants.UserId, "User_1234");
+            context.Add(MessagesConstants.OnBehalfOf, "User_42");
+            sut.Context = context;
 
             Assert.That(sut.IssuedBy, Is.EqualTo("User_42"));
         }
@@ -72,7 +74,9 @@ namespace Jarvis.Framework.Tests.SharedTests.Events
             Assert.That(sut.CommitStamp, Is.EqualTo(ts));
 
             //Act: add the override header
-            sut.Context.Add(MessagesConstants.OverrideCommitTimestamp, ts2);
+            var context = new Dictionary<string, object>();
+            context.Add(MessagesConstants.OverrideCommitTimestamp, ts2);
+            sut.Context = context;
 
             //Assert: verify the override timestamp
             Assert.That(sut.CommitStamp, Is.EqualTo(ts2));

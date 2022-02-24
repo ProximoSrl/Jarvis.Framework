@@ -201,8 +201,9 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             };
             SampleAggregateCreated offlineEvent = new SampleAggregateCreated();
             SampleAggregateCreated onlineEvent = new SampleAggregateCreated();
-            onlineEvent.SetPropertyValue(_ => _.Context, new Dictionary<string, Object>());
-            onlineEvent.Context.Add(MessagesConstants.OfflineEvents, new DomainEvent[] { offlineEvent });
+            var context = new Dictionary<string, Object>();
+            context.Add(MessagesConstants.OfflineEvents, new DomainEvent[] { offlineEvent });
+            onlineEvent.Context = context;
 
             await sut.InsertAsync(offlineEvent, rm).ConfigureAwait(false);
 
@@ -222,8 +223,9 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             };
             SampleAggregateCreated offlineEvent = new SampleAggregateCreated();
             SampleAggregateCreated onlineEvent = new SampleAggregateCreated();
-            onlineEvent.SetPropertyValue(_ => _.Context, new Dictionary<string, Object>());
-            onlineEvent.Context.Add(MessagesConstants.OfflineEvents, new DomainEvent[] { offlineEvent });
+            var context = new Dictionary<string, Object>();
+            context.Add(MessagesConstants.OfflineEvents, new DomainEvent[] { offlineEvent });
+            offlineEvent.Context = context;
 
             await sut.InsertAsync(offlineEvent, rm).ConfigureAwait(false);
 
