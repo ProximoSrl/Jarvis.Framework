@@ -4,6 +4,8 @@ using Jarvis.Framework.Shared.IdentitySupport;
 using Jarvis.Framework.Shared.Messages;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using Jarvis.Framework.Shared.Helpers;
 
 namespace Jarvis.Framework.TestHelpers
 {
@@ -17,12 +19,18 @@ namespace Jarvis.Framework.TestHelpers
 
         public static T AssignIssuedByForTest<T>(this T evt, String issuedBy) where T : DomainEvent
         {
+            Dictionary<string, object> newDic;
             if (evt.Context == null)
             {
-                evt.SetPropertyValue("Context", new Dictionary<String, Object>());
+                newDic = new Dictionary<String, Object>();
+            }
+            else
+            {
+                newDic = evt.Context.ToDictionary(k => k.Key, k => k.Value);
             }
 
-            evt.Context.Add(MessagesConstants.UserId, issuedBy);
+            newDic.Add(MessagesConstants.UserId, issuedBy);
+            evt.SetPropertyValue(e => e.Context, newDic);
             return evt;
         }
     }
