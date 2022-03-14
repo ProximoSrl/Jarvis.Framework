@@ -1,12 +1,12 @@
 ﻿#if NETFULL
 
-using Castle.Core.Logging;
 using Jarvis.Framework.Shared.Exceptions;
 using Jarvis.Framework.Shared.HealthCheck;
 using System;
 using System.ComponentModel;
 using System.Messaging;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.Support
 {
@@ -33,7 +33,9 @@ namespace Jarvis.Framework.Kernel.Support
             //There is no reason to poll more than 5 minutes for the queue status
             if (DateTime.UtcNow.Subtract(lastCheck).TotalMinutes > 5)
             {
-                InnerCheck();
+                //5 minutes passed, fire the check on the queue to have an updated result.
+                //important, do not wait this current thread, just queue on another thread.
+                Task.Run(() => InnerCheck());
             }
             return result;
         }
@@ -58,9 +60,11 @@ namespace Jarvis.Framework.Kernel.Support
         {
             try
             {
+                //Just peed for one second and ignore the timeout, without the first peed sometimes
+                //the process is unable to monitor health check correctly.
                 using (var queue = new MessageQueue(_queueName))
                 {
-                    queue.Peek(TimeSpan.FromSeconds(5));
+                    queue.Peek(TimeSpan.FromSeconds(3));
                 }
             }
 #pragma warning disable RCS1075 // Avoid empty catch clause that catches System.Exception.
@@ -96,10 +100,10 @@ namespace Jarvis.Framework.Kernel.Support
                 props.status = Marshal.AllocHGlobal(sizeof(int));
                 Marshal.WriteInt32(props.status, 0);
 
-                int result = NativeMethods.MQMgmtGetInfo(null, "queue=DIRECT=OS:" + _queueName, ref props);
-                if (result != 0)
+                int getInfoResult = NativeMethods.MQMgmtGetInfo(null, "queue=DIRECT=OS:" + _queueName, ref props);
+                if (getInfoResult != 0)
                 {
-                    throw new Win32Exception(result);
+                    throw new Win32Exception(getInfoResult);
                 }
 
                 if (Marshal.ReadInt32(props.status) != 0)
