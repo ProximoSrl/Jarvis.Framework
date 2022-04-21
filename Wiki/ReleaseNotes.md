@@ -4,15 +4,23 @@
 
 ## vNext
 
-## 6.2.3
+## 6.1.6
+
+- Better indexing for atomic readmodel.
+
+## 6.1.5
+
+- MSMQ Health check.
+  
+## 6.1.4
 
 - DomainEvent context is now a readonly dictionary.
   
-## 6.2.3
+## 6.1.3
 
 - DomainEvent CommitStamp is now a property in pure getter (not anymore set by commit enhancer).
   
-## 6.2.2
+## 6.1.2
 
 - Added helpers to better serialization of command headers.
 
