@@ -88,6 +88,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         #region ICollectionWrapper members
 
+        public Task DropIndexAsync(string name)
+        {
+            return _storage.DropIndexAsync(name);
+        }
+
         public Task CreateIndexAsync(String name, IndexKeysDefinition<TModel> keys, CreateIndexOptions options = null)
         {
             return _storage.CreateIndexAsync(name, keys, options);

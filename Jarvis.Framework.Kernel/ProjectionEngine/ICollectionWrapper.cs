@@ -101,6 +101,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         Task CreateIndexAsync(String name, IndexKeysDefinition<TModel> keys, CreateIndexOptions options = null);
 
+        Task DropIndexAsync(string name);
+
         Task<bool> IndexExistsAsync(String name);
 
         /// <summary>
