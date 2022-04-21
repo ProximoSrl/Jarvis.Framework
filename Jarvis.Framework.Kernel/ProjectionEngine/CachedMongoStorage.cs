@@ -156,6 +156,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             return _storage.CreateIndexAsync(name, keys, options);
         }
 
+        public Task DropIndexAsync(String name)
+        {
+            return _storage.DropIndexAsync(name);
+        }
+
         public async Task InsertBatchAsync(IEnumerable<TModel> values)
         {
             if (_inmemoryCollection.IsActive)

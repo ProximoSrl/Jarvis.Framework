@@ -14,6 +14,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         Task CreateIndexAsync(String name, IndexKeysDefinition<TModel> keys, CreateIndexOptions options = null);
 
+        Task DropIndexAsync(String name);
+
         Task InsertBatchAsync(IEnumerable<TModel> values);
 
         IQueryable<TModel> All { get; }
