@@ -33,32 +33,64 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
             Logger = NullLogger.Instance;
 
-            //Auto create the basic index you need
-            _collection.Indexes.CreateOne(
-                new CreateIndexModel<TModel>(
-                    Builders<TModel>.IndexKeys
-                        .Ascending(_ => _.ProjectedPosition),
-                    new CreateIndexOptions()
-                    {
-                        Name = "ProjectedPosition",
-                        Background = false
-                    }
-                )
-             );
+            var allIndex = _collection.Indexes.List().ToList().Select(i => i["name"].AsString).ToList();
 
-            _collection.Indexes.CreateOne(
-               new CreateIndexModel<TModel>(
-                   Builders<TModel>.IndexKeys
-                       .Ascending(_ => _.ReadModelVersion),
-                   new CreateIndexOptions()
-                   {
-                       Name = "ReadModelVersion",
-                       Background = false
-                   }
-               )
-            );
+            DropOldIndexes(allIndex);
+
+            if (!allIndex.Contains("ProjectedPosition"))
+            {
+                //Auto create the basic index you need
+                Logger.InfoFormat($"About to create index ProjectedPosition for Readmodel collection {0}", _collection.CollectionNamespace.CollectionName);
+                _collection.Indexes.CreateOne(
+                    new CreateIndexModel<TModel>(
+                        Builders<TModel>.IndexKeys
+                            .Ascending(_ => _.ProjectedPosition),
+                        new CreateIndexOptions()
+                        {
+                            Name = "ProjectedPosition",
+                            Background = false
+                        }
+                    )
+                 );
+            }
+            if (!allIndex.Contains("ReadModelVersionForFixer"))
+            {
+                //This is the base index that will be used from the fixer to find 
+                //readmodel that are old and needs to be fixed.
+                Logger.InfoFormat($"About to create index ReadModelVersionForFixer for Readmodel collection {0}", _collection.CollectionNamespace.CollectionName);
+                _collection.Indexes.CreateOne(
+                   new CreateIndexModel<TModel>(
+                       Builders<TModel>.IndexKeys
+                           .Ascending(_ => _.ReadModelVersion)
+                           .Ascending(_ => _.ProjectedPosition),
+                       new CreateIndexOptions()
+                       {
+                           Name = "ReadModelVersionForFixer",
+                           Background = false
+                       }
+                   )
+                );
+            }
 
             _actualVersion = atomicReadModelFactory.GetReamdodelVersion(typeof(TModel));
+        }
+
+        private void DropOldIndexes(List<string> allIndex)
+        {
+            if (allIndex.Contains("ReadModelVersion"))
+            {
+                try
+                {
+                    //Drop the old readmodel version index.
+                    Logger.InfoFormat("Dropping old index ReadModelVersion from readmodel collection {0}", _collection.CollectionNamespace.CollectionName);
+                    _collection.Indexes.DropOne("ReadModelVersion");
+                }
+                catch (Exception ex)
+                {
+                    Logger.ErrorFormat(ex, "Error dropping ReadModelVersion index from readmodel collection {0}", _collection.CollectionNamespace.CollectionName);
+                    //Ignore all exceptions, if we cannot drop the index we can proceed
+                }
+            }
         }
 
         /// <summary>

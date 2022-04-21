@@ -32,6 +32,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             }
         }
 
+        public async Task DropIndexAsync(String name)
+        {
+            var allIndexes = await _collection.Indexes.List().ToListAsync();
+            var existing = allIndexes.Any(d => d["name"].AsString.Equals(name, StringComparison.OrdinalIgnoreCase));
+            if (existing)
+            {
+                await _collection.Indexes.DropOneAsync(name);
+            }
+        }
+
         /// <summary>
         /// Creates an index, but ignore any error (it will only log them) to be used in projections.
         /// If a projections failed to create an index it will stop and this is not the best approach,
