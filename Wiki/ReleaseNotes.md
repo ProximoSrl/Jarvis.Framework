@@ -4,6 +4,10 @@
 
 ## vNext
 
+## 6.1.7
+
+- Better indexing for readmodel fixer
+
 ## 6.1.6
 
 - Better indexing for atomic readmodel.

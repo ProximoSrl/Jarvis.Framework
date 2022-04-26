@@ -1,4 +1,5 @@
-﻿using Castle.Facilities.TypedFactory;
+﻿using Castle.Core.Logging;
+using Castle.Facilities.TypedFactory;
 using Castle.MicroKernel.Registration;
 using Castle.Windsor;
 using Jarvis.Framework.Kernel.ProjectionEngine.Atomic;
@@ -423,6 +424,9 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
                     Component
                         .For<IAtomicReadModelFactory>()
                         .ImplementedBy<AtomicReadModelFactory>(),
+                    Component
+                        .For<ILogger>()
+                        .Instance(NullLogger.Instance),
                     Component
                         .For(new Type[]
                         {

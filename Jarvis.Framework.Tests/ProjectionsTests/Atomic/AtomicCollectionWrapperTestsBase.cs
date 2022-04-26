@@ -1,4 +1,5 @@
-﻿using Castle.Facilities.TypedFactory;
+﻿using Castle.Core.Logging;
+using Castle.Facilities.TypedFactory;
 using Castle.MicroKernel.Registration;
 using Castle.Windsor;
 using Jarvis.Framework.Kernel.ProjectionEngine;
@@ -64,7 +65,8 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             _sut = new AtomicMongoCollectionWrapper<SimpleTestAtomicReadModel>(
                _db,
                new AtomicReadModelFactory(),
-               new LiveAtomicReadModelProcessor(new AtomicReadModelFactory(), new CommitEnhancer(), _persistence));
+               new LiveAtomicReadModelProcessor(new AtomicReadModelFactory(), new CommitEnhancer(), _persistence),
+               NullLogger.Instance);
         }
 
         protected Int64 _lastCommit;

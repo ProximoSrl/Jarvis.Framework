@@ -21,17 +21,19 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         private readonly Int32 _actualVersion;
         private readonly ILiveAtomicReadModelProcessor _liveAtomicReadModelProcessor;
 
+        protected readonly ILogger _logger;
+
         public AtomicMongoCollectionWrapper(
             IMongoDatabase readmodelDb,
             IAtomicReadModelFactory atomicReadModelFactory,
-            ILiveAtomicReadModelProcessor liveAtomicReadModelProcessor)
+            ILiveAtomicReadModelProcessor liveAtomicReadModelProcessor,
+            ILogger logger)
         {
+            _logger = logger;
             _liveAtomicReadModelProcessor = liveAtomicReadModelProcessor;
 
             var collectionName = CollectionNames.GetCollectionName<TModel>();
             _collection = readmodelDb.GetCollection<TModel>(collectionName);
-
-            Logger = NullLogger.Instance;
 
             var allIndex = _collection.Indexes.List().ToList().Select(i => i["name"].AsString).ToList();
 
@@ -40,7 +42,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             if (!allIndex.Contains("ProjectedPosition"))
             {
                 //Auto create the basic index you need
-                Logger.InfoFormat($"About to create index ProjectedPosition for Readmodel collection {0}", _collection.CollectionNamespace.CollectionName);
+                _logger.InfoFormat($"About to create index ProjectedPosition for Readmodel collection {0}", _collection.CollectionNamespace.CollectionName);
                 _collection.Indexes.CreateOne(
                     new CreateIndexModel<TModel>(
                         Builders<TModel>.IndexKeys
@@ -53,19 +55,20 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                     )
                  );
             }
-            if (!allIndex.Contains("ReadModelVersionForFixer"))
+            if (!allIndex.Contains("ReadModelVersionForFixer2"))
             {
                 //This is the base index that will be used from the fixer to find 
                 //readmodel that are old and needs to be fixed.
-                Logger.InfoFormat($"About to create index ReadModelVersionForFixer for Readmodel collection {0}", _collection.CollectionNamespace.CollectionName);
+                _logger.InfoFormat($"About to create index ReadModelVersionForFixer2 for Readmodel collection {0}", _collection.CollectionNamespace.CollectionName);
                 _collection.Indexes.CreateOne(
                    new CreateIndexModel<TModel>(
                        Builders<TModel>.IndexKeys
+                           .Ascending(_ => _.ProjectedPosition)
                            .Ascending(_ => _.ReadModelVersion)
-                           .Ascending(_ => _.ProjectedPosition),
+                           .Ascending(_ => _.Id),
                        new CreateIndexOptions()
                        {
-                           Name = "ReadModelVersionForFixer",
+                           Name = "ReadModelVersionForFixer2",
                            Background = false
                        }
                    )
@@ -82,21 +85,30 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 try
                 {
                     //Drop the old readmodel version index.
-                    Logger.InfoFormat("Dropping old index ReadModelVersion from readmodel collection {0}", _collection.CollectionNamespace.CollectionName);
+                    _logger.InfoFormat("Dropping old index ReadModelVersion from readmodel collection {0}", _collection.CollectionNamespace.CollectionName);
                     _collection.Indexes.DropOne("ReadModelVersion");
                 }
                 catch (Exception ex)
                 {
-                    Logger.ErrorFormat(ex, "Error dropping ReadModelVersion index from readmodel collection {0}", _collection.CollectionNamespace.CollectionName);
+                    _logger.ErrorFormat(ex, "Error dropping ReadModelVersion index from readmodel collection {0}", _collection.CollectionNamespace.CollectionName);
+                    //Ignore all exceptions, if we cannot drop the index we can proceed
+                }
+            } 
+            if (allIndex.Contains("ReadModelVersionForFixer"))
+            {
+                try
+                {
+                    //Drop the old readmodel version index.
+                    _logger.InfoFormat("Dropping old index ReadModelVersionForFixer from readmodel collection {0}", _collection.CollectionNamespace.CollectionName);
+                    _collection.Indexes.DropOne("ReadModelVersionForFixer");
+                }
+                catch (Exception ex)
+                {
+                    _logger.ErrorFormat(ex, "Error dropping ReadModelVersionForFixer index from readmodel collection {0}", _collection.CollectionNamespace.CollectionName);
                     //Ignore all exceptions, if we cannot drop the index we can proceed
                 }
             }
         }
-
-        /// <summary>
-        /// Initialized by castle
-        /// </summary>
-        public ILogger Logger { get; set; }
 
         public IQueryable<TModel> AsQueryable()
         {
