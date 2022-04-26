@@ -1,4 +1,5 @@
-﻿using Jarvis.Framework.Kernel.ProjectionEngine.Atomic;
+﻿using Castle.Core.Logging;
+using Jarvis.Framework.Kernel.ProjectionEngine.Atomic;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 using Jarvis.Framework.Kernel.Support;
 using Jarvis.Framework.Shared.Helpers;
@@ -41,7 +42,8 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support
             _collectionWrapper = new AtomicMongoCollectionWrapper<SimpleTestAtomicReadModel>(
               _db,
               new AtomicReadModelFactory(),
-              new LiveAtomicReadModelProcessor(new AtomicReadModelFactory(), new CommitEnhancer(), _persistence));
+              new LiveAtomicReadModelProcessor(new AtomicReadModelFactory(), new CommitEnhancer(), _persistence),
+              NullLogger.Instance);
         }
 
         [SetUp]
