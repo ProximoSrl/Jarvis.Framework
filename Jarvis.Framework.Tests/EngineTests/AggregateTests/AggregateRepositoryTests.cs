@@ -23,11 +23,12 @@ namespace Jarvis.Framework.Tests.EngineTests.AggregateTests
         public void SetUp()
         {
             container = new WindsorContainer();
-            memoryPersistence = new InMemoryPersistence();
-            sut = new Repository(new AggregateFactoryEx(container.Kernel), new StreamsFactory(memoryPersistence));
 
             var snapshotMemoryPersistence = new InMemoryPersistence();
             snapshotStore = new DefaultSnapshotStore(snapshotMemoryPersistence);
+
+            memoryPersistence = new InMemoryPersistence();
+            sut = new Repository(new AggregateFactoryEx(container.Kernel), new StreamsFactory(memoryPersistence));
         }
 
         [TearDown]
@@ -79,7 +80,7 @@ namespace Jarvis.Framework.Tests.EngineTests.AggregateTests
             await sut.SaveAsync(aggregate, Guid.NewGuid().ToString()).ConfigureAwait(false); //Save snapshot version 1
 
             //repo without snapshot
-            var otherRepo  = new Repository(new AggregateFactoryEx(container.Kernel), new StreamsFactory(memoryPersistence));
+            var otherRepo = new Repository(new AggregateFactoryEx(container.Kernel), new StreamsFactory(memoryPersistence));
             aggregate = await otherRepo.GetByIdAsync<AggregateTestSampleAggregate1>("AggregateTestSampleAggregate1_42").ConfigureAwait(false);
             aggregate.Touch();
             aggregate.SampleEntity.AddValue(10);
@@ -168,6 +169,89 @@ namespace Jarvis.Framework.Tests.EngineTests.AggregateTests
 
             var reloaded = (AggregateTestSampleAggregate1)await sut.GetByIdAsync(type, "AggregateTestSampleAggregate1_42").ConfigureAwait(false);
             Assert.That(reloaded.InternalState.TouchCount, Is.EqualTo(1));
+        }
+
+        [TestCase(true)]
+        [TestCase(false)]
+        public async Task Verify_correct_restore_after_exception(bool useSnapshotStore)
+        {
+            string id = "AggregateTestSampleAggregate1_1000";
+            if (useSnapshotStore)
+            {
+                sut = new Repository(new AggregateFactoryEx(container.Kernel), new StreamsFactory(memoryPersistence), snapshotStore);
+            }
+            var aggregate = await sut.GetByIdAsync<AggregateTestSampleAggregate1>(id).ConfigureAwait(false);
+
+            aggregate.AddToEntity(10, false);
+            await sut.SaveAsync(aggregate, "Operation1");
+            Assert.That(aggregate.InternalState.TouchCount, Is.EqualTo(1));
+            Assert.That(aggregate.SampleEntity.InternalState.Accumulator, Is.EqualTo(10));
+
+            //reload aggregate and then call a method that throws exception
+            sut.Clear();
+            var reloaded = await sut.GetByIdAsync<AggregateTestSampleAggregate1>(id).ConfigureAwait(false);
+            Assert.That(reloaded.InternalState.TouchCount, Is.EqualTo(1));
+            Assert.That(reloaded.SampleEntity.InternalState.Accumulator, Is.EqualTo(10));
+
+            try
+            {
+                reloaded.AddToEntity(10, true);
+                Assert.Fail("An exception must be thrown");
+            }
+            catch
+            {
+                //we simply ignore the exception
+            }
+
+            Assert.That(reloaded.InternalState.TouchCount, Is.EqualTo(2));
+            Assert.That(reloaded.SampleEntity.InternalState.Accumulator, Is.EqualTo(20));
+
+            sut.Clear();
+            reloaded = await sut.GetByIdAsync<AggregateTestSampleAggregate1>(id).ConfigureAwait(false);
+            Assert.That(reloaded.InternalState.TouchCount, Is.EqualTo(1));
+            Assert.That(reloaded.SampleEntity.InternalState.Accumulator, Is.EqualTo(10));
+        }
+
+        [TestCase(true)]
+        [TestCase(false)]
+        public async Task Verify_correct_restore_after_exception_during_save(bool useSnapshotStore)
+        {
+            string id = "AggregateTestSampleAggregate1_1000";
+            if (useSnapshotStore)
+            {
+                sut = new Repository(new AggregateFactoryEx(container.Kernel), new StreamsFactory(memoryPersistence), snapshotStore);
+            }
+            var aggregate = await sut.GetByIdAsync<AggregateTestSampleAggregate1>(id).ConfigureAwait(false);
+
+            aggregate.AddToEntity(10, false);
+            await sut.SaveAsync(aggregate, "Operation1");
+            Assert.That(aggregate.InternalState.TouchCount, Is.EqualTo(1));
+            Assert.That(aggregate.SampleEntity.InternalState.Accumulator, Is.EqualTo(10));
+
+            //reload aggregate and then call a method that throws exception
+            sut.Clear();
+            var reloaded = await sut.GetByIdAsync<AggregateTestSampleAggregate1>(id).ConfigureAwait(false);
+            Assert.That(reloaded.InternalState.TouchCount, Is.EqualTo(1));
+            Assert.That(reloaded.SampleEntity.InternalState.Accumulator, Is.EqualTo(10));
+
+            try
+            {
+                reloaded.AddToEntity(50, false);
+                await sut.SaveAsync(reloaded, "Operation2");
+                Assert.Fail("An exception must be thrown");
+            }
+            catch
+            {
+                //we simply ignore the exception
+            }
+
+            Assert.That(reloaded.InternalState.TouchCount, Is.EqualTo(2));
+            Assert.That(reloaded.SampleEntity.InternalState.Accumulator, Is.EqualTo(60));
+
+            sut.Clear();
+            reloaded = await sut.GetByIdAsync<AggregateTestSampleAggregate1>(id).ConfigureAwait(false);
+            Assert.That(reloaded.InternalState.TouchCount, Is.EqualTo(1));
+            Assert.That(reloaded.SampleEntity.InternalState.Accumulator, Is.EqualTo(10));
         }
     }
 }

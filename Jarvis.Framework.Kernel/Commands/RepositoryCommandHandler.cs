@@ -2,7 +2,6 @@
 using Jarvis.Framework.Kernel.Events;
 using Jarvis.Framework.Shared;
 using Jarvis.Framework.Shared.Commands;
-using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.IdentitySupport;
 using Jarvis.Framework.Shared.Messages;
 using Jarvis.Framework.Shared.Persistence;
@@ -157,7 +156,7 @@ namespace Jarvis.Framework.Kernel.Commands
 
                 if (!callbackResult.ShouldNotPersistAggregate)
                 {
-                    await Repository.SaveAsync(aggregate, _commitId.ToString(), h=> StoreCommandHeaders(h, CurrentCommand)).ConfigureAwait(false);
+                    await Repository.SaveAsync(aggregate, _commitId.ToString(), h => StoreCommandHeaders(h, CurrentCommand)).ConfigureAwait(false);
                 }
             }
         }
@@ -176,7 +175,7 @@ namespace Jarvis.Framework.Kernel.Commands
 
         protected Task SaveAsync(TAggregate aggregate)
         {
-            return Repository.SaveAsync(aggregate, _commitId.ToString(), h=> StoreCommandHeaders(h, CurrentCommand));
+            return Repository.SaveAsync(aggregate, _commitId.ToString(), h => StoreCommandHeaders(h, CurrentCommand));
         }
 
         protected Task<TAggregate> CreateNewAggregateAsync(IIdentity identity)
