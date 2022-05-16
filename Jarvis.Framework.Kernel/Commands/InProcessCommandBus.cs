@@ -147,8 +147,7 @@ namespace Jarvis.Framework.Kernel.Commands
         {
             int i = 0;
             Boolean success = false;
-            Boolean retry = false;
-            CommandHandled replyCommandHandled = null;
+            Boolean retry;
             Exception lastException = null;
             do
             {
@@ -163,12 +162,18 @@ namespace Jarvis.Framework.Kernel.Commands
                 catch (Exception ex)
                 {
                     lastException = ex;
-                    if (!_commandExecutionExceptionHelper.Handle(ex, command, i, out retry, out replyCommandHandled))
+                    if (!_commandExecutionExceptionHelper.Handle(ex, command, i, out retry, out var _))
                     {
                         //Handler is not able to handle the exception, simply retrhow
                         _messagesTracker.Failed(command, DateTime.UtcNow, ex);
                         throw;
                     }
+                }
+
+                if (retry)
+                {
+                    //Since we need to retry the command we need to issue a clear.
+                    await handler.ClearAsync();
                 }
                 i++; //if we reach here we need to increment the counter.
             } while (retry);

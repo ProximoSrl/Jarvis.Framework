@@ -12,6 +12,11 @@ namespace Jarvis.Framework.Tests.BusTests.Handlers
     {
         public readonly ManualResetEvent Reset = new ManualResetEvent(false);
 
+        public Task ClearAsync()
+        {
+            return Task.CompletedTask;
+        }
+
         public Task HandleAsync(SampleTestCommand cmd)
         {
             this.ReceivedCommand = cmd;
