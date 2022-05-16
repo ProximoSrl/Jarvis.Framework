@@ -81,6 +81,11 @@ namespace Jarvis.Framework.Tests.Kernel.Commands
 
         private class SimpleCommandHandler : AbstractCommandHandler<SimpleCommand>
         {
+            public override Task ClearAsync()
+            {
+                return Task.CompletedTask;
+            }
+            
             protected override Task Execute(SimpleCommand cmd)
             {
                 return Task.CompletedTask;
@@ -94,6 +99,11 @@ namespace Jarvis.Framework.Tests.Kernel.Commands
 
         private class AdminCommandHandler : AbstractCommandHandler<AdminCommand>
         {
+            public override Task ClearAsync()
+            {
+                return Task.CompletedTask;
+            }
+            
             protected override Task Execute(AdminCommand cmd)
             {
                 return Task.CompletedTask;

@@ -56,6 +56,12 @@ namespace Jarvis.Framework.Kernel.Commands
         /// </summary>
         public IEventStoreQueryManager EventStoreQueryManager { get; set; }
 
+        public override Task ClearAsync()
+        {
+            Repository.Clear();
+            return Task.CompletedTask;
+        }
+
         public override async Task HandleAsync(TCommand cmd)
         {
             //Before handling any message, we want to be sure that the repository is clear.

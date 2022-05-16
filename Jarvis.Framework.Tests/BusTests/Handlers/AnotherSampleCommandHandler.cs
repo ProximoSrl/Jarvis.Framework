@@ -54,6 +54,11 @@ namespace Jarvis.Framework.Tests.BusTests.Handlers
             return HandleAsync(command as AnotherSampleTestCommand);
         }
 
+        public Task ClearAsync()
+        {
+            return Task.CompletedTask;
+        }
+
         public AnotherSampleTestCommand ReceivedCommand { get; private set; }
 
         private class RunData
