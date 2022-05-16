@@ -119,5 +119,7 @@ namespace Jarvis.Framework.Kernel.Commands
         {
             //Do nothing, give the ability to the concrete handler to add headers to this changeset.
         }
+
+        public abstract Task ClearAsync();
     }
 }

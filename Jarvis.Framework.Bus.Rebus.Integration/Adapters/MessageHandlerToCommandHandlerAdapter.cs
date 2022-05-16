@@ -85,8 +85,13 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
                         throw;
                     }
                 }
-                i++; //if we reach here we need to increment the counter.
 
+                if (retry)
+                {
+                    //Since we need to retry the command we need to issue a clear.
+                    await _commandHandler.ClearAsync();
+                }
+                i++; //if we reach here we need to increment the counter.
             } while (retry);
 
             if (!success)
