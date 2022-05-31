@@ -2,6 +2,8 @@
 
 ====
 
+## vNext
+
 ## 6.2.1
 
 - Updated references to rebus.mongob
