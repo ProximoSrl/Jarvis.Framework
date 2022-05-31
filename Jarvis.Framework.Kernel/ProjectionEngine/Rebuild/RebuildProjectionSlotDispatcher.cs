@@ -3,8 +3,8 @@ using Jarvis.Framework.Kernel.Events;
 using Jarvis.Framework.Kernel.MultitenantSupport;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 using Jarvis.Framework.Kernel.Support;
+using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.HealthCheck;
-using Jarvis.Framework.Shared.Logging;
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
@@ -13,6 +13,9 @@ using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 {
+    /// <summary>
+    /// Helps dispatching events to projection in a slot.
+    /// </summary>
     internal class RebuildProjectionSlotDispatcher
     {
         [DllImport("KERNEL32")]
@@ -23,27 +26,32 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
         private readonly ProjectionEngineConfig _config;
         private readonly IEnumerable<IProjection> _projections;
         private readonly ProjectionMetrics _metrics;
+
+        /// <summary>
+        /// Needed because if an events come greater than this value, we do not
+        /// need to dispatch the event because it is an event that was not 
+        /// dispatched even for standard projection.
+        /// </summary>
         private readonly Int64 _maxCheckpointDispatched;
         private Int64 _lastCheckpointRebuilded;
-        private readonly ILoggerThreadContextManager _loggerThreadContextManager;
 
         /// <summary>
         /// TODO: We should pass a dictionary where we have the last dispatched
-        /// checkpoint for EACH projection.
+        /// checkpoint for EACH projection. For this first version we can simply 
+        /// use the maximum dispatched slot because all the projection in a slot
+        /// can differs only by one element.
         /// </summary>
         /// <param name="logger"></param>
-        /// <param name="slotName"></param>
-        /// <param name="config"></param>
-        /// <param name="projections"></param>
+        /// <param name="slotName">Each instance of this class dispatch events for a single slot.</param>
+        /// <param name="config">Needed only to know tentant id.</param>
+        /// <param name="projections">All projections for the slot.</param>
         /// <param name="lastCheckpointDispatched"></param>
-        /// <param name="loggerThreadContextManager"></param>
         public RebuildProjectionSlotDispatcher(
             ILogger logger,
             String slotName,
             ProjectionEngineConfig config,
             IEnumerable<IProjection> projections,
-            Int64 lastCheckpointDispatched,
-            ILoggerThreadContextManager loggerThreadContextManager)
+            Int64 lastCheckpointDispatched)
         {
             SlotName = slotName;
             _logger = logger;
@@ -52,7 +60,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
             _metrics = new ProjectionMetrics(projections);
             _maxCheckpointDispatched = lastCheckpointDispatched;
             _lastCheckpointRebuilded = 0;
-            _loggerThreadContextManager = loggerThreadContextManager;
         }
 
         public Int64 LastCheckpointDispatched
@@ -149,55 +156,86 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
             KernelMetricsHelper.MarkEventInRebuildDispatchedCount(SlotName, 1);
             Interlocked.Decrement(ref RebuildProjectionMetrics.CountOfConcurrentDispatchingCommit);
         }
-    }
 
-    public class RebuildStatus
-    {
-        private int _bucketActiveCount = 0;
-        public int BucketActiveCount
+        internal async Task DispatchStartEventAsync(DomainEvent domainEvent)
         {
-            get { return _bucketActiveCount; }
-        }
-
-        public List<BucketSummaryStatus> SummaryStatus { get; set; }
-
-        public Boolean Done { get { return BucketActiveCount == 0; } }
-
-        public RebuildStatus()
-        {
-            SummaryStatus = new List<BucketSummaryStatus>();
-        }
-
-        public void AddBucket()
-        {
-            Interlocked.Increment(ref _bucketActiveCount);
-        }
-
-        public void BucketDone(
-            String bucketDescription,
-            Int64 eventsDispatched,
-            Int64 durationInMilliseconds,
-            Int64 totalEventsToDispatchWithoutFiltering)
-        {
-            Interlocked.Decrement(ref _bucketActiveCount);
-            SummaryStatus.Add(new BucketSummaryStatus()
+            if (domainEvent == LastEventMarker.Instance)
             {
-                BucketDescription = bucketDescription,
-                EventsDispatched = eventsDispatched,
-                DurationInMilliseconds = durationInMilliseconds,
-                TotalEventsToDispatchWithoutFiltering = totalEventsToDispatchWithoutFiltering,
-            });
-        }
+                Finished = true;
+                _lastCheckpointRebuilded = LastCheckpointDispatched; //Set to zero metrics, we dispatched everything.
+                return;
+            }
 
-        public class BucketSummaryStatus
-        {
-            public String BucketDescription { get; set; }
+            var chkpoint = domainEvent.CheckpointToken;
+            if (chkpoint > LastCheckpointDispatched)
+            {
+                if (_logger.IsDebugEnabled)
+                {
+                    _logger.DebugFormat("Discharded event {0} commit {1} because last checkpoint dispatched for slot {2} is {3}.", domainEvent.CommitId, domainEvent.CheckpointToken, SlotName, _maxCheckpointDispatched);
+                }
 
-            public Int64 TotalEventsToDispatchWithoutFiltering { get; set; }
+                return;
+            }
 
-            public Int64 EventsDispatched { get; set; }
+            Interlocked.Increment(ref RebuildProjectionMetrics.CountOfConcurrentDispatchingCommit);
+            TenantContext.Enter(_config.TenantId);
 
-            public Int64 DurationInMilliseconds { get; set; }
+            try
+            {
+                string eventName = domainEvent.GetType().Name;
+                foreach (var projection in _projections)
+                {
+                    var cname = projection.Info.CommonName;
+                    long elapsedticks;
+                    try
+                    {
+                        QueryPerformanceCounter(out long ticks1);
+                        await projection.HandleAsync(domainEvent, true).ConfigureAwait(false);
+                        QueryPerformanceCounter(out long ticks2);
+                        elapsedticks = ticks2 - ticks1;
+                        KernelMetricsHelper.IncrementProjectionCounterRebuild(cname, SlotName, eventName, elapsedticks);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.FatalFormat(ex, "[Slot: {3} Projection: {4}] Failed checkpoint: {0} StreamId: {1} Event Name: {2}",
+                            domainEvent.CheckpointToken,
+                            domainEvent.AggregateId,
+                            eventName,
+                            SlotName,
+                            cname
+                        );
+                        HealthChecks.RegisterHealthCheck($"RebuildDispatcher, slot {SlotName} - FailedCheckpoint {domainEvent.CheckpointToken}", () =>
+                            HealthCheckResult.Unhealthy(ex)
+                        );
+                        throw;
+                    }
+
+                    _metrics.Inc(cname, eventName, elapsedticks);
+
+                    if (_logger.IsDebugEnabled)
+                    {
+                        _logger.DebugFormat("[{3}] [{4}] Handled checkpoint {0}: {1} > {2}",
+                            domainEvent.CheckpointToken,
+                            domainEvent.AggregateId,
+                            eventName,
+                            SlotName,
+                            cname
+                        );
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.ErrorFormat(ex, "Error dispathing commit id: {0}\nMessage: {1}\nError: {2}",
+                    domainEvent.CheckpointToken, domainEvent, ex.Message);
+                HealthChecks.RegisterHealthCheck($"RebuildDispatcher, slot {SlotName} - GeneralError", () =>
+                    HealthCheckResult.Unhealthy(ex)
+                );
+                throw;
+            }
+            _lastCheckpointRebuilded = chkpoint;
+            KernelMetricsHelper.MarkEventInRebuildDispatchedCount(SlotName, 1);
+            Interlocked.Decrement(ref RebuildProjectionMetrics.CountOfConcurrentDispatchingCommit);
         }
     }
 }

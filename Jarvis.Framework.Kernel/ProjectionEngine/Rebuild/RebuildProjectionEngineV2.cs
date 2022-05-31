@@ -4,12 +4,14 @@ using Jarvis.Framework.Kernel.Events;
 using Jarvis.Framework.Kernel.MultitenantSupport;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 using Jarvis.Framework.Kernel.Support;
+using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.HealthCheck;
 using Jarvis.Framework.Shared.Logging;
 using Jarvis.Framework.Shared.Support;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
+using NStore.Core.Persistence;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -17,13 +19,28 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
+using NStore.Domain;
+using Jarvis.Framework.Shared.Store;
+using NStore.Persistence.Mongo;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 {
-    public class RebuildProjectionEngine : IRebuildEngine
+    /// <summary>
+    /// <para>
+    /// New version of the RebuildProjectionEngine that does not use
+    /// Unwinded collection but instead simply filter commit with events
+    /// to dispatch using a filter in a nested property Payload.Events._t allowing
+    /// saving the huge amount of space that the unwinded events collection requires.
+    /// </para>
+    /// <para>
+    /// This follows the standard workflow for rebuild projection engine, just
+    /// put all the projection/slots in rebuild, then re-dispatch everything up to
+    /// the last dispatched event for each slot. Then when the rebuild finishes, all
+    /// in-memories collection will be flushed on database
+    /// </para>
+    /// </summary>
+    public class RebuildProjectionEngineV2 : IRebuildEngine
     {
-        private readonly EventUnwinder _eventUnwinder;
-
         private readonly IConcurrentCheckpointTracker _checkpointTracker;
 
         private readonly ProjectionMetrics _metrics;
@@ -31,22 +48,31 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
         public ILogger Logger { get; set; } = NullLogger.Instance;
 
         private readonly ProjectionEngineConfig _config;
+
+        /// <summary>
+        /// This dictionary contains slot name as key and an array of projections
+        /// corresponding to that slot. Needed to being able to understant the list
+        /// of projection that belongs to each slot.
+        /// </summary>
         private readonly Dictionary<string, IProjection[]> _projectionsBySlot;
+
         private readonly IProjection[] _allProjections;
 
         private readonly IRebuildContext _rebuildContext;
         private readonly ProjectionEventInspector _projectionInspector;
 
-        public RebuildProjectionEngine(
-            EventUnwinder eventUnwinder,
+        private readonly ICommitEnhancer _commitEnhancer;
+        private readonly IMongoCollection<MongoChunk> _commitCollection;
+
+        public RebuildProjectionEngineV2(
             IConcurrentCheckpointTracker checkpointTracker,
             IProjection[] projections,
             IRebuildContext rebuildContext,
             ProjectionEngineConfig config,
             ProjectionEventInspector projectionInspector,
-            ILoggerThreadContextManager loggerThreadContextManager)
+            ICommitEnhancer commitEnhancer,
+            IMongoDatabase commitDatabase)
         {
-            _eventUnwinder = eventUnwinder;
             _checkpointTracker = checkpointTracker;
             _rebuildContext = rebuildContext;
             _config = config;
@@ -65,9 +91,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                 .ToDictionary(x => x.Key, x => x.OrderByDescending(p => p.Priority).ToArray());
 
             _metrics = new ProjectionMetrics(_allProjections);
-            _loggerThreadContextManager = loggerThreadContextManager;
+            _commitEnhancer = commitEnhancer;
 
-            HealthChecks.RegisterHealthCheck("RebuildProjectionEngine", (Func<HealthCheckResult>)HealthCheck);
+            _commitCollection = commitDatabase.GetCollection<MongoChunk>("Commits");
+
+            HealthChecks.RegisterHealthCheck("RebuildProjectionEngineV2", HealthCheck);
         }
 
         private HealthCheckResult HealthCheck()
@@ -95,15 +123,23 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
             }
         }
 
+        /// <summary>
+        /// One entry for each bucket. A bucket is the unit of polling, each bucket has a different
+        /// poller that serves a list of slot. Value of this array is a list of RebuildProjectionSlotDispatcher objects
+        /// that have the logic to dispatch a <see cref="DomainEvent"/> or <see cref="UnwindedDomainEvent"/> to 
+        /// corresponding slots projection
+        /// </summary>
         private readonly Dictionary<BucketInfo, List<RebuildProjectionSlotDispatcher>> _consumers =
             new Dictionary<BucketInfo, List<RebuildProjectionSlotDispatcher>>();
-        private readonly List<RebuildProjectionSlotDispatcher> _rebuildDispatchers =
-            new List<RebuildProjectionSlotDispatcher>();
 
+        /// <summary>
+        /// This is the shared status object that is used to signal to outher world if the rebuild finished.
+        /// </summary>
         private RebuildStatus _status;
 
         /// <summary>
-        /// Start rebuild process.
+        /// Start rebuild process, configure everything, then return an object that can be used to know the
+        /// status of the projection engine.
         /// </summary>
         /// <returns></returns>
         public async Task<RebuildStatus> RebuildAsync()
@@ -111,23 +147,26 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
             if (Logger.IsInfoEnabled) Logger.InfoFormat("Starting rebuild projection engine on tenant {0}", _config.TenantId);
             DumpProjections();
 
-            await _eventUnwinder.UnwindAsync().ConfigureAwait(false);
+            // We need to be sure to have an index that supports filtering events type in commits, or we will really poll slowly.
+            await EnsureIndexAsync();
 
             _status = new RebuildStatus();
             TenantContext.Enter(_config.TenantId);
 
+            //Configure projections
             await ConfigureProjections().ConfigureAwait(false);
 
+            //Group by projection by slot, so we have all slots that needs to be rebuilded
             var allSlots = _projectionsBySlot.Keys.ToArray();
 
-            //initialize dispatching of the commits
+            //initialize dispatching of the commits, remember that we have a poller for each bucket.
             foreach (var bucket in _config.BucketInfo)
             {
                 _consumers.Add(bucket, new List<RebuildProjectionSlotDispatcher>());
                 _status.AddBucket(String.Join(",", bucket.Slots));
             }
 
-            //Setup the slots
+            //Setup the slots for dispatching the events.
             foreach (var slotName in allSlots)
             {
                 Logger.InfoFormat("Slot {0} will be rebuilded", slotName);
@@ -136,45 +175,58 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                 Int64 maximumDispatchedValue = projectionsForThisSlot
                     .Select(p => _checkpointTracker.GetCheckpoint(p))
                     .Max();
+
+                //Create the dispatcher, a dispatcher is an object that is able to dispatch events to projections.
                 var dispatcher = new RebuildProjectionSlotDispatcher(Logger, slotName, _config, projectionsForThisSlot, maximumDispatchedValue);
                 KernelMetricsHelper.SetCheckpointCountToDispatch(slotName, () => dispatcher.CheckpointToDispatch);
-                _rebuildDispatchers.Add(dispatcher);
 
-                //find right consumer
+                //For this slot we need to know the bucket that can dispatch it, the rule is simple, find the bucket that contains
+                //this exact slot name, and if you are unable to find that, find the bucket that has * (default bucket.)
                 var slotBucket = _config.BucketInfo.SingleOrDefault(b =>
                     b.Slots.Any(s => s.Equals(slotName, StringComparison.OrdinalIgnoreCase))) ??
                     _config.BucketInfo.Single(b => b.Slots[0] == "*");
                 var consumerList = _consumers[slotBucket];
+
+                //once you find the consumerList (related to owner bucket) add this dispatcher to allow that bucket to
+                //dispatch the events to the right slots.
                 consumerList.Add(dispatcher);
             }
 
-            //Creates TPL chain and start polling everything on the consumer
+            //Creates TPL chain and start polling everything on the consumer, we have a consumer for each bucket, each
+            //consumer will start a single poller of commit.
             foreach (var consumer in _consumers)
             {
                 var bucketInfo = String.Join(",", consumer.Key.Slots);
 
+                //We could have some bucket with NO slot to rebuild, those bucket will be marked as finished (zero commit to dispatch)
                 if (consumer.Value.Count == 0)
                 {
                     Logger.InfoFormat("Bucket {0} has no active slot, and will be ignored!", bucketInfo);
                     _status.BucketDone(bucketInfo, 0, 0, 0);
                     continue;
                 }
+
                 var consumerBufferOptions = new DataflowBlockOptions();
                 consumerBufferOptions.BoundedCapacity = consumer.Key.BufferSize;
-                var _buffer = new BufferBlock<UnwindedDomainEvent>(consumerBufferOptions);
+
+                var _buffer = new BufferBlock<DomainEvent>(consumerBufferOptions);
 
                 ExecutionDataflowBlockOptions executionOption = new ExecutionDataflowBlockOptions();
                 executionOption.BoundedCapacity = consumer.Key.BufferSize;
 
+                //List of all dispatchers belonging to this bucket.
                 var dispatcherList = consumer.Value;
+
                 _projectionInspector.ResetHandledEvents();
-                List<SlotGuaranteedDeliveryBroadcastBlock.SlotInfo<UnwindedDomainEvent>> consumers =
-                    new List<SlotGuaranteedDeliveryBroadcastBlock.SlotInfo<UnwindedDomainEvent>>();
+            
+                List<SlotGuaranteedDeliveryBroadcastBlock.SlotInfo<DomainEvent>> consumers =
+                    new List<SlotGuaranteedDeliveryBroadcastBlock.SlotInfo<DomainEvent>>();
+
                 foreach (var dispatcher in dispatcherList)
                 {
                     ExecutionDataflowBlockOptions consumerOptions = new ExecutionDataflowBlockOptions();
                     consumerOptions.BoundedCapacity = consumer.Key.BufferSize;
-                    var actionBlock = new ActionBlock<UnwindedDomainEvent>((Func<UnwindedDomainEvent, Task>)dispatcher.DispatchEventAsync, consumerOptions);
+                    var actionBlock = new ActionBlock<DomainEvent>(dispatcher.DispatchStartEventAsync, consumerOptions);
                     HashSet<Type> eventsOfThisSlot = new HashSet<Type>();
                     foreach (var projection in dispatcher.Projections)
                     {
@@ -185,17 +237,20 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                         }
                     }
 
-                    SlotGuaranteedDeliveryBroadcastBlock.SlotInfo<UnwindedDomainEvent> slotInfo =
-                        new SlotGuaranteedDeliveryBroadcastBlock.SlotInfo<UnwindedDomainEvent>(
+                    SlotGuaranteedDeliveryBroadcastBlock.SlotInfo<DomainEvent> slotInfo =
+                        new SlotGuaranteedDeliveryBroadcastBlock.SlotInfo<DomainEvent>(
                             actionBlock,
                             dispatcher.SlotName,
                             eventsOfThisSlot);
                     consumers.Add(slotInfo);
                     KernelMetricsHelper.CreateMeterForRebuildDispatcherBuffer(dispatcher.SlotName, () => actionBlock.InputCount);
                 }
-                var allTypeHandledStringList = _projectionInspector.EventHandled.Select(t => t.Name).ToList();
+                var allTypeHandledStringList = _projectionInspector
+                    .EventHandled
+                    .Select(t => VersionInfoAttributeHelper.GetEventName(t))
+                    .ToList();
 
-                var broadcaster = SlotGuaranteedDeliveryBroadcastBlock.Create(consumers, bucketInfo, consumer.Key.BufferSize);
+                var broadcaster = SlotGuaranteedDeliveryBroadcastBlock.CreateForStandardEvents(consumers, bucketInfo, consumer.Key.BufferSize);
                 _buffer.LinkTo(broadcaster, new DataflowLinkOptions() { PropagateCompletion = true });
 
                 KernelMetricsHelper.CreateGaugeForRebuildFirstBuffer(bucketInfo, () => _buffer.Count);
@@ -213,7 +268,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                     allTypeHandledStringList,
                     consumers));
 
-                //await StartPoll(_buffer, _broadcaster, bucketInfo, dispatcherList, allTypeHandledStringList, consumers).ConfigureAwait(false);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             }
 
@@ -221,15 +275,29 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
             return _status;
         }
 
+        private Task EnsureIndexAsync()
+        {
+            return _commitCollection.Indexes.CreateOneAsync(
+                new CreateIndexModel<MongoChunk>(
+                    Builders<MongoChunk>.IndexKeys
+                        .Ascending("Payload.Events._t")
+                        .Ascending("_id"),
+                    new CreateIndexOptions()
+                    {
+                        Background = true,
+                        Name = "RebuildV2_polling"
+                    }));
+        }
+
         private String _pollError = null;
 
         private async Task StartPoll(
-            BufferBlock<UnwindedDomainEvent> buffer,
-            ActionBlock<UnwindedDomainEvent> broadcaster,
+            BufferBlock<DomainEvent> buffer,
+            ActionBlock<DomainEvent> broadcaster,
             String bucketInfo,
             List<RebuildProjectionSlotDispatcher> dispatchers,
             List<String> allEventTypesHandledByAllSlots,
-            List<SlotGuaranteedDeliveryBroadcastBlock.SlotInfo<UnwindedDomainEvent>> consumers)
+            List<SlotGuaranteedDeliveryBroadcastBlock.SlotInfo<DomainEvent>> consumers)
         {
             if (buffer == null)
                 throw new ArgumentNullException(nameof(buffer));
@@ -248,56 +316,55 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 
             Stopwatch sw = Stopwatch.StartNew();
 
-            var eventCollection = _eventUnwinder.UnwindedCollection;
             Int64 lastCheckpointTokenDispatched = 0;
-            Int32 lastSequenceDispatched = 0;
-            Int64 maxEventDispatched = dispatchers.Max(d => d.LastCheckpointDispatched);
-            Int64 totalEventToDispatch = eventCollection.Count(Builders<UnwindedDomainEvent>.Filter.Lte(e => e.CheckpointToken, maxEventDispatched));
-            Int64 dispatchedEvents = 0;
+            //Grab the total count of the commit contained in the whole repository
+            Logger.Info("Calculating total of Chunks in NStore");
+            Int64 totalNumberOfChunks = _commitCollection.AsQueryable().Count();
+            Logger.InfoFormat("Total of Chunks in NStore_ {0}", totalNumberOfChunks);
+            Int64 dispatchedChunks = 0;
 
             //this is the main cycle that continue to poll events and send to the tpl buffer
             Boolean done = false;
+            Logger.InfoFormat("Started polling for bucket {0}", bucketInfo);
             while (!done)
             {
                 try
                 {
-                    IFindFluent<UnwindedDomainEvent, UnwindedDomainEvent> filter = eventCollection
+                    IFindFluent<MongoChunk, MongoChunk> filter = _commitCollection
                         .Find(
                                 //Greater than last dispatched, less than maximum dispatched and one of the events that are elaborated by at least one of the projection
-                                Builders<UnwindedDomainEvent>.Filter.And(
-                                    Builders<UnwindedDomainEvent>.Filter.Or( //this is the condition on last dispatched
-                                        Builders<UnwindedDomainEvent>.Filter.Gt(e => e.CheckpointToken, lastCheckpointTokenDispatched), //or checkpoint token is greater than last dispatched.
-                                        Builders<UnwindedDomainEvent>.Filter.And( //or is equal to the last dispatched, but the EventSequence is greater.
-                                            Builders<UnwindedDomainEvent>.Filter.Gt(e => e.EventSequence, lastSequenceDispatched),
-                                            Builders<UnwindedDomainEvent>.Filter.Eq(e => e.CheckpointToken, lastCheckpointTokenDispatched)
-                                        )
-                                    ),
-                                    Builders<UnwindedDomainEvent>.Filter.Lte(e => e.CheckpointToken, maxEventDispatched) //less than or equal max event dispatched.
-                                    , Builders<UnwindedDomainEvent>.Filter.In(e => e.EventType, allEventTypesHandledByAllSlots)
+                                Builders<MongoChunk>.Filter.And(
+                                    Builders<MongoChunk>.Filter.Gt("_id", lastCheckpointTokenDispatched) //or checkpoint token is greater than last dispatched.
+                                    , Builders<MongoChunk>.Filter.In("Payload.Events._t", allEventTypesHandledByAllSlots)
                              )
                         );
 
                     Logger.InfoFormat($"polled rebuild query {filter}");
                     var query = filter
-                        .Sort(Builders<UnwindedDomainEvent>.Sort.Ascending(e => e.CheckpointToken).Ascending(e => e.EventSequence));
+                        .Sort(Builders<MongoChunk>.Sort.Ascending("_id"));
                     await query.ForEachAsync(Dispatch).ConfigureAwait(false);
 
-                    async Task Dispatch(UnwindedDomainEvent eventUnwinded)
+                    async Task Dispatch(IChunk chunk)
                     {
+                        dispatchedChunks++;
                         _pollError = null;
-
-                        if (Logger.IsDebugEnabled) Logger.DebugFormat("TPL queued event {0}/{1} for bucket {2}", eventUnwinded.CheckpointToken, eventUnwinded.EventSequence, bucketInfo);
+                        _commitEnhancer.Enhance(chunk);
+                        if (Logger.IsDebugEnabled) Logger.DebugFormat("TPL queued chunk {0} for bucket {1}", chunk.Position, bucketInfo);
                         //rehydrate the event before dispatching
-                        eventUnwinded.EnhanceAndUpcastEvent();
-                        await buffer.SendAsync(eventUnwinded).ConfigureAwait(false);
+                        if (chunk.Payload is Changeset cs)
+                        {
+                            StaticUpcaster.UpcastChangeset(cs);
 
-                        dispatchedEvents++;
-                        lastSequenceDispatched = eventUnwinded.EventSequence;
-                        lastCheckpointTokenDispatched = eventUnwinded.CheckpointToken;
+                            foreach (var @event in cs.Events.OfType<DomainEvent>())
+                            {
+                                await buffer.SendAsync(@event).ConfigureAwait(false);
+                            }
+                        }
+                        lastCheckpointTokenDispatched = chunk.Position;
                     }
 
                     //Send marker unwindws domain event to signal that rebuild is finished
-                    await buffer.SendAsync(UnwindedDomainEvent.LastEvent).ConfigureAwait(false);
+                    await buffer.SendAsync(LastEventMarker.Instance).ConfigureAwait(false);
                     done = true;
                 }
                 catch (MongoException ex)
@@ -370,7 +437,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                 }
                 sw.Stop();
                 Logger.InfoFormat("Bucket {0} finished dispathing all events for slots: {1}", bucketInfo, dispatchers.Select(d => d.SlotName).Aggregate((s1, s2) => s1 + ", " + s2));
-                _status.BucketDone(bucketInfo, dispatchedEvents, sw.ElapsedMilliseconds, totalEventToDispatch);
+                _status.BucketDone(bucketInfo, dispatchedChunks, sw.ElapsedMilliseconds, totalNumberOfChunks);
             }
             catch (Exception ex)
             {
@@ -379,6 +446,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
             }
         }
 
+        /// <summary>
+        /// Simply setup Checkpoint tracker and then drop and setup every projection so they are
+        /// ready to re-project all events.
+        /// </summary>
+        /// <returns></returns>
         private async Task ConfigureProjections()
         {
             _checkpointTracker.SetUp(_allProjections, 1, false);
@@ -410,8 +482,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 
             return lastCommit["_id"].AsInt64;
         }
-
-        private readonly ILoggerThreadContextManager _loggerThreadContextManager;
 
         private IMongoCollection<BsonDocument> GetMongoCommitsCollection()
         {

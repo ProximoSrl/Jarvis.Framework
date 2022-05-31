@@ -1,12 +1,11 @@
-﻿using Jarvis.Framework.Kernel.Support;
+﻿using Jarvis.Framework.Kernel.Engine;
+using Jarvis.Framework.Kernel.Events;
+using Jarvis.Framework.Kernel.Support;
 using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Tests.EngineTests;
 using NUnit.Framework;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
@@ -14,11 +13,11 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
     [TestFixture]
     public class ProjectionEventInspectorTests
     {
-#pragma warning disable S1144 // Unused private types or members should be removed
-#pragma warning disable RCS1163 // Unused parameter.
+        #region Special projections used for test
+
         private class TestProjectionWithoutInterface
         {
-            public void On(SampleAggregateCreated e)
+            public void On(SampleAggregateCreated _)
             {
                 // Method intentionally left empty.
             }
@@ -26,7 +25,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 
         private class TestProjectionCatchAll
         {
-            public void On(DomainEvent e)
+            public void On(DomainEvent _)
             {
                 // Method intentionally left empty.
             }
@@ -34,7 +33,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 
         private class TestProjectionBaseEvent
         {
-            public void On(SampleAggregateBaseEvent e)
+            public void On(SampleAggregateBaseEvent _)
             {
                 // Method intentionally left empty.
             }
@@ -42,7 +41,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 
         private class TestProjectionBase
         {
-            public void On(SampleAggregateCreated e)
+            public void On(SampleAggregateCreated _)
             {
                 // Method intentionally left empty.
             }
@@ -50,22 +49,51 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 
         private class TestProjectionInherited : TestProjectionBase
         {
-            public void On(SampleAggregateTouched e)
+            public void On(SampleAggregateTouched _)
             {
                 // Method intentionally left empty.
             }
         }
 
-        private class TestProjectionTouched 
+        private class TestProjectionTouched
         {
-            public void On(SampleAggregateTouched e)
+            public void On(SampleAggregateTouched _)
             {
                 // Method intentionally left empty.
             }
         }
 
-#pragma warning restore RCS1163 // Unused parameter.
-#pragma warning restore S1144 // Unused private types or members should be remove
+        [ProjectionInfo("ProjectionWithEventUpcasted")]
+        public class ProjectionWithEventUpcasted : AbstractProjection,
+            IEventHandler<SampleAggregateCreated>
+        {
+            public override Task DropAsync()
+            {
+                return Task.CompletedTask;
+            }
+
+            public override Task SetUpAsync()
+            {
+                return Task.CompletedTask;
+            }
+
+            public Task On(SampleAggregateCreated _)
+            {
+                return Task.CompletedTask;
+            }
+
+            /// <summary>
+            /// This is the important part, we use an event that was upcasted, this means
+            /// that we need to filter for all old version of the event.
+            /// </summary>
+            /// <returns></returns>
+            public Task On(SampleAggregateUpcasted _)
+            {
+                return Task.CompletedTask;
+            }
+        }
+
+        #endregion
 
         [Test]
         public void verify_can_scan_all_domain_events()
@@ -100,15 +128,15 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         }
 
         [Test]
-		public void verify_get_poco_event_handled()
-		{
-			ProjectionEventInspector sut = new ProjectionEventInspector();
-			sut.AddAssembly(Assembly.GetExecutingAssembly());
-			sut.InspectProjectionForEvents(typeof(ProjectionWithPoco));
-			Assert.That(sut.EventHandled, Is.EquivalentTo(new[] { typeof(SampleAggregateCreated), typeof(PocoPayloadObject) }));
-		}
+        public void verify_get_poco_event_handled()
+        {
+            ProjectionEventInspector sut = new ProjectionEventInspector();
+            sut.AddAssembly(Assembly.GetExecutingAssembly());
+            sut.InspectProjectionForEvents(typeof(ProjectionWithPoco));
+            Assert.That(sut.EventHandled, Is.EquivalentTo(new[] { typeof(SampleAggregateCreated), typeof(PocoPayloadObject) }));
+        }
 
-		[Test]
+        [Test]
         public void verify_get_basic_event_handled_even_if_no_interface_is_declared()
         {
             ProjectionEventInspector sut = new ProjectionEventInspector();
@@ -142,6 +170,25 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             sut.AddAssembly(Assembly.GetExecutingAssembly());
             sut.InspectProjectionForEvents(typeof(TestProjectionCatchAll));
             Assert.That(sut.EventHandled, Has.Count.EqualTo(sut.TotalEventCount));
+        }
+
+        [Test]
+        public void Verify_upcasted_events()
+        {
+            StaticUpcaster.Clear();
+            StaticUpcaster.RegisterUpcaster(new SampleAggregateUpcasted_v1.SampleAggregateUpcasted_v1Upcaster());
+            StaticUpcaster.RegisterUpcaster(new SampleAggregateUpcasted_v2.SampleAggregateUpcasted_v2Upcaster());
+
+            ProjectionEventInspector sut = new ProjectionEventInspector();
+            sut.AddAssembly(Assembly.GetExecutingAssembly());
+            sut.InspectProjectionForEvents(typeof(ProjectionWithEventUpcasted));
+            Assert.That(sut.EventHandled, Is.EquivalentTo(new Type[]
+            {
+                typeof(SampleAggregateCreated),
+                typeof(SampleAggregateUpcasted),
+                typeof(SampleAggregateUpcasted_v1),
+                typeof(SampleAggregateUpcasted_v2),
+            }));
         }
 
         [Test]

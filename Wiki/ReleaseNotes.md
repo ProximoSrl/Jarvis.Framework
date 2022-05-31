@@ -4,6 +4,8 @@
 
 ## vNext
 
+- RebuildEngine 2 that does not uses unwinded events.
+
 ## 6.1.7
 
 - Better indexing for readmodel fixer

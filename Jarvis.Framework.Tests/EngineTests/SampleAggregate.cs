@@ -9,6 +9,7 @@ using Jarvis.Framework.Shared.IdentitySupport;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using NStore.Domain;
+using Jarvis.Framework.Shared.Store;
 
 namespace Jarvis.Framework.Tests.EngineTests
 {
@@ -94,9 +95,50 @@ namespace Jarvis.Framework.Tests.EngineTests
 	{
 	}
 
+	[VersionInfo(Version = 1, Name = "SampleAggregateCreated")]
 	public class SampleAggregateCreated : DomainEvent
 	{
 	}
+
+	[VersionInfo(Version = 1, Name = "SampleAggregateUpcasted")]
+	public class SampleAggregateUpcasted_v1 : DomainEvent
+	{
+        public string Value { get; set; }
+
+		public class SampleAggregateUpcasted_v1Upcaster : BaseUpcaster<SampleAggregateUpcasted_v1, SampleAggregateUpcasted_v2>
+		{
+			protected override SampleAggregateUpcasted_v2 OnUpcast(SampleAggregateUpcasted_v1 eventToUpcast)
+			{
+				return new SampleAggregateUpcasted_v2()
+				{
+					Value = Int32.Parse(eventToUpcast.Value),
+				};
+			}
+		}
+	}
+
+	[VersionInfo(Version = 2, Name = "SampleAggregateUpcasted")]
+	public class SampleAggregateUpcasted_v2 : DomainEvent
+	{
+		public int Value { get; set; }
+
+		public class SampleAggregateUpcasted_v2Upcaster : BaseUpcaster<SampleAggregateUpcasted_v2, SampleAggregateUpcasted>
+		{
+			protected override SampleAggregateUpcasted OnUpcast(SampleAggregateUpcasted_v2 eventToUpcast)
+			{
+				return new SampleAggregateUpcasted()
+				{
+					ValueTest = eventToUpcast.Value / 10,
+				};
+			}
+		}
+	}
+
+	[VersionInfo(Version = 3, Name = "SampleAggregateUpcasted")]
+	public class SampleAggregateUpcasted : DomainEvent
+	{
+        public Int32 ValueTest { get; set; }
+    }
 
 	public class SampleAggregateTouched : DomainEvent
 	{

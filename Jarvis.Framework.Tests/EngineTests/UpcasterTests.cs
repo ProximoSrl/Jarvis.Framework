@@ -2,6 +2,7 @@
 using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.Helpers;
 using Jarvis.Framework.Shared.IdentitySupport;
+using Jarvis.Framework.Shared.Store;
 using Jarvis.Framework.TestHelpers;
 using Newtonsoft.Json;
 using NStore.Domain;
@@ -15,6 +16,7 @@ namespace Jarvis.Framework.Tests.EngineTests
     [TestFixture]
     public class ChangesetUpcasterTest
     {
+        [VersionInfo(Version = 1, Name = "ReallyOldEvent")]
         private class ReallyOldEvent : DomainEvent
         {
             public ReallyOldEvent(Int32 property)
@@ -84,6 +86,30 @@ namespace Jarvis.Framework.Tests.EngineTests
         }
 
         [Test]
+        public void Can_detect_upcast_chain()
+        {
+            StaticUpcaster.Clear();
+            StaticUpcaster.RegisterUpcaster(new UpcastedEvent.Upcaster());
+            StaticUpcaster.RegisterUpcaster(new ReallyOldEvent.Upcaster());
+            var chainOfUpcastedEvents = StaticUpcaster.FindUpcastedEvents(typeof(NewEvent));
+
+            //Assert: we need to verify that the chain of upcasted event is correct
+            Assert.That(chainOfUpcastedEvents, Is.EquivalentTo(new Type[] { typeof(ReallyOldEvent), typeof(UpcastedEvent) }));
+        }
+
+        [Test]
+        public void Can_detect_intermediate_upcast_chain()
+        {
+            StaticUpcaster.Clear();
+            StaticUpcaster.RegisterUpcaster(new UpcastedEvent.Upcaster());
+            StaticUpcaster.RegisterUpcaster(new ReallyOldEvent.Upcaster());
+            var chainOfUpcastedEvents = StaticUpcaster.FindUpcastedEvents(typeof(UpcastedEvent));
+
+            //Assert: we need to verify that the chain of upcasted event is correct
+            Assert.That(chainOfUpcastedEvents, Is.EquivalentTo(new Type[] { typeof(ReallyOldEvent) }));
+        }
+
+        [Test]
         public void Upcast_of_single_event_copy_all_properties()
         {
             var evt = new UpcastedEvent("Hello world")
@@ -146,7 +172,7 @@ namespace Jarvis.Framework.Tests.EngineTests
         }
 
         /// <summary>
-        /// We have ReallyOldEvent upcasted to UpcastedEvent that in turn should be 
+        /// We have ReallyOldEvent upcasted to UpcastedEvent that in turn should be
         /// upcasted to NewEvent
         /// </summary>
         [Test]

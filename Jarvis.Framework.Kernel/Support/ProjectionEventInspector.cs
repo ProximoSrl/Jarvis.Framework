@@ -1,4 +1,5 @@
-﻿using Jarvis.Framework.Kernel.Events;
+﻿using Jarvis.Framework.Kernel.Engine;
+using Jarvis.Framework.Kernel.Events;
 using Jarvis.Framework.Shared.Events;
 using System;
 using System.Collections.Generic;
@@ -23,7 +24,7 @@ namespace Jarvis.Framework.Kernel.Support
 
         public void AddAssembly(Assembly assembly)
         {
-            foreach (var type in assembly.GetTypes().Where(t => t.IsAbstract == false))
+            foreach (var type in assembly.GetTypes().Where(t => !t.IsAbstract))
             {
                 if (typeof(DomainEvent).IsAssignableFrom(type))
                 {
@@ -43,15 +44,14 @@ namespace Jarvis.Framework.Kernel.Support
             HashSet<Type> retValue = new HashSet<Type>();
             var allMethods = type.GetMethods(BindingFlags.Instance | BindingFlags.FlattenHierarchy | BindingFlags.Public | BindingFlags.NonPublic);
             var handlingMethods = allMethods
-                .Where(m => m.Name == "On" & m.IsAbstract == false)
+                .Where(m => m.Name == "On" && !m.IsAbstract)
                 .Select(m => m.GetParameters())
                 .Where(p => p.Length == 1 && typeof(DomainEvent).IsAssignableFrom(p[0].ParameterType));
             foreach (var parameter in handlingMethods)
             {
                 foreach (var eventHandled in ScanForDomainEvent(parameter))
                 {
-                    retValue.Add(eventHandled);
-                    EventHandled.Add(eventHandled);
+                    AddHandledType(eventHandled);
                 }
             }
 
@@ -64,10 +64,21 @@ namespace Jarvis.Framework.Kernel.Support
 
             foreach (var typeExplicitlyHandled in typesExplicitlyHandled)
             {
-                retValue.Add(typeExplicitlyHandled);
-                EventHandled.Add(typeExplicitlyHandled);
+                AddHandledType(typeExplicitlyHandled);
             }
             return retValue;
+
+            void AddHandledType(Type typeToAdd)
+            {
+                retValue.Add(typeToAdd);
+                EventHandled.Add(typeToAdd);
+                var upcastedEventChain = StaticUpcaster.FindUpcastedEvents(typeToAdd);
+                foreach (var evt in upcastedEventChain)
+                {
+                    retValue.Add(evt);
+                    EventHandled.Add(evt);
+                }
+            }
         }
 
         private IEnumerable<Type> ScanForDomainEvent(ParameterInfo[] parameter)
