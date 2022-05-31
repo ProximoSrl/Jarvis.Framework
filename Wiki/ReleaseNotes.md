@@ -2,9 +2,14 @@
 
 ====
 
-## vNext
+## 6.2.1
+
+- Updated references to rebus.mongob
+
+## 6.2.0
 
 - RebuildEngine 2 that does not uses unwinded events.
+- Updated all references.
 
 ## 6.1.7
 
