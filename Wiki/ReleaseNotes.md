@@ -4,6 +4,8 @@
 
 ## vNext
 
+- Case insensitive EventStoreIdentities
+
 ## 6.2.1
 
 - Updated references to rebus.mongob

@@ -37,15 +37,20 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
             int pos = identityAsString.IndexOf(EventStoreIdentity.Separator);
             if (pos == -1)
-                throw new JarvisFrameworkEngineException(string.Format("invalid identity value {0}", identityAsString));
-
+            {
+                throw new JarvisFrameworkIdentityException(string.Format("invalid identity value {0}", identityAsString));
+            }
+            
             var tag = identityAsString.Substring(0, pos);
-            var id = Int64.Parse(identityAsString.Substring(pos + 1));
+            if (!ulong.TryParse(identityAsString.Substring(pos + 1), out var id))
+            {
+                throw new JarvisFrameworkIdentityException(string.Format("invalid identity value {0}", identityAsString));
+            }
             if (!_longBasedFactories.TryGetValue(tag, out Func<long, IIdentity> factory))
             {
-                throw new JarvisFrameworkEngineException(string.Format("{0} not registered in IdentityManager", tag));
+                throw new JarvisFrameworkIdentityException(string.Format("{0} not registered in IdentityManager", tag));
             }
-            return factory(id);
+            return factory((long) id);
         }
 
         public TIdentity ToIdentity<TIdentity>(string identityAsString)

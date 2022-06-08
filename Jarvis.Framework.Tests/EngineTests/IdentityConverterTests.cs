@@ -1,8 +1,8 @@
-﻿using System;
-using Jarvis.Framework.Shared.IdentitySupport;
+﻿using Jarvis.Framework.Shared.IdentitySupport;
 using NUnit.Framework;
-using System.Diagnostics;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace Jarvis.Framework.Tests.EngineTests
 {
@@ -111,10 +111,23 @@ namespace Jarvis.Framework.Tests.EngineTests
             Assert.That(identity, Is.EqualTo(new SampleAggregateId(1)));
         }
 
-        [Test]
-        public void Verify_not_parse_extra_char()
+        [TestCase("SampleAggregate_-1")]
+        [TestCase("SampleAggregate_1_2")]
+        [TestCase("_1")]
+        [TestCase("1")]
+        [TestCase("ASAMPLEAGGREGATE_1")]
+        [TestCase("SAMPLEAGGREGATE__1")]
+        public void To_identity_rejects_invalid_formats(String aggregateIdString)
         {
-            Assert.Throws<FormatException>(() => new SampleAggregateId("SampleAggregate_20|458ca8a2-d165-45ba-8403-4c74c01e7fe1"));
+            Assert.Throws<JarvisFrameworkIdentityException>(() => _manager.ToIdentity(aggregateIdString));
+        }
+
+        [TestCase("SampleAggregate_20|458ca8a2-d165-45ba-8403-4c74c01e7fe1")]
+        [TestCase("SampleAggregate_20|1")]
+        [TestCase("SampleAggregate_20_1")]
+        public void Verify_not_parse_extra_char(string id)
+        {
+            Assert.Throws<JarvisFrameworkIdentityException>(() => new SampleAggregateId(id));
         }
     }
 }
