@@ -2,6 +2,8 @@
 
 ## vnext
 
+## 6.3.0
+
 - EventStoreIdentities are now case insensitive, you can create a DocumentId from string "documeNTID_12"
 - IdentityManager.ToIdentity now raise a JarvisFrameworkIdentityException exception if the id is malformed not the old and not specific JarvisFrameworkEngineException
 

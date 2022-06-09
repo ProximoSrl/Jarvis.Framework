@@ -4,6 +4,8 @@
 
 ## vNext
 
+## 6.3.1
+
 - Case insensitive EventStoreIdentities
 
 ## 6.2.1
