@@ -31,7 +31,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                 return false;
 
             //it must start with id tag
-            if (!id.StartsWith(idTag))
+            if (!id.StartsWith(idTag, StringComparison.OrdinalIgnoreCase))
                 return false;
 
             //Check for separator after the prefix
@@ -81,32 +81,60 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             Assign(id);
         }
 
+        /// <summary>
+        /// Assign the identity to the object, actually this method performs an extended validation
+        /// of the string passed as parameter, rejecting anything that has not a correct format for this
+        /// specific identity.
+        /// </summary>
+        /// <param name="identityAsString"></param>
+        /// <exception cref="JarvisFrameworkIdentityException"></exception>
         protected void Assign(string identityAsString)
         {
             int pos = identityAsString.IndexOf(Separator);
+
+            if (pos == 0)
+            {
+                //identity starts with underscore .... error
+                throw new JarvisFrameworkIdentityException(string.Format("Wrong Identity format: {0}", identityAsString));
+            }
+
+            // now proceed with standard parsing.
+            string tag = null;
+            string idString = null;
             if (pos == -1)
             {
-                long parsed;
-                if (long.TryParse(identityAsString, out parsed))
-                {
-                    this.Id = parsed;
-                    return;
-                }
-
-                throw new JarvisFrameworkIdentityException(string.Format("invalid identity value {0}", identityAsString));
+                //this is a special case, we can have a simple number as id, not pretty much sure if that should be supported
+                tag = GetTag();
+                idString = identityAsString;
             }
-            var tag = identityAsString.Substring(0, pos);
-            var idString = identityAsString.Substring(pos + 1);
-            var id = long.Parse(idString);
-            Assign(tag, id);
+            else if (pos > 0)
+            {
+                //this is normal situation, we found the separator and a tag
+                tag = identityAsString.Substring(0, pos);
+                idString = identityAsString.Substring(pos + 1);
+            }
+
+
+            //Need to parse numeric part, must be a valid long positive.
+            if (ulong.TryParse(idString, out var id))
+            {
+                //this is the standard happy path to create identity.
+                Assign(tag, id);
+                return;
+            }
+
+            //if we reach here the id starts with underscore or is not valid
+            throw new JarvisFrameworkIdentityException(string.Format("invalid identity value {0}", identityAsString));
         }
 
-        protected virtual void Assign(string tag, Int64 value)
+        protected virtual void Assign(string tag, ulong value)
         {
             var thisTag = GetTag();
-            if (tag != thisTag)
+            if (!tag.Equals(thisTag, StringComparison.OrdinalIgnoreCase))
+            {
                 throw new JarvisFrameworkIdentityException(string.Format("Invalid assigment. {0} tag is not valid for type {1} - Tag expected: {2}", tag, GetType().FullName, thisTag));
-            this.Id = value;
+            }
+            Id = (long) value;
         }
 
         public static string Format(Type type, long value)

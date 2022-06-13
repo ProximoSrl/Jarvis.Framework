@@ -2,6 +2,12 @@
 
 ====
 
+## vNext
+
+## 6.3.1
+
+- Case insensitive EventStoreIdentities
+
 ## 6.2.1
 
 - Updated references to rebus.mongob

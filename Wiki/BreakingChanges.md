@@ -1,9 +1,18 @@
-# Version 5
+# Version 6
+
+## vnext
+
+## 6.3.0
+
+- EventStoreIdentities are now case insensitive, you can create a DocumentId from string "documeNTID_12"
+- IdentityManager.ToIdentity now raise a JarvisFrameworkIdentityException exception if the id is malformed not the old and not specific JarvisFrameworkEngineException
 
 ## 6.1.0
 
 - AbstractAtomicReadModel moved some property to private (you should not modify them): CreationUser, LastModificationUser, LastModify, AggregateVersion
 - Standard reamodel base class now contains AggregateVersion property
+
+# Version 5
 
 ## 5.4.0
 
