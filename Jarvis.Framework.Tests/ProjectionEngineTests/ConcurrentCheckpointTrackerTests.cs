@@ -3,6 +3,7 @@ using Jarvis.Framework.Kernel.ProjectionEngine;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 using Jarvis.Framework.Shared.Helpers;
 using Jarvis.Framework.Shared.Messages;
+using Machine.Specifications;
 using MongoDB.Driver;
 using NSubstitute;
 using NUnit.Framework;
@@ -529,6 +530,33 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             var status = _slotStatusCheckerSut.GetSlotsStatus();
 
             Assert.That(status.SlotsThatNeedsRebuild, Has.Count.EqualTo(1));
+        }
+
+        [Test]
+        public void Verify_creation_slot_at_value_should_have_current_to_the_same_value()
+        {
+            var p1 = SetupNewSlot();
+            int currentCheckpoint = 50;
+            _slotStatusCheckerSut.CreateSlotAtCheckpoint(p1.Info.SlotName, currentCheckpoint);
+            var status = _slotStatusCheckerSut.GetSlotsStatus();
+            var p1Checkpoint = _checkPoints.AsQueryable().FirstOrDefault(p => p.Id == p1.Info.CommonName);
+            Assert.That(p1Checkpoint, Is.Not.Null);
+            Assert.That(p1Checkpoint.Value, Is.EqualTo(currentCheckpoint), $"Value should be {currentCheckpoint}");
+            Assert.That(p1Checkpoint.Current, Is.EqualTo(currentCheckpoint), $"Current should be {currentCheckpoint}");
+        }
+
+        private IProjection SetupNewSlot()
+        {
+            var rebuildContext = new RebuildContext(false);
+            var storageFactory = new MongoStorageFactory(_db, rebuildContext);
+            var writer1 = new CollectionWrapper<SampleReadModel3, string>(storageFactory, new NotifyToNobody());
+            var p1 = new Projection3(writer1);
+
+            var projections = new IProjection[] { p1 };
+            _concurrentCheckpointTrackerSut = new ConcurrentCheckpointTracker(_db, 60);
+            _slotStatusCheckerSut = new SlotStatusManager(_db, projections.Select(p => p.Info).ToArray());
+
+            return p1;
         }
 
         private void SetupOneProjectionNew()
