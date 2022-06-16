@@ -249,6 +249,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             foreach (var projection in GetProjectionIdsFromSlot(slotName))
             {
                 Checkpoint cp = new Checkpoint(projection.CommonName, valueCheckpointToken, projection.Signature);
+                cp.Value = valueCheckpointToken;
+                cp.Current = valueCheckpointToken;
                 cp.Slot = projection.SlotName;
                 _checkpoints.Save(cp, cp.Id);
             }
