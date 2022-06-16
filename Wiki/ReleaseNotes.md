@@ -3,8 +3,11 @@
 ====
 
 ## vNext
-
 ## 6.3.1
+
+- Fix CreateSlotAtCheckpoint function to set Current to the same value
+
+## 6.3.0
 
 - Case insensitive EventStoreIdentities
 
