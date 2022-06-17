@@ -53,7 +53,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         }
 
         /// <summary>
-        /// Add an aliast to a key, this is useful when you want 
+        /// Add an alias to a key, this is useful when you want
         /// multiple keys to map to the very same identity (TKey)
         /// </summary>
         /// <param name="key"></param>
@@ -83,6 +83,11 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             MapIdentity(alias, key);
         }
 
+        /// <summary>
+        /// Returns the first mapped value for a given key.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <exception cref="ArgumentNullException"></exception>
         protected String GetAlias(TKey key)
         {
             if (key == null) throw new ArgumentNullException(nameof(key));
@@ -92,18 +97,33 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
         /// <summary>
         /// Return reverse mapping for multiple aliases.
+        /// Returns a Dictionary where the Keys are the requested keys and the value
+        /// is the first mapped value (same behavior as <see cref="GetAlias(TKey)"/>
         /// </summary>
         /// <param name="keys"></param>
         /// <returns>Dictionary with mappings.</returns>
         protected IDictionary<TKey, String> GetAliases(IEnumerable<TKey> keys)
         {
-            if (keys == null || !keys.Any())
+            if (keys?.Any() != true)
                 return new Dictionary<TKey, String>();
 
             return _collection
                 .Find(Builders<MappedIdentity>.Filter.In("AggregateId", keys))
                 .ToEnumerable()
-                .ToDictionary(_ => _.AggregateId, _ => _.ExternalKey);
+                .GroupBy(k => k.AggregateId)
+                .ToDictionary(_ => _.Key, _ => _.First().ExternalKey);
+        }
+
+        /// <summary>
+        /// Returns all the aliases of a given key.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <exception cref="ArgumentNullException"></exception>
+        protected string[] GetAliases(TKey key)
+        {
+            if (key == null) throw new ArgumentNullException(nameof(key));
+            var aliases = _collection.Find(Builders<MappedIdentity>.Filter.Eq("AggregateId", key.AsString())).ToList();
+            return aliases?.Select(a => a.ExternalKey).ToArray();
         }
 
         /// <summary>
@@ -150,7 +170,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             externalKey = externalKey.ToLowerInvariant();
             var mapped = _collection.FindOneById(externalKey);
 
-            return mapped == null ? null : mapped.AggregateId;
+            return mapped?.AggregateId;
         }
 
         private MappedIdentity MapIdentity(string externalKey, TKey key)

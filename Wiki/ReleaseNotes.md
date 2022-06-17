@@ -2,7 +2,11 @@
 
 ====
 
-## vNext
+## 6.3.2
+
+- AbstractIdentityTranslator: added GetAliases(key) function that returns all the aliases for a mapped key.
+- AbstractIdentityTranslator: fixed GetAliases(key[]) function so that does not throw exception when there are multiple mappings for the same key (it will return the first mapped value).
+
 ## 6.3.1
 
 - Fix CreateSlotAtCheckpoint function to set Current to the same value
