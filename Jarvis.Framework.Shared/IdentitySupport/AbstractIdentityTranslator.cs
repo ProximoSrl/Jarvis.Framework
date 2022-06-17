@@ -53,7 +53,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         }
 
         /// <summary>
-        /// Add an aliast to a key, this is useful when you want
+        /// Add an alias to a key, this is useful when you want
         /// multiple keys to map to the very same identity (TKey)
         /// </summary>
         /// <param name="key"></param>
