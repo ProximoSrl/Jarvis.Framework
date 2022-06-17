@@ -138,6 +138,50 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
         }
 
         [Test]
+        public void Verify_reverse_translation_with_multiple_aliases_returns_first_mapped()
+        {
+            TestMapper sut = new TestMapper(_db, _identityManager);
+            String key1 = Guid.NewGuid().ToString();
+            string alias = Guid.NewGuid().ToString();
+
+            var id1 = sut.MapWithAutomaticCreate(key1);
+            sut.AddAlias(id1, alias);
+
+            var reversed = sut.ReverseMap(id1);
+            Assert.That(reversed, Is.EqualTo(key1));
+        }
+
+        [Test]
+        public void Verify_reverse_translation_with_multiple_aliases_returns_dictionary()
+        {
+            TestMapper sut = new TestMapper(_db, _identityManager);
+            String key1 = Guid.NewGuid().ToString();
+            string alias = Guid.NewGuid().ToString();
+
+            var id1 = sut.MapWithAutomaticCreate(key1);
+            sut.AddAlias(id1, alias);
+
+            var reversed = sut.ReverseMap(new[] { id1 });
+            Assert.That(reversed[id1], Is.EqualTo(key1));
+        }
+
+        [Test]
+        public void Verify_reverse_translation_with_multiple_aliases()
+        {
+            TestMapper sut = new TestMapper(_db, _identityManager);
+            String key1 = Guid.NewGuid().ToString();
+            string alias = Guid.NewGuid().ToString();
+
+            var id1 = sut.MapWithAutomaticCreate(key1);
+            sut.AddAlias(id1, alias);
+
+            var reversed = sut.ReverseMaps(id1);
+            Assert.That(reversed.Length, Is.EqualTo(2));
+            Assert.That(reversed[0], Is.EqualTo(key1));
+            Assert.That(reversed[1], Is.EqualTo(alias));
+        }
+
+        [Test]
         public void Verify_reverse_translation_is_resilient_to_missing_id()
         {
             TestMapper sut = new TestMapper(_db, _identityManager);
@@ -203,12 +247,12 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
 
             public SampleAggregateId MapWithAutomaticCreate(String key)
             {
-                return base.Translate(key, true);
+                return Translate(key, true);
             }
 
             public SampleAggregateId MapWithWithoutAutomaticCreate(String key)
             {
-                return base.Translate(key, false);
+                return Translate(key, false);
             }
 
             public IDictionary<String, SampleAggregateId> GetMultipleMapWithoutAutoCreation(params String[] keys)
@@ -218,12 +262,17 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
 
             public string ReverseMap(SampleAggregateId id)
             {
-                return base.GetAlias(id);
+                return GetAlias(id);
             }
 
             public IDictionary<SampleAggregateId, String> ReverseMap(params SampleAggregateId[] ids)
             {
-                return base.GetAliases(ids);
+                return GetAliases(ids);
+            }
+
+            public string[] ReverseMaps(SampleAggregateId id)
+            {
+                return GetAliases(id);
             }
 
             public new void AddAlias(SampleAggregateId key, string alias)
