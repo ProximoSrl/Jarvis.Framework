@@ -95,6 +95,11 @@ namespace Jarvis.Framework.Kernel.Engine
             State.ReplyFinished();
         }
 
+        protected void Throw(String message)
+        {
+            throw new JarvisFrameworkEngineException(message);
+        }
+
         protected void Throw(String message, params String[] param)
         {
             throw new JarvisFrameworkEngineException(String.Format(message, param));
