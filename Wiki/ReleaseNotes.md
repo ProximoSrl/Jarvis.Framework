@@ -2,6 +2,10 @@
 
 ====
 
+## 6.3.3
+
+- Fix healt check when loggin with no string format.
+
 ## 6.3.2
 
 - AbstractIdentityTranslator: added GetAliases(key) function that returns all the aliases for a mapped key.
