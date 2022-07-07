@@ -22,7 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Jarvis.Framework.Kernel\Jarvis.Framework.Kernel.csproj" />
+    <ProjectReference Include="..\Jarvis.Framework\Jarvis.Framework.csproj" />
     <ProjectReference Include="..\Jarvis.Framework.Shared\Jarvis.Framework.Shared.csproj" />
   </ItemGroup>
 

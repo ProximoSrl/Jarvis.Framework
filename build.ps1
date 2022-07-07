@@ -119,10 +119,10 @@ if ($CreateNugetPackages) {
     dotnet pack "Jarvis.Framework.Shared/Jarvis.Framework.Shared.csproj" -o $publishDirectory --configuration $Configuration /p:PackageVersion=$nugetVersion /p:assemblyVersion=$assemblyVersion /p:FileVersion=$assemblyFileVersion /p:InformationalVersion=$assemblyInformationalVersion -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg
     Assert-LastExecution -message "Unable to create nuget packages for Jarvis.Framework.Shared" -haltExecution $true
 
-    dotnet pack "Jarvis.Framework.Kernel/Jarvis.Framework.Kernel.csproj" --no-build -p:PackageId=Jarvis.Framework -o $publishDirectory --configuration $Configuration /p:PackageVersion=$nugetVersion /p:assemblyVersion=$assemblyVersion /p:FileVersion=$assemblyFileVersion /p:InformationalVersion=$assemblyInformationalVersion -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg
+    dotnet pack "Jarvis.Framework/Jarvis.Framework.csproj" -o $publishDirectory --configuration $Configuration /p:PackageVersion=$nugetVersion /p:assemblyVersion=$assemblyVersion /p:FileVersion=$assemblyFileVersion /p:InformationalVersion=$assemblyInformationalVersion -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg
     Assert-LastExecution -message "Unable to create nuget for Jarvis.Framework.Kernel" -haltExecution $true
 
-    dotnet pack "Jarvis.Framework.Bus.Rebus.Integration/Jarvis.Framework.Bus.Rebus.Integration.csproj" --no-build -p:PackageId=Jarvis.Framework.Rebus -o $publishDirectory --configuration $Configuration /p:PackageVersion=$nugetVersion /p:assemblyVersion=$assemblyVersion /p:FileVersion=$assemblyFileVersion /p:InformationalVersion=$assemblyInformationalVersion -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg
+    dotnet pack "Jarvis.Framework.Rebus/Jarvis.Framework.Rebus.csproj" -o $publishDirectory --configuration $Configuration /p:PackageVersion=$nugetVersion /p:assemblyVersion=$assemblyVersion /p:FileVersion=$assemblyFileVersion /p:InformationalVersion=$assemblyInformationalVersion -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg
     Assert-LastExecution -message "Unable to create nuget packages for Bus.Rebus.Integration.csproj" -haltExecution $true
 }
 

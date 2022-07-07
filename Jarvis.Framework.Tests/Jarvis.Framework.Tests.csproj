@@ -38,8 +38,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Jarvis.Framework.Bus.Rebus.Integration\Jarvis.Framework.Bus.Rebus.Integration.csproj" />
-    <ProjectReference Include="..\Jarvis.Framework.Kernel\Jarvis.Framework.Kernel.csproj" />
+    <ProjectReference Include="..\Jarvis.Framework.Rebus\Jarvis.Framework.Rebus.csproj" />
+    <ProjectReference Include="..\Jarvis.Framework\Jarvis.Framework.csproj" />
     <ProjectReference Include="..\Jarvis.Framework.Shared\Jarvis.Framework.Shared.csproj" />
     <ProjectReference Include="..\Jarvis.Framework.TestHelpers\Jarvis.Framework.TestHelpers.csproj" />
   </ItemGroup>
