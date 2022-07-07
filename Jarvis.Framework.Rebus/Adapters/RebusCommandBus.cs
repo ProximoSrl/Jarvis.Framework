@@ -7,7 +7,7 @@ using Rebus.Bus;
 using System;
 using System.Threading.Tasks;
 
-namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
+namespace Jarvis.Framework.Rebus.Adapters
 {
     public abstract class RebusCommandBus : ICommandBus
     {
@@ -31,7 +31,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
         private Task SendCommand(ICommand command)
         {
             var forcedDispatchQueue = command.GetContextData(MessagesConstants.DestinationAddress);
-            if (!String.IsNullOrEmpty(forcedDispatchQueue))
+            if (!string.IsNullOrEmpty(forcedDispatchQueue))
             {
                 return _bus.Advanced.Routing.Send(forcedDispatchQueue, command);
             }
@@ -51,7 +51,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
         private Task SendCommandLocal(ICommand command)
         {
             var forcedDispatchQueue = command.GetContextData(MessagesConstants.DestinationAddress);
-            if (!String.IsNullOrEmpty(forcedDispatchQueue))
+            if (!string.IsNullOrEmpty(forcedDispatchQueue))
             {
                 throw new JarvisFrameworkEngineException("Cannot use a DestinationAddress with a send local. It is allowed only with a standard send.");
             }
@@ -72,7 +72,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
             else
             {
                 var forcedDispatchQueue = command.GetContextData(MessagesConstants.DestinationAddress);
-                if (!String.IsNullOrEmpty(forcedDispatchQueue))
+                if (!string.IsNullOrEmpty(forcedDispatchQueue))
                 {
                     throw new JarvisFrameworkEngineException("Cannot use a DestinationAddress with a deferred message. It is allowed only with a standard send.");
                 }

@@ -3,7 +3,7 @@ using Rebus.Bus;
 using Rebus.Config;
 using System;
 
-namespace Jarvis.Framework.Bus.Rebus.Integration.Support
+namespace Jarvis.Framework.Rebus.Support
 {
     public class BusStarter : IStartable
     {

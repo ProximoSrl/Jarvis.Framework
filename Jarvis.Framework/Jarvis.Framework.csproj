@@ -7,6 +7,8 @@
     <DebugType>full</DebugType>
     <DebugSymbols>true</DebugSymbols>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <RootNamespace>Jarvis.Framework.Kernel</RootNamespace>
+    <CodeAnalysisRuleSet>Jarvis.Framework.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard2.0'">

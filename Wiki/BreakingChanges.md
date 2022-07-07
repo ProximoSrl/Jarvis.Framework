@@ -7,6 +7,10 @@
 - EventStoreIdentities are now case insensitive, you can create a DocumentId from string "documeNTID_12"
 - IdentityManager.ToIdentity now raise a JarvisFrameworkIdentityException exception if the id is malformed not the old and not specific JarvisFrameworkEngineException
 
+### 6.3.4
+
+- Renamed all namespace from Jarvis.Framework.Bus.Rebus.Integration to Jarvis.Framework.Rebus
+
 ## 6.1.0
 
 - AbstractAtomicReadModel moved some property to private (you should not modify them): CreationUser, LastModificationUser, LastModify, AggregateVersion

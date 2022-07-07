@@ -1,4 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <RuleSet Name="SonarQube - Jarvis.Framework Sonar way" ToolsVersion="15.0">
   <Include Path="..\.sonarlint\jarvis.frameworkcsharp.ruleset" Action="Default" />
+  <Rules AnalyzerId="Microsoft.CodeAnalysis.CSharp" RuleNamespace="Microsoft.CodeAnalysis.CSharp">
+    <Rule Id="CS1591" Action="Info" />
+  </Rules>
 </RuleSet>

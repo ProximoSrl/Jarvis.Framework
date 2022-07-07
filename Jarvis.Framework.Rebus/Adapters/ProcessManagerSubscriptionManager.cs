@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
+namespace Jarvis.Framework.Rebus.Adapters
 {
     /// <summary>
     /// This will scan all process manager listener, and all objects that is registered
@@ -44,7 +44,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
             }
 
             //then should scan Castle for each component that registered IHandleMessage
-            foreach (var handler in _kernel.GetAssignableHandlers(typeof(Object)))
+            foreach (var handler in _kernel.GetAssignableHandlers(typeof(object)))
             {
                 var messageHandlers = handler.ComponentModel.Services
                     .Where(s => s.IsGenericType && s.GetGenericTypeDefinition() == typeof(IHandleMessages<>));

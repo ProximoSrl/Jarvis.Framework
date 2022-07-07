@@ -16,7 +16,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Jarvis.Framework.Bus.Rebus.Integration.Support
+namespace Jarvis.Framework.Rebus.Support
 {
     public partial class BusBootstrapper
     {

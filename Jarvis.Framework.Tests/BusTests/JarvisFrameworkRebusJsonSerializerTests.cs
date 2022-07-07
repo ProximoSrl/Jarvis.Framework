@@ -1,4 +1,4 @@
-﻿using Jarvis.Framework.Bus.Rebus.Integration.Support;
+﻿using Jarvis.Framework.Rebus.Support;
 using NUnit.Framework;
 using Rebus.Messages;
 using Rebus.Serialization;
@@ -29,7 +29,7 @@ namespace Jarvis.Framework.Tests.BusTests
                 "Jarvis.Framework.OldAssembly, Version=1.0.0.0")).ConfigureAwait(false);
         }
 
-        private async Task TestBody(Func<string, string> stringManipulation) 
+        private async Task TestBody(Func<string, string> stringManipulation)
         {
             var sut = CreateSut();
             Dictionary<String, TestClass> dic = new Dictionary<string, TestClass>();

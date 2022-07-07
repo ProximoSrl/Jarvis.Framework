@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Reflection;
 
-namespace Jarvis.Framework.Bus.Rebus.Integration.Support
+namespace Jarvis.Framework.Rebus.Support
 {
     /// <summary>
     /// Configuration for rebus, it is necessary to have it centralized
@@ -59,7 +59,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
         /// </para>
         /// <para>
         /// <br />
-        /// This should be a value taken from <see cref="JarvisStartableFacility.Priorities"/>
+        /// This should be a value taken from JarvisStartableFacility.Priorities
         /// </para>
         /// </summary>
         public Int32 StartBusPriority { get; set; }

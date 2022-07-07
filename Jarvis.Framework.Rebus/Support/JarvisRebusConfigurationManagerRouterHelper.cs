@@ -5,7 +5,7 @@ using Rebus.Routing.TypeBased;
 using System;
 using System.Linq;
 
-namespace Jarvis.Framework.Bus.Rebus.Integration.Support
+namespace Jarvis.Framework.Rebus.Support
 {
     public class JarvisRebusConfigurationManagerRouterHelper
     {

@@ -1,9 +1,8 @@
 ﻿using Castle.Core.Logging;
 using Fasterflect;
-using Jarvis.Framework.Bus.Rebus.Integration.Support;
+using Jarvis.Framework.Rebus.Support;
 using Jarvis.Framework.Shared.Domain.Serialization;
 using Jarvis.Framework.Shared.Events;
-using Jarvis.Framework.Shared.Exceptions;
 using Jarvis.Framework.Shared.Messages;
 using Newtonsoft.Json;
 using NUnit.Framework;
@@ -109,11 +108,11 @@ namespace Jarvis.Framework.Tests.BusTests
         public void Class_generic_with_Array()
         {
             var obj = new ClassWithArrayGeneric();
-            obj.DomainEvents = new[] { new ClassGeneric<String, int> 
+            obj.DomainEvents = new[] { new ClassGeneric<String, int>
                 {
                     PropT = "Ciao",
                     PropU = 42
-                } 
+                }
             };
             var serialized = JsonConvert.SerializeObject(obj, GetSettingsForTest());
             Console.WriteLine(serialized);
@@ -121,7 +120,7 @@ namespace Jarvis.Framework.Tests.BusTests
             var defaultSerialized = JsonConvert.SerializeObject(obj, GetDefaultSettingsWithFullSerialization());
             Console.WriteLine(defaultSerialized);
 
-            var deserialized = JsonConvert.DeserializeObject< ClassWithArrayGeneric>(serialized, GetSettingsForTest());
+            var deserialized = JsonConvert.DeserializeObject<ClassWithArrayGeneric>(serialized, GetSettingsForTest());
 
             Assert.That(deserialized.DomainEvents.Single().PropT, Is.EqualTo("Ciao"));
         }
@@ -300,7 +299,7 @@ namespace Jarvis.Framework.Tests.BusTests
                 DomainEvents = new[] { "foo", "bar" },
                 ExtraData = new
                 {
-                    Id ="Document_123",
+                    Id = "Document_123",
                     ContainerId = "Container_2134",
                     CreationUser = "user_23",
                     IsInDraft = true,
@@ -328,7 +327,7 @@ namespace Jarvis.Framework.Tests.BusTests
         [Test]
         public void Generic_object_serialization_with_complex_anonymous_types_and_linq()
         {
-            
+
             ClassWithAnonymousType classWithAnonymousType = new ClassWithAnonymousType()
             {
                 DomainEvents = new[] { "foo", "bar" },
@@ -410,7 +409,7 @@ namespace Jarvis.Framework.Tests.BusTests
             public ClassGeneric<string, int>[] DomainEvents { get; set; }
         }
 
-        public class ClassGeneric<T, U> 
+        public class ClassGeneric<T, U>
         {
             public U PropU { get; set; }
 

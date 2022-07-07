@@ -45,11 +45,11 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
         {
             var id = sut.Map("TEST");
             var mapCount = _mappingCollection.FindAll();
-            Assert.That(mapCount.Count(), Is.EqualTo(1));
+            Assert.That(mapCount.CountDocuments(), Is.EqualTo(1));
 
             sut.DeleteAliases(id);
             mapCount = _mappingCollection.FindAll();
-            Assert.That(mapCount.Count(), Is.EqualTo(0));
+            Assert.That(mapCount.CountDocuments(), Is.EqualTo(0));
         }
 
         [Test]
@@ -57,11 +57,11 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
         {
             var id = sutFlat.Map("TEST");
             var mapCount = _mappingFlatCollection.FindAll();
-            Assert.That(mapCount.Count(), Is.EqualTo(1));
+            Assert.That(mapCount.CountDocuments(), Is.EqualTo(1));
 
             sutFlat.DeleteAliases(id);
             mapCount = _mappingFlatCollection.FindAll();
-            Assert.That(mapCount.Count(), Is.EqualTo(0));
+            Assert.That(mapCount.CountDocuments(), Is.EqualTo(0));
         }
 
         [Test]
@@ -69,11 +69,11 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
         {
             var id = sutFlat.Map("TEST");
             var mapCount = _mappingFlatCollection.FindAll();
-            Assert.That(mapCount.Count(), Is.EqualTo(1));
+            Assert.That(mapCount.CountDocuments(), Is.EqualTo(1));
 
             sutFlat.ReplaceAlias(id, "TEST2");
             mapCount = _mappingFlatCollection.FindAll();
-            Assert.That(mapCount.Count(), Is.EqualTo(1));
+            Assert.That(mapCount.CountDocuments(), Is.EqualTo(1));
         }
 
         [Test]
@@ -123,8 +123,4 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             Assert.That(instance.AbstractId.Id, Is.EqualTo(42L));
         }
     }
-
-
-
-
 }

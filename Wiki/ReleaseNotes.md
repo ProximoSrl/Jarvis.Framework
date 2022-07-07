@@ -4,6 +4,7 @@
 ## 6.3.4
 
 - Fix build using a standard build.ps1 file
+- Rename of rebus project
   
 ## 6.3.3
 
