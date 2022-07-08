@@ -6,6 +6,8 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <DebugType>full</DebugType>
     <DebugSymbols>true</DebugSymbols>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <CodeAnalysisRuleSet>Jarvis.Framework.Rebus.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'net461' ">
@@ -20,11 +22,11 @@
     <PackageReference Include="Castle.Core" Version="4.4.1" />
     <PackageReference Include="Castle.LoggingFacility" Version="5.1.1" />
     <PackageReference Include="Castle.Windsor" Version="5.1.1" />
-    <PackageReference Include="MongoDB.Bson" Version="2.15.1" />
-    <PackageReference Include="MongoDB.Driver" Version="2.15.1" />
-    <PackageReference Include="MongoDB.Driver.Core" Version="2.15.1" />
-    <PackageReference Include="MongoDB.Driver.GridFS" Version="2.15.1" />
-    <PackageReference Include="MongoDB.Libmongocrypt" Version="1.5.2" />
+    <PackageReference Include="MongoDB.Bson" Version="2.16.1" />
+    <PackageReference Include="MongoDB.Driver" Version="2.16.1" />
+    <PackageReference Include="MongoDB.Driver.Core" Version="2.16.1" />
+    <PackageReference Include="MongoDB.Driver.GridFS" Version="2.16.1" />
+    <PackageReference Include="MongoDB.Libmongocrypt" Version="1.5.3" />
     <PackageReference Include="NStore.Core" Version="0.11.5" />
     <PackageReference Include="NStore.Domain" Version="0.11.5" />
     <PackageReference Include="NStore.Persistence.Mongo" Version="0.11.5" />
@@ -35,7 +37,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Jarvis.Framework.Kernel\Jarvis.Framework.Kernel.csproj" />
     <ProjectReference Include="..\Jarvis.Framework.Shared\Jarvis.Framework.Shared.csproj" />
+    <ProjectReference Include="..\Jarvis.Framework\Jarvis.Framework.csproj" />
   </ItemGroup>
 </Project>

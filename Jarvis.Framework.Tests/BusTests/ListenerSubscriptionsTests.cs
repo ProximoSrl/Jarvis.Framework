@@ -1,8 +1,8 @@
 ﻿using Castle.MicroKernel;
 using Castle.MicroKernel.Registration;
 using Castle.Windsor;
-using Jarvis.Framework.Bus.Rebus.Integration.Adapters;
 using Jarvis.Framework.Kernel.Engine;
+using Jarvis.Framework.Rebus.Adapters;
 using Jarvis.Framework.Tests.BusTests.Handlers;
 using Jarvis.Framework.Tests.BusTests.MessageFolder;
 using NSubstitute;

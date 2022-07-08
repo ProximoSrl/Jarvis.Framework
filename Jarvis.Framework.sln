@@ -1,17 +1,17 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.28407.52
+# Visual Studio Version 17
+VisualStudioVersion = 17.3.32611.2
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jarvis.Framework.Shared", "Jarvis.Framework.Shared\Jarvis.Framework.Shared.csproj", "{70B179ED-C419-4782-B080-0D1678C90279}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jarvis.Framework.Kernel", "Jarvis.Framework.Kernel\Jarvis.Framework.Kernel.csproj", "{203AD69F-E839-46CF-A25A-0ED22EA1ABF8}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jarvis.Framework.Bus.Rebus.Integration", "Jarvis.Framework.Bus.Rebus.Integration\Jarvis.Framework.Bus.Rebus.Integration.csproj", "{804D09EF-0E40-4C7C-8064-ADD92B7DE03F}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jarvis.Framework.TestHelpers", "Jarvis.Framework.TestHelpers\Jarvis.Framework.TestHelpers.csproj", "{DF7EF8CC-CDA7-4299-8769-62FDD1654FB9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jarvis.Framework.Tests", "Jarvis.Framework.Tests\Jarvis.Framework.Tests.csproj", "{D5D90909-CFEF-443E-BDDE-318FE638E5C0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jarvis.Framework.Tests", "Jarvis.Framework.Tests\Jarvis.Framework.Tests.csproj", "{D5D90909-CFEF-443E-BDDE-318FE638E5C0}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jarvis.Framework", "Jarvis.Framework\Jarvis.Framework.csproj", "{7CCB4F2F-59BD-4CF9-99F0-707C9DC0470A}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jarvis.Framework.Rebus", "Jarvis.Framework.Rebus\Jarvis.Framework.Rebus.csproj", "{CA8F9C2A-36CF-4125-BD41-32561F87ACAA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -23,14 +23,6 @@ Global
 		{70B179ED-C419-4782-B080-0D1678C90279}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{70B179ED-C419-4782-B080-0D1678C90279}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{70B179ED-C419-4782-B080-0D1678C90279}.Release|Any CPU.Build.0 = Release|Any CPU
-		{203AD69F-E839-46CF-A25A-0ED22EA1ABF8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{203AD69F-E839-46CF-A25A-0ED22EA1ABF8}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{203AD69F-E839-46CF-A25A-0ED22EA1ABF8}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{203AD69F-E839-46CF-A25A-0ED22EA1ABF8}.Release|Any CPU.Build.0 = Release|Any CPU
-		{804D09EF-0E40-4C7C-8064-ADD92B7DE03F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{804D09EF-0E40-4C7C-8064-ADD92B7DE03F}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{804D09EF-0E40-4C7C-8064-ADD92B7DE03F}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{804D09EF-0E40-4C7C-8064-ADD92B7DE03F}.Release|Any CPU.Build.0 = Release|Any CPU
 		{DF7EF8CC-CDA7-4299-8769-62FDD1654FB9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{DF7EF8CC-CDA7-4299-8769-62FDD1654FB9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DF7EF8CC-CDA7-4299-8769-62FDD1654FB9}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -39,6 +31,14 @@ Global
 		{D5D90909-CFEF-443E-BDDE-318FE638E5C0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D5D90909-CFEF-443E-BDDE-318FE638E5C0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D5D90909-CFEF-443E-BDDE-318FE638E5C0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7CCB4F2F-59BD-4CF9-99F0-707C9DC0470A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7CCB4F2F-59BD-4CF9-99F0-707C9DC0470A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7CCB4F2F-59BD-4CF9-99F0-707C9DC0470A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7CCB4F2F-59BD-4CF9-99F0-707C9DC0470A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CA8F9C2A-36CF-4125-BD41-32561F87ACAA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CA8F9C2A-36CF-4125-BD41-32561F87ACAA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CA8F9C2A-36CF-4125-BD41-32561F87ACAA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CA8F9C2A-36CF-4125-BD41-32561F87ACAA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

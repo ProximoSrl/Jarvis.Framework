@@ -17,6 +17,7 @@ TestResults
 *.user
 *.sln.docstates
 .vs/
+BuildOutput/**
 
 # Build results
 publish-*

@@ -3,7 +3,7 @@ using Castle.MicroKernel.Registration;
 using Jarvis.Framework.Kernel.Engine;
 using Rebus.Handlers;
 
-namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
+namespace Jarvis.Framework.Rebus.Adapters
 {
     /// <summary>
     /// Register in castle windsor all listeners for Saga an Message Handlers.

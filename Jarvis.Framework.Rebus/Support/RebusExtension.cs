@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Jarvis.Framework.Bus.Rebus.Integration.Support
+namespace Jarvis.Framework.Rebus.Support
 {
     public static class RebusExtension
     {

@@ -9,7 +9,7 @@ using Rebus.Handlers;
 using System;
 using System.Threading.Tasks;
 
-namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
+namespace Jarvis.Framework.Rebus.Adapters
 {
     /// <summary>
     /// MessageHandler (Bus) to CommandHandler (Jarvis.Framework.Kernel) Adapter
@@ -50,7 +50,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
             var notifyTo = message.GetContextData(MessagesConstants.ReplyToHeader);
 
             CommandHandled replyCommandHandled = null;
-            Boolean success = false;
+            bool success = false;
             Exception lastException = null;
             do
             {

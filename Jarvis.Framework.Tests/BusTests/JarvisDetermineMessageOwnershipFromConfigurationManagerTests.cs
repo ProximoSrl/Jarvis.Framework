@@ -1,4 +1,4 @@
-﻿using Jarvis.Framework.Bus.Rebus.Integration.Support;
+﻿using Jarvis.Framework.Rebus.Support;
 using Jarvis.Framework.Tests.BusTests.MessageFolder;
 using NUnit.Framework;
 using System.Collections.Generic;

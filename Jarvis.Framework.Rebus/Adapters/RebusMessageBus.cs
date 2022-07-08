@@ -1,13 +1,14 @@
 ﻿using Castle.Core.Logging;
+using Jarvis.Framework.Shared.Commands;
 using Jarvis.Framework.Shared.Messages;
 using Rebus.Bus;
 using System;
 using System.Threading.Tasks;
 
-namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
+namespace Jarvis.Framework.Rebus.Adapters
 {
     /// <summary>
-    /// This message bus is used when someone (like process manager) should dispatch 
+    /// This message bus is used when someone (like process manager) should dispatch
     /// standard Messages in the bus, not something that inherits from <see cref="ICommand"/>
     /// </summary>
     public class RebusMessageBus : IMessageBus

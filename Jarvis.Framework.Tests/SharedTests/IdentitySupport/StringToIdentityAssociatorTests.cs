@@ -83,7 +83,7 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
 			document = _collection.FindOneById("a300");
 			Assert.That(document["OriginalKey"].AsString, Is.EqualTo("A300"));
 
-			Assert.That(_collection.Count(Builders<BsonDocument>.Filter.Empty), Is.EqualTo(2L));
+			Assert.That(_collection.CountDocuments(Builders<BsonDocument>.Filter.Empty), Is.EqualTo(2L));
 		}
 
 		[Test]
@@ -124,7 +124,7 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
 
 				Assert.That(testLogger.ErrorCount, Is.EqualTo(1)); //We need to log the error
 
-				Assert.That(_collection.Count(Builders<BsonDocument>.Filter.Empty), Is.EqualTo(3L));
+				Assert.That(_collection.CountDocuments(Builders<BsonDocument>.Filter.Empty), Is.EqualTo(3L));
 			}
 		}
 
@@ -167,7 +167,7 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
 				Assert.That(document["Id"].AsString, Is.EqualTo("Test_2"));
 
 				Assert.That(testLogger.ErrorCount, Is.EqualTo(1)); //We need to log the error
-				Assert.That(_collection.Count(Builders<BsonDocument>.Filter.Empty), Is.EqualTo(3L));
+				Assert.That(_collection.CountDocuments(Builders<BsonDocument>.Filter.Empty), Is.EqualTo(3L));
 			}
 		}
 	}
@@ -207,7 +207,7 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
 			document = _collection.FindOneById("A300");
 			Assert.That(document["OriginalKey"].AsString, Is.EqualTo("A300"));
 
-			Assert.That(_collection.Count(Builders<BsonDocument>.Filter.Empty), Is.EqualTo(2L));
+			Assert.That(_collection.CountDocuments(Builders<BsonDocument>.Filter.Empty), Is.EqualTo(2L));
 		}
 
 		[Test]
@@ -245,7 +245,7 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
 			Assert.That(document["Id"].AsString, Is.EqualTo("Test_2"));
 
 			Assert.That(testLogger.ErrorCount, Is.EqualTo(0)); //NO ERROR LOGGED
-			Assert.That(_collection.Count(Builders<BsonDocument>.Filter.Empty), Is.EqualTo(3L));
+			Assert.That(_collection.CountDocuments(Builders<BsonDocument>.Filter.Empty), Is.EqualTo(3L));
 		}
 
 		[Test]
@@ -286,7 +286,7 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
 			Assert.That(document["Id"].AsString, Is.EqualTo("Test_2"));
 
 			Assert.That(testLogger.ErrorCount, Is.EqualTo(0)); //No log error
-			Assert.That(_collection.Count(Builders<BsonDocument>.Filter.Empty), Is.EqualTo(3L));
+			Assert.That(_collection.CountDocuments(Builders<BsonDocument>.Filter.Empty), Is.EqualTo(3L));
 		}
 	}
 

@@ -9,7 +9,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
+namespace Jarvis.Framework.Rebus.Adapters
 {
     /// <summary>
     /// This is the saga adapter, that dispatch all messages to the saga, it is asyncronous
@@ -27,7 +27,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
         private readonly ILogger _logger;
         private readonly IRepository _repository;
         private readonly IProcessManagerListener<TProcessManager, TState> _listener;
-        private readonly Int32 _numberOfConcurrencyExceptionBeforeRandomSleeping = 5;
+        private readonly int _numberOfConcurrencyExceptionBeforeRandomSleeping = 5;
 
         public RebusSagaAdapter(IRepository repository, IProcessManagerListener<TProcessManager, TState> listener, ILogger logger)
         {
@@ -47,7 +47,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Adapters
                 try
                 {
                     var id = _listener.GetCorrelationId(message);
-                    if (String.IsNullOrEmpty(id))
+                    if (string.IsNullOrEmpty(id))
                         return;
                     if (i > 0)
                     {
