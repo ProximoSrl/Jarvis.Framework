@@ -1,7 +1,11 @@
 # J.A.R.V.I.S. Framework - Proximo srl (c)
 
 ====
+## 6.3.4
 
+- Fix build using a standard build.ps1 file
+- Rename of rebus project
+  
 ## 6.3.3
 
 - Fix healt check when loggin with no string format.

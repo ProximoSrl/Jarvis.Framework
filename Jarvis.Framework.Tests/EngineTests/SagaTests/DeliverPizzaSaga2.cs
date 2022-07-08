@@ -36,25 +36,23 @@ namespace Jarvis.Framework.Tests.EngineTests.SagaTests
 
 		public String PizzaActualStatus { get; set; }
 
-		internal ILogger Logger { get; set; }
-
 		private void Log(String message)
 		{
 			Logger.Debug(message);
 			PizzaActualStatus = message;
 		}
 
-		public void On(PaymentReceived paymentReceived)
+		public void On(PaymentReceived _)
 		{
 			Log("Payment received");
 		}
 
-		public void On(BillPrinted billPrinted)
+		public void On(BillPrinted _)
 		{
 			Log("Bill printed");
 		}
 
-		public void On(PizzaDelivered pizzaDelivered)
+		public void On(PizzaDelivered _)
 		{
 			Log("Pizza delivered");
 		}

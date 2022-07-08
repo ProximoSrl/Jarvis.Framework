@@ -5,7 +5,7 @@ using Newtonsoft.Json.Serialization;
 using System;
 using System.Runtime.CompilerServices;
 
-namespace Jarvis.Framework.Bus.Rebus.Integration.Support
+namespace Jarvis.Framework.Rebus.Support
 {
     public class JarvisFrameworkRebusSerializationBinder : DefaultSerializationBinder
     {

@@ -1,14 +1,14 @@
 ﻿using Castle.Core.Logging;
 using Castle.MicroKernel.Registration;
 using Castle.Windsor;
-using Jarvis.Framework.Bus.Rebus.Integration.Adapters;
 using Jarvis.Framework.Kernel.Commands;
 using Jarvis.Framework.Kernel.Engine;
+using Jarvis.Framework.Rebus.Adapters;
 using Rebus.Handlers;
 using System.Linq;
 using System.Reflection;
 
-namespace Jarvis.Framework.Bus.Rebus.Integration.Support
+namespace Jarvis.Framework.Rebus.Support
 {
     /// <summary>
     /// Registra nel bus i Command handlers
@@ -22,8 +22,8 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
 
         public CommandHandlersRegistration(IWindsorContainer container, params Assembly[] assemblies)
         {
-            this._container = container;
-            this._assemblies = assemblies;
+            _container = container;
+            _assemblies = assemblies;
         }
 
         /// <summary>

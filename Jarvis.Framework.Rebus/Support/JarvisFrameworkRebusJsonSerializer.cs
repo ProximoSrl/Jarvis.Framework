@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Jarvis.Framework.Bus.Rebus.Integration.Support
+namespace Jarvis.Framework.Rebus.Support
 {
     /// <summary>
     /// This is copied directly from the original serializer of rebus you can find here
@@ -39,8 +39,8 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
         readonly string _encodingHeaderValue;
 
         public JarvisFrameworkRebusJsonSerializer(
-            IMessageTypeNameConvention messageTypeNameConvention, 
-            JsonSerializerSettings jsonSerializerSettings = null, 
+            IMessageTypeNameConvention messageTypeNameConvention,
+            JsonSerializerSettings jsonSerializerSettings = null,
             Encoding encoding = null)
         {
             _messageTypeNameConvention = messageTypeNameConvention ?? throw new ArgumentNullException(nameof(messageTypeNameConvention));
@@ -66,7 +66,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
                 headers[Headers.Type] = _messageTypeNameConvention.GetTypeName(message.Body.GetType());
             }
 
-            return Task.FromResult( new TransportMessage(headers, bytes));
+            return Task.FromResult(new TransportMessage(headers, bytes));
         }
 
         /// <summary>
@@ -144,7 +144,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
                         ? JsonConvert.DeserializeObject(bodyString, _settings)
                         : JsonConvert.DeserializeObject(bodyString, type, _settings);
                 }
-                catch (JsonSerializationException jsex)
+                catch (JsonSerializationException)
                 {
                     if (type != null)
                     {
@@ -154,7 +154,7 @@ namespace Jarvis.Framework.Bus.Rebus.Integration.Support
                     throw;
                 }
             }
-        
+
             catch (Exception exception)
             {
                 if (bodyString.Length > 32768)
