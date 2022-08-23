@@ -16,6 +16,9 @@ using System.Linq;
 
 namespace Jarvis.Framework.Shared.Commands.Tracking
 {
+    /// <summary>
+    /// Track progress of command inside mongo database (usually the log database)
+    /// </summary>
     public class MongoDbMessagesTracker : IMessagesTracker, IMessagesTrackerQueryManager
     {
         private IMongoCollection<TrackedMessageModel> _commands;
@@ -52,6 +55,10 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
 
         private readonly IMongoDatabase _db;
 
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="db"></param>
         public MongoDbMessagesTracker(IMongoDatabase db)
         {
             _db = db;
@@ -114,6 +121,7 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
             return collection;
         }
 
+        /// <inheritdoc/>
         public void Started(IMessage msg)
         {
             try
@@ -154,6 +162,7 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
             }
         }
 
+        /// <inheritdoc/>
         public void ElaborationStarted(ICommand command, DateTime startAt)
         {
             try
@@ -176,6 +185,7 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
             }
         }
 
+        /// <inheritdoc/>
         public void Completed(ICommand command, DateTime completedAt)
         {
             try
@@ -236,6 +246,7 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
             }
         }
 
+        /// <inheritdoc/>
         public bool Dispatched(Guid messageId, DateTime dispatchedAt)
         {
             try
@@ -258,13 +269,20 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
             return false;
         }
 
+        /// <inheritdoc/>
         public void Drop()
         {
             Commands?.Drop();
         }
 
+        /// <inheritdoc />
         public void Failed(ICommand command, DateTime failedAt, Exception ex)
         {
+            if (command is null)
+            {
+                throw new ArgumentNullException(nameof(command));
+            }
+
             LogTypedException(command, ex);
             try
             {
@@ -310,6 +328,7 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
 
         private static readonly SortDefinition<TrackedMessageModel> OrederByCreationDateDescending = Builders<TrackedMessageModel>.Sort.Descending(m => m.StartedAt);
 
+        /// <inheritdoc/>
         public List<TrackedMessageModel> GetByIdList(IEnumerable<String> idList)
         {
             return Commands.Find(
@@ -317,13 +336,8 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
                 .ToList();
         }
 
-        /// <summary>
-        /// Get a list of command for a user with pagination.
-        /// </summary>
-        /// <param name="userId"></param>
-        /// <param name="pageIndex"></param>
-        /// <param name="pageSize"></param>
-        /// <returns></returns>
+
+        /// <inheritdoc/>
         public TrackedMessageModelPaginated GetCommands(string userId, int pageIndex, int pageSize)
         {
             var query = Commands.AsQueryable()
@@ -345,6 +359,7 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
             };
         }
 
+        /// <inheritdoc/>
         public List<TrackedMessageModel> Query(MessageTrackerQuery query, int limit)
         {
             if (limit > 1000)

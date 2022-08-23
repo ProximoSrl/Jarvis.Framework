@@ -1,6 +1,11 @@
 # J.A.R.V.I.S. Framework - Proximo srl (c)
 
 ====
+
+## 6.3.5
+
+- Fix handle poison messages in queue that are not commands.
+
 ## 6.3.4
 
 - Fix build using a standard build.ps1 file
