@@ -78,7 +78,11 @@ namespace Jarvis.Framework.Rebus.Support
                         }
 
                         var command = GetCommandFromMessage(transportMessage);
-                        _lazyMessageTracker.Value.Failed(command, DateTime.UtcNow, exception);
+                        if (command != null)
+                        {
+                            //Ok we need to track failure of the command, but only if this message is a command.
+                            _lazyMessageTracker.Value.Failed(command, DateTime.UtcNow, exception);
+                        }
 
                         if (exception != null)
                         {

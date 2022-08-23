@@ -128,6 +128,12 @@ namespace Jarvis.Framework.Shared.ReadModel
         private readonly IMongoCollection<OfflineCommandInfo> _offlineCommandCollection;
         private readonly IMessagesTrackerQueryManager _originalQueryManager;
 
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="originalTracker"></param>
+        /// <param name="originalQueryManager"></param>
+        /// <param name="logDb"></param>
         public OfflineCommandMessageTracker(
             IMessagesTracker originalTracker,
             IMessagesTrackerQueryManager originalQueryManager,
@@ -140,6 +146,7 @@ namespace Jarvis.Framework.Shared.ReadModel
 
         #region IMessageTracker interface
 
+        /// <inheritdoc/>
         public void Completed(ICommand command, DateTime completedAt)
         {
             _originalTracker.Completed(command, completedAt);
@@ -149,23 +156,32 @@ namespace Jarvis.Framework.Shared.ReadModel
                new FindOneAndReplaceOptions<OfflineCommandInfo, OfflineCommandInfo>() { IsUpsert = true });
         }
 
+        /// <inheritdoc/>
         public bool Dispatched(Guid messageId, DateTime dispatchedAt)
         {
             return _originalTracker.Dispatched(messageId, dispatchedAt);
         }
 
+        /// <inheritdoc/>
         public void Drop()
         {
             _originalTracker.Drop();
         }
 
+        /// <inheritdoc/>
         public void ElaborationStarted(ICommand command, DateTime startAt)
         {
             _originalTracker.ElaborationStarted(command, startAt);
         }
 
+        /// <inheritdoc/>
         public void Failed(ICommand command, DateTime failedAt, Exception ex)
         {
+            if (command is null)
+            {
+                throw new ArgumentNullException(nameof(command));
+            }
+
             _originalTracker.Failed(command, failedAt, ex);
             _offlineCommandCollection.FindOneAndReplace(
                 Builders<OfflineCommandInfo>.Filter.Eq(m => m.Id, command.MessageId.ToString()),
@@ -173,6 +189,7 @@ namespace Jarvis.Framework.Shared.ReadModel
                 new FindOneAndReplaceOptions<OfflineCommandInfo, OfflineCommandInfo>() { IsUpsert = true });
         }
 
+        /// <inheritdoc/>
         public void Started(IMessage msg)
         {
             _originalTracker.Started(msg);
@@ -182,16 +199,19 @@ namespace Jarvis.Framework.Shared.ReadModel
 
         #region IMessagesTrackerQueryManager interface
 
+        /// <inheritdoc/>
         public List<TrackedMessageModel> GetByIdList(IEnumerable<string> idList)
         {
             return _originalQueryManager.GetByIdList(idList);
         }
 
+        /// <inheritdoc/>
         public List<TrackedMessageModel> Query(MessageTrackerQuery query, int limit)
         {
             return _originalQueryManager.Query(query, limit);
         }
 
+        /// <inheritdoc/>
         public TrackedMessageModelPaginated GetCommands(string userId, int pageIndex, int pageSize)
         {
             return _originalQueryManager.GetCommands(userId, pageIndex, pageSize);
@@ -201,6 +221,7 @@ namespace Jarvis.Framework.Shared.ReadModel
 
         #region IOfflineCommandManager
 
+        /// <inheritdoc/>
         public List<OfflineCommandInfo> GetOfflineCommandExecuted()
         {
             return _offlineCommandCollection.AsQueryable()
@@ -208,6 +229,7 @@ namespace Jarvis.Framework.Shared.ReadModel
                  .ToList();
         }
 
+        /// <inheritdoc/>
         public Boolean MarkCommandAsSynchronizing(string id)
         {
             var result = _offlineCommandCollection.UpdateOne(
@@ -218,6 +240,7 @@ namespace Jarvis.Framework.Shared.ReadModel
             return result.ModifiedCount == 1;
         }
 
+        /// <inheritdoc/>
         public Boolean MarkCommandAsSynchronized(String id, Boolean success)
         {
             var newStatus = success ? OfflineCommandSynchronizingStatus.SynchronizationOk : OfflineCommandSynchronizingStatus.SynchronizationFailed;
@@ -229,6 +252,7 @@ namespace Jarvis.Framework.Shared.ReadModel
             return result.ModifiedCount == 1;
         }
 
+        /// <inheritdoc/>
         public OfflineCommandInfo GetById(String id)
         {
             return _offlineCommandCollection.AsQueryable()
@@ -236,6 +260,7 @@ namespace Jarvis.Framework.Shared.ReadModel
                  .FirstOrDefault();
         }
 
+        /// <inheritdoc/>
         public void SetConflictingCommands(String id, IEnumerable<ConflictingCommandInfo> commands)
         {
             _offlineCommandCollection.UpdateOne(
@@ -244,6 +269,7 @@ namespace Jarvis.Framework.Shared.ReadModel
                  .Set(m => m.ConflictingCommands, commands.ToList()));
         }
 
+        /// <inheritdoc/>
         public Boolean SetSkipSynchronizationFlag(string id, bool skipSynchronization)
         {
             var result = _offlineCommandCollection.UpdateOne(
