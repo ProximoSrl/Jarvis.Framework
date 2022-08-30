@@ -2,6 +2,10 @@
 
 ====
 
+## 6.3.6
+
+- Updated NStore and Mongodb drivers
+
 ## 6.3.5
 
 - Fix handle poison messages in queue that are not commands.
