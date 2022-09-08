@@ -2,8 +2,8 @@
 using Castle.Core.Logging;
 using Castle.MicroKernel.Registration;
 using Castle.Windsor;
-using Jarvis.Framework.Bus.Rebus.Integration.Adapters;
-using Jarvis.Framework.Bus.Rebus.Integration.Support;
+using Jarvis.Framework.Rebus.Adapters;
+using Jarvis.Framework.Rebus.Support;
 using Jarvis.Framework.Shared.Commands;
 using Jarvis.Framework.Shared.Commands.Tracking;
 using Jarvis.Framework.Shared.Exceptions;
@@ -18,6 +18,7 @@ using NUnit.Framework;
 using Rebus.Bus;
 using Rebus.Config;
 using Rebus.Handlers;
+using Rebus.Logging;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
@@ -69,10 +70,12 @@ namespace Jarvis.Framework.Tests.BusTests
         public void TestFixtureSetUp()
         {
             _container = new WindsorContainer();
+            _container.Register(Component.For<Castle.Core.Logging.ILoggerFactory>().Instance(new Castle.Core.Logging.NullLogFactory()));
             String connectionString = ConfigurationManager.ConnectionStrings["log"].ConnectionString;
             var logUrl = new MongoUrl(connectionString);
             var logClient = logUrl.CreateClient(false);
             var logDb = logClient.GetDatabase(logUrl.DatabaseName);
+
             logDb.Drop();
 
             _messages = logDb.GetCollection<TrackedMessageModel>("messages");
@@ -263,14 +266,15 @@ namespace Jarvis.Framework.Tests.BusTests
             //cycle until we found handled message on tracking
             TrackedMessageModel track;
             DateTime startTime = DateTime.Now;
-            do {
+            do
+            {
                 Thread.Sleep(200);
                 track = _messages.AsQueryable().SingleOrDefault(t => t.MessageId == sampleMessage.MessageId.ToString()
                     && t.Completed == true);
             }
             while (
                     track == null && DateTime.Now.Subtract(startTime).TotalSeconds < 5
-            ) ;
+            );
 
             if (track == null)
             {

@@ -1,5 +1,6 @@
 ﻿#if NETFULL
-using Jarvis.Framework.Bus.Rebus.Integration.Support;
+
+using Jarvis.Framework.Rebus.Support;
 using Jarvis.Framework.Shared.Commands.Tracking;
 using Rebus.Config;
 
@@ -7,7 +8,10 @@ namespace Jarvis.Framework.Tests.BusTests
 {
     internal class MsmqTransportJarvisTestBusBootstrapper : BusBootstrapper
     {
-        public MsmqTransportJarvisTestBusBootstrapper(Castle.Windsor.IWindsorContainer container, JarvisRebusConfiguration configuration, IMessagesTracker messagesTracker) : base(container, configuration, messagesTracker)
+        public MsmqTransportJarvisTestBusBootstrapper(
+            Castle.Windsor.IWindsorContainer container, 
+            JarvisRebusConfiguration configuration, 
+            IMessagesTracker messagesTracker) : base(container, configuration, messagesTracker, false)
         {
         }
 
@@ -18,10 +22,11 @@ namespace Jarvis.Framework.Tests.BusTests
             busConfiguration.Transport(t => t.UseMsmq(JarvisRebusConfiguration.InputQueue));
         }
     }
-
+    
     internal class MongoDbTransportJarvisTestBusBootstrapper : BusBootstrapper
     {
-        public MongoDbTransportJarvisTestBusBootstrapper(Castle.Windsor.IWindsorContainer container, JarvisRebusConfiguration configuration, IMessagesTracker messagesTracker) : base(container, configuration, messagesTracker)
+        public MongoDbTransportJarvisTestBusBootstrapper(Castle.Windsor.IWindsorContainer container, JarvisRebusConfiguration configuration, IMessagesTracker messagesTracker) :
+            base(container, configuration, messagesTracker, false)
         {
         }
 
