@@ -1,7 +1,7 @@
 ﻿#if NETFULL
 using Castle.MicroKernel.Registration;
 using Castle.Windsor;
-using Jarvis.Framework.Bus.Rebus.Integration.Support;
+using Jarvis.Framework.Rebus.Support;
 using Jarvis.Framework.Shared.Helpers;
 using Jarvis.Framework.Shared.Messages;
 using Jarvis.Framework.Shared.ReadModel;
@@ -196,6 +196,7 @@ namespace Jarvis.Framework.Tests.BusTests
             public TestProcess(string configurationType, String connectionString, String inputQueue, Dictionary<String, String> mapping)
             {
                 _container = new WindsorContainer();
+                _container.Register(Component.For<Castle.Core.Logging.ILoggerFactory>().Instance(new Castle.Core.Logging.NullLogFactory()));
                 NullMessageTracker tracker = new NullMessageTracker();
 
                 MongoUrlBuilder mb = new MongoUrlBuilder(connectionString);

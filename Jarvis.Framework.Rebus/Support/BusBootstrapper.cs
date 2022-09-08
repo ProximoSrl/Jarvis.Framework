@@ -173,10 +173,14 @@ at least configure one assembly with messages to be dispatched.";
         {
             if (_messagesTracker != null)
             {
-                var msg = message as IMessage;
-                if (msg != null)
+                //Do not track messages that are deferred, we do not expect this message to be tracked.
+                if (!headers.Keys.Contains("rbs2-defer-count"))
                 {
-                    _messagesTracker.Started(msg);
+                    var msg = message as IMessage;
+                    if (msg != null)
+                    {
+                        _messagesTracker.Started(msg);
+                    }
                 }
             }
 
