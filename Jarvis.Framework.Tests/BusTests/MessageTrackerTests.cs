@@ -2,8 +2,8 @@
 using Castle.Core.Logging;
 using Castle.MicroKernel.Registration;
 using Castle.Windsor;
-using Jarvis.Framework.Bus.Rebus.Integration.Adapters;
-using Jarvis.Framework.Bus.Rebus.Integration.Support;
+using Jarvis.Framework.Rebus.Adapters;
+using Jarvis.Framework.Rebus.Support;
 using Jarvis.Framework.Shared.Commands;
 using Jarvis.Framework.Shared.Commands.Tracking;
 using Jarvis.Framework.Shared.Helpers;
@@ -48,6 +48,7 @@ namespace Jarvis.Framework.Tests.BusTests
         public void TestFixtureSetUp()
         {
             _container = new WindsorContainer();
+            _container.Register(Component.For<Castle.Core.Logging.ILoggerFactory>().Instance(new Castle.Core.Logging.NullLogFactory()));
             _container.Kernel.ComponentRegistered += Kernel_ComponentRegistered;
             String connectionString = ConfigurationManager.ConnectionStrings["log"].ConnectionString;
             var rebusUrl = new MongoUrl(connectionString);
@@ -186,7 +187,6 @@ namespace Jarvis.Framework.Tests.BusTests
         /// <summary>
         /// verify the capability to re-send on bus with reply to header
         /// and that the CommandHandled is a real command that was also tracked.
-        /// 
         /// </summary>
         [Test]
         public async Task Check_response_handled()
@@ -226,7 +226,6 @@ namespace Jarvis.Framework.Tests.BusTests
         /// <summary>
         /// verify the capability to re-send on bus with reply to header
         /// and that the CommandHandled is a real command that was also tracked.
-        /// 
         /// </summary>
         [Test]
         public async Task Verify_elaboration_tracking()
@@ -252,6 +251,37 @@ namespace Jarvis.Framework.Tests.BusTests
             Assert.That(track.LastExecutionStartTime, Is.Not.Null);
             Assert.That(track.ExecutionCount, Is.EqualTo(1));
             Assert.That(track.ExecutionStartTimeList.Length, Is.EqualTo(1));
+        }
+
+        /// <summary>
+        /// Deferred messages should not be logged in messages collection ,that message
+        /// collection is meant to contains only command that are waiting in the queue.
+        /// </summary>
+        [Test]
+        public async Task Verify_deferred_message_are_not_tracked()
+        {
+            var sampleMessage = new SampleTestCommand(10);
+            await _bus.Defer(TimeSpan.FromSeconds(2), sampleMessage).ConfigureAwait(false);
+
+            var mid = sampleMessage.MessageId.ToString();
+            var trackedMessage = _messages.AsQueryable().SingleOrDefault(m => m.MessageId == mid);
+            Assert.That(trackedMessage, Is.Null);
+
+            DateTime waitStart = DateTime.UtcNow;
+            //now wait some seconds
+            do
+            {
+                Thread.Sleep(50);
+                trackedMessage = _messages.AsQueryable().SingleOrDefault(m => m.MessageId == mid);
+                if (trackedMessage != null)
+                {
+                    //test is ok
+                    return;
+                }
+            }
+            while (DateTime.UtcNow.Subtract(waitStart).TotalSeconds < 5);
+
+            Assert.Fail("MEssage is not tracked after defer time passed");
         }
     }
 }

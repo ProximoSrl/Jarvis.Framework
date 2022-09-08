@@ -1,7 +1,11 @@
 # J.A.R.V.I.S. Framework - Proximo srl (c)
 
 ====
+## 6.3.7
 
+- Restored rebus test.
+- Fixed a bug in bug messages tracking.
+ 
 ## 6.3.6
 
 - Updated NStore and Mongodb drivers
