@@ -4,6 +4,10 @@
 
 # vNext
 
+## 6.4.1
+
+- Rename IAtomicCollectionReader.FindOneByIdAtCheckpoint adding async suffix
+
 ## 6.4.0
 
 - Removed IAtomicMongoCollectionWrapper
