@@ -21,7 +21,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support
         {
             var genericType = typeof(AtomicReadmodelProjectorHelper<>);
             var closedType = genericType.MakeGenericType(new Type[] { atomicReadmodelType });
-            return (IAtomicReadmodelProjectorHelper)_kernel.Resolve(closedType);
+            try
+            {
+
+                return (IAtomicReadmodelProjectorHelper)_kernel.Resolve(closedType);
+            }
+            catch (Exception ex)
+            {
+
+                throw;
+            }
         }
     }
 }

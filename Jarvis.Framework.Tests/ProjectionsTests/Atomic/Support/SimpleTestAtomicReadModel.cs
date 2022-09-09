@@ -2,7 +2,6 @@
 using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.ReadModel.Atomic;
 using Jarvis.Framework.Tests.EngineTests;
-using MongoDB.Driver;
 using System;
 using System.Threading.Tasks;
 
@@ -64,9 +63,9 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support
 
     public class SimpleTestAtomicReadModelInitializer : IAtomicReadModelInitializer
     {
-        private readonly IAtomicMongoCollectionWrapper<SimpleTestAtomicReadModel> _atomicCollectionWrapper;
+        private readonly IAtomicCollectionWrapper<SimpleTestAtomicReadModel> _atomicCollectionWrapper;
 
-        public SimpleTestAtomicReadModelInitializer(IAtomicMongoCollectionWrapper<SimpleTestAtomicReadModel> atomicCollectionWrapper)
+        public SimpleTestAtomicReadModelInitializer(IAtomicCollectionWrapper<SimpleTestAtomicReadModel> atomicCollectionWrapper)
         {
             _atomicCollectionWrapper = atomicCollectionWrapper;
         }
@@ -76,16 +75,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support
         public Task Initialize()
         {
             Initialized = true;
-            return _atomicCollectionWrapper
-                .Collection
-                .Indexes
-                    .CreateOneAsync(new MongoDB.Driver.CreateIndexModel<SimpleTestAtomicReadModel>(
-                        Builders<SimpleTestAtomicReadModel>.IndexKeys.Ascending(_ => _.TouchCount),
-                        new CreateIndexOptions()
-                        {
-                            Name = "Test index"
-                        }
-                     ));
+            return Task.CompletedTask;
         }
     }
 }

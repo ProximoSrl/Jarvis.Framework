@@ -430,7 +430,6 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
                     Component
                         .For(new Type[]
                         {
-                            typeof (IAtomicMongoCollectionWrapper<>),
                             typeof (IAtomicCollectionWrapper<>),
                             typeof (IAtomicCollectionReader<>),
                         })

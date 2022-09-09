@@ -14,7 +14,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support
     /// engine.
     /// </summary>
     /// <typeparam name="TModel"></typeparam>
-    /// <typeparam name="TKey"></typeparam>
     public class AtomicReadmodelProjectorHelper<TModel> : IAtomicReadmodelProjectorHelper
          where TModel : IAtomicReadModel
     {

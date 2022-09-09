@@ -142,7 +142,6 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
                 Component
                     .For(new Type[]
                     {
-                            typeof (IAtomicMongoCollectionWrapper<>),
                             typeof (IAtomicCollectionWrapper<>),
                             typeof (IAtomicCollectionReader<>),
                     })
@@ -191,10 +190,10 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             return ProcessEvent(evt);
         }
 
-        protected Task<Changeset> GenerateTouchedEvent(String issuedBy = null)
+        protected Task<Changeset> GenerateTouchedEvent(String issuedBy = null, DateTime? timestamp = null )
         {
             var evt = new SampleAggregateTouched();
-            SetBasePropertiesToEvent(evt, issuedBy);
+            SetBasePropertiesToEvent(evt, issuedBy, timestamp ?? DateTime.UtcNow);
             return ProcessEvent(evt);
         }
 
@@ -235,6 +234,16 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             evt.SetPropertyValue(d => d.AggregateId, generateId(_aggregateIdSeed));
             Changeset cs = new Changeset(_aggregateVersion++, new Object[] { evt });
             var stream = _streamsFactory.Open(evt.AggregateId);
+
+            //Need to copy context of the event to the header.
+            if (evt.Context != null)
+            {
+                foreach (var element in evt.Context)
+                {
+                    cs.Headers.Add(element.Key, element.Value);
+                }
+            }
+
             var chunk = await stream.AppendAsync(cs).ConfigureAwait(false);
             lastUsedPosition = chunk.Position;
 
@@ -305,11 +314,11 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             return await GenerateTouchedEvent().ConfigureAwait(false);
         }
 
-        protected static void SetBasePropertiesToEvent(DomainEvent evt, string issuedBy)
+        protected static void SetBasePropertiesToEvent(DomainEvent evt, string issuedBy, DateTime? timestamp = null)
         {
             var context = new Dictionary<String, Object>();
             context.Add(MessagesConstants.UserId, issuedBy);
-            context.Add(ChangesetCommonHeaders.Timestamp, DateTime.UtcNow);
+            context.Add(ChangesetCommonHeaders.Timestamp, timestamp ?? DateTime.UtcNow);
 
             evt.SetPropertyValue(d => d.Context, context);
         }

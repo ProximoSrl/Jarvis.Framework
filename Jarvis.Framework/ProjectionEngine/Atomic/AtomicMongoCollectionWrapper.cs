@@ -11,8 +11,7 @@ using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 {
-    public class AtomicMongoCollectionWrapper<TModel> :
-          IAtomicMongoCollectionWrapper<TModel>
+    public class AtomicMongoCollectionWrapper<TModel> : IAtomicCollectionWrapper<TModel>
         where TModel : class, IAtomicReadModel
     {
         private const string ConcurrencyException = "E1100";
@@ -93,7 +92,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                     _logger.ErrorFormat(ex, "Error dropping ReadModelVersion index from readmodel collection {0}", _collection.CollectionNamespace.CollectionName);
                     //Ignore all exceptions, if we cannot drop the index we can proceed
                 }
-            } 
+            }
             if (allIndex.Contains("ReadModelVersionForFixer"))
             {
                 try
@@ -169,13 +168,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             return rm;
         }
 
-        public async Task<IEnumerable<TModel>> FindManyAsync(System.Linq.Expressions.Expression<Func<TModel, bool>> filter, bool fixVersion = false)
+        public async Task<IReadOnlyCollection<TModel>> FindManyAsync(System.Linq.Expressions.Expression<Func<TModel, bool>> filter, bool fixVersion = false)
         {
             var rms = await _collection.FindAsync(filter).ConfigureAwait(false);
 
             if (!fixVersion)
             {
-                return rms.ToEnumerable();
+                return rms.ToList();
             }
 
             var rmsResult = new List<TModel>();
@@ -301,11 +300,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 });
         }
 
-        IMongoCollection<TModel> IAtomicMongoCollectionWrapper<TModel>.Collection => _collection;
-
-        IMongoQueryable IAtomicMongoCollectionWrapper<TModel>.AsMongoQueryable()
+        /// <inheritdoc />
+        public Task<TModel> FindOneByIdAtCheckpoint(string id, long chunkPosition)
         {
-            return _collection.AsQueryable();
+            //TODO: cache somewhat readmodel in some cache database to avoid rebuilding always at version in memory.
+            return _liveAtomicReadModelProcessor.ProcessAsyncUntilChunkPosition<TModel>(id, chunkPosition);
         }
     }
 }
