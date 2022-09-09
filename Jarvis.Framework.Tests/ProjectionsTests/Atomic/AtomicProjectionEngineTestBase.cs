@@ -236,9 +236,12 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             var stream = _streamsFactory.Open(evt.AggregateId);
 
             //Need to copy context of the event to the header.
-            foreach (var element in evt.Context)
+            if (evt.Context != null)
             {
-                cs.Headers.Add(element.Key, element.Value);
+                foreach (var element in evt.Context)
+                {
+                    cs.Headers.Add(element.Key, element.Value);
+                }
             }
 
             var chunk = await stream.AppendAsync(cs).ConfigureAwait(false);
