@@ -56,7 +56,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// </param>
         /// <remarks>Actually this method is a simple wrapper to a call to <see cref="ILiveAtomicReadModelProcessor"/>
         /// that was used internally by the reader.</remarks>
-        Task<TModel> FindOneByIdAtCheckpoint(string id, long chunkPosition);
+        Task<TModel> FindOneByIdAtCheckpointAsync(string id, long chunkPosition);
     }
 
     /// <summary>
