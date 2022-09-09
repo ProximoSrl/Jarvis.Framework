@@ -59,31 +59,7 @@ namespace Jarvis.Framework.Shared.Events
         {
             get
             {
-                if (Context == null) return DateTime.MinValue;
-
-                if (Context.TryGetValue(MessagesConstants.OverrideCommitTimestamp, out var timestamp))
-                {
-                    // I have overide timestamp with date time
-                    if (timestamp is DateTime date)
-                    {
-                        return date;
-                    }
-                    else if (timestamp is string dateString)
-                    {
-                        if (DateTime.TryParse(dateString, out var parsedDate))
-                        {
-                            return parsedDate;
-                        }
-                    }
-                }
-
-                if (Context.TryGetValue(ChangesetCommonHeaders.Timestamp, out var tsValue)
-                    && tsValue is DateTime dateTimeTsValue)
-                {
-                    return dateTimeTsValue;
-                }
-
-                return DateTime.MinValue;
+                return ChangesetCommonHeaders.GetTimestampFromHeaders(Context);
             }
         }
 

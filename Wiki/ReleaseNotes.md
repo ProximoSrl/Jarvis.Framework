@@ -1,5 +1,10 @@
 # J.A.R.V.I.S. Framework - Proximo srl (c)
 
+# vNext
+
+- Removed IAtomicMongoCollectionWrapper
+- Added ability to project up to global checkpoint in standard atomic reader
+
 ====
 ## 6.3.7
 

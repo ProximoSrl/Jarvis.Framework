@@ -22,6 +22,7 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
         /// Project an atomic readmodel.
         /// </summary>
         /// <param name="commitEnhancer"></param>
+        /// <param name="readModel"></param>
         /// <param name="stopCondition">This condition will be evaluated BEFORE the changeset will be processed
         /// by the readmodel, if the return value is true, the iteration will stop.</param>
         public AtomicReadModelSubscription(

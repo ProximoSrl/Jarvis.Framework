@@ -46,5 +46,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             var subscription = new AtomicReadModelSubscription<TModel>(_commitEnhancer, readModel, cs => false);
             return _persistence.ReadForwardAsync(readModel.Id, readModel.AggregateVersion + 1, subscription, Int64.MaxValue);
         }
+
+        public async Task<TModel> ProcessAsyncUntilUtcTimestamp<TModel>(string id, DateTime dateTimeUpTo) where TModel : IAtomicReadModel
+        {
+            var readmodel = _atomicReadModelFactory.Create<TModel>(id);
+            var subscription = new AtomicReadModelSubscription<TModel>(_commitEnhancer, readmodel, cs => cs.GetTimestamp() > dateTimeUpTo);
+            await _persistence.ReadForwardAsync(id, 0, subscription, Int64.MaxValue).ConfigureAwait(false);
+            return readmodel;
+        }
     }
 }

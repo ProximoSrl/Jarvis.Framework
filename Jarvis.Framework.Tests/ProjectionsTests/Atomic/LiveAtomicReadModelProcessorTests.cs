@@ -74,6 +74,59 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         }
 
         [Test]
+        public async Task Project_up_until_certain_date()
+        {
+            var c1 = await GenerateSomeChangesetsAndReturnLatestsChangeset().ConfigureAwait(false);
+
+            //First block generates 3 events and two touch this is another touch 3 touch and version 4 (creation event)
+            var c2 = await GenerateTouchedEvent().ConfigureAwait(false);
+
+            //we are at version 4 now put events in the future.
+
+            DateTime future1 = DateTime.UtcNow.AddMinutes(1);
+            var c3 = await GenerateTouchedEvent(timestamp: future1);
+
+            DateTime future2 = DateTime.UtcNow.AddMinutes(3);
+            var c4 = await GenerateTouchedEvent(timestamp: future2);
+
+            //ok we need to check that events are not mixed.
+            var sut = _container.Resolve<ILiveAtomicReadModelProcessor>();
+            DomainEvent firstEvent = (DomainEvent)c1.Events[0];
+
+            //Process until now, we should have everythign up to latest two events.
+            var processed = await sut.ProcessAsyncUntilUtcTimestamp<SimpleTestAtomicReadModel>(
+                firstEvent.AggregateId.AsString(),
+                DateTime.UtcNow).ConfigureAwait(false);
+
+            Assert.That(processed.TouchCount, Is.EqualTo(3));
+            Assert.That(processed.AggregateVersion, Is.EqualTo(4));
+
+            //project up to future 1
+            processed = await sut.ProcessAsyncUntilUtcTimestamp<SimpleTestAtomicReadModel>(
+                  firstEvent.AggregateId.AsString(),
+                  future1).ConfigureAwait(false);
+
+            Assert.That(processed.TouchCount, Is.EqualTo(4));
+            Assert.That(processed.AggregateVersion, Is.EqualTo(5));
+
+            //project up to future 2
+            processed = await sut.ProcessAsyncUntilUtcTimestamp<SimpleTestAtomicReadModel>(
+                  firstEvent.AggregateId.AsString(),
+                  future2).ConfigureAwait(false);
+
+            Assert.That(processed.TouchCount, Is.EqualTo(5));
+            Assert.That(processed.AggregateVersion, Is.EqualTo(6));
+
+            //project up to the max
+            processed = await sut.ProcessAsyncUntilUtcTimestamp<SimpleTestAtomicReadModel>(
+                  firstEvent.AggregateId.AsString(),
+                  DateTime.UtcNow.AddYears(2000)).ConfigureAwait(false);
+
+            Assert.That(processed.TouchCount, Is.EqualTo(5));
+            Assert.That(processed.AggregateVersion, Is.EqualTo(6));
+        }
+
+        [Test]
         public async Task Capability_of_catchup_events()
         {
             await GenerateSomeChangesetsAndReturnLatestsChangeset().ConfigureAwait(false);

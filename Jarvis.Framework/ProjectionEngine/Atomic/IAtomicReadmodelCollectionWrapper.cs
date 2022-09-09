@@ -1,6 +1,4 @@
 ﻿using Jarvis.Framework.Shared.ReadModel.Atomic;
-using MongoDB.Driver;
-using MongoDB.Driver.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,10 +9,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
     /// <summary>
     /// Simple wrapper for readmodel atomic collection. There is no need
     /// for corresponding reader, this is the only interface that will
-    /// be used to access atomic readmodels, that are inherited by <see cref="AbstractAtomicReadModel{TKey}"/>
+    /// be used to access atomic readmodels, that are inherited by <see cref="AbstractAtomicReadModel"/>
     /// </summary>
     /// <typeparam name="TModel"></typeparam>
-    /// <typeparam name="TKey"></typeparam>
     public interface IAtomicCollectionReader<TModel>
          where TModel : IAtomicReadModel
     {
@@ -40,15 +37,42 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// <returns></returns>
         Task<TModel> FindOneByIdAndCatchupAsync(string id);
 
-        Task<IEnumerable<TModel>> FindManyAsync(System.Linq.Expressions.Expression<Func<TModel, bool>> filter, bool fixVersion = false);
+        /// <summary>
+        /// Find by query and allow for an optional parameter called <paramref name="fixVersion"/> that allows
+        /// to fix for version if you need to be 100% sure to read latest version (upgrade skew)
+        /// </summary>
+        /// <param name="filter"></param>
+        /// <param name="fixVersion"></param>
+        /// <returns></returns>
+        Task<IReadOnlyCollection<TModel>> FindManyAsync(System.Linq.Expressions.Expression<Func<TModel, bool>> filter, bool fixVersion = false);
+
+        /// <summary>
+        /// Loads by id but project until a specific checkpoint passed as parameter. This checkpoint
+        /// is the global checkpoint of the store (not Aggregate Version).
+        /// </summary>
+        /// <param name="id">aggregate id</param>
+        /// <param name="chunkPosition">
+        /// Position to project the aggregate to.
+        /// </param>
+        /// <remarks>Actually this method is a simple wrapper to a call to <see cref="ILiveAtomicReadModelProcessor"/>
+        /// that was used internally by the reader.</remarks>
+        Task<TModel> FindOneByIdAtCheckpoint(string id, long chunkPosition);
     }
 
+    /// <summary>
+    /// Needed for the fixer, a factory NON GENERIC that have a generic method to 
+    /// create CollectionWrapper
+    /// </summary>
     public interface IAtomicCollectionWrapperFactory
     {
         IAtomicCollectionWrapper<TModel> CreateCollectionWrappper<TModel>()
              where TModel : IAtomicReadModel;
     }
 
+    /// <summary>
+    /// General interface to access storage for atomic readmodel.
+    /// </summary>
+    /// <typeparam name="TModel"></typeparam>
     public interface IAtomicCollectionWrapper<TModel> :
         IAtomicCollectionReader<TModel>
         where TModel : IAtomicReadModel
@@ -82,14 +106,5 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// <remarks>If the readmodel is not present on database, nothing will be written.</remarks>
         /// <returns></returns>
         Task UpdateAsync(TModel model);
-    }
-
-    public interface IAtomicMongoCollectionWrapper<TModel> :
-       IAtomicCollectionWrapper<TModel>
-       where TModel : IAtomicReadModel
-    {
-        IMongoCollection<TModel> Collection { get; }
-
-        IMongoQueryable AsMongoQueryable();
     }
 }
