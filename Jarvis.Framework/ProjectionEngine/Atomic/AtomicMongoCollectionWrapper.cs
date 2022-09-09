@@ -301,7 +301,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         }
 
         /// <inheritdoc />
-        public Task<TModel> FindOneByIdAtCheckpoint(string id, long chunkPosition)
+        public Task<TModel> FindOneByIdAtCheckpointAsync(string id, long chunkPosition)
         {
             //TODO: cache somewhat readmodel in some cache database to avoid rebuilding always at version in memory.
             return _liveAtomicReadModelProcessor.ProcessAsyncUntilChunkPosition<TModel>(id, chunkPosition);
