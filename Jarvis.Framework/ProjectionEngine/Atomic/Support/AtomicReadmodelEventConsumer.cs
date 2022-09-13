@@ -41,7 +41,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support
         /// <summary>
         /// Handle the events.
         /// </summary>
+        /// <param name="position"></param>
         /// <param name="changeset"></param>
+        /// <param name="identity"></param>
         public async Task<AtomicReadmodelChangesetConsumerReturnValue> Handle(
             Int64 position,
             Changeset changeset,

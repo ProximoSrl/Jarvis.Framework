@@ -228,6 +228,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// </summary>
         /// <param name="poller"></param>
         /// <param name="pollerId"></param>
+        /// <param name="maxCommitInStream"></param>
+        /// <param name="dispatchToTplFunction"></param>
         /// <returns></returns>
         private Int64 CreatePollerAndStart(
             ref AtomicProjectionNstorePoller poller,
