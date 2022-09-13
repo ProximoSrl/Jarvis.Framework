@@ -70,7 +70,7 @@
     <Copy SourceFiles="$(IntermediateOutputPath)$(TargetFileName).config" DestinationFiles="$(OutDir)\testhost.dll.config" />
   </Target>
   <Target Name="CopyCustomContent2" AfterTargets="AfterBuild" Condition="!Exists('App.$(Configuration).config')">
-    <Copy SourceFiles="app.config" DestinationFiles="$(OutDir)\testhost.dll.config" />
+    <Copy SourceFiles="App.config" DestinationFiles="$(OutDir)\testhost.dll.config" />
   </Target>
   <!-- End Transform XML files -->
 </Project>

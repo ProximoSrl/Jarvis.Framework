@@ -17,6 +17,9 @@ on:
     # The branches below must be a subset of the branches above
     branches: [develop, master]
 
+env:
+  DOTNETMULTITARGET: false
+
 jobs:
   analyze:
     name: Analyze
@@ -65,20 +68,20 @@ jobs:
     - name: Setup .NET Core SDK
       uses: actions/setup-dotnet@v1.7.2
       with:
-        dotnet-version: 3.1.402
+        dotnet-version: 3.1.422
 
-    # remember that this project has multitargeted project you need to disable if you want to compile in linux.
-    - run: echo "DOTNETMULTITARGET=false" >> $GITHUB_ENV 
+    - name: Setup .NET Core SDK
+      uses: actions/setup-dotnet@v1.7.2
+      with:
+        dotnet-version: 6.0.400
+     
+    - run: dotnet restore ./Jarvis.Framework.sln --configfile $GITHUB_WORKSPACE/NuGet.Config
       
-    - run: dotnet restore ./Jarvis.Framework.Kernel/Jarvis.Framework.Kernel.csproj --configfile $GITHUB_WORKSPACE/NuGet.Config
-    - run: dotnet restore ./Jarvis.Framework.Shared/Jarvis.Framework.Shared.csproj --configfile $GITHUB_WORKSPACE/NuGet.Config
-      
-    - run: dotnet build ./Jarvis.Framework.Kernel/Jarvis.Framework.Kernel.csproj 
-    - run: dotnet build ./Jarvis.Framework.Shared/Jarvis.Framework.Shared.csproj 
-      
+    - run: dotnet build ./Jarvis.Framework.sln 
+       
     #- run: |
     #   make bootstrap
     #   make release
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v1
+      uses: github/codeql-action/analyze@v2

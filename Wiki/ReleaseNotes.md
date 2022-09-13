@@ -4,6 +4,10 @@
 
 # vNext
 
+## 6.4.2
+
+- GH Code QL action fix
+ 
 ## 6.4.1
 
 - Rename IAtomicCollectionReader.FindOneByIdAtCheckpoint adding async suffix
