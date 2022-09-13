@@ -7,6 +7,7 @@
 ## 6.4.2
 
 - GH Code QL action fix
+- Added ability to change polling intervale and hole detection on poller
  
 ## 6.4.1
 

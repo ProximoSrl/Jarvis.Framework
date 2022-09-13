@@ -122,19 +122,25 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// because are commit of the past (atomic reamodels does not have rebuilds)</param>
         /// <param name="subscription"></param>
         /// <param name="inStoreLoggerFactory"></param>
+        /// <param name="pollingIntervalInMilliseconds">Poller interval time in millinseconds.</param>
+        /// <param name="holeDetectionTimeoutInMilliseconds">Hole detection timeout, this happens when 
+        /// you find an hole in the poller, such you read 123 then you read 125, you wait for a small amount
+        /// of milliseconds, then move on.</param>
         public AtomicProjectionNstorePoller(
             IPersistence store,
             long lastPosition,
             long positionToStartSequencing,
             ISubscription subscription,
-            INStoreLoggerFactory inStoreLoggerFactory)
+            INStoreLoggerFactory inStoreLoggerFactory,
+            int pollingIntervalInMilliseconds = 200,
+            int holeDetectionTimeoutInMilliseconds = 2000)
         {
             this._logger = inStoreLoggerFactory.CreateLogger(GetType().FullName);
 
             _sequencer = new Sequencer(lastPosition, positionToStartSequencing, subscription, _logger);
             _store = store;
-            PollingIntervalMilliseconds = 200;
-            HoleDetectionTimeout = 2000;
+            PollingIntervalMilliseconds = pollingIntervalInMilliseconds;
+            HoleDetectionTimeout = holeDetectionTimeoutInMilliseconds;
         }
 
         public async Task Stop()
