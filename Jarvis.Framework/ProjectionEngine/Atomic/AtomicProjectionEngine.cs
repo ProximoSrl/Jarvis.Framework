@@ -1,11 +1,9 @@
-﻿using App.Metrics;
-using Castle.Core.Logging;
+﻿using Castle.Core.Logging;
 using Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 using Jarvis.Framework.Kernel.Support;
 using Jarvis.Framework.Shared;
 using Jarvis.Framework.Shared.Exceptions;
-using Jarvis.Framework.Shared.HealthCheck;
 using Jarvis.Framework.Shared.Helpers;
 using Jarvis.Framework.Shared.ReadModel.Atomic;
 using Jarvis.Framework.Shared.Store;
@@ -63,6 +61,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         public ILogger Logger { get; set; }
 
         private readonly INStoreLoggerFactory _nStoreLoggerFactory;
+        private readonly IJarvisFrameworkMetric _jarvisFrameworkMetric;
 
         /// <summary>
         /// When the projection engine works, it will instruct the tracker to flush not for
@@ -104,7 +103,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             ICommitEnhancer commitEnhancer,
             AtomicProjectionCheckpointManager atomicProjectionCheckpointManager,
             IAtomicReadmodelProjectorHelperFactory atomicReadmodelProjectorHelperFactory,
-            INStoreLoggerFactory nStoreLoggerFactory)
+            INStoreLoggerFactory nStoreLoggerFactory,
+            IJarvisFrameworkMetric jarvisFrameworkMetric)
         {
             Logger = NullLogger.Instance;
             _atomicProjectionCheckpointManager = atomicProjectionCheckpointManager;
@@ -113,21 +113,22 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             _atomicReadmodelProjectorHelperFactory = atomicReadmodelProjectorHelperFactory;
             _lastPositionDispatched = _atomicProjectionCheckpointManager.GetLastPositionDispatched();
             _nStoreLoggerFactory = nStoreLoggerFactory;
+            _jarvisFrameworkMetric = jarvisFrameworkMetric;
             FlushTimeSpan = TimeSpan.FromSeconds(30); //flush checkpoint on db each 10 seconds.
 
             Logger.Info("Created Atomic Projection Engine");
             MaximumDifferenceForCatchupPoller = 20000;
 
-            Metric.RegisterHealthCheck("AtomicProjectionEngine", GetHealthCheck);
+            _jarvisFrameworkMetric.RegisterHealthCheck("AtomicProjectionEngine", GetHealthCheck);
 
             _maxCommitInStream = _persistence.ReadLastPositionAsync().Result;
         }
 
-        private HealthCheckResult GetHealthCheck()
+        private JarvisFrameworkHealthCheckResult GetHealthCheck()
         {
             if (_engineExceptions.Count == 0)
             {
-                return HealthCheckResult.Healthy();
+                return JarvisFrameworkHealthCheckResult.Healthy();
             }
 
             StringBuilder errors = new StringBuilder();
@@ -135,7 +136,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             {
                 errors.AppendLine($"Error: {ex.Key}: {ex.Value}");
             }
-            return HealthCheckResult.Unhealthy("Error in Atomic Projection Engine: " + errors.ToString());
+            return JarvisFrameworkHealthCheckResult.Unhealthy("Error in Atomic Projection Engine: " + errors.ToString());
         }
 
         /// <summary>
@@ -229,6 +230,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// <param name="poller"></param>
         /// <param name="pollerId"></param>
         /// <param name="maxCommitInStream"></param>
+        /// <param name="jarvisFrameworkMetric"></param>
         /// <param name="dispatchToTplFunction"></param>
         /// <returns></returns>
         private Int64 CreatePollerAndStart(
@@ -244,7 +246,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             //The default value to start is zero, it is a situation that should never happen, if it happens this poller has no projection to dispatch.
             var startingPosition = TryGetStartingPoint(pollerId, 0);
             Logger.InfoFormat("AtomicProjectionEngine: Starting poller id {0} from position {1}", pollerId, startingPosition);
-            var subscription = new JarvisFrameworkLambdaSubscription(c => dispatchToTplFunction(new AtomicDispatchChunk(pollerId, c)), $"atomicPoller-{pollerId}");
+            var subscription = new JarvisFrameworkLambdaSubscription(
+                c => dispatchToTplFunction(new AtomicDispatchChunk(pollerId, c)),
+                $"atomicPoller-{pollerId}",
+                _jarvisFrameworkMetric);
             poller = new AtomicProjectionNstorePoller(_persistence, startingPosition, maxCommitInStream, subscription, _nStoreLoggerFactory);
             poller.Start();
             return startingPosition;
@@ -396,7 +401,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 BoundedCapacity = 4000,
             };
             var localBuffer = buffer = new BufferBlock<AtomicDispatchChunk>(bufferOptions);
-            Metric.Gauge("atomic-projection-buffer", () => localBuffer.Count, Unit.Items);
+            _jarvisFrameworkMetric.Gauge("atomic-projection-buffer", () => localBuffer.Count);
 
             ExecutionDataflowBlockOptions enhancerExecutionOptions = new ExecutionDataflowBlockOptions
             {
@@ -409,7 +414,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 return c;
             }, enhancerExecutionOptions);
             buffer.LinkTo(enhancer, new DataflowLinkOptions() { PropagateCompletion = true });
-            Metric.Gauge("atomic-projection-enhancer-buffer", () => enhancer.InputCount, Unit.Items);
+            _jarvisFrameworkMetric.Gauge("atomic-projection-enhancer-buffer", () => enhancer.InputCount);
 
             ExecutionDataflowBlockOptions consumerExecutionOptions = new ExecutionDataflowBlockOptions
             {
@@ -422,7 +427,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 //Ok I have a list of atomic projection, we need to create projector for every item.
                 var blocks = item.Value;
                 var consumer = new ActionBlock<AtomicDispatchChunk>(InnerDispatch(item, blocks), consumerExecutionOptions);
-                Metric.Gauge("atomic-projection-consumer-buffer-" + item.Key.Name, () => consumer.InputCount, Unit.Items);
+                _jarvisFrameworkMetric.Gauge("atomic-projection-consumer-buffer-" + item.Key.Name, () => consumer.InputCount);
                 KernelMetricsHelper.CreateMeterForAtomicReadmodelDispatcherCount(item.Key.Name);
                 consumers.Add(consumer);
             }

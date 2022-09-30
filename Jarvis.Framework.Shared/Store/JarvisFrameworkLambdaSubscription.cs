@@ -1,5 +1,4 @@
-﻿using App.Metrics;
-using Jarvis.Framework.Shared.Support;
+﻿using Jarvis.Framework.Shared.Support;
 using NStore.Core.Persistence;
 using System;
 using System.Threading;
@@ -39,14 +38,14 @@ namespace Jarvis.Framework.Shared.Store
 
         public IChunk LastDispatchedChunk { get; set; }
 
-        public JarvisFrameworkLambdaSubscription(ChunkProcessor fn, String lambdaName)
+        public JarvisFrameworkLambdaSubscription(ChunkProcessor fn, String lambdaName, IJarvisFrameworkMetric jarvisFrameworkMetric)
         {
             _fn = fn;
             _lambdaName = lambdaName;
             _failedPosition = 0;
             LastException = null;
 
-            MetricsHelper.CreateGauge($"fw-lambda-subscription-{_lambdaName}", () => _numOfChunksProcessed, Unit.Items);
+            jarvisFrameworkMetric.Gauge($"fw-lambda-subscription-{_lambdaName}", () => _numOfChunksProcessed);
         }
 
         private Int64 _numOfChunksProcessed = 0;

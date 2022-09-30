@@ -9,19 +9,35 @@ using System.Threading;
 
 namespace Jarvis.Framework.Shared.Commands
 {
-
+    /// <summary>
+    /// helps handling exception for command execution
+    /// </summary>
     public class JarvisDefaultCommandExecutionExceptionHelper : ICommandExecutionExceptionHelper
     {
         private readonly ILogger _logger;
+        private readonly IJarvisFrameworkMetric _jarvisFrameworkMetric;
         private readonly Int32 _numberOfConcurrencyExceptionBeforeRandomSleeping;
         private readonly Int32 _maxRetryOnConcurrencyException;
+        private readonly IJarvisFrameworkCounterMetric _concurrencyExceptionsCounter;
+        private readonly IJarvisFrameworkCounterMetric _domainExceptionsCounter;
+        private readonly IJarvisFrameworkCounterMetric _securityExceptionsCounter;
 
+        /// <summary>
+        /// Constructors
+        /// </summary>
+        /// <param name="logger"></param>
+        /// <param name="jarvisFrameworkMetric"></param>
+        /// <param name="numberOfConcurrencyExceptionBeforeRandomSleeping"></param>
+        /// <param name="maxRetryOnConcurrencyException"></param>
+        /// <exception cref="ArgumentException"></exception>
         public JarvisDefaultCommandExecutionExceptionHelper(
             ILogger logger,
+            IJarvisFrameworkMetric jarvisFrameworkMetric,
             Int32 numberOfConcurrencyExceptionBeforeRandomSleeping,
             Int32 maxRetryOnConcurrencyException)
         {
             _logger = logger;
+            _jarvisFrameworkMetric = jarvisFrameworkMetric;
             if (numberOfConcurrencyExceptionBeforeRandomSleeping <= 0)
                 throw new ArgumentException(
                     $"Value {numberOfConcurrencyExceptionBeforeRandomSleeping} is not valid, we should have a value greater than 0",
@@ -34,6 +50,10 @@ namespace Jarvis.Framework.Shared.Commands
 
             _numberOfConcurrencyExceptionBeforeRandomSleeping = numberOfConcurrencyExceptionBeforeRandomSleeping;
             _maxRetryOnConcurrencyException = maxRetryOnConcurrencyException;
+
+            _concurrencyExceptionsCounter = jarvisFrameworkMetric.Counter("ConcurrencyException");
+            _domainExceptionsCounter = jarvisFrameworkMetric.Counter("DomainException");
+            _securityExceptionsCounter = jarvisFrameworkMetric.Counter("SecurityException");
         }
 
         public Boolean Handle(Exception ex, ICommand command, Int32 retryCount, out Boolean retry, out CommandHandled replyCommand)
@@ -81,7 +101,7 @@ namespace Jarvis.Framework.Shared.Commands
             {
                 case ConcurrencyException cex:
 
-                    SharedMetricsHelper.MarkConcurrencyException();
+                    _concurrencyExceptionsCounter.Increment(command.GetType().Name, 1);
                     // retry
                     if (_logger.IsInfoEnabled) _logger.InfoFormat(ex, "Handled {0} {1} [{2}], concurrency exception. Retry count: {3}", command.GetType().FullName, command.MessageId, command.Describe(), retryCount);
 
@@ -96,7 +116,7 @@ namespace Jarvis.Framework.Shared.Commands
 
                 case DomainException dex:
 
-                    SharedMetricsHelper.MarkDomainException(command, dex);
+                    _domainExceptionsCounter.Increment(command.GetType().Name, 1);
                     var notifyTo = command.GetContextData(MessagesConstants.ReplyToHeader);
                     if (notifyTo != null)
                     {
@@ -116,7 +136,7 @@ namespace Jarvis.Framework.Shared.Commands
 
                 case SecurityException sex:
 
-                    SharedMetricsHelper.MarkSecurityException(command);
+                    _securityExceptionsCounter.Increment(command.GetType().Name, 1);
                     var notifySexTo = command.GetContextData(MessagesConstants.ReplyToHeader);
                     if (notifySexTo != null)
                     {

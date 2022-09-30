@@ -2,6 +2,8 @@
 
 ## vnext
 
+- Metrics was completely removed, framework require some interface to be registered to access real metrics engine.
+
 ## 6.3.0
 
 - EventStoreIdentities are now case insensitive, you can create a DocumentId from string "documeNTID_12"

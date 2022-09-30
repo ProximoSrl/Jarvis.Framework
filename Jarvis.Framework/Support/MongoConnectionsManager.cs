@@ -28,19 +28,6 @@ namespace Jarvis.Framework.Kernel.Support
         {
             Logger = NullLogger.Instance;
             _connectionStrings = connectionStrings;
-            SetupHealthCheck();
-        }
-
-        private List<DatabaseHealthCheck> _healthChecks;
-
-        private void SetupHealthCheck()
-        {
-            _healthChecks = new List<DatabaseHealthCheck>();
-
-            foreach (var connection in _connectionStrings)
-            {
-                _healthChecks.Add(new DatabaseHealthCheck(connection.Name, connection.ConnectionString));
-            }
         }
 
         public bool CheckDatabase()

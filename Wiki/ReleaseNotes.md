@@ -4,6 +4,8 @@
 
 # vNext
 
+- Need to register concrete implementation for Interfaces if you want metrics to work.
+
 ## 6.4.2
 
 - GH Code QL action fix

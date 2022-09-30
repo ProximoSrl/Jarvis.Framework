@@ -1,6 +1,4 @@
 #if NETSTANDARD
-using App.Metrics;
-using App.Metrics.Counter;
 using Jarvis.Framework.Shared.IdentitySupport;
 using Jarvis.Framework.Shared.Support;
 using Microsoft.Extensions.Caching.Memory;
@@ -14,9 +12,6 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
     public class AggregateCachedRepositoryFactory : IAggregateCachedRepositoryFactory
     {
         private static readonly MemoryCache Cache = new MemoryCache(new MemoryCacheOptions());
-
-        private static readonly CounterOptions CacheHitCounter = MetricsHelper.CreateCounter("RepositorySingleEntityCacheHits", Unit.Calls);
-        private static readonly CounterOptions CacheMissCounter = MetricsHelper.CreateCounter("RepositorySingleEntityCacheMisses", Unit.Calls);
 
         private readonly MemoryCacheEntryOptions _memoryCacheEntryOptions;
 
@@ -52,11 +47,14 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
 
         private readonly IRepositoryFactory _repositoryFactory;
         private readonly bool _cacheDisabled;
+        private readonly IJarvisFrameworkCounterMetric _cacheHitCounter;
+        private readonly IJarvisFrameworkCounterMetric _cacheMissCounter;
 
         /// <summary>
         /// Create aggregate cached repository factory
         /// </summary>
         /// <param name="repositoryFactory"></param>
+        /// <param name="jarvisFrameworkMetric"></param>
         /// <param name="cacheDisabled">If True cache is not used, and each time an instance of
         /// <see cref="IAggregateCachedRepository{TAggregate}"/> is requested, a non caceable
         /// entities is returned.
@@ -66,10 +64,14 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
         /// </param>
         public AggregateCachedRepositoryFactory(
             IRepositoryFactory repositoryFactory,
+            IJarvisFrameworkMetric jarvisFrameworkMetric,
             Boolean cacheDisabled = false)
         {
             _repositoryFactory = repositoryFactory;
             _cacheDisabled = cacheDisabled;
+
+            _cacheHitCounter = jarvisFrameworkMetric.Counter("RepositorySingleEntityCacheHits");
+            _cacheMissCounter = jarvisFrameworkMetric.Counter("RepositorySingleEntityCacheMisses");
         }
 
         private Int32 _isGettingCache = 0;
@@ -88,14 +90,14 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
                 TAggregate aggregate = null;
                 if (cached != null)
                 {
-                    MetricsHelper.Counter.Increment(CacheHitCounter);
+                    _cacheHitCounter.Increment(1);
                     innerRepository = cached.RepositoryEx;
                 }
                 else
                 {
                     //I have nothing in cache, I'll create a new repository and since aggregate is 
                     //null it will load the entity for the first time.
-                    MetricsHelper.Counter.Increment(CacheMissCounter);
+                    _cacheMissCounter.Increment(1);
                     innerRepository = _repositoryFactory.Create();
                 }
 
@@ -170,20 +172,18 @@ using System.Runtime.Caching;
 using System.Threading;
 using Jarvis.Framework.Shared.IdentitySupport;
 using NStore.Domain;
-using App.Metrics;
-using App.Metrics.Counter;
 using Jarvis.Framework.Shared.Support;
 
 namespace Jarvis.Framework.Shared.Persistence.EventStore
 {
-	public class AggregateCachedRepositoryFactory : IAggregateCachedRepositoryFactory
+    public class AggregateCachedRepositoryFactory : IAggregateCachedRepositoryFactory
     {
         private static readonly MemoryCache Cache = new MemoryCache("RepositorySingleAggregateFactory");
 
-        private static readonly CounterOptions CacheHitCounter = MetricsHelper.CreateCounter("RepositorySingleEntityCacheHits", Unit.Calls);
-        private static readonly CounterOptions CacheMissCounter = MetricsHelper.CreateCounter("RepositorySingleEntityCacheMisses", Unit.Calls);
 
-		readonly CacheItemPolicy _cachePolicy;
+        readonly CacheItemPolicy _cachePolicy;
+        private readonly IJarvisFrameworkCounterMetric _cacheHitCounter;
+        private readonly IJarvisFrameworkCounterMetric _cacheMissCounter;
 
         private class CacheEntry
         {
@@ -200,10 +200,10 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
         private void RemovedCallback(CacheEntryRemovedArguments arguments)
         {
             var cacheEntry = arguments.CacheItem.Value as CacheEntry;
-			if (cacheEntry != null && cacheEntry.RepositoryEx != null && !cacheEntry.InUse)
-			{
-				_repositoryFactory.Release(cacheEntry.RepositoryEx);
-			}
+            if (cacheEntry != null && cacheEntry.RepositoryEx != null && !cacheEntry.InUse)
+            {
+                _repositoryFactory.Release(cacheEntry.RepositoryEx);
+            }
         }
 
         private readonly IRepositoryFactory _repositoryFactory;
@@ -213,6 +213,7 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
         /// Create aggregate cached repository factory
         /// </summary>
         /// <param name="repositoryFactory"></param>
+        /// <param name="jarvisFrameworkMetric"></param>
         /// <param name="cacheDisabled">If True cache is not used, and each time an instance of
         /// <see cref="IAggregateCachedRepository{TAggregate}"/> is requested, a non caceable
         /// entities is returned.
@@ -221,19 +222,23 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
         /// it does not prevent two thread to execute at the same moment on the same aggregateId.
         /// </param>
         public AggregateCachedRepositoryFactory(
-			IRepositoryFactory repositoryFactory,
+            IRepositoryFactory repositoryFactory,
+            IJarvisFrameworkMetric jarvisFrameworkMetric,
             Boolean cacheDisabled = false)
         {
             _repositoryFactory = repositoryFactory;
             _cacheDisabled = cacheDisabled;
-			_cachePolicy = new CacheItemPolicy()
-			{
-				SlidingExpiration = TimeSpan.FromMinutes(10),
-				RemovedCallback = RemovedCallback
-			};
-		}
+            _cachePolicy = new CacheItemPolicy()
+            {
+                SlidingExpiration = TimeSpan.FromMinutes(10),
+                RemovedCallback = RemovedCallback
+            };
 
-		private Int32 _isGettingCache = 0;
+            _cacheHitCounter = jarvisFrameworkMetric.Counter("RepositorySingleEntityCacheHits");
+            _cacheMissCounter = jarvisFrameworkMetric.Counter("RepositorySingleEntityCacheMisses");
+        }
+
+        private Int32 _isGettingCache = 0;
 
         IAggregateCachedRepository<TAggregate> IAggregateCachedRepositoryFactory.Create<TAggregate>(IIdentity id)
         {
@@ -247,14 +252,14 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
                 TAggregate aggregate = null;
                 if (cached != null)
                 {
-                    MetricsHelper.Counter.Increment(CacheHitCounter);
+                    _cacheHitCounter.Increment(1);
                     innerRepository = cached.RepositoryEx;
                 }
                 else
                 {
                     //I have nothing in cache, I'll create a new repository and since aggregate is 
                     //null it will load the entity for the first time.
-                    MetricsHelper.Counter.Increment(CacheMissCounter);
+                    _cacheMissCounter.Increment(1);
                     innerRepository = _repositoryFactory.Create();
                 }
 
@@ -307,8 +312,8 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
 
         private void OnException(String id, IRepository repositoryEx)
         {
-			//remove the repository from cache, this will really dispose wrapped repository
-			_repositoryFactory.Release(repositoryEx);
+            //remove the repository from cache, this will really dispose wrapped repository
+            _repositoryFactory.Release(repositoryEx);
             Cache.Remove(id);
         }
 

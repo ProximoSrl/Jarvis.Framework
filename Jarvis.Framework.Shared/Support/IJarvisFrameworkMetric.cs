@@ -2,13 +2,99 @@
 using System.Linq;
 using System.Text;
 
-namespace Jarvis.Framework.Shared.HealthCheck
+namespace Jarvis.Framework.Shared.Support
 {
     /// <summary>
-    /// This is the very same class of Metrics.NET library, copied into framework to 
-    /// make the transition from Metrics.NET to App.Metrics easier.
+    /// Abstract the usage of a concrete metrics implementation
     /// </summary>
-    public struct HealthCheckResult
+    public interface IJarvisFrameworkMetric
+    {
+        /// <summary>
+        /// Registers a function to monitor. If the function throws or returns an JarvisFrameworkHealthCheckResult.Unhealthy the check fails,
+        /// otherwise the result of the function is used as a status.
+        /// </summary>
+        /// <param name="name">Name of the health check.</param>
+        /// <param name="check">Function to execute</param>
+        void RegisterHealthCheck(string name, Func<JarvisFrameworkHealthCheckResult> check);
+
+        /// <summary>
+        /// Create a concrete implementation for a counter.
+        /// </summary>
+        /// <param name="counterName"></param>
+        /// <returns></returns>
+        IJarvisFrameworkCounterMetric Counter(string counterName);
+
+        /// <summary>
+        /// Set a gauge.
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="provider"></param>
+        void Gauge(string name, Func<double> provider);
+    }
+
+    /// <summary>
+    /// Allow fallback to no-metrics logging, to avoid caller to be forced to register someting
+    /// </summary>
+    public class NullJarvisFrameworkMetric : IJarvisFrameworkMetric
+    {
+        ///<inheritdoc />
+        public IJarvisFrameworkCounterMetric Counter(string counterName)
+        {
+            return new NullJarvisFrameworkCounterMetric();
+        }
+
+        ///<inheritdoc />
+        public void Gauge(string name, Func<double> provider)
+        {
+            //intentionally left empty
+        }
+
+        ///<inheritdoc />
+        public void RegisterHealthCheck(string name, Func<JarvisFrameworkHealthCheckResult> check)
+        {
+            //Intentionally left empty
+        }
+    }
+
+    /// <summary>
+    /// Abstract counter metric for jarvis framework.
+    /// </summary>
+    public interface IJarvisFrameworkCounterMetric
+    {
+        /// <summary>
+        /// Increment the counter for a specific item.
+        /// </summary>
+        /// <param name="item"></param>
+        /// <param name="amount"></param>
+        void Increment(string item, double amount);
+
+        /// <summary>
+        /// Increment the counter 
+        /// </summary>
+        /// <param name="amount"></param>
+        void Increment(double amount);
+    }
+
+    ///<inheritdoc />
+    public class NullJarvisFrameworkCounterMetric : IJarvisFrameworkCounterMetric
+    {
+        ///<inheritdoc />
+        public void Increment(string item, double amount)
+        {
+            //Intentionally left empty
+        }
+
+        ///<inheritdoc />
+        public void Increment(double amount)
+        {
+            //Intentionally left empty
+        }
+    }
+
+    /// <summary>
+    /// Simple class to abstract health check result.
+    /// </summary>
+    public class JarvisFrameworkHealthCheckResult
     {
         /// <summary>
         /// True if the check was successful, false if the check failed.
@@ -20,7 +106,7 @@ namespace Jarvis.Framework.Shared.HealthCheck
         /// </summary>
         public readonly string Message;
 
-        private HealthCheckResult(bool isHealthy, string message)
+        private JarvisFrameworkHealthCheckResult(bool isHealthy, string message)
         {
             IsHealthy = isHealthy;
             Message = message;
@@ -30,7 +116,7 @@ namespace Jarvis.Framework.Shared.HealthCheck
         /// Create a healthy status response.
         /// </summary>
         /// <returns>Healthy status response.</returns>
-        public static HealthCheckResult Healthy()
+        public static JarvisFrameworkHealthCheckResult Healthy()
         {
             return Healthy("OK");
         }
@@ -41,9 +127,9 @@ namespace Jarvis.Framework.Shared.HealthCheck
         /// <param name="message">Status message.</param>
         /// <param name="values">Values to format the status message with.</param>
         /// <returns>Healthy status response.</returns>
-        public static HealthCheckResult Healthy(string message)
+        public static JarvisFrameworkHealthCheckResult Healthy(string message)
         {
-            return new HealthCheckResult(true, string.IsNullOrWhiteSpace(message) ? "OK" : message);
+            return new JarvisFrameworkHealthCheckResult(true, string.IsNullOrWhiteSpace(message) ? "OK" : message);
         }
 
         /// <summary>
@@ -52,17 +138,17 @@ namespace Jarvis.Framework.Shared.HealthCheck
         /// <param name="message">Status message.</param>
         /// <param name="values">Values to format the status message with.</param>
         /// <returns>Healthy status response.</returns>
-        public static HealthCheckResult Healthy(string message, params object[] values)
+        public static JarvisFrameworkHealthCheckResult Healthy(string message, params object[] values)
         {
             var status = string.Format(message, values);
-            return new HealthCheckResult(true, string.IsNullOrWhiteSpace(status) ? "OK" : status);
+            return new JarvisFrameworkHealthCheckResult(true, string.IsNullOrWhiteSpace(status) ? "OK" : status);
         }
 
         /// <summary>
         /// Create a unhealthy status response.
         /// </summary>
         /// <returns>Unhealthy status response.</returns>
-        public static HealthCheckResult Unhealthy()
+        public static JarvisFrameworkHealthCheckResult Unhealthy()
         {
             return Unhealthy("FAILED");
         }
@@ -73,9 +159,9 @@ namespace Jarvis.Framework.Shared.HealthCheck
         /// <param name="message">Status message.</param>
         /// <param name="values">Values to format the status message with.</param>
         /// <returns>Unhealthy status response.</returns>
-        public static HealthCheckResult Unhealthy(string message)
+        public static JarvisFrameworkHealthCheckResult Unhealthy(string message)
         {
-            return new HealthCheckResult(false, string.IsNullOrWhiteSpace(message) ? "FAILED" : message);
+            return new JarvisFrameworkHealthCheckResult(false, string.IsNullOrWhiteSpace(message) ? "FAILED" : message);
         }
 
         /// <summary>
@@ -84,10 +170,10 @@ namespace Jarvis.Framework.Shared.HealthCheck
         /// <param name="message">Status message.</param>
         /// <param name="values">Values to format the status message with.</param>
         /// <returns>Unhealthy status response.</returns>
-        public static HealthCheckResult Unhealthy(string message, params object[] values)
+        public static JarvisFrameworkHealthCheckResult Unhealthy(string message, params object[] values)
         {
             var status = string.Format(message, values);
-            return new HealthCheckResult(false, string.IsNullOrWhiteSpace(status) ? "FAILED" : status);
+            return new JarvisFrameworkHealthCheckResult(false, string.IsNullOrWhiteSpace(status) ? "FAILED" : status);
         }
 
         /// <summary>
@@ -95,10 +181,10 @@ namespace Jarvis.Framework.Shared.HealthCheck
         /// </summary>
         /// <param name="exception">Exception to use for reason.</param>
         /// <returns>Unhealthy status response.</returns>
-        public static HealthCheckResult Unhealthy(Exception exception)
+        public static JarvisFrameworkHealthCheckResult Unhealthy(Exception exception)
         {
             var status = $"EXCEPTION: {exception.GetType().Name} - {exception.Message}";
-            return new HealthCheckResult(false, status + Environment.NewLine + FormatStackTrace(exception));
+            return new JarvisFrameworkHealthCheckResult(false, status + Environment.NewLine + FormatStackTrace(exception));
         }
 
         private static string FormatStackTrace(Exception exception, int indent = 2)
