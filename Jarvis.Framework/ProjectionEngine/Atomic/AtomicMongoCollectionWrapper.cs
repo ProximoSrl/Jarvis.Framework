@@ -1,7 +1,10 @@
-﻿using Castle.Core.Logging;
+﻿using App.Metrics;
+using App.Metrics.Counter;
+using Castle.Core.Logging;
 using Jarvis.Framework.Shared.Helpers;
 using Jarvis.Framework.Shared.ReadModel;
 using Jarvis.Framework.Shared.ReadModel.Atomic;
+using Jarvis.Framework.Shared.Support;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
 using System;
@@ -11,6 +14,7 @@ using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 {
+    /// <inheritdoc />
     public class AtomicMongoCollectionWrapper<TModel> : IAtomicCollectionWrapper<TModel>
         where TModel : class, IAtomicReadModel
     {
@@ -21,6 +25,30 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         private readonly ILiveAtomicReadModelProcessor _liveAtomicReadModelProcessor;
 
         protected readonly ILogger _logger;
+
+        private static readonly CounterOptions FindOneByIdCounter = new CounterOptions()
+        {
+            Name = "AtomicRmFindOneByIdr",
+            MeasurementUnit = Unit.Calls
+        };
+
+        private static readonly CounterOptions QueryCounter = new CounterOptions()
+        {
+            Name = "AtomicRmQuery",
+            MeasurementUnit = Unit.Calls
+        };
+
+        private static readonly CounterOptions FindOneByIdAndCachupCounter = new CounterOptions()
+        {
+            Name = "AtomicRmFindOneByIdAndCachup",
+            MeasurementUnit = Unit.Calls
+        };    
+        
+        private static readonly CounterOptions FindOneByIdAtCheckpointCachupCounter = new CounterOptions()
+        {
+            Name = "AtomicRmFindOneByIdAtCheckpointCachup",
+            MeasurementUnit = Unit.Calls
+        };
 
         public AtomicMongoCollectionWrapper(
             IMongoDatabase readmodelDb,
@@ -109,15 +137,20 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             }
         }
 
+        /// <inheritdoc />
         public IQueryable<TModel> AsQueryable()
         {
+            JarvisFrameworkMetricsHelper.Counter.Increment(QueryCounter, 1, typeof(TModel).Name);
             return _collection.AsQueryable();
         }
 
+        /// <inheritdoc />
         public async Task<TModel> FindOneByIdAsync(String id)
         {
             TModel rm = null;
             Boolean fixableExceptions = false;
+            JarvisFrameworkMetricsHelper.Counter.Increment(FindOneByIdCounter, 1, typeof(TModel).Name);
+
             //try to read, but intercept a format exception if someone changed binary
             //serialization on mongodb.
             try
@@ -150,9 +183,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             return rm;
         }
 
+        /// <inheritdoc />
         public async Task<TModel> FindOneByIdAndCatchupAsync(string id)
         {
             var rm = await FindOneByIdAsync(id).ConfigureAwait(false);
+            JarvisFrameworkMetricsHelper.Counter.Increment(FindOneByIdAndCachupCounter, 1, typeof(TModel).Name);
             if (rm == null)
             {
                 //Try to project a new readmodel
@@ -168,8 +203,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             return rm;
         }
 
+        /// <inheritdoc />
         public async Task<IReadOnlyCollection<TModel>> FindManyAsync(System.Linq.Expressions.Expression<Func<TModel, bool>> filter, bool fixVersion = false)
         {
+            JarvisFrameworkMetricsHelper.Counter.Increment(QueryCounter, 1, typeof(TModel).Name);
             var rms = await _collection.FindAsync(filter).ConfigureAwait(false);
 
             if (!fixVersion)
@@ -192,16 +229,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             return rmsResult;
         }
 
-        /// <summary>
-        /// Perform an upsert without <see cref="AbstractAtomicReadModel.AggregateVersion"/> check.
-        /// </summary>
-        /// <param name="model"></param>
-        /// <returns></returns>
+        /// <inheritdoc />
         public Task UpsertForceAsync(TModel model)
         {
             return UpsertAsync(model, false);
         }
 
+        /// <inheritdoc />
         public Task UpsertAsync(TModel model)
         {
             return UpsertAsync(model, true);
@@ -212,6 +246,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// way possible
         /// </summary>
         /// <param name="model"></param>
+        /// <param name="performAggregateVersionCheck"></param>
         /// <returns></returns>
         private async Task UpsertAsync(TModel model, Boolean performAggregateVersionCheck)
         {
@@ -263,7 +298,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             }
 
             //ok if we reach here, we incurr in concurrent exception, a record is alreay
-            //present and inserted between the 
+            //present and inserted between the two call, we need to update and let the idempotency avoid corruption
             await UpdateAsync(model, performAggregateVersionCheck).ConfigureAwait(false);
         }
 
@@ -303,6 +338,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// <inheritdoc />
         public Task<TModel> FindOneByIdAtCheckpointAsync(string id, long chunkPosition)
         {
+            JarvisFrameworkMetricsHelper.Counter.Increment(FindOneByIdAtCheckpointCachupCounter, 1, typeof(TModel).Name);
             //TODO: cache somewhat readmodel in some cache database to avoid rebuilding always at version in memory.
             return _liveAtomicReadModelProcessor.ProcessAsyncUntilChunkPosition<TModel>(id, chunkPosition);
         }

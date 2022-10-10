@@ -55,7 +55,7 @@ namespace Jarvis.Framework.Kernel.Support
                 gaugeName = CheckpointBehind;
             }
 
-            Metric.Gauge(gaugeName, valueProvider, Unit.Items);
+            JarvisFrameworkMetric.Gauge(gaugeName, valueProvider, Unit.Items);
         }
 
         public void Start()
@@ -65,21 +65,21 @@ namespace Jarvis.Framework.Kernel.Support
             {
                 var slotName = stat.Name;
                 CreateCheckpointBehindGauge(stat.Name, () => _loader.GetSlotMetric(slotName).CommitBehind);
-                HealthChecks.RegisterHealthCheck("Slot-" + slotName, () => CheckSlotHealth(slotName));
+                JarvisFrameworkHealthChecks.RegisterHealthCheck("Slot-" + slotName, () => CheckSlotHealth(slotName));
             }
             CreateCheckpointBehindGauge("ALLSLOT", () => _loader.GetSlotMetrics().Max(d => d.CommitBehind));
         }
 
-        private HealthCheckResult CheckSlotHealth(string slotName)
+        private JarvisFrameworkHealthCheckResult CheckSlotHealth(string slotName)
         {
             if (RebuildSettings.ShouldRebuild)
-                return HealthCheckResult.Healthy("Slot " + slotName + " is rebuilding");
+                return JarvisFrameworkHealthCheckResult.Healthy("Slot " + slotName + " is rebuilding");
 
             var behind = _loader.GetSlotMetric(slotName).CommitBehind;
             if (behind > _maxSkewForSlot)
-                return HealthCheckResult.Unhealthy("Slot " + slotName + " behind:" + behind);
+                return JarvisFrameworkHealthCheckResult.Unhealthy("Slot " + slotName + " behind:" + behind);
             else
-                return HealthCheckResult.Healthy("Slot " + slotName + " behind:" + behind);
+                return JarvisFrameworkHealthCheckResult.Healthy("Slot " + slotName + " behind:" + behind);
         }
 
         public void Stop()

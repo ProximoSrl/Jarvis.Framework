@@ -20,7 +20,7 @@ namespace Jarvis.Framework.Kernel.Support
             {
                 options.BoundedCapacity = boundedCapacity;
             }
-            var meter = Metric.Meter($"GuaranteedDeliveryBroadcastBlock-{commitPollingClientId}", Unit.Items, TimeUnit.Seconds);
+            var meter = JarvisFrameworkMetric.Meter($"GuaranteedDeliveryBroadcastBlock-{commitPollingClientId}", Unit.Items, TimeUnit.Seconds);
             var actionBlock = new ActionBlock<T>(
                 async item =>
                 {

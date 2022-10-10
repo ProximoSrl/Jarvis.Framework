@@ -160,7 +160,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                 var slotName = slot;
                 if (setupMetrics)
                 {
-                    KernelMetricsHelper.SetCheckpointCountToDispatch(slot, () => GetCheckpointCount(slotName));
+                    JarvisFrameworkKernelMetricsHelper.SetCheckpointCountToDispatch(slot, () => GetCheckpointCount(slotName));
                 }
 
                 _checkpointSlotTracker[slot] = 0;
@@ -169,7 +169,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
             if (setupMetrics)
             {
-                KernelMetricsHelper.SetCheckpointCountToDispatch("", GetCheckpointMaxCount);
+                JarvisFrameworkKernelMetricsHelper.SetCheckpointCountToDispatch("", GetCheckpointMaxCount);
             }
         }
 

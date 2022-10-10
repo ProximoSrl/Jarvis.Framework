@@ -198,47 +198,37 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
                     .Set(x => x.Completed, true)
                     .Set(x => x.Success, true);
                 var equalityCheck = Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id);
-                if (JarvisFrameworkGlobalConfiguration.KernelMetrics)
-                {
-                    var trackMessage = Commands.FindOneAndUpdate(
-                        equalityCheck,
-                        mongoUpdate,
-                        new FindOneAndUpdateOptions<TrackedMessageModel, TrackedMessageModel>()
-                        {
-                            IsUpsert = true,
-                            ReturnDocument = ReturnDocument.After
-                        }
-                    );
-                    if (trackMessage != null)
-                    {
-                        if (trackMessage.StartedAt > DateTime.MinValue)
-                        {
-                            if (trackMessage.ExecutionStartTimeList != null
-                                && trackMessage.ExecutionStartTimeList.Length > 0)
-                            {
-                                var firstExecutionValue = trackMessage.ExecutionStartTimeList[0];
-                                var queueTime = firstExecutionValue.Subtract(trackMessage.StartedAt).TotalMilliseconds;
 
-                                var messageType = trackMessage.Message.GetType().Name;
-                                MetricsHelper.Timer.Time(QueueTimer, (long)queueTime);
-                                MetricsHelper.Counter.Increment(QueueCounter, (Int64)queueTime, messageType);
-                            }
-                            else
-                            {
-                                Logger.WarnFormat("Command id {0} received completed event but ExecutionStartTimeList is empty", command.MessageId);
-                            }
+                var trackMessage = Commands.FindOneAndUpdate(
+                    equalityCheck,
+                    mongoUpdate,
+                    new FindOneAndUpdateOptions<TrackedMessageModel, TrackedMessageModel>()
+                    {
+                        IsUpsert = true,
+                        ReturnDocument = ReturnDocument.After
+                    }
+                );
+                if (trackMessage != null)
+                {
+                    if (trackMessage.StartedAt > DateTime.MinValue)
+                    {
+                        if (trackMessage.ExecutionStartTimeList != null
+                            && trackMessage.ExecutionStartTimeList.Length > 0)
+                        {
+                            var firstExecutionValue = trackMessage.ExecutionStartTimeList[0];
+                            var queueTime = firstExecutionValue.Subtract(trackMessage.StartedAt).TotalMilliseconds;
+
+                            var messageType = trackMessage.Message.GetType().Name;
+                            JarvisFrameworkMetricsHelper.Timer.Time(QueueTimer, (long)queueTime);
+                            JarvisFrameworkMetricsHelper.Counter.Increment(QueueCounter, (Int64)queueTime, messageType);
+                        }
+                        else
+                        {
+                            Logger.WarnFormat("Command id {0} received completed event but ExecutionStartTimeList is empty", command.MessageId);
                         }
                     }
                 }
-                else
-                {
-                    //track completed date, delete all error messages.
-                    Commands.UpdateOne(
-                         equalityCheck,
-                         mongoUpdate,
-                         new UpdateOptions() { IsUpsert = true }
-                     );
-                }
+
             }
             catch (Exception ex)
             {
@@ -302,7 +292,7 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
                         .Set(x => x.Completed, true),
                     new UpdateOptions() { IsUpsert = true }
                 );
-                MetricsHelper.Meter.Mark(ErrorMeter);
+                JarvisFrameworkMetricsHelper.Meter.Mark(ErrorMeter);
             }
             catch (Exception iex)
             {

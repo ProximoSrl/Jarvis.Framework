@@ -2,6 +2,9 @@
 
 ## vnext
 
+- When init MetricsHelper you need to pass a complete build app.metrics configuration
+- Removed EventHappenedEventArgs due to metrics consolidation, now framework uses metrics directly
+
 ## 6.3.0
 
 - EventStoreIdentities are now case insensitive, you can create a DocumentId from string "documeNTID_12"

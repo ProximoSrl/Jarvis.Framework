@@ -4,6 +4,8 @@
 
 # vNext
 
+- Metrics helper now are internals only.
+
 ## 6.4.2
 
 - GH Code QL action fix

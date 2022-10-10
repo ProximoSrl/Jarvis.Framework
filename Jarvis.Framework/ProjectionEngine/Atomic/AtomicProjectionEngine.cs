@@ -118,16 +118,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             Logger.Info("Created Atomic Projection Engine");
             MaximumDifferenceForCatchupPoller = 20000;
 
-            Metric.RegisterHealthCheck("AtomicProjectionEngine", GetHealthCheck);
+            JarvisFrameworkMetric.RegisterHealthCheck("AtomicProjectionEngine", GetHealthCheck);
 
             _maxCommitInStream = _persistence.ReadLastPositionAsync().Result;
         }
 
-        private HealthCheckResult GetHealthCheck()
+        private JarvisFrameworkHealthCheckResult GetHealthCheck()
         {
             if (_engineExceptions.Count == 0)
             {
-                return HealthCheckResult.Healthy();
+                return JarvisFrameworkHealthCheckResult.Healthy();
             }
 
             StringBuilder errors = new StringBuilder();
@@ -135,7 +135,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             {
                 errors.AppendLine($"Error: {ex.Key}: {ex.Value}");
             }
-            return HealthCheckResult.Unhealthy("Error in Atomic Projection Engine: " + errors.ToString());
+            return JarvisFrameworkHealthCheckResult.Unhealthy("Error in Atomic Projection Engine: " + errors.ToString());
         }
 
         /// <summary>
@@ -396,7 +396,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 BoundedCapacity = 4000,
             };
             var localBuffer = buffer = new BufferBlock<AtomicDispatchChunk>(bufferOptions);
-            Metric.Gauge("atomic-projection-buffer", () => localBuffer.Count, Unit.Items);
+            JarvisFrameworkMetric.Gauge("atomic-projection-buffer", () => localBuffer.Count, Unit.Items);
 
             ExecutionDataflowBlockOptions enhancerExecutionOptions = new ExecutionDataflowBlockOptions
             {
@@ -409,7 +409,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 return c;
             }, enhancerExecutionOptions);
             buffer.LinkTo(enhancer, new DataflowLinkOptions() { PropagateCompletion = true });
-            Metric.Gauge("atomic-projection-enhancer-buffer", () => enhancer.InputCount, Unit.Items);
+            JarvisFrameworkMetric.Gauge("atomic-projection-enhancer-buffer", () => enhancer.InputCount, Unit.Items);
 
             ExecutionDataflowBlockOptions consumerExecutionOptions = new ExecutionDataflowBlockOptions
             {
@@ -422,8 +422,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 //Ok I have a list of atomic projection, we need to create projector for every item.
                 var blocks = item.Value;
                 var consumer = new ActionBlock<AtomicDispatchChunk>(InnerDispatch(item, blocks), consumerExecutionOptions);
-                Metric.Gauge("atomic-projection-consumer-buffer-" + item.Key.Name, () => consumer.InputCount, Unit.Items);
-                KernelMetricsHelper.CreateMeterForAtomicReadmodelDispatcherCount(item.Key.Name);
+                JarvisFrameworkMetric.Gauge("atomic-projection-consumer-buffer-" + item.Key.Name, () => consumer.InputCount, Unit.Items);
+                JarvisFrameworkKernelMetricsHelper.CreateMeterForAtomicReadmodelDispatcherCount(item.Key.Name);
                 consumers.Add(consumer);
             }
             broadcaster = GuaranteedDeliveryBroadcastBlock.Create(consumers, "AtomicPoller", 3000);
@@ -479,8 +479,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
                             QueryPerformanceCounter(out long ticks2);
                             var elapsedTicks = ticks2 - ticks1;
-                            KernelMetricsHelper.IncrementProjectionCounterAtomicProjection(item.Key.Name, elapsedTicks);
-                            KernelMetricsHelper.MarkCommitDispatchedAtomicReadmodelCount(item.Key.Name, 1);
+                            JarvisFrameworkKernelMetricsHelper.IncrementProjectionCounterAtomicProjection(item.Key.Name, elapsedTicks);
+                            JarvisFrameworkKernelMetricsHelper.MarkCommitDispatchedAtomicReadmodelCount(item.Key.Name, 1);
                         }
                     }
                     foreach (var rm in blocks.Where(_ => _.PollerId == dispatchObj.PollerId))

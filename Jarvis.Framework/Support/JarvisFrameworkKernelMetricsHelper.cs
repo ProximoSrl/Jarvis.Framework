@@ -11,7 +11,7 @@ namespace Jarvis.Framework.Kernel.Support
     /// <summary>
     /// Class to centralize metrics based on Metrics.NET
     /// </summary>
-    public static class KernelMetricsHelper
+    internal static class JarvisFrameworkKernelMetricsHelper
     {
         private const String _checkpointToDispatchRebuildGaugeName = "checkpoint-to-dispatch";
 
@@ -24,7 +24,7 @@ namespace Jarvis.Framework.Kernel.Support
 
         public static void SetProjectionEngineCurrentDispatchCount(Func<double> valueProvider)
         {
-            MetricsHelper.CreateGauge(_projectionEngineCurrentDispatchCount, valueProvider, Unit.Custom(EventStoreFactory.PartitionCollectionName));
+            JarvisFrameworkMetricsHelper.CreateGauge(_projectionEngineCurrentDispatchCount, valueProvider, Unit.Custom(EventStoreFactory.PartitionCollectionName));
         }
 
         public static void SetCheckpointCountToDispatch(String slotName, Func<double> valueProvider)
@@ -48,7 +48,7 @@ namespace Jarvis.Framework.Kernel.Support
             {
                 gaugeName = "t[" + TenantContext.CurrentTenantId + "]" + gaugeName;
             }
-            MetricsHelper.CreateGauge(gaugeName, valueProvider, Unit.Items);
+            JarvisFrameworkMetricsHelper.CreateGauge(gaugeName, valueProvider, Unit.Items);
         }
 
         public static void SetCommitPollingClientBufferSize(String pollerName, Func<double> valueProvider)
@@ -66,20 +66,20 @@ namespace Jarvis.Framework.Kernel.Support
             {
                 gaugeName = "t[" + TenantContext.CurrentTenantId + "]" + gaugeName;
             }
-            MetricsHelper.CreateGauge(gaugeName, valueProvider, Unit.Items);
+            JarvisFrameworkMetricsHelper.CreateGauge(gaugeName, valueProvider, Unit.Items);
         }
 
-        private static readonly Dictionary<string, Meter> CommitDispatchedBySlot = new Dictionary<string, Meter>();
-        private static readonly Dictionary<string, Meter> CommitDispatchedByAtomicReadmodel = new Dictionary<string, Meter>();
+        private static readonly Dictionary<string, JarvisFrameworkMeter> CommitDispatchedBySlot = new Dictionary<string, JarvisFrameworkMeter>();
+        private static readonly Dictionary<string, JarvisFrameworkMeter> CommitDispatchedByAtomicReadmodel = new Dictionary<string, JarvisFrameworkMeter>();
 
-        private static readonly Dictionary<string, Meter> RebuildCommitDispatchedBySlot = new Dictionary<string, Meter>();
-        private static readonly Dictionary<string, Meter> RebuildEventDispatchedByBucket = new Dictionary<string, Meter>();
+        private static readonly Dictionary<string, JarvisFrameworkMeter> RebuildCommitDispatchedBySlot = new Dictionary<string, JarvisFrameworkMeter>();
+        private static readonly Dictionary<string, JarvisFrameworkMeter> RebuildEventDispatchedByBucket = new Dictionary<string, JarvisFrameworkMeter>();
 
         public static void CreateMeterForDispatcherCountSlot(String slotName)
         {
             if (!CommitDispatchedBySlot.ContainsKey(slotName))
             {
-                var meter = Metric.Meter("projection-chunk-dispatched-" + slotName, Unit.Items, TimeUnit.Seconds);
+                var meter = JarvisFrameworkMetric.Meter("projection-chunk-dispatched-" + slotName, Unit.Items, TimeUnit.Seconds);
                 CommitDispatchedBySlot[slotName] = meter;
             }
         }
@@ -98,7 +98,7 @@ namespace Jarvis.Framework.Kernel.Support
         {
             if (!CommitDispatchedByAtomicReadmodel.ContainsKey(aggregateIdType))
             {
-                var meter = Metric.Meter("atomicreadmodel-dispatched-commit-" + aggregateIdType, Unit.Items, TimeUnit.Seconds);
+                var meter = JarvisFrameworkMetric.Meter("atomicreadmodel-dispatched-commit-" + aggregateIdType, Unit.Items, TimeUnit.Seconds);
                 CommitDispatchedByAtomicReadmodel[aggregateIdType] = meter;
             }
         }
@@ -112,37 +112,37 @@ namespace Jarvis.Framework.Kernel.Support
         {
             if (!RebuildCommitDispatchedBySlot.ContainsKey(slotName))
             {
-                var meter = Metric.Meter("projection-rebuild-event-dispatched-" + slotName, Unit.Items, TimeUnit.Seconds);
+                var meter = JarvisFrameworkMetric.Meter("projection-rebuild-event-dispatched-" + slotName, Unit.Items, TimeUnit.Seconds);
                 RebuildCommitDispatchedBySlot[slotName] = meter;
             }
-            Metric.Gauge("rebuild-buffer-STAGE3 (Action slot " + slotName + ")", getBufferDispatchCount, Unit.Items);
+            JarvisFrameworkMetric.Gauge("rebuild-buffer-STAGE3 (Action slot " + slotName + ")", getBufferDispatchCount, Unit.Items);
         }
 
         public static void CreateGaugeForRebuildBucketDBroadcasterBuffer(string bucketKey, Func<Double> provider)
         {
-            Metric.Gauge("rebuild-buffer-STAGE2 (Broadcaster)-" + bucketKey, provider, Unit.Items);
+            JarvisFrameworkMetric.Gauge("rebuild-buffer-STAGE2 (Broadcaster)-" + bucketKey, provider, Unit.Items);
         }
 
         public static void CreateGaugeForRebuildFirstBuffer(string bucketKey, Func<Double> provider)
         {
-            Metric.Gauge("rebuild-buffer-STAGE1-" + bucketKey, provider, Unit.Items);
+            JarvisFrameworkMetric.Gauge("rebuild-buffer-STAGE1-" + bucketKey, provider, Unit.Items);
         }
 
         internal static void CreateGaugeForAtomicProjectionFirstBuffer(Func<Double> provider)
         {
-            Metric.Gauge("atomic-projection-input-buffer", provider, Unit.Items);
+            JarvisFrameworkMetric.Gauge("atomic-projection-input-buffer", provider, Unit.Items);
         }
 
         internal static void CreateGaugeForAtomicProjectionEnhancerBuffer(Func<Double> provider)
         {
-            Metric.Gauge("atomic-projection-enhance-buffer", provider, Unit.Items);
+            JarvisFrameworkMetric.Gauge("atomic-projection-enhance-buffer", provider, Unit.Items);
         }
 
         public static void CreateMeterForRebuildEventCompleted(string bucketKey)
         {
             if (!RebuildEventDispatchedByBucket.ContainsKey(bucketKey))
             {
-                var meter = Metric.Meter("rebuild-event-processed-" + bucketKey, Unit.Items, TimeUnit.Seconds);
+                var meter = JarvisFrameworkMetric.Meter("rebuild-event-processed-" + bucketKey, Unit.Items, TimeUnit.Seconds);
                 CommitDispatchedBySlot[bucketKey] = meter;
             }
         }
@@ -158,19 +158,19 @@ namespace Jarvis.Framework.Kernel.Support
             RebuildEventDispatchedByBucket[bucketName].Mark(count);
         }
 
-        private static readonly Counter projectionCounter = Metric.Counter("prj-time", Unit.Custom("ticks"));
-        private static readonly Counter projectionSlotCounter = Metric.Counter("prj-slot-time", Unit.Custom("ticks"));
-        private static readonly Counter projectionEventCounter = Metric.Counter("prj-event-time", Unit.Custom("ticks"));
-        private static readonly Counter projectionSlowEventCounter = Metric.Counter("prj-slow-event", Unit.Custom("ms"));
+        private static readonly JarvisFrameworkCounter projectionCounter = JarvisFrameworkMetric.Counter("prj-time", Unit.Custom("ticks"));
+        private static readonly JarvisFrameworkCounter projectionSlotCounter = JarvisFrameworkMetric.Counter("prj-slot-time", Unit.Custom("ticks"));
+        private static readonly JarvisFrameworkCounter projectionEventCounter = JarvisFrameworkMetric.Counter("prj-event-time", Unit.Custom("ticks"));
+        private static readonly JarvisFrameworkCounter projectionSlowEventCounter = JarvisFrameworkMetric.Counter("prj-slow-event", Unit.Custom("ms"));
 
-        private static readonly Counter projectionCounterRebuild = Metric.Counter("prj-time-rebuild", Unit.Custom("ticks"));
-        private static readonly Counter projectionSlotCounterRebuild = Metric.Counter("prj-slot-time-rebuild", Unit.Custom("ticks"));
-        private static readonly Counter projectionEventCounterRebuild = Metric.Counter("prj-event-time-rebuild", Unit.Custom("ticks"));
+        private static readonly JarvisFrameworkCounter projectionCounterRebuild = JarvisFrameworkMetric.Counter("prj-time-rebuild", Unit.Custom("ticks"));
+        private static readonly JarvisFrameworkCounter projectionSlotCounterRebuild = JarvisFrameworkMetric.Counter("prj-slot-time-rebuild", Unit.Custom("ticks"));
+        private static readonly JarvisFrameworkCounter projectionEventCounterRebuild = JarvisFrameworkMetric.Counter("prj-event-time-rebuild", Unit.Custom("ticks"));
 
         /// <summary>
         /// During rebuild, this is the count of ALL Slot dispatched event, each event is counted multiple times.
         /// </summary>
-        private static readonly Meter projectionRebuildDispatchMeter = Metric.Meter("projection-rebuild-event-dispatched-TOTAL", Unit.Items, TimeUnit.Seconds);
+        private static readonly JarvisFrameworkMeter projectionRebuildDispatchMeter = JarvisFrameworkMetric.Meter("projection-rebuild-event-dispatched-TOTAL", Unit.Items, TimeUnit.Seconds);
 
         public static void IncrementProjectionCounter(String projectionName, String slotName, String eventName, Int64 ticks, Int64 milliseconds)
         {
@@ -192,7 +192,7 @@ namespace Jarvis.Framework.Kernel.Support
 
         /* ----------------------- Atomic projection related metrics ----------------------------- */
 
-        private static readonly Counter atomicProjectionCounterRebuild = Metric.Counter("atomic-projection-time", Unit.Custom("ticks"));
+        private static readonly JarvisFrameworkCounter atomicProjectionCounterRebuild = JarvisFrameworkMetric.Counter("atomic-projection-time", Unit.Custom("ticks"));
 
         public static void IncrementProjectionCounterAtomicProjection(String aggregateId, Int64 milliseconds)
         {

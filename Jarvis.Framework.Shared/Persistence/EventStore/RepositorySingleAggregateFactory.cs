@@ -15,8 +15,8 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
     {
         private static readonly MemoryCache Cache = new MemoryCache(new MemoryCacheOptions());
 
-        private static readonly CounterOptions CacheHitCounter = MetricsHelper.CreateCounter("RepositorySingleEntityCacheHits", Unit.Calls);
-        private static readonly CounterOptions CacheMissCounter = MetricsHelper.CreateCounter("RepositorySingleEntityCacheMisses", Unit.Calls);
+        private static readonly CounterOptions CacheHitCounter = JarvisFrameworkMetricsHelper.CreateCounter("RepositorySingleEntityCacheHits", Unit.Calls);
+        private static readonly CounterOptions CacheMissCounter = JarvisFrameworkMetricsHelper.CreateCounter("RepositorySingleEntityCacheMisses", Unit.Calls);
 
         private readonly MemoryCacheEntryOptions _memoryCacheEntryOptions;
 
@@ -88,14 +88,14 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
                 TAggregate aggregate = null;
                 if (cached != null)
                 {
-                    MetricsHelper.Counter.Increment(CacheHitCounter);
+                    JarvisFrameworkMetricsHelper.Counter.Increment(CacheHitCounter);
                     innerRepository = cached.RepositoryEx;
                 }
                 else
                 {
                     //I have nothing in cache, I'll create a new repository and since aggregate is 
                     //null it will load the entity for the first time.
-                    MetricsHelper.Counter.Increment(CacheMissCounter);
+                    JarvisFrameworkMetricsHelper.Counter.Increment(CacheMissCounter);
                     innerRepository = _repositoryFactory.Create();
                 }
 
@@ -180,8 +180,8 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
     {
         private static readonly MemoryCache Cache = new MemoryCache("RepositorySingleAggregateFactory");
 
-        private static readonly CounterOptions CacheHitCounter = MetricsHelper.CreateCounter("RepositorySingleEntityCacheHits", Unit.Calls);
-        private static readonly CounterOptions CacheMissCounter = MetricsHelper.CreateCounter("RepositorySingleEntityCacheMisses", Unit.Calls);
+        private static readonly CounterOptions CacheHitCounter = JarvisFrameworkMetricsHelper.CreateCounter("RepositorySingleEntityCacheHits", Unit.Calls);
+        private static readonly CounterOptions CacheMissCounter = JarvisFrameworkMetricsHelper.CreateCounter("RepositorySingleEntityCacheMisses", Unit.Calls);
 
 		readonly CacheItemPolicy _cachePolicy;
 
@@ -247,14 +247,14 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
                 TAggregate aggregate = null;
                 if (cached != null)
                 {
-                    MetricsHelper.Counter.Increment(CacheHitCounter);
+                    JarvisFrameworkMetricsHelper.Counter.Increment(CacheHitCounter);
                     innerRepository = cached.RepositoryEx;
                 }
                 else
                 {
                     //I have nothing in cache, I'll create a new repository and since aggregate is 
                     //null it will load the entity for the first time.
-                    MetricsHelper.Counter.Increment(CacheMissCounter);
+                    JarvisFrameworkMetricsHelper.Counter.Increment(CacheMissCounter);
                     innerRepository = _repositoryFactory.Create();
                 }
 

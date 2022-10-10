@@ -97,14 +97,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                 _owner = owner;
                 _consumerId = consumerId;
 
-                HealthChecks.RegisterHealthCheck("PollingConsumer-" + consumerId, () =>
+                JarvisFrameworkHealthChecks.RegisterHealthCheck("PollingConsumer-" + consumerId, () =>
                 {
                     if (string.IsNullOrEmpty(_error))
                     {
-                        return HealthCheckResult.Healthy($"Consumer {_consumerId} healthy - LastDispatched: {_owner.LastDispatchedPosition}");
+                        return JarvisFrameworkHealthCheckResult.Healthy($"Consumer {_consumerId} healthy - LastDispatched: {_owner.LastDispatchedPosition}");
                     }
 
-                    return HealthCheckResult.Unhealthy($"Consumer {_consumerId} error: {_error} - LastDispatched: {_owner.LastDispatchedPosition}");
+                    return JarvisFrameworkHealthCheckResult.Unhealthy($"Consumer {_consumerId} error: {_error} - LastDispatched: {_owner.LastDispatchedPosition}");
                 });
             }
 
@@ -194,39 +194,39 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         private void RegisterHealthChecks(string pollerName)
         {
-            KernelMetricsHelper.SetCommitPollingClientBufferSize(pollerName, () => GetClientBufferSize());
+            JarvisFrameworkKernelMetricsHelper.SetCommitPollingClientBufferSize(pollerName, () => GetClientBufferSize());
             //Set health check for polling
-            HealthChecks.RegisterHealthCheck("Polling-" + pollerName, () =>
+            JarvisFrameworkHealthChecks.RegisterHealthCheck("Polling-" + pollerName, () =>
             {
                 if (Status == CommitPollingClientStatus.Stopped)
                 {
                     //poller is stopped, system healty
-                    return HealthCheckResult.Healthy("Automatic polling stopped");
+                    return JarvisFrameworkHealthCheckResult.Healthy("Automatic polling stopped");
                 }
                 else if (Status == CommitPollingClientStatus.Faulted || LastException != null)
                 {
                     //poller is stopped, system is not healty anymore.
                     var exceptionText = (LastException != null ? LastException.ToString() : "");
                     exceptionText = exceptionText.Replace("{", "{{").Replace("}", "}}");
-                    return HealthCheckResult.Unhealthy(
+                    return JarvisFrameworkHealthCheckResult.Unhealthy(
                         "[LastDispatchedPosition: {0}] - Faulted (exception in consumer): {1}",
                         _lastDispatchedPosition,
                         exceptionText);
                 }
 
-                return HealthCheckResult.Healthy($"Poller alive / last dispatched position {LastDispatchedPosition}");
+                return JarvisFrameworkHealthCheckResult.Healthy($"Poller alive / last dispatched position {LastDispatchedPosition}");
             });
 
             //Now register health check for the internal NES poller, to diagnose errors in polling.
-            HealthChecks.RegisterHealthCheck("Polling internal errors: ", () =>
+            JarvisFrameworkHealthChecks.RegisterHealthCheck("Polling internal errors: ", () =>
             {
                 if (_innerSubscription?.LastException != null)
                 {
-                    return HealthCheckResult.Unhealthy("[LastDispatchedPosition: {0}] - Inner NStore poller has error: {1}",
+                    return JarvisFrameworkHealthCheckResult.Unhealthy("[LastDispatchedPosition: {0}] - Inner NStore poller has error: {1}",
                         _lastDispatchedPosition,
                         _innerSubscription?.LastException);
                 }
-                return HealthCheckResult.Healthy("Inner NES Poller Ok");
+                return JarvisFrameworkHealthCheckResult.Healthy("Inner NES Poller Ok");
             });
         }
 

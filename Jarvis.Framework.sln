@@ -13,6 +13,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jarvis.Framework", "Jarvis.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jarvis.Framework.Rebus", "Jarvis.Framework.Rebus\Jarvis.Framework.Rebus.csproj", "{CA8F9C2A-36CF-4125-BD41-32561F87ACAA}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ReleaseNotes", "ReleaseNotes", "{A216AE2B-BCF6-455C-9510-FA54DBC61CBE}"
+	ProjectSection(SolutionItems) = preProject
+		Wiki\BreakingChanges.md = Wiki\BreakingChanges.md
+		Wiki\ReleaseNotes.md = Wiki\ReleaseNotes.md
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

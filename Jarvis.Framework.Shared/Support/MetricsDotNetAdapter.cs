@@ -1,8 +1,6 @@
 ﻿using App.Metrics;
 using App.Metrics.Counter;
-using App.Metrics.Histogram;
 using App.Metrics.Meter;
-using App.Metrics.Timer;
 using Jarvis.Framework.Shared.HealthCheck;
 using System;
 
@@ -12,18 +10,18 @@ namespace Jarvis.Framework.Shared.Support
     /// Wrapper to use App.Metrics counters in a way that is more similar to the
     /// old Metrics.Net class
     /// </summary>
-    public class Counter
+    internal class JarvisFrameworkCounter
     {
         private readonly CounterOptions _counterOptions;
 
         /// <summary>
         /// Create a nuill counter that does not do anything
         /// </summary>
-        internal Counter()
+        internal JarvisFrameworkCounter()
         {
         }
 
-        public Counter(CounterOptions counterOptions)
+        public JarvisFrameworkCounter(CounterOptions counterOptions)
         {
             _counterOptions = counterOptions;
         }
@@ -32,7 +30,7 @@ namespace Jarvis.Framework.Shared.Support
         {
             if (_counterOptions != null)
             {
-                MetricsHelper.Counter.Increment(_counterOptions, ticks, item);
+                JarvisFrameworkMetricsHelper.Counter.Increment(_counterOptions, ticks, item);
             }
         }
 
@@ -40,7 +38,7 @@ namespace Jarvis.Framework.Shared.Support
         {
             if (_counterOptions != null)
             {
-                MetricsHelper.Counter.Increment(_counterOptions, item);
+                JarvisFrameworkMetricsHelper.Counter.Increment(_counterOptions, item);
             }
         }
 
@@ -48,20 +46,20 @@ namespace Jarvis.Framework.Shared.Support
         {
             if (_counterOptions != null)
             {
-                MetricsHelper.Counter.Increment(_counterOptions, ticks);
+                JarvisFrameworkMetricsHelper.Counter.Increment(_counterOptions, ticks);
             }
         }
     }
 
-    public class Meter
+    internal class JarvisFrameworkMeter
     {
         private readonly MeterOptions _meterOptions;
 
-        public Meter()
+        public JarvisFrameworkMeter()
         {
         }
 
-        public Meter(MeterOptions meterOptions)
+        public JarvisFrameworkMeter(MeterOptions meterOptions)
         {
             _meterOptions = meterOptions;
         }
@@ -70,131 +68,49 @@ namespace Jarvis.Framework.Shared.Support
         {
             if (_meterOptions != null)
             {
-                MetricsHelper.Meter.Mark(_meterOptions, amount);
+                JarvisFrameworkMetricsHelper.Meter.Mark(_meterOptions, amount);
             }
         }
     }
 
-    public class Timer
+    internal static class JarvisFrameworkMetric
     {
-        private readonly TimerOptions _timerOptions;
-
-        public Timer(TimerOptions timerOptions)
-        {
-            _timerOptions = timerOptions;
-        }
-
-        public TimerContext NewContext()
-        {
-            return MetricsHelper.Timer.Time(_timerOptions);
-        }
-
-        public TimerContext NewContext(string userValue)
-        {
-            return MetricsHelper.Timer.Time(_timerOptions, userValue);
-        }
-    }
-
-    public class Histogram
-    {
-        private readonly HistogramOptions _histogramOptions;
-
-        public Histogram()
-        {
-        }
-
-        public Histogram(HistogramOptions historgramOptions)
-        {
-            _histogramOptions = historgramOptions;
-        }
-
-        public void Update(long value)
-        {
-            if (_histogramOptions != null)
-            {
-                MetricsHelper.Histogram.Update(_histogramOptions, value);
-            }
-        }
-
-        public void Update(long value, string userValue)
-        {
-            if (_histogramOptions != null)
-            {
-                MetricsHelper.Histogram.Update(_histogramOptions, value, userValue);
-            }
-        }
-    }
-
-    public static class Metric
-    {
-        public static Counter Counter(string counterName, Unit measurementUnit)
+        public static JarvisFrameworkCounter Counter(string counterName, Unit measurementUnit)
         {
             if (MetricsGlobalSettings.IsCounterEnabled)
             {
-                return new Counter(new CounterOptions()
+                return new JarvisFrameworkCounter(new CounterOptions()
                 {
                     Name = counterName,
                     MeasurementUnit = measurementUnit,
                 });
             }
 
-            return new Counter();
+            return new JarvisFrameworkCounter();
         }
 
-        public static Meter Meter(string counterName, Unit measurementUnit, TimeUnit timeUnit = TimeUnit.Seconds)
+        public static JarvisFrameworkMeter Meter(string counterName, Unit measurementUnit, TimeUnit timeUnit = TimeUnit.Seconds)
         {
             if (MetricsGlobalSettings.IsCounterEnabled)
             {
-                return new Meter(new MeterOptions()
+                return new JarvisFrameworkMeter(new MeterOptions()
                 {
                     Name = counterName,
                     MeasurementUnit = measurementUnit,
                     RateUnit = timeUnit,
                 });
             }
-            return new Meter();
-        }
-
-        public static Histogram Histogram(string counterName, Unit measurementUnit)
-        {
-            if (MetricsGlobalSettings.IsHistogramEnabled)
-            {
-                return new Histogram(new HistogramOptions()
-                {
-                    Name = counterName,
-                    MeasurementUnit = measurementUnit,
-                });
-            }
-            return new Histogram();
-        }
-
-        public static Timer Timer(string counterName, Unit measurementUnit, TimeUnit timeUnit)
-        {
-            return new Timer(new TimerOptions()
-            {
-                Name = counterName,
-                MeasurementUnit = measurementUnit,
-                RateUnit = timeUnit,
-            });
-        }
-
-        public static Timer Timer(string counterName, Unit measurementUnit)
-        {
-            return new Timer(new TimerOptions()
-            {
-                Name = counterName,
-                MeasurementUnit = measurementUnit,
-            });
+            return new JarvisFrameworkMeter();
         }
 
         public static void Gauge(string name, Func<double> provider, Unit measurementUnit)
         {
-            MetricsHelper.CreateGauge(name, provider, measurementUnit);
+            JarvisFrameworkMetricsHelper.CreateGauge(name, provider, measurementUnit);
         }
 
-        public static void RegisterHealthCheck(string name, Func<HealthCheck.HealthCheckResult> getHealthCheck)
+        public static void RegisterHealthCheck(string name, Func<HealthCheck.JarvisFrameworkHealthCheckResult> getHealthCheck)
         {
-            HealthChecks.RegisterHealthCheck(name, getHealthCheck);
+            JarvisFrameworkHealthChecks.RegisterHealthCheck(name, getHealthCheck);
         }
     }
 }

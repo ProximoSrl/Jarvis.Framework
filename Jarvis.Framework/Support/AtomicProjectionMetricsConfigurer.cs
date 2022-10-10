@@ -94,8 +94,8 @@ namespace Jarvis.Framework.Kernel.Support
 
         public void Start()
         {
-            Metric.Gauge("checkpoint-behind-AtomicReadModels", CheckAllAtomicsValue(), Unit.Items);
-            HealthChecks.RegisterHealthCheck("Slot-All-AtomicReadmodels", CheckSlotHealth());
+            JarvisFrameworkMetric.Gauge("checkpoint-behind-AtomicReadModels", CheckAllAtomicsValue(), Unit.Items);
+            JarvisFrameworkHealthChecks.RegisterHealthCheck("Slot-All-AtomicReadmodels", CheckSlotHealth());
             foreach (var readModelType in _atomicProjectionCheckpointManager.GetAllRegisteredAtomicReadModels())
             {
                 var name = CollectionNames.GetCollectionName(readModelType);
@@ -103,7 +103,7 @@ namespace Jarvis.Framework.Kernel.Support
                 try
                 {
                     var readmodelVersion = _readModelFactory.GetReamdodelVersion(readModelType);
-                    Metric.Gauge("versions-behind-" + name, () => _versionLoader.CountReadModelToUpdateByName(name, readmodelVersion), Unit.Items);
+                    JarvisFrameworkMetric.Gauge("versions-behind-" + name, () => _versionLoader.CountReadModelToUpdateByName(name, readmodelVersion), Unit.Items);
                 }
                 catch (Exception ex)
                 {
@@ -117,7 +117,7 @@ namespace Jarvis.Framework.Kernel.Support
             // Method intentionally left empty.
         }
 
-        private Func<HealthCheckResult> CheckSlotHealth()
+        private Func<JarvisFrameworkHealthCheckResult> CheckSlotHealth()
         {
             return () =>
             {
@@ -126,11 +126,11 @@ namespace Jarvis.Framework.Kernel.Support
                 long behind = maxCheckpoint - minimumDispateched;
                 if (minimumDispateched > maxCheckpoint)
                 {
-                    return HealthCheckResult.Unhealthy("Slot-All-AtomicReadmodels behind:" + behind);
+                    return JarvisFrameworkHealthCheckResult.Unhealthy("Slot-All-AtomicReadmodels behind:" + behind);
                 }
                 else
                 {
-                    return HealthCheckResult.Healthy("Slot-All-AtomicReadmodels behind:" + behind);
+                    return JarvisFrameworkHealthCheckResult.Healthy("Slot-All-AtomicReadmodels behind:" + behind);
                 }
             };
         }

@@ -4,8 +4,6 @@ namespace Jarvis.Framework.Shared
 {
     public static class JarvisFrameworkGlobalConfiguration
     {
-        public static Boolean KernelMetrics { get; private set; }
-
         /// <summary>
         /// If true the RepositoryCommandHandler will use SingleAggregateRepository cached
         /// to reuse the same Repository+Aggregate if found in cache. This form of aggressive
@@ -25,7 +23,6 @@ namespace Jarvis.Framework.Shared
 
         static JarvisFrameworkGlobalConfiguration()
         {
-            KernelMetrics = true;
             SingleAggregateRepositoryCacheEnabled = false;
             AtomicProjectionEngineOptimizedCatchup = true;
         }
@@ -33,22 +30,6 @@ namespace Jarvis.Framework.Shared
         public static void DisableMongoDbAsync()
         {
             MongoDbAsyncDisabled = true;
-        }
-
-        /// <summary>
-        /// Disable kernel metrics.
-        /// </summary>
-        public static void DisableMetrics()
-        {
-            KernelMetrics = false;
-        }
-
-        /// <summary>
-        /// Enable kernel metrics.
-        /// </summary>
-        public static void EnableMetrics()
-        {
-            KernelMetrics = true;
         }
 
         public static void DisableSingleAggregateRepositoryCache()

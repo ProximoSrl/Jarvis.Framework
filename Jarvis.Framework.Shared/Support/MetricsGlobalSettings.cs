@@ -1,6 +1,6 @@
 ﻿namespace Jarvis.Framework.Shared.Support
 {
-    public static class MetricsGlobalSettings
+    internal static class MetricsGlobalSettings
     {
         public static bool GlobalDisabled { get; set; }
 

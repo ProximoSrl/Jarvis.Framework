@@ -42,8 +42,4 @@
   <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="6.0.1" />
   </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="HealthCheck\" />
-  </ItemGroup>
 </Project>

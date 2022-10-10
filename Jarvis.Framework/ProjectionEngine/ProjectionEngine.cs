@@ -273,7 +273,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
             foreach (var slotName in allSlots)
             {
-                KernelMetricsHelper.CreateMeterForDispatcherCountSlot(slotName);
+                JarvisFrameworkKernelMetricsHelper.CreateMeterForDispatcherCountSlot(slotName);
                 var startCheckpoint = GetStartCheckpointForSlot(slotName);
                 _logger.InfoFormat("Slot {0} starts from {1}", slotName, startCheckpoint);
 
@@ -287,7 +287,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             }
 
             Initialized = true;
-            KernelMetricsHelper.SetProjectionEngineCurrentDispatchCount(() => _countOfConcurrentDispatchingCommit);
+            JarvisFrameworkKernelMetricsHelper.SetProjectionEngineCurrentDispatchCount(() => _countOfConcurrentDispatchingCommit);
         }
 
         private Int64 GetStartGlobalCheckpoint(String[] slots)
@@ -431,7 +431,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                             someProjectionProcessedTheEvent |= eventProcessed;
                             sw.Stop();
                             ticks = sw.ElapsedTicks;
-                            KernelMetricsHelper.IncrementProjectionCounter(cname, slotName, eventName, ticks, sw.ElapsedMilliseconds);
+                            JarvisFrameworkKernelMetricsHelper.IncrementProjectionCounter(cname, slotName, eventName, ticks, sw.ElapsedMilliseconds);
 
                             if (_logger.IsDebugEnabled)
                             {
@@ -486,7 +486,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 projections.Select(_ => _.Info.CommonName),
                 chunk.Position,
                 someEventDispatched: someProjectionProcessedTheEvent).ConfigureAwait(false);
-            KernelMetricsHelper.MarkCommitDispatchedCount(slotName, 1);
+            JarvisFrameworkKernelMetricsHelper.MarkCommitDispatchedCount(slotName, 1);
 
             await _notifyCommitHandled.SetDispatched(slotName, chunk).ConfigureAwait(false);
 
@@ -597,12 +597,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         private void RegisterHealthCheck()
         {
-            HealthChecks.RegisterHealthCheck("Projection Engine Errors", () =>
+            JarvisFrameworkHealthChecks.RegisterHealthCheck("Projection Engine Errors", () =>
             {
                 if (_engineFatalErrors.Count == 0)
-                    return HealthCheckResult.Healthy("No error in projection engine");
+                    return JarvisFrameworkHealthCheckResult.Healthy("No error in projection engine");
 
-                return HealthCheckResult.Unhealthy("Error occurred in projection engine: " + String.Join("\n\n", _engineFatalErrors));
+                return JarvisFrameworkHealthCheckResult.Unhealthy("Error occurred in projection engine: " + String.Join("\n\n", _engineFatalErrors));
             });
         }
 
