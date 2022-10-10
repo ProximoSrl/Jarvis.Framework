@@ -21,15 +21,10 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
     [TestFixture]
     public class AtomicCollectionWrapperTests : AtomicCollectionWrapperTestsBase
     {
-        [OneTimeSetUp]
-        public void TestFixtureSetUp()
-        {
-            Init();
-        }
-
         [SetUp]
         public void SetUp()
         {
+            Init();
             InitSingleTest();
         }
 
@@ -350,6 +345,52 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 
             //Assert
             Assert.That(reloadedWithCatchup, Is.Null);
+        }
+
+        [Test]
+        public async Task Ability_to_project_At_checkpoint_is_not_present()
+        {
+            var reloadedWithCatchup = await _sut.FindOneByIdAtCheckpointAsync(new SampleAggregateId(123456789), 100).ConfigureAwait(false);
+
+            //Assert 
+            Assert.That(reloadedWithCatchup, Is.Null, "Non existing entity");
+        }
+
+        [Test]
+        public async Task Ability_to_project_at_checkpoint()
+        {
+            //Arrange create the readmodel, and process some events, then persist those events.
+            var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
+            GenerateCreatedEvent(false);
+            var first = GenerateTouchedEvent(false);
+            var second = GenerateTouchedEvent(false);
+
+            var firstCheckpoint = first.GetChunkPosition();
+            var secondCheckpoint = second.GetChunkPosition();
+
+            //Check
+            var reloaded = await _sut.FindOneByIdAtCheckpointAsync(rm.Id, firstCheckpoint).ConfigureAwait(false);
+            Assert.That(reloaded.TouchCount, Is.EqualTo(1), $"At checkpoint {firstCheckpoint} we expect correct value");
+
+            reloaded = await _sut.FindOneByIdAtCheckpointAsync(rm.Id, secondCheckpoint).ConfigureAwait(false);
+            Assert.That(reloaded.TouchCount, Is.EqualTo(2));
+        }
+
+        [Test]
+        public async Task Project_at_checkpoint_where_object_does_not_exists()
+        {
+            //Arrange create the readmodel, and process some events, then persist those events.
+            var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
+            GenerateCreatedEvent(false);
+            var first = GenerateTouchedEvent(false);
+            var second = GenerateTouchedEvent(false);
+
+            var firstCheckpoint = first.GetChunkPosition();
+            var secondCheckpoint = second.GetChunkPosition();
+
+            //Check
+            var reloaded = await _sut.FindOneByIdAtCheckpointAsync(rm.Id, 0).ConfigureAwait(false);
+            Assert.That(reloaded, Is.Null);
         }
 
         [Test]

@@ -49,6 +49,30 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         }
 
         [Test]
+        public async Task Project_before_the_object_exists()
+        {
+            var c1 = await GenerateSomeChangesetsAndReturnLatestsChangeset().ConfigureAwait(false);
+            var c2 = await GenerateTouchedEvent().ConfigureAwait(false);
+
+            //ok we need to check that events are not mixed.
+            var sut = _container.Resolve<ILiveAtomicReadModelProcessor>();
+            DomainEvent firstEvent = (DomainEvent)c1.Events[0];
+            var processed = await sut.ProcessAsyncUntilChunkPosition<SimpleTestAtomicReadModel>(
+                firstEvent.AggregateId.AsString(),
+                firstEvent.CheckpointToken).ConfigureAwait(false);
+
+            Assert.That(processed.TouchCount, Is.EqualTo(2));
+            Assert.That(processed.AggregateVersion, Is.EqualTo(3));
+
+            firstEvent = (DomainEvent)c2.Events[0];
+            processed = await sut.ProcessAsyncUntilChunkPosition<SimpleTestAtomicReadModel>(
+                  firstEvent.AggregateId.AsString(),
+                  0L).ConfigureAwait(false);
+
+            Assert.That(processed, Is.Null, "Aggregate does not exists at that checkpoint, we expect null");
+        }
+
+        [Test]
         public async Task Project_up_until_certain_checkpoint_number()
         {
             var c1 = await GenerateSomeChangesetsAndReturnLatestsChangeset().ConfigureAwait(false);
