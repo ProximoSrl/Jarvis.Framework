@@ -6,6 +6,10 @@
 
 - Metrics helper now are internals only.
 
+## 6.4.3
+
+- Fix FindOneByIdAtCheckpoint if the aggregate is not present at checkpoint
+
 ## 6.4.2
 
 - GH Code QL action fix

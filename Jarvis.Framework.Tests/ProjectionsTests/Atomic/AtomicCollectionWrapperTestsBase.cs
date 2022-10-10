@@ -51,7 +51,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 
         protected void InitSingleTest()
         {
-            _lastCommit = 1;
+            _lastCommit = 0;
             _lastPosition = 0;
             _aggregateVersion = 1;
             _aggregateIdSeed++;
