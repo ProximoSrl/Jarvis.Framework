@@ -33,7 +33,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
                 4);
 
             //Needed to avoid crash on wrong metrics dispatch.
-            KernelMetricsHelper.CreateMeterForRebuildDispatcherBuffer(slotName, () => 0);
+            JarvisFrameworkKernelMetricsHelper.CreateMeterForRebuildDispatcherBuffer(slotName, () => 0);
         }
 
         [Test]

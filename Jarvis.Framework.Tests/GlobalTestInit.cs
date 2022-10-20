@@ -17,7 +17,7 @@ namespace Jarvis.Framework.Tests
         [OneTimeSetUp]
         public void Global_initialization_of_all_tests()
         {
-            MetricsHelper.InitMetrics(new MetricsBuilder());
+            JarvisFrameworkMetricsHelper.InitMetrics(new MetricsBuilder().Build());
 
             //Nunit3 fix for test adapter of visual studio, it uses visual studio test directory
             Environment.CurrentDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);

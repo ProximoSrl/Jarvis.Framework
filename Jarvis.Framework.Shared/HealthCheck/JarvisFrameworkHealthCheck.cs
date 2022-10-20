@@ -7,15 +7,15 @@ namespace Jarvis.Framework.Shared.HealthCheck
     /// This is the very same class of Metrics.NET library, copied into framework to 
     /// make the transition from Metrics.NET to App.Metrics easier.
     /// </summary>
-    public class HealthCheck
+    internal class JarvisFrameworkHealthCheck
     {
         public struct Result
         {
             public readonly string Name;
-            public readonly HealthCheckResult Check;
+            public readonly JarvisFrameworkHealthCheckResult Check;
             public long DurationInMilliseconds { get; set; }
 
-            public Result(string name, HealthCheckResult check, long durationInMilliseconds)
+            public Result(string name, JarvisFrameworkHealthCheckResult check, long durationInMilliseconds)
             {
                 Name = name;
                 Check = check;
@@ -23,21 +23,21 @@ namespace Jarvis.Framework.Shared.HealthCheck
             }
         }
 
-        private readonly Func<HealthCheckResult> check;
+        private readonly Func<JarvisFrameworkHealthCheckResult> check;
 
-        protected HealthCheck(string name)
+        protected JarvisFrameworkHealthCheck(string name)
             : this(name, () => { })
         { }
 
-        public HealthCheck(string name, Action check)
+        public JarvisFrameworkHealthCheck(string name, Action check)
             : this(name, () => { check(); return string.Empty; })
         { }
 
-        public HealthCheck(string name, Func<string> check)
-            : this(name, () => HealthCheckResult.Healthy(check()))
+        public JarvisFrameworkHealthCheck(string name, Func<string> check)
+            : this(name, () => JarvisFrameworkHealthCheckResult.Healthy(check()))
         { }
 
-        public HealthCheck(string name, Func<HealthCheckResult> check)
+        public JarvisFrameworkHealthCheck(string name, Func<JarvisFrameworkHealthCheckResult> check)
         {
             Name = name;
             this.check = check;
@@ -45,7 +45,7 @@ namespace Jarvis.Framework.Shared.HealthCheck
 
         public string Name { get; }
 
-        protected virtual HealthCheckResult Check()
+        protected virtual JarvisFrameworkHealthCheckResult Check()
         {
             return check();
         }
@@ -60,7 +60,7 @@ namespace Jarvis.Framework.Shared.HealthCheck
             }
             catch (Exception x)
             {
-                return new Result(Name, HealthCheckResult.Unhealthy(x), stopwatch.ElapsedMilliseconds);
+                return new Result(Name, JarvisFrameworkHealthCheckResult.Unhealthy(x), stopwatch.ElapsedMilliseconds);
             }
         }
     }

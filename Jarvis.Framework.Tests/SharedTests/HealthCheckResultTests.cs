@@ -14,7 +14,7 @@ namespace Jarvis.Framework.Tests.SharedTests
         [Test]
         public void Can_log_single_message()
         {
-            Assert.DoesNotThrow(() => HealthCheckResult.Unhealthy("wrong { string }"));
+            Assert.DoesNotThrow(() => JarvisFrameworkHealthCheckResult.Unhealthy("wrong { string }"));
         }
     }
 }

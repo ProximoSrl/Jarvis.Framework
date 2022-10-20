@@ -112,7 +112,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                         await projection.HandleAsync(unwindedEvent.GetEvent(), true).ConfigureAwait(false);
                         QueryPerformanceCounter(out long ticks2);
                         elapsedticks = ticks2 - ticks1;
-                        KernelMetricsHelper.IncrementProjectionCounterRebuild(cname, SlotName, eventName, elapsedticks);
+                        JarvisFrameworkKernelMetricsHelper.IncrementProjectionCounterRebuild(cname, SlotName, eventName, elapsedticks);
                     }
                     catch (Exception ex)
                     {
@@ -123,8 +123,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                             SlotName,
                             cname
                         );
-                        HealthChecks.RegisterHealthCheck($"RebuildDispatcher, slot {SlotName} - FailedCheckpoint {unwindedEvent.CheckpointToken}", () =>
-                            HealthCheckResult.Unhealthy(ex)
+                        JarvisFrameworkHealthChecks.RegisterHealthCheck($"RebuildDispatcher, slot {SlotName} - FailedCheckpoint {unwindedEvent.CheckpointToken}", () =>
+                            JarvisFrameworkHealthCheckResult.Unhealthy(ex)
                         );
                         throw;
                     }
@@ -147,13 +147,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
             {
                 _logger.ErrorFormat(ex, "Error dispathing commit id: {0}\nMessage: {1}\nError: {2}",
                     unwindedEvent.CheckpointToken, unwindedEvent.Event, ex.Message);
-                HealthChecks.RegisterHealthCheck($"RebuildDispatcher, slot {SlotName} - GeneralError", () =>
-                    HealthCheckResult.Unhealthy(ex)
+                JarvisFrameworkHealthChecks.RegisterHealthCheck($"RebuildDispatcher, slot {SlotName} - GeneralError", () =>
+                    JarvisFrameworkHealthCheckResult.Unhealthy(ex)
                 );
                 throw;
             }
             _lastCheckpointRebuilded = chkpoint;
-            KernelMetricsHelper.MarkEventInRebuildDispatchedCount(SlotName, 1);
+            JarvisFrameworkKernelMetricsHelper.MarkEventInRebuildDispatchedCount(SlotName, 1);
             Interlocked.Decrement(ref RebuildProjectionMetrics.CountOfConcurrentDispatchingCommit);
         }
 
@@ -193,7 +193,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                         await projection.HandleAsync(domainEvent, true).ConfigureAwait(false);
                         QueryPerformanceCounter(out long ticks2);
                         elapsedticks = ticks2 - ticks1;
-                        KernelMetricsHelper.IncrementProjectionCounterRebuild(cname, SlotName, eventName, elapsedticks);
+                        JarvisFrameworkKernelMetricsHelper.IncrementProjectionCounterRebuild(cname, SlotName, eventName, elapsedticks);
                     }
                     catch (Exception ex)
                     {
@@ -204,8 +204,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                             SlotName,
                             cname
                         );
-                        HealthChecks.RegisterHealthCheck($"RebuildDispatcher, slot {SlotName} - FailedCheckpoint {domainEvent.CheckpointToken}", () =>
-                            HealthCheckResult.Unhealthy(ex)
+                        JarvisFrameworkHealthChecks.RegisterHealthCheck($"RebuildDispatcher, slot {SlotName} - FailedCheckpoint {domainEvent.CheckpointToken}", () =>
+                            JarvisFrameworkHealthCheckResult.Unhealthy(ex)
                         );
                         throw;
                     }
@@ -228,13 +228,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
             {
                 _logger.ErrorFormat(ex, "Error dispathing commit id: {0}\nMessage: {1}\nError: {2}",
                     domainEvent.CheckpointToken, domainEvent, ex.Message);
-                HealthChecks.RegisterHealthCheck($"RebuildDispatcher, slot {SlotName} - GeneralError", () =>
-                    HealthCheckResult.Unhealthy(ex)
+                JarvisFrameworkHealthChecks.RegisterHealthCheck($"RebuildDispatcher, slot {SlotName} - GeneralError", () =>
+                    JarvisFrameworkHealthCheckResult.Unhealthy(ex)
                 );
                 throw;
             }
             _lastCheckpointRebuilded = chkpoint;
-            KernelMetricsHelper.MarkEventInRebuildDispatchedCount(SlotName, 1);
+            JarvisFrameworkKernelMetricsHelper.MarkEventInRebuildDispatchedCount(SlotName, 1);
             Interlocked.Decrement(ref RebuildProjectionMetrics.CountOfConcurrentDispatchingCommit);
         }
     }

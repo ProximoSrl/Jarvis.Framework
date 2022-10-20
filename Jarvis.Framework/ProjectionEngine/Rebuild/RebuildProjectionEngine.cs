@@ -67,16 +67,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
             _metrics = new ProjectionMetrics(_allProjections);
             _loggerThreadContextManager = loggerThreadContextManager;
 
-            HealthChecks.RegisterHealthCheck("RebuildProjectionEngine", (Func<HealthCheckResult>)HealthCheck);
+            JarvisFrameworkHealthChecks.RegisterHealthCheck("RebuildProjectionEngine", (Func<JarvisFrameworkHealthCheckResult>)HealthCheck);
         }
 
-        private HealthCheckResult HealthCheck()
+        private JarvisFrameworkHealthCheckResult HealthCheck()
         {
             if (String.IsNullOrEmpty(_pollError))
             {
-                return HealthCheckResult.Healthy();
+                return JarvisFrameworkHealthCheckResult.Healthy();
             }
-            return HealthCheckResult.Unhealthy(_pollError);
+            return JarvisFrameworkHealthCheckResult.Unhealthy(_pollError);
         }
 
         private void DumpProjections()
@@ -137,7 +137,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                     .Select(p => _checkpointTracker.GetCheckpoint(p))
                     .Max();
                 var dispatcher = new RebuildProjectionSlotDispatcher(Logger, slotName, _config, projectionsForThisSlot, maximumDispatchedValue);
-                KernelMetricsHelper.SetCheckpointCountToDispatch(slotName, () => dispatcher.CheckpointToDispatch);
+                JarvisFrameworkKernelMetricsHelper.SetCheckpointCountToDispatch(slotName, () => dispatcher.CheckpointToDispatch);
                 _rebuildDispatchers.Add(dispatcher);
 
                 //find right consumer
@@ -191,17 +191,17 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                             dispatcher.SlotName,
                             eventsOfThisSlot);
                     consumers.Add(slotInfo);
-                    KernelMetricsHelper.CreateMeterForRebuildDispatcherBuffer(dispatcher.SlotName, () => actionBlock.InputCount);
+                    JarvisFrameworkKernelMetricsHelper.CreateMeterForRebuildDispatcherBuffer(dispatcher.SlotName, () => actionBlock.InputCount);
                 }
                 var allTypeHandledStringList = _projectionInspector.EventHandled.Select(t => t.Name).ToList();
 
                 var broadcaster = SlotGuaranteedDeliveryBroadcastBlock.Create(consumers, bucketInfo, consumer.Key.BufferSize);
                 _buffer.LinkTo(broadcaster, new DataflowLinkOptions() { PropagateCompletion = true });
 
-                KernelMetricsHelper.CreateGaugeForRebuildFirstBuffer(bucketInfo, () => _buffer.Count);
-                KernelMetricsHelper.CreateGaugeForRebuildBucketDBroadcasterBuffer(bucketInfo, () => broadcaster.InputCount);
+                JarvisFrameworkKernelMetricsHelper.CreateGaugeForRebuildFirstBuffer(bucketInfo, () => _buffer.Count);
+                JarvisFrameworkKernelMetricsHelper.CreateGaugeForRebuildBucketDBroadcasterBuffer(bucketInfo, () => broadcaster.InputCount);
 
-                KernelMetricsHelper.CreateMeterForRebuildEventCompleted(bucketInfo);
+                JarvisFrameworkKernelMetricsHelper.CreateMeterForRebuildEventCompleted(bucketInfo);
 
                 //fire each bucket in own thread
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
@@ -217,7 +217,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             }
 
-            KernelMetricsHelper.SetProjectionEngineCurrentDispatchCount(() => RebuildProjectionMetrics.CountOfConcurrentDispatchingCommit);
+            JarvisFrameworkKernelMetricsHelper.SetProjectionEngineCurrentDispatchCount(() => RebuildProjectionMetrics.CountOfConcurrentDispatchingCommit);
             return _status;
         }
 

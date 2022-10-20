@@ -46,7 +46,7 @@ namespace Jarvis.Framework.Shared.Store
             _failedPosition = 0;
             LastException = null;
 
-            MetricsHelper.CreateGauge($"fw-lambda-subscription-{_lambdaName}", () => _numOfChunksProcessed, Unit.Items);
+            JarvisFrameworkMetricsHelper.CreateGauge($"fw-lambda-subscription-{_lambdaName}", () => _numOfChunksProcessed, Unit.Items);
         }
 
         private Int64 _numOfChunksProcessed = 0;

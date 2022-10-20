@@ -10,7 +10,7 @@ namespace Jarvis.Framework.Shared.HealthCheck
     /// This is the very same class of Metrics.NET library, copied into framework to 
     /// make the transition from Metrics.NET to App.Metrics easier.
     /// </summary>
-    public struct HealthStatus
+    internal struct HealthStatus
     {
         /// <summary>
         /// Flag indicating whether any checks are registered
@@ -25,9 +25,9 @@ namespace Jarvis.Framework.Shared.HealthCheck
         /// <summary>
         /// Result of each health check operation
         /// </summary>
-        public readonly HealthCheck.Result[] Results;
+        public readonly JarvisFrameworkHealthCheck.Result[] Results;
 
-        public HealthStatus(IEnumerable<HealthCheck.Result> results)
+        public HealthStatus(IEnumerable<JarvisFrameworkHealthCheck.Result> results)
         {
             Results = results.ToArray();
             IsHealthy = Results.All(r => r.Check.IsHealthy);
@@ -38,9 +38,9 @@ namespace Jarvis.Framework.Shared.HealthCheck
     /// <summary>
     /// Registry for health checks
     /// </summary>
-    public static class HealthChecks
+    internal static class JarvisFrameworkHealthChecks
     {
-        private static readonly ConcurrentDictionary<string, HealthCheck> checks = new ConcurrentDictionary<string, HealthCheck>();
+        private static readonly ConcurrentDictionary<string, JarvisFrameworkHealthCheck> checks = new ConcurrentDictionary<string, JarvisFrameworkHealthCheck>();
 
         /// <summary>
         /// Registers an action to monitor. If the action throws the health check fails, otherwise is successful.
@@ -49,7 +49,7 @@ namespace Jarvis.Framework.Shared.HealthCheck
         /// <param name="check">Action to execute.</param>
         public static void RegisterHealthCheck(string name, Action check)
         {
-            RegisterHealthCheck(new HealthCheck(name, check));
+            RegisterHealthCheck(new JarvisFrameworkHealthCheck(name, check));
         }
 
         /// <summary>
@@ -60,7 +60,7 @@ namespace Jarvis.Framework.Shared.HealthCheck
         /// <param name="check">Function to execute.</param>
         public static void RegisterHealthCheck(string name, Func<string> check)
         {
-            RegisterHealthCheck(new HealthCheck(name, check));
+            RegisterHealthCheck(new JarvisFrameworkHealthCheck(name, check));
         }
 
         /// <summary>
@@ -69,16 +69,16 @@ namespace Jarvis.Framework.Shared.HealthCheck
         /// </summary>
         /// <param name="name">Name of the health check.</param>
         /// <param name="check">Function to execute</param>
-        public static void RegisterHealthCheck(string name, Func<HealthCheckResult> check)
+        public static void RegisterHealthCheck(string name, Func<JarvisFrameworkHealthCheckResult> check)
         {
-            RegisterHealthCheck(new HealthCheck(name, check));
+            RegisterHealthCheck(new JarvisFrameworkHealthCheck(name, check));
         }
 
         /// <summary>
         /// Registers a custom health check.
         /// </summary>
         /// <param name="healthCheck">Custom health check to register.</param>
-        public static void RegisterHealthCheck(HealthCheck healthCheck)
+        public static void RegisterHealthCheck(JarvisFrameworkHealthCheck healthCheck)
         {
             if (MetricsGlobalSettings.IsHealthCheckEnabled)
             {

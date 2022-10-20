@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.Support
 {
-    public class DatabaseHealthCheck : HealthCheck
+    internal class DatabaseHealthCheck : JarvisFrameworkHealthCheck
     {
         private readonly String _dbDescription;
         private readonly String _serverUrl;
@@ -18,13 +18,13 @@ namespace Jarvis.Framework.Kernel.Support
            : base("MongoDatabaseCheck: " + dbDescription)
         {
             _dbDescription = dbDescription;
-            HealthChecks.RegisterHealthCheck(this);
+            JarvisFrameworkHealthChecks.RegisterHealthCheck(this);
             _serverUrl = serverUrl;
         }
 
         private string _lastError = null;
         DateTime _lastQuestionTime = DateTime.MinValue;
-        protected override HealthCheckResult Check()
+        protected override JarvisFrameworkHealthCheckResult Check()
         {
             if (DateTime.Now.Subtract(_lastQuestionTime).TotalSeconds > 20)
             {
@@ -33,9 +33,9 @@ namespace Jarvis.Framework.Kernel.Support
             }
 
             if (!String.IsNullOrEmpty(_lastError))
-                return HealthCheckResult.Unhealthy(_lastError.Replace("{", "{{").Replace("}", "}}"));
+                return JarvisFrameworkHealthCheckResult.Unhealthy(_lastError.Replace("{", "{{").Replace("}", "}}"));
 
-            return HealthCheckResult.Healthy();
+            return JarvisFrameworkHealthCheckResult.Healthy();
         }
 
         private void PerformCheck()

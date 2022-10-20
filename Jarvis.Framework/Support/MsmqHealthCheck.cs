@@ -12,7 +12,7 @@ namespace Jarvis.Framework.Kernel.Support
 {
 #pragma warning disable S101 // Types should be named in camel case
 
-    public class MsmqHealthCheck : HealthCheck
+    internal class MsmqHealthCheck : JarvisFrameworkHealthCheck
     {
         private readonly String _queueName;
         private readonly Int32 _messageLimit;
@@ -22,13 +22,13 @@ namespace Jarvis.Framework.Kernel.Support
         {
             _queueName = queueName;
             _messageLimit = messageLimit;
-            HealthChecks.RegisterHealthCheck(this);
+            JarvisFrameworkHealthChecks.RegisterHealthCheck(this);
         }
 
-        private HealthCheckResult result = HealthCheckResult.Healthy();
+        private JarvisFrameworkHealthCheckResult result = JarvisFrameworkHealthCheckResult.Healthy();
         private DateTime lastCheck;
 
-        protected override HealthCheckResult Check()
+        protected override JarvisFrameworkHealthCheckResult Check()
         {
             //There is no reason to poll more than 5 minutes for the queue status
             if (DateTime.UtcNow.Subtract(lastCheck).TotalMinutes > 5)
@@ -46,12 +46,12 @@ namespace Jarvis.Framework.Kernel.Support
             var count = GetCount();
             if (count > _messageLimit)
             {
-                result = HealthCheckResult.Unhealthy("Queue {0} has {1} messages waiting in queue, exceeding maximum allowable limit of {2}",
+                result = JarvisFrameworkHealthCheckResult.Unhealthy("Queue {0} has {1} messages waiting in queue, exceeding maximum allowable limit of {2}",
                     _queueName, count, _messageLimit);
             }
             else
             {
-                result = HealthCheckResult.Healthy();
+                result = JarvisFrameworkHealthCheckResult.Healthy();
             }
             lastCheck = DateTime.UtcNow;
         }

@@ -81,7 +81,7 @@ namespace Jarvis.Framework.Shared.Commands
             {
                 case ConcurrencyException cex:
 
-                    SharedMetricsHelper.MarkConcurrencyException();
+                    JarvisFrameworkSharedMetricsHelper.MarkConcurrencyException(command);
                     // retry
                     if (_logger.IsInfoEnabled) _logger.InfoFormat(ex, "Handled {0} {1} [{2}], concurrency exception. Retry count: {3}", command.GetType().FullName, command.MessageId, command.Describe(), retryCount);
 
@@ -96,7 +96,7 @@ namespace Jarvis.Framework.Shared.Commands
 
                 case DomainException dex:
 
-                    SharedMetricsHelper.MarkDomainException(command, dex);
+                    JarvisFrameworkSharedMetricsHelper.MarkDomainException(command, dex);
                     var notifyTo = command.GetContextData(MessagesConstants.ReplyToHeader);
                     if (notifyTo != null)
                     {
@@ -116,7 +116,7 @@ namespace Jarvis.Framework.Shared.Commands
 
                 case SecurityException sex:
 
-                    SharedMetricsHelper.MarkSecurityException(command);
+                    JarvisFrameworkSharedMetricsHelper.MarkSecurityException(command);
                     var notifySexTo = command.GetContextData(MessagesConstants.ReplyToHeader);
                     if (notifySexTo != null)
                     {
