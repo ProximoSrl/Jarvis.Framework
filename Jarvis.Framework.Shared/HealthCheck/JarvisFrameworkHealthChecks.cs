@@ -10,7 +10,7 @@ namespace Jarvis.Framework.Shared.HealthCheck
     /// This is the very same class of Metrics.NET library, copied into framework to 
     /// make the transition from Metrics.NET to App.Metrics easier.
     /// </summary>
-    internal struct HealthStatus
+    public struct JarvisFrameworkHealthStatus
     {
         /// <summary>
         /// Flag indicating whether any checks are registered
@@ -27,7 +27,7 @@ namespace Jarvis.Framework.Shared.HealthCheck
         /// </summary>
         public readonly JarvisFrameworkHealthCheck.Result[] Results;
 
-        public HealthStatus(IEnumerable<JarvisFrameworkHealthCheck.Result> results)
+        public JarvisFrameworkHealthStatus(IEnumerable<JarvisFrameworkHealthCheck.Result> results)
         {
             Results = results.ToArray();
             IsHealthy = Results.All(r => r.Check.IsHealthy);
@@ -38,7 +38,7 @@ namespace Jarvis.Framework.Shared.HealthCheck
     /// <summary>
     /// Registry for health checks
     /// </summary>
-    internal static class JarvisFrameworkHealthChecks
+    public static class JarvisFrameworkHealthChecks
     {
         private static readonly ConcurrentDictionary<string, JarvisFrameworkHealthCheck> checks = new ConcurrentDictionary<string, JarvisFrameworkHealthCheck>();
 
@@ -95,10 +95,10 @@ namespace Jarvis.Framework.Shared.HealthCheck
         /// Execute all registered checks and return overall.
         /// </summary>
         /// <returns>Status of the system.</returns>
-        public static HealthStatus GetStatus()
+        public static JarvisFrameworkHealthStatus GetStatus()
         {
             var results = checks.Values.Select(v => v.Execute()).OrderBy(r => r.Name);
-            return new HealthStatus(results);
+            return new JarvisFrameworkHealthStatus(results);
         }
 
         /// <summary>

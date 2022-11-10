@@ -2,6 +2,10 @@
 
 ====
 
+# 6.5.2
+
+- Framework Metrics exposed to the external caller.
+  
 # 6.5.1
 
 - Avoid hammering readmodel for atomic readmodel stats.
