@@ -46,6 +46,8 @@ namespace Jarvis.Framework.Kernel.Support
         private readonly IMongoDatabase _readmodelDb;
         private readonly ConcurrentDictionary<String, IMongoCollection<AbstractAtomicReadModel>> _collectionsCache;
 
+        private ConcurrentDictionary<string, int> _countReadModelToUpdateByNameCache = new ConcurrentDictionary<string, int>();
+
         public AtomicReadModelVersionLoader(IMongoDatabase readmodelDb)
         {
             _readmodelDb = readmodelDb;
@@ -54,10 +56,25 @@ namespace Jarvis.Framework.Kernel.Support
 
         public double CountReadModelToUpdateByName(string readmodelName, Int32 version)
         {
+            if (_countReadModelToUpdateByNameCache.TryGetValue(readmodelName, out var count)) 
+            {
+                //ok we have the count, if its 0 fixer is finished, no need to aggregate anything more, just
+                //avoid doing the query. This is done because we need these stats only until we have
+                //version to be fixed.
+                if (count == 0) 
+                {
+                    return 0;
+                }
+            }
+
+            //if we reach here we are at first query or we have still readmodel to fix
             var _collection = GetCollection(readmodelName);
-            return _collection.AsQueryable()
+            count = _collection.AsQueryable()
                  .Where(_ => _.ReadModelVersion != version)
                  .Count();
+
+            _countReadModelToUpdateByNameCache[readmodelName] = count;
+            return count;
         }
 
         private IMongoCollection<AbstractAtomicReadModel> GetCollection(string readmodelName)
