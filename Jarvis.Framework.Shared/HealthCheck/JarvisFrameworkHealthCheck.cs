@@ -7,7 +7,7 @@ namespace Jarvis.Framework.Shared.HealthCheck
     /// This is the very same class of Metrics.NET library, copied into framework to 
     /// make the transition from Metrics.NET to App.Metrics easier.
     /// </summary>
-    internal class JarvisFrameworkHealthCheck
+    public class JarvisFrameworkHealthCheck
     {
         public struct Result
         {
