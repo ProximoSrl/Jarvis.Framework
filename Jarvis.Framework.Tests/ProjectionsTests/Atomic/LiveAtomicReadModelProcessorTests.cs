@@ -49,6 +49,29 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         }
 
         [Test]
+        public async Task Project_non_existing_aggregate()
+        {
+            var sut = _container.Resolve<ILiveAtomicReadModelProcessor>();
+            var processed = await sut.ProcessAsyncUntilChunkPosition<SimpleTestAtomicReadModel>(
+                  "SampleAggregate_123123123",
+                  0L).ConfigureAwait(false);
+
+            Assert.That(processed, Is.Null, "Aggregate does not exists at that checkpoint, we expect null");
+
+            processed = await sut.ProcessAsync<SimpleTestAtomicReadModel>(
+               "SampleAggregate_123123123",
+               0L).ConfigureAwait(false);
+
+            Assert.That(processed, Is.Null, "Aggregate does not exists at that checkpoint, we expect null");
+
+            processed = await sut.ProcessAsyncUntilUtcTimestamp<SimpleTestAtomicReadModel>(
+              "SampleAggregate_123123123",
+              DateTime.Now).ConfigureAwait(false);
+
+            Assert.That(processed, Is.Null, "Aggregate does not exists at that checkpoint, we expect null");
+        }
+
+        [Test]
         public async Task Project_before_the_object_exists()
         {
             var c1 = await GenerateSomeChangesetsAndReturnLatestsChangeset().ConfigureAwait(false);
@@ -68,6 +91,18 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             processed = await sut.ProcessAsyncUntilChunkPosition<SimpleTestAtomicReadModel>(
                   firstEvent.AggregateId.AsString(),
                   0L).ConfigureAwait(false);
+
+            Assert.That(processed, Is.Null, "Aggregate does not exists at that checkpoint, we expect null");
+
+            processed = await sut.ProcessAsync<SimpleTestAtomicReadModel>(
+               firstEvent.AggregateId.AsString(),
+               0L).ConfigureAwait(false);
+
+            Assert.That(processed, Is.Null, "Aggregate does not exists at that checkpoint, we expect null");
+
+            processed = await sut.ProcessAsyncUntilUtcTimestamp<SimpleTestAtomicReadModel>(
+              firstEvent.AggregateId.AsString(),
+              DateTime.MinValue).ConfigureAwait(false);
 
             Assert.That(processed, Is.Null, "Aggregate does not exists at that checkpoint, we expect null");
         }

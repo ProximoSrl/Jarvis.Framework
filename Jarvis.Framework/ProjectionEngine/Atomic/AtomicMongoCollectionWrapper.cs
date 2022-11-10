@@ -174,7 +174,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 rm = await _liveAtomicReadModelProcessor.ProcessAsync<TModel>(id, Int32.MaxValue).ConfigureAwait(false);
 
                 //Save if we have a newer readmodel
-                if (shouldSave)
+                if (shouldSave && rm != null)
                 {
                     await UpdateAsync(rm).ConfigureAwait(false);
                 }
@@ -192,7 +192,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             {
                 //Try to project a new readmodel
                 rm = await _liveAtomicReadModelProcessor.ProcessAsync<TModel>(id, Int64.MaxValue).ConfigureAwait(false);
-                if (rm.AggregateVersion == 0)
+                if (rm?.AggregateVersion == 0)
                 {
                     //we have an aggregate with no commit, just return null.
                     return null;
@@ -341,7 +341,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             JarvisFrameworkMetricsHelper.Counter.Increment(FindOneByIdAtCheckpointCachupCounter, 1, typeof(TModel).Name);
             //TODO: cache somewhat readmodel in some cache database to avoid rebuilding always at version in memory.
             var readmodel = await _liveAtomicReadModelProcessor.ProcessAsyncUntilChunkPosition<TModel>(id, chunkPosition);
-            if (readmodel.AggregateVersion == 0)
+            if (readmodel?.AggregateVersion == 0)
             {
                 return null;
             }

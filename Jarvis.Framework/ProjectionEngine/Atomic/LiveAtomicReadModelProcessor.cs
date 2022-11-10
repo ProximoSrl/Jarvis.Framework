@@ -30,7 +30,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             var readmodel = _atomicReadModelFactory.Create<TModel>(id);
             var subscription = new AtomicReadModelSubscription<TModel>(_commitEnhancer, readmodel, cs => cs.AggregateVersion > versionUpTo);
             await _persistence.ReadForwardAsync(id, 0, subscription).ConfigureAwait(false);
-            return readmodel;
+            return readmodel.AggregateVersion == 0 ? default : readmodel;
         }
 
         public async Task<TModel> ProcessAsyncUntilChunkPosition<TModel>(string id, long positionUpTo) where TModel : IAtomicReadModel
@@ -38,7 +38,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             var readmodel = _atomicReadModelFactory.Create<TModel>(id);
             var subscription = new AtomicReadModelSubscription<TModel>(_commitEnhancer, readmodel, cs => cs.GetChunkPosition() > positionUpTo);
             await _persistence.ReadForwardAsync(id, 0, subscription, Int64.MaxValue).ConfigureAwait(false);
-            return readmodel;
+            return readmodel.AggregateVersion == 0 ? default : readmodel;
         }
 
         public Task CatchupAsync<TModel>(TModel readModel) where TModel : IAtomicReadModel
@@ -52,7 +52,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             var readmodel = _atomicReadModelFactory.Create<TModel>(id);
             var subscription = new AtomicReadModelSubscription<TModel>(_commitEnhancer, readmodel, cs => cs.GetTimestamp() > dateTimeUpTo);
             await _persistence.ReadForwardAsync(id, 0, subscription, Int64.MaxValue).ConfigureAwait(false);
-            return readmodel;
+            return readmodel.AggregateVersion == 0 ? default : readmodel;
         }
     }
 }

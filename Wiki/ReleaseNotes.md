@@ -2,7 +2,11 @@
 
 ====
 
-# vNext
+# 6.5.1
+
+- Avoid hammering readmodel for atomic readmodel stats.
+
+# 6.5.0
 
 - Metrics helper now are internals only.
 
