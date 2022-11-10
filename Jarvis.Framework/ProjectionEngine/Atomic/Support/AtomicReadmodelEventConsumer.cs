@@ -98,7 +98,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support
         public async Task FullProject(IIdentity identity)
         {
             var rm = await _liveAtomicReadModelProcessor.ProcessAsync<TModel>(identity.AsString(), Int64.MaxValue).ConfigureAwait(false);
-            await _atomicCollectionWrapper.UpsertAsync(rm).ConfigureAwait(false);
+            if (rm != null)
+            {
+                await _atomicCollectionWrapper.UpsertAsync(rm).ConfigureAwait(false);
+            }
         }
     }
 }

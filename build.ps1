@@ -98,6 +98,7 @@ Write-Host "Building solution"
 dotnet build $solutionName -p:IncludeSymbols=true --configuration $Configuration /p:assemblyVersion=$assemblyVersion /p:FileVersion=$assemblyFileVersion /p:InformationalVersion=$assemblyInformationalVersion 
 Assert-LastExecution -message "Build solution failed." -haltExecution $true
 
+Write-Host "Test Phase: Skip test = $SkipTest"
 if (!$SkipTest) {
 
     # Step 6: Running tests
@@ -107,7 +108,7 @@ if (!$SkipTest) {
     foreach ($file in $testProject) {
         $fileName = $file.Name
         Write-Host "Run test for $($file.FullName) to file result $publishDirectory/$fileName.trx"
-        dotnet test $file.FullName --no-build --configuration $Configuration -r $publishDirectory --logger "trx;" /p:PackageVersion=$nugetVersion /p:AssemblyVersion=$assemblyVersion /p:FileVersion=$assemblyFileVersion /p:InformationalVersion=$assemblyInformationalVersion
+        dotnet test $file.FullName --no-build --configuration $Configuration --results-directory $publishDirectory --logger "trx;" /p:PackageVersion=$nugetVersion /p:AssemblyVersion=$assemblyVersion /p:FileVersion=$assemblyFileVersion /p:InformationalVersion=$assemblyInformationalVersion
     }
 }
 
