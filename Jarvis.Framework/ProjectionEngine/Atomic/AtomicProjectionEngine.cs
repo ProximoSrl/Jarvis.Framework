@@ -27,10 +27,14 @@ using System.Timers;
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 {
     /// <summary>
+    /// <para>
     /// This is a real reduced form of Projection Engine that is 
-    /// capable of building only <see cref="Jarvis.Framework.Shared.ReadModel.Atomic.AbstractAtomicReadModel{TKey}IAtomicReadModel/>.
+    /// capable of building only classes that derives from <see cref="AbstractAtomicReadModel" />.
+    /// </para>
     /// 
+    /// <para>
     /// This component automatically flushes with an internal timer the checkpoint.
+    /// </para>
     /// </summary>
     public class AtomicProjectionEngine
     {
