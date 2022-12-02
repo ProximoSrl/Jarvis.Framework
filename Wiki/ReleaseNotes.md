@@ -2,6 +2,10 @@
 
 ====
 
+# 6.5.3
+
+- Command handlers can now override how command and other data are stored into commit header.
+
 # 6.5.2
 
 - Framework Metrics exposed to the external caller.

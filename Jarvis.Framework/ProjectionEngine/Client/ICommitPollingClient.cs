@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 {
     /// <summary>
-    /// An abstractio nof a 
+    /// An abstraction of a component that polls NStore commits.
     /// </summary>
     public interface ICommitPollingClient
     {
