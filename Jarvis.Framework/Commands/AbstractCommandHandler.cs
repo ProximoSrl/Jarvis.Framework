@@ -93,15 +93,34 @@ namespace Jarvis.Framework.Kernel.Commands
             }
         }
 
-        protected void StoreCommandHeaders(IHeadersAccessor headersAccessor, ICommand currentCommand)
+        /// <summary>
+        /// Version 6.5.3 made this method virtual so specific command hanlder can change how headers
+        /// are stored, this is especially useful to avoid storing plain command in the same commit 
+        /// and instead using some proxy.
+        /// </summary>
+        /// <param name="headersAccessor"></param>
+        /// <param name="currentCommand"></param>
+        protected virtual void StoreCommandHeaders(IHeadersAccessor headersAccessor, ICommand currentCommand)
         {
             foreach (var key in currentCommand.AllContextKeys)
             {
                 headersAccessor.Add(key, currentCommand.GetContextData(key));
             }
-            headersAccessor.Add(ChangesetCommonHeaders.Command, currentCommand);
+            OnStoreCommandDataIntoHeaders(headersAccessor, currentCommand);
             headersAccessor.Add(ChangesetCommonHeaders.Timestamp, DateTime.UtcNow);
             OnStoreCommandHeaders(headersAccessor);
+        }
+
+        /// <summary>
+        /// Added in 6.5.3 allows for a special store of command information into commit header. This
+        /// is different from <see cref="OnStoreCommandHeaders(IHeadersAccessor)"/> because this method
+        /// can prevent / change storage of plain command into headers.
+        /// </summary>
+        /// <param name="headersAccessor"></param>
+        /// <param name="currentCommand"></param>
+        protected virtual void OnStoreCommandDataIntoHeaders(IHeadersAccessor headersAccessor, ICommand currentCommand)
+        {
+            headersAccessor.Add(ChangesetCommonHeaders.Command, currentCommand);
         }
 
         protected virtual void OnStoreCommandHeaders(IHeadersAccessor headersAccessor)
