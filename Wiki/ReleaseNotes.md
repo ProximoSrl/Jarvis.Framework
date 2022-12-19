@@ -2,6 +2,14 @@
 
 ====
 
+# 6.5.4
+
+- Updated references
+  - NStore
+  - MongoDb drivers
+  - Json.NET
+  - Test related libraries
+
 # 6.5.3
 
 - Command handlers can now override how command and other data are stored into commit header.
