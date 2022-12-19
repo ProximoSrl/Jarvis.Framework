@@ -12,14 +12,6 @@
     <DefineConstants>NET45;NETFULL</DefineConstants>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <OutputPath>bincore\Debug\netcoreapp2.0\</OutputPath>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <OutputPath>bincore\Release\netcoreapp2.0\</OutputPath>
-  </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="App.Metrics" Version="4.3.0" />
     <PackageReference Include="Castle.Core" Version="4.4.1" />
