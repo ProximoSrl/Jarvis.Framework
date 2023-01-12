@@ -11,31 +11,31 @@ namespace Jarvis.Framework.Shared.Support
     {
         private static readonly CounterOptions ConcurrencyExceptions = new CounterOptions()
         {
-            Name = "ConcurrencyExceptions",
+            Name = "FrameworkConcurrencyExceptions",
             MeasurementUnit = Unit.Events
         };
 
         private static readonly CounterOptions DomainExceptions = new CounterOptions()
         {
-            Name = "DomainExceptions",
+            Name = "FrameworkDomainExceptions",
             MeasurementUnit = Unit.Events
         };
 
         private static readonly CounterOptions SecurityExceptions = new CounterOptions()
         {
-            Name = "SecurityExceptions",
+            Name = "FrameworkSecurityExceptions",
             MeasurementUnit = Unit.Events
         };
 
         private static readonly CounterOptions CommandsExecuted = new CounterOptions()
         {
-            Name = "CommandsExecuted",
+            Name = "FrameworkCommandsExecuted",
             MeasurementUnit = Unit.Commands
         };
 
         private static readonly TimerOptions CommandTimer = new TimerOptions
         {
-            Name = "CommandsExecution",
+            Name = "FrameworkCommandsExecution",
             MeasurementUnit = Unit.Requests,
             DurationUnit = TimeUnit.Milliseconds,
             RateUnit = TimeUnit.Milliseconds
