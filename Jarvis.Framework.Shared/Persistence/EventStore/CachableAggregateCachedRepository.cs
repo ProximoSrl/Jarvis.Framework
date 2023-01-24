@@ -1,4 +1,5 @@
-﻿using Jarvis.Framework.Shared.IdentitySupport;
+﻿using Jarvis.Framework.Shared.Exceptions;
+using Jarvis.Framework.Shared.IdentitySupport;
 using NStore.Domain;
 using System;
 using System.Threading.Tasks;
@@ -44,12 +45,13 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
             Aggregate = wrappedRepository.GetByIdAsync<TAggregate>(id.ToString()).Result;
         }
 
+        /// <inheritdoc />
         public TAggregate Aggregate { get; }
 
         /// <summary>
         /// Since the repository should be kept in cache, the dispose of this
         /// object only inform the caller with the callback that the single entity repository
-        /// was disposed. 
+        /// was disposed.
         /// </summary>
         public void Dispose()
         {
@@ -57,16 +59,24 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
             _disposeAction(Aggregate.Id, _wrappedRepository);
         }
 
-        public async Task SaveAsync(Guid commitId, Action<IHeadersAccessor> updateHeaders)
+		private Exception _lastException = null;
+
+		/// <inheritdoc />
+		public async Task SaveAsync(Guid commitId, Action<IHeadersAccessor> updateHeaders)
         {
+            if (_lastException != null)
+            {
+                throw new JarvisFrameworkEngineException($"Unable to Save aggregate {Aggregate.Id} because we have a previous fault on the aggregate {_lastException}"); ;
+            }
             try
             {
                 await _wrappedRepository.SaveAsync(Aggregate, commitId.ToString(), updateHeaders).ConfigureAwait(false);
                 _afterSaveAction(Aggregate.Id, _wrappedRepository);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                _onExceptionAction(Aggregate.Id, _wrappedRepository);
+                _lastException = ex;
+				_onExceptionAction(Aggregate.Id, _wrappedRepository);
                 throw;
             }
         }

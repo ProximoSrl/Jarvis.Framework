@@ -79,7 +79,7 @@ namespace Jarvis.Framework.Shared.Commands
             shouldContinue = false;
             switch (ex)
             {
-                case ConcurrencyException cex:
+                case ConcurrencyException _:
 
                     JarvisFrameworkSharedMetricsHelper.MarkConcurrencyException(command);
                     // retry
