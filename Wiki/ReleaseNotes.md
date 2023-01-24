@@ -2,6 +2,10 @@
 
 ====
 
+# 6.5.5
+
+- Fix aggregate cache in repository when an exception is thrown.
+
 # 6.5.4
 
 - Updated references
