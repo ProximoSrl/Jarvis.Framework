@@ -121,7 +121,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
                     .For<AtomicProjectionEngine>()
                     .ImplementedBy<AtomicProjectionEngine>(),
                 Component
-                    .For<ILiveAtomicReadModelProcessor>()
+                    .For<ILiveAtomicReadModelProcessor, ILiveAtomicReadModelProcessorEnhanced>()
                     .ImplementedBy<LiveAtomicReadModelProcessor>(),
                 Component
                     .For<ICommitPollingClient>()
