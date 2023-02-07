@@ -122,7 +122,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
                     .For<AtomicProjectionEngine>()
                     .ImplementedBy<AtomicProjectionEngine>(),
                 Component
-                    .For<ILiveAtomicReadModelProcessor, ILiveAtomicReadModelProcessorEnhanced>()
+                    .For<ILiveAtomicReadModelProcessor, ILiveAtomicMultistreamReadModelProcessor, ILiveAtomicReadModelProcessorEnhanced>()
                     .ImplementedBy<LiveAtomicReadModelProcessor>(),
                 Component
                     .For<ICommitPollingClient>()
@@ -184,10 +184,10 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 
         protected Int64 lastUsedPosition;
 
-        protected Task<Changeset> GenerateCreatedEvent(String issuedBy = null)
+        protected Task<Changeset> GenerateCreatedEvent(String issuedBy = null, DateTime? timestamp = null)
         {
             var evt = new SampleAggregateCreated();
-            SetBasePropertiesToEvent(evt, issuedBy);
+            SetBasePropertiesToEvent(evt, issuedBy, timestamp: timestamp);
             return ProcessEvent(evt);
         }
 
@@ -307,12 +307,12 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         {
         }
 
-        protected async Task<Changeset> GenerateSomeChangesetsAndReturnLatestsChangeset()
+        protected async Task<Changeset> GenerateSomeChangesetsAndReturnLatestsChangeset(DateTime? timestamp = null)
         {
             //Three events all generated in datbase
-            await GenerateCreatedEvent().ConfigureAwait(false);
-            await GenerateTouchedEvent().ConfigureAwait(false);
-            return await GenerateTouchedEvent().ConfigureAwait(false);
+            await GenerateCreatedEvent(timestamp: timestamp).ConfigureAwait(false);
+            await GenerateTouchedEvent(timestamp: timestamp).ConfigureAwait(false);
+            return await GenerateTouchedEvent(timestamp: timestamp).ConfigureAwait(false);
         }
 
         protected static void SetBasePropertiesToEvent(DomainEvent evt, string issuedBy, DateTime? timestamp = null)

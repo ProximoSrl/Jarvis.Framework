@@ -199,7 +199,8 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
 		/// one event that is handled by the readmodel.
 		/// </summary>
 		/// <param name="changeset"></param>
-		/// <returns></returns>
+		/// <exception cref="JarvisFrameworkEngineException">if we dispatch a changeset in the past that was not dispatched
+		/// we have framework excepion.</exception>
 		public virtual Boolean ProcessChangeset(Changeset changeset)
 		{
 			Boolean processed = false;
