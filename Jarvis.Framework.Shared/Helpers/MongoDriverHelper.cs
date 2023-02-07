@@ -14,6 +14,9 @@ using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.Helpers
 {
+    /// <summary>
+    /// Helper for MongoDrivers.
+    /// </summary>
     public static class MongoDriverHelper
     {
         public static void Drop<T>(this IMongoCollection<T> collection)

@@ -68,6 +68,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 
             GenerateContainer();
             SimpleTestAtomicReadModel.TouchMax = Int32.MaxValue;
+            SimpleTestAtomicReadModel.GenerateInternalExceptionforMaxTouch = false;
         }
 
         private static IPersistence CreatePersistence()
