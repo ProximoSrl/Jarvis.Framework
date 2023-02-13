@@ -2,6 +2,11 @@
 
 ====
 
+# vNext
+
+- Multi readmodel atomic projection handler #45
+- Multi readmodel/aggregates live atomic projection #44
+
 # 6.5.5
 
 - Fix aggregate cache in repository when an exception is thrown.
