@@ -4,6 +4,8 @@
 
 # vNext
 
+# 6.6.0
+
 - Multi readmodel atomic projection handler #45
 - Multi readmodel/aggregates live atomic projection #44
 
