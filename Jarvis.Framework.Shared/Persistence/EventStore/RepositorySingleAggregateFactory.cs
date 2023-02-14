@@ -147,9 +147,15 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
 			}
 		}
 
+		/// <inheritdoc />
+        public void Release(IIdentity aggregateId)
+        {
+            Cache.Remove(aggregateId.AsString());
+        }
+
 #if NETSTANDARD2_0_OR_GREATER
 #else
-		private void RemovedCallback(CacheEntryRemovedArguments arguments)
+        private void RemovedCallback(CacheEntryRemovedArguments arguments)
 		{
 			var cacheEntry = arguments.CacheItem.Value as CacheEntry;
 			if (cacheEntry != null && cacheEntry.RepositoryEx != null && !cacheEntry.InUse)
@@ -159,5 +165,5 @@ namespace Jarvis.Framework.Shared.Persistence.EventStore
 			}
 		}
 #endif
-	}
+    }
 }

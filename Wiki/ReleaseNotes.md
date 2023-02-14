@@ -2,6 +2,10 @@
 
 ====
 
+# 6.5.6
+
+- Fix aggregate cache in repository when a DomainException is thrown.
+
 # 6.5.5
 
 - Fix aggregate cache in repository when an exception is thrown.

@@ -84,7 +84,7 @@ namespace Jarvis.Framework.Tests.BusTests
 
             _handler = new SampleCommandHandler();
             _commandExecutionExceptionHelper = new JarvisDefaultCommandExecutionExceptionHelper(NullLogger.Instance, 20, 10);
-            var handlerAdapter = new MessageHandlerToCommandHandlerAdapter<SampleTestCommand>(_handler, _commandExecutionExceptionHelper, tracker, _bus);
+            var handlerAdapter = new MessageHandlerToCommandHandlerAdapter<SampleTestCommand>(_handler, _commandExecutionExceptionHelper, tracker, _bus, null);
 
             _container.Register(
                 Component
@@ -92,7 +92,7 @@ namespace Jarvis.Framework.Tests.BusTests
                     .Instance(handlerAdapter)
             );
 
-            var handlerAggregateAdapter = new MessageHandlerToCommandHandlerAdapter<SampleAggregateTestCommand>(_handler, _commandExecutionExceptionHelper, tracker, _bus);
+            var handlerAggregateAdapter = new MessageHandlerToCommandHandlerAdapter<SampleAggregateTestCommand>(_handler, _commandExecutionExceptionHelper, tracker, _bus, null);
 
             _container.Register(
                 Component

@@ -109,7 +109,7 @@ namespace Jarvis.Framework.Tests.BusTests
 
             var commandExecutionExceptionHelper = new JarvisDefaultCommandExecutionExceptionHelper(NullLogger.Instance, 20, 10);
             var handlerAdapter = new MessageHandlerToCommandHandlerAdapter<AnotherSampleTestCommand>(
-                handler, commandExecutionExceptionHelper, tracker, _bus);
+                handler, commandExecutionExceptionHelper, tracker, _bus, null);
 
             _container.Register(
                 Component

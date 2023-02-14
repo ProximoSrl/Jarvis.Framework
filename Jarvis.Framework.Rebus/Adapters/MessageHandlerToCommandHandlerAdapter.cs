@@ -4,6 +4,7 @@ using Jarvis.Framework.Shared.Commands;
 using Jarvis.Framework.Shared.Commands.Tracking;
 using Jarvis.Framework.Shared.Logging;
 using Jarvis.Framework.Shared.Messages;
+using Jarvis.Framework.Shared.Persistence;
 using Rebus.Bus;
 using Rebus.Handlers;
 using System;
@@ -23,19 +24,22 @@ namespace Jarvis.Framework.Rebus.Adapters
         private readonly ICommandHandler<T> _commandHandler;
         private readonly IMessagesTracker _messagesTracker;
         private readonly IBus _bus;
+        private readonly IAggregateCachedRepositoryFactory _aggregateCachedRepositoryFactory;
         private readonly ICommandExecutionExceptionHelper _commandExecutionExceptionHelper;
 
         public MessageHandlerToCommandHandlerAdapter(
             ICommandHandler<T> commandHandler,
             ICommandExecutionExceptionHelper commandExecutionExceptionHelper,
             IMessagesTracker messagesTracker,
-            IBus bus)
+            IBus bus,
+            IAggregateCachedRepositoryFactory aggregateCachedRepositoryFactory)
         {
             Logger = NullLogger.Instance;
             LoggerThreadContextManager = NullLoggerThreadContextManager.Instance;
             _commandHandler = commandHandler;
             _messagesTracker = messagesTracker;
             _bus = bus;
+            _aggregateCachedRepositoryFactory = aggregateCachedRepositoryFactory;
             _commandExecutionExceptionHelper = commandExecutionExceptionHelper;
         }
 
@@ -76,6 +80,13 @@ namespace Jarvis.Framework.Rebus.Adapters
                 }
                 catch (Exception ex)
                 {
+                    //Remember to release any aggregate cache if we are handling an aggregate command this will prevent
+                    //an aggregate to be cached after any error happens.
+                    if (message is IAggregateCommand aggregateCommand)
+                    {
+                        _aggregateCachedRepositoryFactory?.Release(aggregateCommand.AggregateId);
+                    }
+
                     lastException = ex;
                     if (!_commandExecutionExceptionHelper.Handle(ex, message, i, out retry, out replyCommandHandled))
                     {

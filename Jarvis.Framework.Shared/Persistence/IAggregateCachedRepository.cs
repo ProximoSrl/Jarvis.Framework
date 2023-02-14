@@ -56,5 +56,12 @@ namespace Jarvis.Framework.Shared.Persistence
 		/// <typeparam name="TAggregate"></typeparam>
 		/// <param name="repository"></param>
 		void Release<TAggregate>(IAggregateCachedRepository<TAggregate> repository) where TAggregate : class, IAggregate;
+
+		/// <summary>
+		/// Release a repository by aggregate id, will remove the repository from cache and it is called when a generic
+		/// exception happens executing a command for an aggregate.
+		/// </summary>
+		/// <param name="aggregateId"></param>
+		void Release(IIdentity aggregateId);
 	}
 }
