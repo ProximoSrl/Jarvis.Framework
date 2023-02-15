@@ -148,7 +148,35 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 			Assert.That(cms.AggregateVersion, Is.EqualTo(c5.AggregateVersion));
 		}
 
-		private async Task CreateScenario()
+        [Test]
+        public async Task Project_at_different_checkpoint()
+        {
+            await CreateScenario().ConfigureAwait(false);
+
+            //ok now we can start to test
+            var sut = _container.Resolve<ILiveAtomicMultistreamReadModelProcessor>();
+
+            //ok now we want to project multiple stuff
+            List<CheckpointMultiStreamProcessRequest> request = new List<CheckpointMultiStreamProcessRequest>
+            {
+                new CheckpointMultiStreamProcessRequest(c1.GetIdentity().AsString(), new Type[] { typeof(SimpleTestAtomicReadModel) }, c1.GetChunkPosition()),
+                new CheckpointMultiStreamProcessRequest(c4.GetIdentity().AsString(), new Type[] { typeof(ComplexAggregateReadModel) }, c5.GetChunkPosition())
+            };
+
+            //project everything up to the most up to date stuff
+            var result = await sut.ProcessAsync(request);
+            var rms = result.Get<SimpleTestAtomicReadModel>(c1.GetIdentity().AsString());
+            Assert.That(rms.TouchCount, Is.EqualTo(2));
+            Assert.That(rms.AggregateVersion, Is.EqualTo(c1.AggregateVersion));
+
+            var cms = result.Get<ComplexAggregateReadModel>(c4.GetIdentity().AsString());
+            Assert.That(cms.Born, Is.True);
+            Assert.That(cms.DoneValues, Is.EquivalentTo(new[] { "done1" }));
+            Assert.That(cms.AggregateVersion, Is.EqualTo(c5.AggregateVersion));
+        }
+
+
+        private async Task CreateScenario()
 		{
 			sequence1 = new DateTime(2010, 10, 10);
 			sequence2 = sequence1.AddDays(1);

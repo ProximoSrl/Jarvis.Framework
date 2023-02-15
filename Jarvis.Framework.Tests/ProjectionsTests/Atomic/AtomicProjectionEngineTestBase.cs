@@ -37,7 +37,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
     public class AtomicProjectionEngineTestBase
     {
         private const Int32 WaitTimeInSeconds = 5;
-
+        private string _dbName;
         protected IMongoDatabase _db;
         protected IPersistence _persistence;
         private StreamsFactory _streamsFactory;
@@ -56,7 +56,10 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 
             var url = new MongoUrl(ConfigurationManager.ConnectionStrings["readmodel"].ConnectionString);
             var client = new MongoClient(url);
-            _db = client.GetDatabase(url.DatabaseName);
+
+            _dbName = url.DatabaseName + "_" + Environment.Version.Major;
+
+            _db = client.GetDatabase(_dbName);
             _collection = GetCollection<SimpleTestAtomicReadModel>();
             _collectionForAtomicAggregate = GetCollection<SimpleAtomicAggregateReadModel>();
 
@@ -175,11 +178,17 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         public virtual void TearDown()
         {
             _testLoggerScope?.Dispose();
+            _db.Drop();
         }
 
         protected Int64 _lastCommit;
 
-        protected Int64 _aggregateIdSeed = 1;
+        /// <summary>
+        /// Ensure for each instance class to have a completely different seed.
+        /// </summary>
+        protected static Int64 globalAggregateIdSeed = new Random().Next(100000);
+
+        protected Int64 _aggregateIdSeed = 1 + (globalAggregateIdSeed++ * 1000) ;
         protected Int32 _aggregateVersion = 1;
 
         protected Int64 lastUsedPosition;

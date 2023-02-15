@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using static Jarvis.Framework.Shared.ReadModel.Atomic.AtomicReadmodelMultiAggregateSubscription;
 using static MongoDB.Driver.WriteConcern;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
@@ -77,14 +78,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 			}
 
 			//Need to prepare readmodel
-			IDictionary<string, IReadOnlyCollection<IAtomicReadModel>> rmDictionary = request.ToDictionary(
+			var rmDictionary = request.ToDictionary(
 				r => r.AggregateId,
-				r => r.ReadmodelTypes.Select(t => _atomicReadModelFactory.Create(t, r.AggregateId)).ToList() as IReadOnlyCollection<IAtomicReadModel>);
+				r => ReadModelProjectionInstruction.SimpleProjection(r.ReadmodelTypes.Select(t => _atomicReadModelFactory.Create(t, r.AggregateId)).ToList()));
 
 			var subscription = new AtomicReadmodelMultiAggregateSubscription(_commitEnhancer, rmDictionary, cs => cs.GetChunkPosition() > checkpointUpToIncluded);
 			var idList = request.Select(r => r.AggregateId).ToList();
 			await _persistence.ReadForwardMultiplePartitionsAsync(idList, 0, subscription, checkpointUpToIncluded).ConfigureAwait(false);
-			return new MultiStreamProcessorResult(rmDictionary.Values);
+			return new MultiStreamProcessorResult(rmDictionary.Values.Select(v => v.Readmodels));
 		}
 
 		public async Task<MultiStreamProcessorResult> ProcessAsync(IReadOnlyCollection<MultiStreamProcessRequest> request, DateTime dateTimeUpTo)
@@ -94,15 +95,15 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 				throw new ArgumentNullException(nameof(request));
 			}
 
-			//Need to prepare readmodel
-			IDictionary<string, IReadOnlyCollection<IAtomicReadModel>> rmDictionary = request.ToDictionary(
-				r => r.AggregateId,
-				r => r.ReadmodelTypes.Select(t => _atomicReadModelFactory.Create(t, r.AggregateId)).ToList() as IReadOnlyCollection<IAtomicReadModel>);
+            //Need to prepare readmodel
+            var rmDictionary = request.ToDictionary(
+                r => r.AggregateId,
+                r => ReadModelProjectionInstruction.SimpleProjection(r.ReadmodelTypes.Select(t => _atomicReadModelFactory.Create(t, r.AggregateId)).ToList()));
 
-			var subscription = new AtomicReadmodelMultiAggregateSubscription(_commitEnhancer, rmDictionary, cs => cs.GetTimestamp() > dateTimeUpTo);
+            var subscription = new AtomicReadmodelMultiAggregateSubscription(_commitEnhancer, rmDictionary, cs => cs.GetTimestamp() > dateTimeUpTo);
 			var idList = request.Select(r => r.AggregateId).ToList();
 			await _persistence.ReadForwardMultiplePartitionsAsync(idList, 0, subscription, Int32.MaxValue).ConfigureAwait(false);
-			return new MultiStreamProcessorResult(rmDictionary.Values);
+			return new MultiStreamProcessorResult(rmDictionary.Values.Select(v => v.Readmodels));
 		}
 
 		/// <inheritdoc/>
@@ -115,8 +116,31 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 			return new MultipleReadmodelProjectionResult(readModels);
 		}
 
-		/// <inheritdoc/>
-		public async Task<MultipleReadmodelProjectionResult> ProcessAsyncUntilChunkPosition(IEnumerable<Type> types, string id, long positionUpTo)
+        /// <inheritdoc/>
+        public async Task<MultiStreamProcessorResult> ProcessAsync(IReadOnlyCollection<CheckpointMultiStreamProcessRequest> request)
+        {
+            if (request is null)
+            {
+                throw new ArgumentNullException(nameof(request));
+            }
+
+            //Need to prepare readmodels
+            var rmDictionary = request.ToDictionary(
+                r => r.AggregateId,
+                r => ReadModelProjectionInstruction.CheckpointProjection(r.ReadmodelTypes.Select(t => _atomicReadModelFactory.Create(t, r.AggregateId)).ToList(), r.CheckpointLimit));
+
+            //Stop reading at max checkpoint
+            var maxCheckpoint = request.Max(r => r.CheckpointLimit);
+
+            var subscription = new AtomicReadmodelMultiAggregateSubscription(_commitEnhancer, rmDictionary, cs => cs.GetChunkPosition() > maxCheckpoint);
+
+            var idList = request.Select(r => r.AggregateId).ToList();
+            await _persistence.ReadForwardMultiplePartitionsAsync(idList, 0, subscription, Int32.MaxValue).ConfigureAwait(false);
+            return new MultiStreamProcessorResult(rmDictionary.Values.Select(v => v.Readmodels));
+        }
+
+        /// <inheritdoc/>
+        public async Task<MultipleReadmodelProjectionResult> ProcessAsyncUntilChunkPosition(IEnumerable<Type> types, string id, long positionUpTo)
 		{
 			List<IAtomicReadModel> readModels = types.Select(rmt => _atomicReadModelFactory.Create(rmt, id)).ToList();
 			var subscription = new MultipleAtomicReadModelSubscription(_commitEnhancer, readModels, cs => cs.GetChunkPosition() > positionUpTo);
@@ -132,5 +156,5 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 			await _persistence.ReadForwardAsync(id, 0, subscription, Int64.MaxValue).ConfigureAwait(false);
 			return new MultipleReadmodelProjectionResult(readModels);
 		}
-	}
+    }
 }
