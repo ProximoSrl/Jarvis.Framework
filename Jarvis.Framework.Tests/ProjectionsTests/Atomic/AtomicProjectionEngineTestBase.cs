@@ -37,7 +37,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
     public class AtomicProjectionEngineTestBase
     {
         private const Int32 WaitTimeInSeconds = 5;
-
+        private string _dbName;
         protected IMongoDatabase _db;
         protected IPersistence _persistence;
         private StreamsFactory _streamsFactory;
@@ -56,7 +56,10 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 
             var url = new MongoUrl(ConfigurationManager.ConnectionStrings["readmodel"].ConnectionString);
             var client = new MongoClient(url);
-            _db = client.GetDatabase(url.DatabaseName);
+
+            _dbName = url.DatabaseName + "_" + Environment.Version.Major;
+
+            _db = client.GetDatabase(_dbName);
             _collection = GetCollection<SimpleTestAtomicReadModel>();
             _collectionForAtomicAggregate = GetCollection<SimpleAtomicAggregateReadModel>();
 
@@ -68,6 +71,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 
             GenerateContainer();
             SimpleTestAtomicReadModel.TouchMax = Int32.MaxValue;
+            SimpleTestAtomicReadModel.GenerateInternalExceptionforMaxTouch = false;
         }
 
         private static IPersistence CreatePersistence()
@@ -121,7 +125,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
                     .For<AtomicProjectionEngine>()
                     .ImplementedBy<AtomicProjectionEngine>(),
                 Component
-                    .For<ILiveAtomicReadModelProcessor>()
+                    .For<ILiveAtomicReadModelProcessor, ILiveAtomicMultistreamReadModelProcessor, ILiveAtomicReadModelProcessorEnhanced>()
                     .ImplementedBy<LiveAtomicReadModelProcessor>(),
                 Component
                     .For<ICommitPollingClient>()
@@ -174,19 +178,25 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         public virtual void TearDown()
         {
             _testLoggerScope?.Dispose();
+            _db.Drop();
         }
 
         protected Int64 _lastCommit;
 
-        protected Int64 _aggregateIdSeed = 1;
+        /// <summary>
+        /// Ensure for each instance class to have a completely different seed.
+        /// </summary>
+        protected static Int64 globalAggregateIdSeed = new Random().Next(100000);
+
+        protected Int64 _aggregateIdSeed = 1 + (globalAggregateIdSeed++ * 1000) ;
         protected Int32 _aggregateVersion = 1;
 
         protected Int64 lastUsedPosition;
 
-        protected Task<Changeset> GenerateCreatedEvent(String issuedBy = null)
+        protected Task<Changeset> GenerateCreatedEvent(String issuedBy = null, DateTime? timestamp = null)
         {
             var evt = new SampleAggregateCreated();
-            SetBasePropertiesToEvent(evt, issuedBy);
+            SetBasePropertiesToEvent(evt, issuedBy, timestamp: timestamp);
             return ProcessEvent(evt);
         }
 
@@ -306,12 +316,12 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         {
         }
 
-        protected async Task<Changeset> GenerateSomeChangesetsAndReturnLatestsChangeset()
+        protected async Task<Changeset> GenerateSomeChangesetsAndReturnLatestsChangeset(DateTime? timestamp = null)
         {
             //Three events all generated in datbase
-            await GenerateCreatedEvent().ConfigureAwait(false);
-            await GenerateTouchedEvent().ConfigureAwait(false);
-            return await GenerateTouchedEvent().ConfigureAwait(false);
+            await GenerateCreatedEvent(timestamp: timestamp).ConfigureAwait(false);
+            await GenerateTouchedEvent(timestamp: timestamp).ConfigureAwait(false);
+            return await GenerateTouchedEvent(timestamp: timestamp).ConfigureAwait(false);
         }
 
         protected static void SetBasePropertiesToEvent(DomainEvent evt, string issuedBy, DateTime? timestamp = null)

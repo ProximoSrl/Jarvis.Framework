@@ -5,7 +5,9 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
 {
     /// <summary>
     /// Processor that is capable of live projection of atomic
-    /// readmodel
+    /// readmodels, it will allow for historical projection when
+    /// you have a readmodel and you want to project up to a certain
+    /// point in time.
     /// </summary>
     public interface ILiveAtomicReadModelProcessor
     {

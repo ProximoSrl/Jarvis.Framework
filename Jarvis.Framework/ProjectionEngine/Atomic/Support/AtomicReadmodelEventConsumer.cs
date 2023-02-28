@@ -1,5 +1,6 @@
 ﻿using Castle.Core.Logging;
 using Jarvis.Framework.Shared.Events;
+using Jarvis.Framework.Shared.Exceptions;
 using Jarvis.Framework.Shared.IdentitySupport;
 using Jarvis.Framework.Shared.ReadModel.Atomic;
 using NStore.Domain;
@@ -75,6 +76,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support
                     AtomicReadmodelInfoAttribute.Name,
                     changeset.Events?.OfType<DomainEvent>()?.FirstOrDefault()?.AggregateId ?? "Unknow aggregate id",
                     ex.Message);
+                //We mark aggregate as faulted with a special property that tells me is it is a framework exception.
                 rm.MarkAsFaulted(position);
                 readmodelModified = true;
                 //continue.
