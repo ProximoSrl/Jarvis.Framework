@@ -1,11 +1,12 @@
 # J.A.R.V.I.S. Framework - Proximo srl (c)
 
-====
-
 # vNext
+
+# 6.6.0
 
 - Multi readmodel atomic projection handler #45
 - Multi readmodel/aggregates live atomic projection #44
+- Multi readmodel/aggregates at different checkpoint live atomic projection #44
 
 # 6.5.5
 
