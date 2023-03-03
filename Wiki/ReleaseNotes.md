@@ -2,6 +2,8 @@
 
 # vNext
 
+- Removed tentative notification system never ready for production usage.
+
 # 6.6.0
 
 - Multi readmodel atomic projection handler #45
