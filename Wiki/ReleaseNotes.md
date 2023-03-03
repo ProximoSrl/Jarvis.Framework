@@ -3,6 +3,8 @@
 # vNext
 
 - Removed tentative notification system never ready for production usage.
+- Removed EventHappenedEventArgs due to metrics consolidation, now framework uses metrics directly
+- Removed completely aggregate cached repository, because it introuces a lots of complexity.
 
 # 6.6.0
 
