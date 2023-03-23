@@ -7,20 +7,29 @@ using System.Threading.Tasks;
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 {
     /// <summary>
+    /// Simple interface to expose <see cref="IQueryable{T}"/> interface,
+    /// so we can take advange of covariance in readmodels too.
+    /// </summary>
+    /// <typeparam name="TModel"></typeparam>
+    public interface IAtomicCollectionReaderQueryable<out TModel>
+        where TModel : IAtomicReadModel
+    {
+        /// <summary>
+        /// Allow standard IQueryable interface
+        /// </summary>
+        IQueryable<TModel> AsQueryable();
+    }
+
+    /// <summary>
     /// Simple wrapper for readmodel atomic collection. There is no need
     /// for corresponding reader, this is the only interface that will
     /// be used to access atomic readmodels, that are inherited by <see cref="AbstractAtomicReadModel"/>
     /// </summary>
     /// <typeparam name="TModel"></typeparam>
     public interface IAtomicCollectionReader<TModel>
-         where TModel : IAtomicReadModel
+        : IAtomicCollectionReaderQueryable<TModel>
+        where TModel : IAtomicReadModel
     {
-        /// <summary>
-        /// Allow standard IQueryable interface
-        /// </summary>
-        /// <returns></returns>
-        IQueryable<TModel> AsQueryable();
-
         /// <summary>
         /// Find a readmodel by id and does some checking like automatic rebuild
         /// of superseded readmodel, etc.

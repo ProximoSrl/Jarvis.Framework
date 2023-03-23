@@ -1,6 +1,9 @@
 # J.A.R.V.I.S. Framework - Proximo srl (c)
 
-# vNext
+# 6.6.1
+
+- added IAtomicCollectionReaderQueryable (covariant reading interface), IAtomicCollectionReader inherits from IAtomicCollectionReaderQueryable [#56](https://github.com/ProximoSrl/Jarvis.Framework/issues/56)
+- added .editorconfig to configure development environments
 
 # 6.6.0
 
