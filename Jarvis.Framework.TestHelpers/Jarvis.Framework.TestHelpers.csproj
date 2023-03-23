@@ -9,7 +9,7 @@
   <ItemGroup>
     <PackageReference Include="Castle.LoggingFacility" Version="5.1.1" />
     <PackageReference Include="fasterflect" Version="3.0.0" />
-    <PackageReference Include="Machine.Specifications" Version="1.1.0" />
+    <PackageReference Include="Machine.Specifications" Version="1.1.1" />
     <PackageReference Include="MongoDB.Bson" Version="2.18.0" />
     <PackageReference Include="MongoDB.Driver" Version="2.18.0" />
     <PackageReference Include="MongoDB.Driver.Core" Version="2.18.0" />
