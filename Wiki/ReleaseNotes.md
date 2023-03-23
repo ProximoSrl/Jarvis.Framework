@@ -1,5 +1,9 @@
 # J.A.R.V.I.S. Framework - Proximo srl (c)
 
+# 6.6.2
+
+- Fixed out of order check for abstract atomic readmodel for deserialized readmodels.
+
 # 6.6.1
 
 - added IAtomicCollectionReaderQueryable (covariant reading interface), IAtomicCollectionReader inherits from IAtomicCollectionReaderQueryable [#56](https://github.com/ProximoSrl/Jarvis.Framework/issues/56)
