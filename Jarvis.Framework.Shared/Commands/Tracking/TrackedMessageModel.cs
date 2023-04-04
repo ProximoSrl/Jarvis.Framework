@@ -14,6 +14,12 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
         public string MessageId { get; set; }
 
         /// <summary>
+        /// If present indicates when the message will expire and will be deleted by the
+        /// mongodb database. Until the value is null mongod will not evict the message.
+        /// </summary>
+        public DateTime? ExpireDate { get; set; }
+
+        /// <summary>
         /// This is populated only if the command is an instance
         /// of <see cref="Command{TIdentity}"/>, in all other situation 
         /// is null.

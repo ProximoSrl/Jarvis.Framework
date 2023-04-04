@@ -1,5 +1,9 @@
 # J.A.R.V.I.S. Framework - Proximo srl (c)
 
+## vNext
+
+- Added time to live for TrackedMessageModel.
+
 # 6.6.2
 
 - Fixed out of order check for abstract atomic readmodel for deserialized readmodels.

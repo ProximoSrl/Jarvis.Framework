@@ -118,6 +118,18 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
                     }
                 )
             });
+
+            //Create time to live index
+            collection.Indexes.CreateOne(
+                  new CreateIndexModel<TrackedMessageModel>(
+                    Builders<TrackedMessageModel>.IndexKeys
+                        .Ascending(m => m.ExpireDate),
+                    new CreateIndexOptions()
+                    {
+                        Name = "ExpireDate",
+                        Background = true,
+                        ExpireAfter = TimeSpan.Zero,
+                    }));
             return collection;
         }
 
@@ -130,11 +142,17 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
                 string issuedBy = null;
                 TrackedMessageType type = TrackedMessageType.Unknown;
                 String aggregateId = null;
+
+                //basically I want stuff to go away in one week
+                DateTime? expireDate = DateTime.UtcNow.AddDays(7);
                 if (msg is ICommand cmd)
                 {
                     type = TrackedMessageType.Command;
                     issuedBy = cmd.GetContextData(MessagesConstants.UserId);
                     aggregateId = cmd.ExtractAggregateId();
+                    //ok this is a command we need to disable expire date for now, we will set the
+                    //exact value when we will know if the command execution is ok or not
+                    expireDate = null;
                 }
                 else if (msg is IDomainEvent de)
                 {
@@ -152,7 +170,8 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
                         .Set(x => x.Description, msg.Describe())
                         .Set(x => x.Type, type)
                         .Set(x => x.MessageType, msg.GetType().Name)
-                        .Set(x => x.Completed, false),
+                        .Set(x => x.Completed, false)
+                        .Set(x => x.ExpireDate, expireDate),
                    new UpdateOptions() { IsUpsert = true }
                 );
             }
@@ -190,13 +209,18 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
         {
             try
             {
+                //command completed successfully, it is nice to have log remain for longer time, remember that we have all commands
+                //in header of generated commit, so this log is somewhat redundant
+                DateTime expireDate = DateTime.UtcNow.AddDays(30);
+
                 var id = command.MessageId.ToString();
                 var mongoUpdate = Builders<TrackedMessageModel>.Update
                     .Set(x => x.CompletedAt, completedAt)
                     //.Set(x => x.FailedAt, null)
                     .Set(x => x.ErrorMessage, null)
                     .Set(x => x.Completed, true)
-                    .Set(x => x.Success, true);
+                    .Set(x => x.Success, true)
+                    .Set(x => x.ExpireDate, expireDate);
                 var equalityCheck = Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id);
 
                 var trackMessage = Commands.FindOneAndUpdate(
@@ -212,8 +236,7 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
                 {
                     if (trackMessage.StartedAt > DateTime.MinValue)
                     {
-                        if (trackMessage.ExecutionStartTimeList != null
-                            && trackMessage.ExecutionStartTimeList.Length > 0)
+                        if (trackMessage.ExecutionStartTimeList?.Length > 0)
                         {
                             var firstExecutionValue = trackMessage.ExecutionStartTimeList[0];
                             var queueTime = firstExecutionValue.Subtract(trackMessage.StartedAt).TotalMilliseconds;
@@ -228,7 +251,6 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
                         }
                     }
                 }
-
             }
             catch (Exception ex)
             {
@@ -280,6 +302,10 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
                 {
                     ex = aex.Flatten()?.InnerException;
                 }
+
+                //command failed, this is an important information we want to keep for really long time
+                DateTime expireDate = DateTime.UtcNow.AddYears(7);
+
                 var id = command.MessageId.ToString();
                 Commands.UpdateOne(
                     Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
@@ -289,7 +315,8 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
                         .Set(x => x.ErrorMessage, ex?.Message)
                         .Set(x => x.FullException, ex?.ToString())
                         .Set(x => x.Success, false)
-                        .Set(x => x.Completed, true),
+                        .Set(x => x.Completed, true)
+                        .Set(x => x.ExpireDate, expireDate),
                     new UpdateOptions() { IsUpsert = true }
                 );
                 JarvisFrameworkMetricsHelper.Meter.Mark(ErrorMeter);
@@ -325,7 +352,6 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
                 Builders<TrackedMessageModel>.Filter.In(m => m.MessageId, idList))
                 .ToList();
         }
-
 
         /// <inheritdoc/>
         public TrackedMessageModelPaginated GetCommands(string userId, int pageIndex, int pageSize)
