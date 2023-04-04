@@ -9,8 +9,16 @@ namespace Jarvis.Framework.Shared.Persistence
     /// </summary>
     public interface IRepositoryFactory
     {
+        /// <summary>
+        /// Create a repository
+        /// </summary>
+        /// <returns></returns>
         IRepository Create();
 
+        /// <summary>
+        /// Release a repository
+        /// </summary>
+        /// <param name="repository"></param>
         void Release(IRepository repository);
     }
 }

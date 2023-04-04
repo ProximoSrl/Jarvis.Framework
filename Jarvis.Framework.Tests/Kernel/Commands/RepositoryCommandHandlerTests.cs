@@ -1,31 +1,29 @@
-﻿using System;
-using System.Configuration;
+﻿using Castle.Facilities.TypedFactory;
+using Castle.MicroKernel.Registration;
+using Castle.Windsor;
 using Jarvis.Framework.Kernel.Engine;
+using Jarvis.Framework.Kernel.Events;
 using Jarvis.Framework.Shared.IdentitySupport;
+using Jarvis.Framework.Shared.IdentitySupport.Serialization;
+using Jarvis.Framework.Shared.Messages;
+using Jarvis.Framework.Shared.Persistence;
+using Jarvis.Framework.Tests.EngineTests;
+using Jarvis.Framework.Tests.Support;
+using MongoDB.Bson;
 using MongoDB.Driver;
+using NStore.Core.Logging;
+using NStore.Core.Persistence;
+using NStore.Core.Streams;
+using NStore.Domain;
 using NSubstitute;
 using NUnit.Framework;
-using Jarvis.Framework.Shared.Helpers;
-using Jarvis.Framework.Shared.IdentitySupport.Serialization;
-using Jarvis.Framework.Tests.EngineTests;
-using Castle.Windsor;
-using Castle.Facilities.TypedFactory;
-using Castle.MicroKernel.Registration;
-using Jarvis.Framework.Shared.Messages;
-using MongoDB.Bson;
-using Jarvis.Framework.Kernel.Events;
+using System;
+using System.Configuration;
 using System.Threading.Tasks;
-using Jarvis.Framework.Shared.Persistence;
-using Jarvis.Framework.Shared.Persistence.EventStore;
-using NStore.Domain;
-using NStore.Core.Persistence;
-using NStore.Core.Logging;
-using NStore.Core.Streams;
-using Jarvis.Framework.Tests.Support;
 
 namespace Jarvis.Framework.Tests.Kernel.Commands
 {
-	[TestFixture]
+    [TestFixture]
     public class RepositoryCommandHandlerTests
     {
         private TouchSampleAggregateHandler _sut;
@@ -72,7 +70,6 @@ namespace Jarvis.Framework.Tests.Kernel.Commands
             {
                 Repository = _repositoryEx,
                 AggregateFactory = _aggregateFactory,
-                AggregateCachedRepositoryFactory = new AggregateCachedRepositoryFactory(factory),
                 EventStoreQueryManager = new DirectMongoEventStoreQueryManager(_db),
             };
         }

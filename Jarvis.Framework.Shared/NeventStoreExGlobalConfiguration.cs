@@ -8,13 +8,6 @@ namespace Jarvis.Framework.Shared
         internal static Boolean MetricsEnabled { get; private set; }
 
         /// <summary>
-        /// When this parameter is true the <see cref="NStore.Domain.IRepository"/> will try to 
-        /// serialize the access to aggregate to avoid unnecessary ConcurrencyException when 
-        /// multiple threads are executing commands that call a very same aggregate.
-        /// </summary>
-        internal static Boolean RepositoryLockOnAggregateId { get; private set; }
-
-        /// <summary>
         /// When the <see cref="NStore.Domain.IRepository"/> or the <see cref="NStore.Domain.IRepository"/> 
         /// are trying to acquire lock it does a first fast SpinWait with the
         /// <see cref="Thread.SpinWait"/> method, then it start sleeping for a given number of time, waiting
@@ -26,7 +19,6 @@ namespace Jarvis.Framework.Shared
         static NeventStoreExGlobalConfiguration()
         {
             MetricsEnabled = true;
-            RepositoryLockOnAggregateId = true;
             LockThreadSleepCount = 0;
         }
 
@@ -38,16 +30,6 @@ namespace Jarvis.Framework.Shared
         public static void EnableMetrics()
         {
             MetricsEnabled = false;
-        }
-
-        public static void DisableRepositoryLockOnAggregateId()
-        {
-            RepositoryLockOnAggregateId = false;
-        }
-
-        public static void EnableRepositoryLockOnAggregateId()
-        {
-            RepositoryLockOnAggregateId = true;
         }
 
         public static void SetLockThreadSleepCount(Int32 lockThreadSleepCount)

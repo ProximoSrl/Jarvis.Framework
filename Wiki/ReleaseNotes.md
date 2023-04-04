@@ -1,5 +1,9 @@
 # J.A.R.V.I.S. Framework - Proximo srl (c)
 
+## vNext
+
+- Added time to live for TrackedMessageModel.
+
 # 6.6.2
 
 - Fixed out of order check for abstract atomic readmodel for deserialized readmodels.
@@ -8,6 +12,10 @@
 
 - added IAtomicCollectionReaderQueryable (covariant reading interface), IAtomicCollectionReader inherits from IAtomicCollectionReaderQueryable [#56](https://github.com/ProximoSrl/Jarvis.Framework/issues/56)
 - added .editorconfig to configure development environments
+
+- Removed tentative notification system never ready for production usage.
+- Removed EventHappenedEventArgs due to metrics consolidation, now framework uses metrics directly
+- Removed completely aggregate cached repository, because it introuces a lots of complexity.
 
 # 6.6.0
 
