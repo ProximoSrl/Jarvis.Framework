@@ -30,6 +30,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             if (chunk.Payload is Changeset commit)
             {
                 DomainEvent evt = null;
+                int eventPosition = 1;
                 foreach (var eventMessage in commit.Events.Where(m => m is DomainEvent))
                 {
                     evt = (DomainEvent)eventMessage;
@@ -39,6 +40,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                     evt.Version = commit.AggregateVersion;
                     evt.Context = headers;
                     evt.CheckpointToken = chunk.Position;
+                    evt.EventPosition = eventPosition++;
                 }
 
                 evt?.SetPropertyValue(d => d.IsLastEventOfCommit, true);

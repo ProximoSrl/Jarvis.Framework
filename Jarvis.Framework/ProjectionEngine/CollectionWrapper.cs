@@ -147,7 +147,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             model.AggregateVersion = e.Version;
             model.LastModified = e.CommitStamp;
 
-            model.AddEvent(e.MessageId);
+            model.SetEventProjected(e);
             HandlePollableReadModel(e, model);
             try
             {
@@ -215,7 +215,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             model.Version++;
             model.AggregateVersion = e.Version;
             model.LastModified = e.CommitStamp;
-            model.AddEvent(e.MessageId);
+            model.SetEventProjected(e);
             HandlePollableReadModel(e, model);
             var result = await _storage.SaveWithVersionAsync(model, orignalVersion).ConfigureAwait(false);
 

@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 {
+    /// <inheritdoc />
     public class ConcurrentCheckpointTracker : IConcurrentCheckpointTracker
     {
         private readonly IMongoCollection<Checkpoint> _checkpoints;
@@ -64,6 +65,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         /// the checkpoint to the standard / classic operation mode.</remarks>
         public Int32 FlushNotDispatchedTimeoutInSeconds { get; set; } = 60;
 
+        private List<Checkpoint> _initialCollectionContent;
+
         private bool DeferredFlushEnabled => FlushNotDispatchedTimeoutInSeconds > 0;
 
         public ConcurrentCheckpointTracker(
@@ -98,7 +101,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             var projectionSignature = projection.Info.Signature;
             var projectionSlotName = projection.Info.SlotName;
 
-            var checkPoint = _checkpoints.FindOneById(id) ??
+            //use the initial collection content to avoid reading the collection for each projection (limit mongodb calls)
+            var checkPoint = _initialCollectionContent.SingleOrDefault(c => c.Id.Equals(id, StringComparison.OrdinalIgnoreCase)) ??
                 new Checkpoint(id, defaultValue, projectionSignature);
 
             //Check if some projection is changed and rebuild is not active
@@ -143,6 +147,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                 Builders<Checkpoint>.Update.Set(c => c.Active, false)
             );
 
+            _initialCollectionContent = _checkpoints.FindAll().ToList();
             foreach (var projection in projections)
             {
                 Add(projection, projectionStartFormCheckpointValue);
@@ -321,12 +326,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         /// <returns></returns>
         private void UpdateSlotCheckpointInMongodb(string slotName, long valueCheckpointToken)
         {
-             _checkpoints.UpdateMany(
-                    Builders<Checkpoint>.Filter.Eq("Slot", slotName),
-                    Builders<Checkpoint>.Update
-                        .Set(_ => _.Current, valueCheckpointToken)
-                        .Set(_ => _.Value, valueCheckpointToken)
-            );
+            _checkpoints.UpdateMany(
+                   Builders<Checkpoint>.Filter.Eq("Slot", slotName),
+                   Builders<Checkpoint>.Update
+                       .Set(_ => _.Current, valueCheckpointToken)
+                       .Set(_ => _.Value, valueCheckpointToken)
+           );
         }
 
         /// <summary>

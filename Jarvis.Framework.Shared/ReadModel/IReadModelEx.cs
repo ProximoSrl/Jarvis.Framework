@@ -25,9 +25,19 @@ namespace Jarvis.Framework.Shared.ReadModel
 
         DateTime LastModified { get; set; }
 
-        bool BuiltFromEvent(DomainEvent evt);
+        /// <summary>
+        /// Return true if the specific event was already processed by the readmodel.
+        /// </summary>
+        /// <param name="evt"></param>
+        /// <returns></returns>
+		bool BuiltFromEvent(DomainEvent evt);
 
-        void AddEvent(Guid id);
+        /// <summary>
+        /// It sets the last event projected on this readmodel, it uses both the commit
+        /// position and event position to generate a unique index numer
+        /// </summary>
+        /// <param name="evt"></param>
+        void SetEventProjected(DomainEvent evt);
 
         void ThrowIfInvalidId();
     }

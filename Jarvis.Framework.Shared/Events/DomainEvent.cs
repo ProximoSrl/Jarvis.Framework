@@ -81,6 +81,12 @@ namespace Jarvis.Framework.Shared.Events
         public Boolean IsLastEventOfCommit { get; set; }
 
         /// <summary>
+        /// This is populated by the ICommitEnhancer interface.
+        /// </summary>
+        [BsonIgnore]
+        public Int32 EventPosition { get; internal set; }
+
+        /// <summary>
         /// Contesto dell'evento
         /// </summary>
         [BsonIgnore]
