@@ -173,7 +173,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             RegisterHealthChecks(_id);
         }
 
-        public void Start()
+        public void Start(int pollingIntervalInMilliseconds)
         {
             _logger.InfoFormat("CommitPollingClient {0}: start called", _id);
             if (Status != CommitPollingClientStatus.Polling)
@@ -183,6 +183,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                     throw new JarvisFrameworkEngineException($"CommitPollingClient {_id}: Cannot start polling client because you forget to call Configure First");
                 }
 
+                _innerClient.PollingIntervalMilliseconds = pollingIntervalInMilliseconds;
                 _innerClient.Start();
                 Status = CommitPollingClientStatus.Polling;
             }

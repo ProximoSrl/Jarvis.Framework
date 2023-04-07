@@ -56,7 +56,7 @@ namespace Jarvis.Framework.Kernel.Engine
         {
             if (!_configuration.DispatchCommand) return;
             _client.Configure(_currentCheckpoint.LastDispatchedPosition, 100);
-            _client.Start();
+            _client.Start(100);
             _started = true;
         }
 

@@ -215,7 +215,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             await InitAsync().ConfigureAwait(false);
             foreach (var bucket in _bucketToClient)
             {
-                bucket.Value.Start();
+                bucket.Value.Start(100);
             }
         }
 
