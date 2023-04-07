@@ -306,7 +306,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 
             if (autostart)
             {
-                await sut.StartAsync().ConfigureAwait(false);
+                await sut.StartAsync(100).ConfigureAwait(false);
             }
 
             return sut;

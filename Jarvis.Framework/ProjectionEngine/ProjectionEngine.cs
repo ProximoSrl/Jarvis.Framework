@@ -154,16 +154,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         /// This is only to give the ability to register and start with old startable aux function
         /// for castle.
         /// </summary>
-        public void StartSync()
+        public void StartSync(int millisecondInterval)
         {
-            StartAsync().Wait();
+            StartAsync(millisecondInterval).Wait();
         }
 
-        public async Task StartAsync()
+        public async Task StartAsync(int millisecondInterval)
         {
             if (_logger.IsDebugEnabled) _logger.DebugFormat("Starting projection engine on tenant {0}", _config.TenantId);
 
-            await StartPollingAsync().ConfigureAwait(false);
+            await StartPollingAsync(millisecondInterval).ConfigureAwait(false);
             if (_logger.IsDebugEnabled) _logger.Debug("Projection engine started");
         }
 
@@ -210,12 +210,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             }
         }
 
-        private async Task StartPollingAsync()
+        private async Task StartPollingAsync(int millisecondInterval)
         {
             await InitAsync().ConfigureAwait(false);
             foreach (var bucket in _bucketToClient)
             {
-                bucket.Value.Start(100);
+                bucket.Value.Start(millisecondInterval);
             }
         }
 

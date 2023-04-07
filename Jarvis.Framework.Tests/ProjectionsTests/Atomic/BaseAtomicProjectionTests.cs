@@ -257,7 +257,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
                 .ImplementedBy<SimpleTestAtomicReadModelInitializer>());
 
             var sut = _container.Resolve<AtomicProjectionEngine>();
-            await sut.StartAsync().ConfigureAwait(false);
+            await sut.StartAsync(100).ConfigureAwait(false);
             //we need to verify that the index was created.
 
             var initializer = _container.ResolveAll<IAtomicReadModelInitializer>()
@@ -278,7 +278,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             //And finally check if everything is projected
             _sut = await CreateSutAndStartProjectionEngineAsync(autostart: false).ConfigureAwait(false);
             _sut.AtomicReadmodelNotifier = Substitute.For<IAtomicReadmodelNotifier>();
-            await _sut.StartAsync().ConfigureAwait(false);
+            await _sut.StartAsync(100).ConfigureAwait(false);
 
             //wait that commit was projected
             GetTrackerAndWaitForChangesetToBeProjected("SimpleTestAtomicReadModel");
@@ -309,7 +309,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             //And finally check if everything is projected
             _sut = await CreateSutAndStartProjectionEngineAsync(autostart: false).ConfigureAwait(false);
             _sut.AtomicReadmodelNotifier = Substitute.For<IAtomicReadmodelNotifier>();
-            await _sut.StartAsync().ConfigureAwait(false);
+            await _sut.StartAsync(100).ConfigureAwait(false);
 
             //wait that commit was projected
             GetTrackerAndWaitForChangesetToBeProjected("SimpleTestAtomicReadModel");
@@ -333,7 +333,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             //And finally check if everything is projected
             _sut = await CreateSutAndStartProjectionEngineAsync(autostart: false).ConfigureAwait(false);
             _sut.AtomicReadmodelNotifier = Substitute.For<IAtomicReadmodelNotifier>();
-            await _sut.StartAsync().ConfigureAwait(false);
+            await _sut.StartAsync(100).ConfigureAwait(false);
 
             //wait that commit was projected
             GetTrackerAndWaitForChangesetToBeProjected("SimpleTestAtomicReadModel");

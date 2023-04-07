@@ -48,7 +48,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             _sut.MaximumDifferenceForCatchupPoller = newCheckpoint - 10;
             _sut.RegisterAtomicReadModel(typeof(SimpleAtomicAggregateReadModel));
 
-            await _sut.StartAsync().ConfigureAwait(false);
+            await _sut.StartAsync(100).ConfigureAwait(false);
 
             //ok, we do not want the main projection engine to register the new projection, then it should be projected with a different poller.
             _aggregateIdSeed++;
