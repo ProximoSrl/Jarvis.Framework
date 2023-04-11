@@ -456,7 +456,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                             _engineFatalErrors.Add(String.Format("{0}\n{1}", error, ex));
                             throw;
                         }
-
                     } //End of event cycle
                 }
                 catch (Exception ex)

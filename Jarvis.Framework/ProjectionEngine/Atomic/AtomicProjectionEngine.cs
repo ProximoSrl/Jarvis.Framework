@@ -161,7 +161,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
         private Int64 _defaultPollerStartingPoint;
 
-        public async Task StartAsync(int pollingIntervalInMilliseconds)
+        public async Task StartAsync(int pollingIntervalInMilliseconds, int catchupPollingIntervalInMilliseconds)
         {
             if (_started)
             {
@@ -212,11 +212,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 if (JarvisFrameworkGlobalConfiguration.AtomicProjectionEngineOptimizedCatchup)
                 {
                     //really slow polling, it will dispatch only old commits.
-                    CreatePollerAndStart(ref _catchupPoller, CatchupPollerId, _maxCommitInStream, DispatchCatchupToTpl, pollingIntervalInMilliseconds: 20000);
+                    CreatePollerAndStart(ref _catchupPoller, CatchupPollerId, _maxCommitInStream, DispatchCatchupToTpl, pollingIntervalInMilliseconds: catchupPollingIntervalInMilliseconds);
                 }
                 else
                 {
-                    CreatePollerAndStart(ref _catchupPoller, CatchupPollerId, _maxCommitInStream, DispatchToTpl, pollingIntervalInMilliseconds: 20000);
+                    CreatePollerAndStart(ref _catchupPoller, CatchupPollerId, _maxCommitInStream, DispatchToTpl, pollingIntervalInMilliseconds: catchupPollingIntervalInMilliseconds);
                 }
             }
 

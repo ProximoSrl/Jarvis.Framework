@@ -4,6 +4,7 @@
     {
         Unknown = 0,
         Command = 1,
-        Event = 2
+        Event = 2,
+        CommandHandled = 3,
     }
 }

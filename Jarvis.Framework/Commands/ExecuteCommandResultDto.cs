@@ -1,8 +1,5 @@
-﻿using Jarvis.Framework.Shared.Messages;
-using Jarvis.Framework.Shared.ReadModel;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
 
 namespace Jarvis.Framework.Kernel.Commands
 {
@@ -31,12 +28,5 @@ namespace Jarvis.Framework.Kernel.Commands
         public String Error { get; set; }
 
         public string OriginalException { get; set; }
-
-        /// <summary>
-        /// if the command is executed with an <see cref="MessagesConstants.IfVersionEqualsTo"/>
-        /// and the aggregate is changed, this collection will contains list of the conflicting
-        /// commands.
-        /// </summary>
-        public List<ConflictingCommandInfo> ConflictingCommands { get; set; }
     }
 }

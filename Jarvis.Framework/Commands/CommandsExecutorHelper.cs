@@ -5,7 +5,6 @@ using Jarvis.Framework.Shared.Commands.Tracking;
 using Jarvis.Framework.Shared.Exceptions;
 using Jarvis.Framework.Shared.Logging;
 using Jarvis.Framework.Shared.Messages;
-using Jarvis.Framework.Shared.ReadModel;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -48,11 +47,7 @@ namespace Jarvis.Framework.Kernel.Commands
             LoggerThreadContextManager.MarkCommandExecution(command);
             Logger.InfoFormat("Ask execution of command {0} - {1}", command.MessageId, command.Describe());
 
-            var user = command.GetContextData(MessagesConstants.UserId) ?? dto.ImpersonatingUser;
-
-            if (user == null)
-                throw new JarvisFrameworkEngineException($"Unable to execue a command, no user in header {MessagesConstants.UserId} nor impersonation user in dto is present.");
-
+            var user = (command.GetContextData(MessagesConstants.UserId) ?? dto.ImpersonatingUser) ?? throw new JarvisFrameworkEngineException($"Unable to execue a command, no user in header {MessagesConstants.UserId} nor impersonation user in dto is present.");
             try
             {
                 await _commandBus.SendAsync(command, user).ConfigureAwait(false);
@@ -61,15 +56,7 @@ namespace Jarvis.Framework.Kernel.Commands
             catch (AggregateModifiedException ex)
             {
                 //we have a conflicting exception
-                var retValue = new ExecuteCommandResultDto(false, ex.Message, ex);
-                if (dto.OfflineCheckpointTokenFrom.HasValue)
-                {
-                    List<CommitShortInfo> newCommits = await GetNewCommid(dto.OfflineCheckpointTokenFrom.Value, ex.AggregateId).ConfigureAwait(false);
-                    var idList = newCommits.Select(c => c.OperationId).ToList();
-                    retValue.ConflictingCommands = GetConflictingCommandList(ex.AggregateId, idList);
-                }
-
-                return retValue;
+                return new ExecuteCommandResultDto(false, ex.Message, ex);
             }
             catch (Exception ex)
             {
@@ -79,29 +66,6 @@ namespace Jarvis.Framework.Kernel.Commands
             {
                 LoggerThreadContextManager.ClearMarkCommandExecution(); //clear data
             }
-        }
-
-        private Task<List<CommitShortInfo>> GetNewCommid(Int64 checkpointTokenFrom, String aggregateId)
-        {
-            return _eventStoreQueryManager.GetCommitsAfterCheckpointTokenAsync(
-                checkpointTokenFrom,
-                new List<String>() { aggregateId });
-        }
-
-        private List<ConflictingCommandInfo> GetConflictingCommandList(String aggregateId, List<string> idList)
-        {
-            var commandList = _messagesTrackerQueryManager.GetByIdList(idList);
-            return commandList
-                .Where(c => c.CompletedAt.HasValue)
-                .Select(c => new ConflictingCommandInfo()
-                {
-                    AggregateId = aggregateId,
-                    Describe = c.Message.Describe(),
-                    Id = c.Message.MessageId.ToString(),
-                    TimeStamp = c.CompletedAt.Value,
-                    UserId = c.IssuedBy
-                })
-                .ToList();
         }
     }
 }

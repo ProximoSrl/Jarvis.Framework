@@ -68,7 +68,7 @@ namespace Jarvis.Framework.Shared.Helpers
             collection.ReplaceOne(
                    Builders<T>.Filter.Eq("_id", id),
                    objToSave,
-                   new UpdateOptions { IsUpsert = true });
+                   new ReplaceOptions { IsUpsert = true });
         }
 
         public static void Save<T, Tid>(this IMongoCollection<T> collection, T objToSave, Tid objectId)
@@ -78,7 +78,7 @@ namespace Jarvis.Framework.Shared.Helpers
             collection.ReplaceOne(
                    Builders<T>.Filter.Eq("_id", objectId),
                    objToSave,
-                   new UpdateOptions { IsUpsert = true });
+                   new ReplaceOptions { IsUpsert = true });
         }
 
         public static Task SaveAsync<T, Tid>(this IMongoCollection<T> collection, T objToSave, Tid objectId)
@@ -88,7 +88,7 @@ namespace Jarvis.Framework.Shared.Helpers
             return collection.ReplaceOneAsync(
                    Builders<T>.Filter.Eq("_id", objectId),
                    objToSave,
-                   new UpdateOptions { IsUpsert = true });
+                   new ReplaceOptions { IsUpsert = true });
         }
 
         public static DeleteResult RemoveById<T, Tid>(this IMongoCollection<T> collection, Tid idValue)
