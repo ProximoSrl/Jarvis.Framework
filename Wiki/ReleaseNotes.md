@@ -2,10 +2,12 @@
 
 ## vNext
 
+## 7.1.0
+
 - Optimization for pollers (allows user to use Watch)
 - Some optimization for concurrent checkpoint tracker.
 
-## 0.7.0
+## 7.0.0
 
 - Added time to live for TrackedMessageModel.
 
