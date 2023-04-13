@@ -1,20 +1,16 @@
 ﻿using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.Exceptions;
-using Jarvis.Framework.Shared.Helpers;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Jarvis.Framework.Shared.ReadModel
 {
-#pragma warning disable S1210 // "Equals" and the comparison operators should be overridden when implementing "IComparable"
     public abstract class AbstractReadModel<TKey> :
-#pragma warning restore S1210 // "Equals" and the comparison operators should be overridden when implementing "IComparable"
         IReadModelEx<TKey>,
         IComparable<AbstractReadModel<TKey>>
     {
-        private const int MaxEventIdToRetain = 30;
+        private const int CommitIdSkew = 10000;
 
         public AbstractReadModel()
         {
@@ -35,13 +31,13 @@ namespace Jarvis.Framework.Shared.ReadModel
         /// <para>
         /// We need to keep track of index of last event that
         /// modified this readmodel. We need to store two number
-        /// one is the index of the changeset, the other is the 
+        /// one is the index of the changeset, the other is the
         /// incremental index of the event inside the changeset.
         /// </para>
         /// <para>
         /// To use a single value we simple multiply the index
-        /// by 1000 then add the incremental of the event. This
-        /// will work if we have less than 1000 events in a single
+        /// by CommitIdSkew then add the incremental of the event. This
+        /// will work if we have less than CommitIdSkew events in a single
         /// changeset.
         /// </para>
         /// </summary>
@@ -89,14 +85,15 @@ namespace Jarvis.Framework.Shared.ReadModel
 
         private Int64 GenerateLastEventIdexProjected(Int64 commitPosition, Int32 eventPosition)
         {
-            return (commitPosition * 5000) + eventPosition;
+            return (commitPosition * CommitIdSkew) + eventPosition;
         }
-
 
         public void ThrowIfInvalidId()
         {
-            if (EqualityComparer<TKey>.Default.Equals(default(TKey), Id))
+            if (EqualityComparer<TKey>.Default.Equals(default, Id))
+            {
                 throw new InvalidAggregateIdException("Empty Id Value");
+            }
         }
 
         public int CompareTo(AbstractReadModel<TKey> other)
