@@ -5,6 +5,7 @@
 - When init MetricsHelper you need to pass a complete build app.metrics configuration
 - Removed EventHappenedEventArgs due to metrics consolidation, now framework uses metrics directly
 - Removed completely aggregate cached repository, because it introuces a lots of complexity.
+- ProcessManagerDispatcher does not implements anymore ISTartable, you need to start manually.
 
 ## 6.3.0
 

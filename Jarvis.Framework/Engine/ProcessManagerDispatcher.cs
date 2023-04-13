@@ -1,5 +1,4 @@
-﻿using Castle.Core;
-using Castle.Core.Logging;
+﻿using Castle.Core.Logging;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 using Jarvis.Framework.Shared.Commands;
 using Jarvis.Framework.Shared.Helpers;
@@ -13,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.Engine
 {
-    public class ProcessManagerDispatcher : IStartable
+    public class ProcessManagerDispatcher
     {
         private readonly ICommandBus _commandBus;
 
@@ -52,11 +51,11 @@ namespace Jarvis.Framework.Kernel.Engine
             _messageBus = messageBus;
         }
 
-        public void Start()
+        public void Start(int frequenceInMilliseconds)
         {
             if (!_configuration.DispatchCommand) return;
             _client.Configure(_currentCheckpoint.LastDispatchedPosition, 100);
-            _client.Start();
+            _client.Start(frequenceInMilliseconds);
             _started = true;
         }
 
@@ -67,6 +66,11 @@ namespace Jarvis.Framework.Kernel.Engine
                 _client.Stop(false);
                 _started = false;
             }
+        }
+
+        public Task Poll()
+        {
+            return _client.PollAsync();
         }
 
         public async Task Dispatch(IChunk commit)

@@ -39,15 +39,17 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         private string _eventStoreConnectionString;
         private IdentityManager _identityConverter;
         protected Repository Repository;
+        private ProjectionEngineConfig _config;
         protected IPersistence _persistence;
         protected IMongoDatabase _db;
+        private RebuildContext _rebuildContext;
         protected IMongoStorageFactory _storageFactory;
 
         protected IMongoCollection<UnwindedDomainEvent> _unwindedEventCollection;
         protected IMongoCollection<Checkpoint> _checkpointCollection;
 
         protected EventUnwinder _eventUnwinder;
-
+        private IProjection[] _projections;
         protected RebuildProjectionEngine sut;
 
         protected MongoReader<SampleReadModel, string> _reader1;
@@ -55,6 +57,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         protected MongoReader<SampleReadModel3, string> _reader3;
 
         protected ConcurrentCheckpointTracker _tracker;
+        private ProjectionEventInspector _inspector;
 
         [SetUp]
         public virtual void TestFixtureSetUp()
@@ -73,8 +76,8 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             MongoFlatMapper.EnableFlatMapping(true);
             MongoFlatIdSerializerHelper.Initialize(_identityConverter);
 
-            var rebuildContext = new RebuildContext(NitroEnabled);
-            _storageFactory = new MongoStorageFactory(_db, rebuildContext);
+            _rebuildContext = new RebuildContext(NitroEnabled);
+            _storageFactory = new MongoStorageFactory(_db, _rebuildContext);
 
             _reader1 = new MongoReader<SampleReadModel, string>(_db);
             _reader2 = new MongoReader<SampleReadModel2, string>(_db);
@@ -89,27 +92,39 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
                 new StreamsFactory(_persistence)
            );
 
-            ProjectionEngineConfig config = new ProjectionEngineConfig();
-            config.EventStoreConnectionString = _eventStoreConnectionString;
-            config.Slots = new string[] { "*" };
-            config.TenantId = new TenantId("A");
-            config.BucketInfo = new List<BucketInfo>();
-            config.BucketInfo.Add(new BucketInfo() { Slots = new[] { "*" }, BufferSize = 10000 });
+            _config = new ProjectionEngineConfig();
+            _config.EventStoreConnectionString = _eventStoreConnectionString;
+            _config.Slots = new string[] { "*" };
+            _config.TenantId = new TenantId("A");
+            _config.BucketInfo = new List<BucketInfo>
+            {
+                new BucketInfo() { Slots = new[] { "*" }, BufferSize = 10000 }
+            };
 
-            _eventUnwinder = new EventUnwinder(config, _persistence, new TestLogger(LoggerLevel.Info));
+            _eventUnwinder = new EventUnwinder(_config, _persistence, new TestLogger(LoggerLevel.Info));
+
+            _projections = BuildProjections().ToArray();
 
             //now configure RebuildProjectionEngine
             _tracker = new ConcurrentCheckpointTracker(_db, 60);
-
-            var projections = BuildProjections().ToArray();
-
-            _tracker.SetUp(projections, 1, false);
-            ProjectionEventInspector inspector = new ProjectionEventInspector();
-            inspector.AddAssembly(Assembly.GetExecutingAssembly());
-            sut = new RebuildProjectionEngine(_eventUnwinder, _tracker, projections, rebuildContext, config, inspector, NullLoggerThreadContextManager.Instance);
-            sut.Logger = new TestLogger(LoggerLevel.Debug);
+            _tracker.SetUp(_projections, 1, false);
+            _inspector = new ProjectionEventInspector();
+            _inspector.AddAssembly(Assembly.GetExecutingAssembly());
 
             _checkpointCollection = _db.GetCollection<Checkpoint>("checkpoints");
+        }
+
+        protected void CreateSut()
+        {
+            sut = new RebuildProjectionEngine(
+                _eventUnwinder,
+                _tracker,
+                _projections,
+                _rebuildContext,
+                _config,
+                _inspector,
+                NullLoggerThreadContextManager.Instance);
+            sut.Logger = new TestLogger(LoggerLevel.Debug);
         }
 
         protected abstract IEnumerable<IProjection> BuildProjections();
@@ -151,6 +166,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         {
             await CreateAggregate().ConfigureAwait(false);
 
+            CreateSut();
             var status = await sut.RebuildAsync().ConfigureAwait(false);
             WaitForFinish(status);
             Assert.That(_writer.All.Count(), Is.EqualTo(0), "No event should be loaded because we did not dispatched anything");
@@ -161,6 +177,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         {
             await CreateAggregate().ConfigureAwait(false);
 
+            CreateSut();
             var status = await sut.RebuildAsync().ConfigureAwait(false);
             WaitForFinish(status);
             Assert.That(_eventUnwinder.UnwindedCollection.AsQueryable().Count(), Is.EqualTo(1), "RebuildProjection should call unwind to ensure all events are unwinded");
@@ -190,6 +207,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             thisTracker.SetUp(new[] { _projection }, 1, false);
 			await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection.Info.SlotName, new[] { _projection.Info.CommonName }, 2, true); //Set the projection as dispatched
 
+            CreateSut();
             var status = await sut.RebuildAsync().ConfigureAwait(false);
             WaitForFinish(status);
             Assert.That(_writer.All.Count(), Is.EqualTo(2));
@@ -221,6 +239,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection1.Info.SlotName, new[] { _projection1.Info.CommonName }, 1, true);
             await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection3.Info.SlotName, new[] { _projection3.Info.CommonName }, 1, true);
 
+            CreateSut();
             var status = await sut.RebuildAsync().ConfigureAwait(false);
             WaitForFinish(status);
             Assert.That(_writer1.All.Count(), Is.EqualTo(1));
@@ -240,6 +259,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 			await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection1.Info.SlotName, new[] { _projection1.Info.CommonName }, 2, true);
 			await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection3.Info.SlotName, new[] { _projection3.Info.CommonName }, 1, true);
 
+            CreateSut();
             var status = await sut.RebuildAsync().ConfigureAwait(false);
             WaitForFinish(status);
             Assert.That(_writer1.All.Count(), Is.EqualTo(2));
@@ -286,6 +306,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 
             //now change signature.
             _projection3.Signature = "Modified";
+            CreateSut();
             var status = await sut.RebuildAsync().ConfigureAwait(false);
             WaitForFinish(status);
             var checkpoint = _checkpointCollection.AsQueryable().Single(c => c.Id == ((IProjection)_projection3).Info.CommonName);
@@ -326,6 +347,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection1.Info.SlotName, new[] { _projection1.Info.CommonName }, 1, true);
 			await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection3.Info.SlotName, new[] { _projection3.Info.CommonName }, 1, true);
 
+            CreateSut();
             RebuildStatus status = await sut.RebuildAsync().ConfigureAwait(false);
             WaitForFinish(status);
             var coll = _db.GetCollection<BsonDocument>("Sample");
@@ -334,4 +356,3 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         }
     }
 }
-

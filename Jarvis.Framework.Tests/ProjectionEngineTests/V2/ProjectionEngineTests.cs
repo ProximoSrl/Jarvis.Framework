@@ -94,7 +94,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 
             try
             {
-                Engine.StartSync();
+                Engine.StartSync(100);
                 Assert.Fail("Exception expected");
             }
             catch (AggregateException aex)

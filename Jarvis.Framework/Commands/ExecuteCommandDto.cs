@@ -2,6 +2,7 @@
 using Jarvis.Framework.Shared.Domain.Serialization;
 using Jarvis.Framework.Shared.Exceptions;
 using Jarvis.Framework.Shared.Messages;
+using MongoDB.Bson.Serialization.Attributes;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -62,10 +63,12 @@ namespace Jarvis.Framework.Kernel.Commands
         public String ImpersonatingUser { get; set; }
 
         /// <summary>
+        /// Removed after offline remove.
         /// This value is set only by an offline system and indicates
         /// the last checkpoint token when the offline session is started
         /// </summary>
-        public Int64? OfflineCheckpointTokenFrom { get; set; }
+        [BsonElement]
+        private Int64? OfflineCheckpointTokenFrom { get; set; }
 
         private static JsonSerializerSettings GetSerializationSettings()
         {

@@ -525,7 +525,6 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         {
             var projections = SetupTwoProjectionsError();
 
-            _concurrentCheckpointTrackerSut = new ConcurrentCheckpointTracker(_db, 60);
             _slotStatusCheckerSut = new SlotStatusManager(_db, projections.Select(p => p.Info).ToArray());
             var status = _slotStatusCheckerSut.GetSlotsStatus();
 
@@ -628,7 +627,6 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
 
         private IProjection[] SetupTwoProjectionsError()
         {
-            _concurrentCheckpointTrackerSut = new ConcurrentCheckpointTracker(_db, 60);
             var rebuildContext = new RebuildContext(false);
             var storageFactory = new MongoStorageFactory(_db, rebuildContext);
             var writer1 = new CollectionWrapper<SampleReadModel, string>(storageFactory, new NotifyToNobody());
@@ -647,8 +645,10 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             p2.Current = p2.Value;
             _checkPoints.Save(p2, p2.Id);
 
-            _concurrentCheckpointTrackerSut.SetUp(projections, 1, false);
             _slotStatusCheckerSut = new SlotStatusManager(_db, projections.Select(p => p.Info).ToArray());
+
+            _concurrentCheckpointTrackerSut = new ConcurrentCheckpointTracker(_db, 60);
+            _concurrentCheckpointTrackerSut.SetUp(projections, 1, false);
             return projections;
         }
     }

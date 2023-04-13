@@ -38,7 +38,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 
 		protected override Task OnStartPolling()
 		{
-			return Engine.StartAsync();
+			return Engine.StartAsync(100);
 		}
 
 		[Test]
@@ -60,7 +60,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 			checkpointPassed = WaitForCheckpoint(2);
 			Assert.IsFalse(checkpointPassed, "Automatic poller is still working after stop.");
 
-			await Engine.StartAsync().ConfigureAwait(false);
+			await Engine.StartAsync(100).ConfigureAwait(false);
 
 			checkpointPassed = WaitForCheckpoint(2);
 			Assert.IsTrue(checkpointPassed, "Automatic poller is not restarted correctly.");

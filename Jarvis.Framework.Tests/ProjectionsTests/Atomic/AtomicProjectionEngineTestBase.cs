@@ -298,6 +298,22 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             return tracker;
         }
 
+        protected async Task< AtomicProjectionCheckpointManager> GetTrackerAndWaitForChangesetToBeProjectedAsync(String readmodelName, Int64? positionToCheck = null)
+        {
+            var tracker = _container.Resolve<AtomicProjectionCheckpointManager>();
+            positionToCheck = positionToCheck ?? lastUsedPosition;
+            DateTime startWait = DateTime.UtcNow;
+            while (DateTime.UtcNow.Subtract(startWait).TotalSeconds < WaitTimeInSeconds
+                && tracker.GetCheckpoint(readmodelName) < positionToCheck)
+            {
+                await Task.Delay(100);
+            }
+
+            Assert.That(tracker.GetCheckpoint(readmodelName), Is.EqualTo(positionToCheck), "Checkpoint not projected");
+
+            return tracker;
+        }
+
         protected async Task<AtomicProjectionEngine> CreateSutAndStartProjectionEngineAsync(Int32 flushTimeInSeconds = 10, Boolean autostart = true)
         {
             var sut = _container.Resolve<AtomicProjectionEngine>();
@@ -306,7 +322,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 
             if (autostart)
             {
-                await sut.StartAsync().ConfigureAwait(false);
+                await sut.StartAsync(100, 100).ConfigureAwait(false);
             }
 
             return sut;

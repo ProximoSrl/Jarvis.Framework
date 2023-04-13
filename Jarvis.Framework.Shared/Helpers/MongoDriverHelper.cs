@@ -19,6 +19,11 @@ namespace Jarvis.Framework.Shared.Helpers
     /// </summary>
     public static class MongoDriverHelper
     {
+        private static ReplaceOptions DefaultReplaceOptions = new ReplaceOptions
+        {
+            IsUpsert = true
+        };
+
         public static void Drop<T>(this IMongoCollection<T> collection)
         {
             collection.Database.DropCollection(collection.CollectionNamespace.CollectionName);
@@ -66,9 +71,9 @@ namespace Jarvis.Framework.Shared.Helpers
             var id = ObjectId.GenerateNewId();
             idAssigner(id);
             collection.ReplaceOne(
-                   Builders<T>.Filter.Eq("_id", id),
-                   objToSave,
-                   new UpdateOptions { IsUpsert = true });
+                Builders<T>.Filter.Eq("_id", id),
+                objToSave,
+                DefaultReplaceOptions);
         }
 
         public static void Save<T, Tid>(this IMongoCollection<T> collection, T objToSave, Tid objectId)
@@ -76,9 +81,9 @@ namespace Jarvis.Framework.Shared.Helpers
             if (ObjectId.Empty.Equals(objectId))
                 throw new ArgumentException("Cannot save with null objectId", nameof(objectId));
             collection.ReplaceOne(
-                   Builders<T>.Filter.Eq("_id", objectId),
-                   objToSave,
-                   new UpdateOptions { IsUpsert = true });
+                Builders<T>.Filter.Eq("_id", objectId),
+                objToSave,
+                DefaultReplaceOptions);
         }
 
         public static Task SaveAsync<T, Tid>(this IMongoCollection<T> collection, T objToSave, Tid objectId)
@@ -86,9 +91,9 @@ namespace Jarvis.Framework.Shared.Helpers
             if (ObjectId.Empty.Equals(objectId))
                 throw new ArgumentException("Cannot save with null objectId", nameof(objectId));
             return collection.ReplaceOneAsync(
-                   Builders<T>.Filter.Eq("_id", objectId),
-                   objToSave,
-                   new UpdateOptions { IsUpsert = true });
+                Builders<T>.Filter.Eq("_id", objectId),
+                objToSave,
+                DefaultReplaceOptions);
         }
 
         public static DeleteResult RemoveById<T, Tid>(this IMongoCollection<T> collection, Tid idValue)

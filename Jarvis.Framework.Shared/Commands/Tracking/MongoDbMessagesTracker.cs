@@ -159,6 +159,17 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
                     type = TrackedMessageType.Event;
                     issuedBy = de.IssuedBy;
                 }
+                else if (msg is CommandHandled)
+                {
+                    type = TrackedMessageType.CommandHandled;
+                }
+
+                if (type != TrackedMessageType.Command
+                    && type != TrackedMessageType.CommandHandled
+                    && JarvisFrameworkGlobalConfiguration.DisableJarvisLogForNonCommandType)
+                {
+                    return;
+                }
 
                 Commands.UpdateOne(
                    Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
@@ -267,7 +278,7 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
                 var result = Commands.UpdateOne(
                      Builders<TrackedMessageModel>.Filter.And(
                         Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id),
-                         Builders<TrackedMessageModel>.Filter.Eq(x => x.DispatchedAt, null)
+                        Builders<TrackedMessageModel>.Filter.Eq(x => x.DispatchedAt, null)
                     ),
                     Builders<TrackedMessageModel>.Update.Set(x => x.DispatchedAt, dispatchedAt)
                 );

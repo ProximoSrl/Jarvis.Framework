@@ -15,6 +15,7 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
 using System.Threading.Tasks;
+using Jarvis.Framework.TestHelpers;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests
 {
@@ -77,10 +78,14 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
                 Id = new TestId(1),
                 Value = "test"
             };
-            SampleAggregateCreated e1 = new SampleAggregateCreated();
+            SampleAggregateCreated e1 = new SampleAggregateCreated()
+                .AssignPositionValues(1, 1, 1);
             await sut.InsertAsync(e1, rm).ConfigureAwait(false);
 
-            SampleAggregateCreated e2 = new SampleAggregateCreated();
+            //Be sure that this is another event with other position values.
+            SampleAggregateCreated e2 = new SampleAggregateCreated()
+                .AssignPositionValues(2, 1, 1);
+
             //check we are not able to create a readmodel with two different source events.
             Assert.ThrowsAsync<CollectionWrapperException>(() => sut.InsertAsync(e2, rm));
         }
@@ -169,10 +174,10 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
                 Value = "test",
                 Counter = 10,
             };
-            await sut.InsertAsync(new SampleAggregateCreated(), rm).ConfigureAwait(false);
+            await sut.InsertAsync(new SampleAggregateCreated().AssignPositionValues(1, 1, 1), rm).ConfigureAwait(false);
 
             //now try to update counter with an event
-            SampleAggregateTouched e = new SampleAggregateTouched();
+            SampleAggregateTouched e = new SampleAggregateTouched().AssignPositionValues(2, 1, 1);
 
             await sut.FindAndModifyAsync(e, rm.Id, _ => _.Counter++).ConfigureAwait(false);
             var reloaded = await sut.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
@@ -184,7 +189,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             Assert.That(reloaded.Counter, Is.EqualTo(11));
 
             //increment on different event
-            SampleAggregateTouched anotherEvent = new SampleAggregateTouched();
+            SampleAggregateTouched anotherEvent = new SampleAggregateTouched().AssignPositionValues(3, 1, 1);
             await sut.FindAndModifyAsync(anotherEvent, rm.Id, _ => _.Counter++).ConfigureAwait(false);
             reloaded = await sut.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
             Assert.That(reloaded.Counter, Is.EqualTo(12));
@@ -211,28 +216,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             //and this should simply skip the insertion.
             await sut.InsertAsync(onlineEvent, rm).ConfigureAwait(false);
         }
-
-        [Test]
-        public async Task Verify_disable_check_on_creation_by_two_different_event_honor_offline_events()
-        {
-            JarvisFrameworkGlobalConfiguration.DisableOfflineEventsReadmodelIdempotencyCheck();
-            var rm = new SampleReadModelTest
-            {
-                Id = new TestId(1),
-                Value = "test"
-            };
-            SampleAggregateCreated offlineEvent = new SampleAggregateCreated();
-            SampleAggregateCreated onlineEvent = new SampleAggregateCreated();
-            var context = new Dictionary<string, Object>();
-            context.Add(MessagesConstants.OfflineEvents, new DomainEvent[] { offlineEvent });
-            offlineEvent.Context = context;
-
-            await sut.InsertAsync(offlineEvent, rm).ConfigureAwait(false);
-
-            //this should NOT be ignored, because I've disabled the readmodelidempotency check.
-            Assert.ThrowsAsync<CollectionWrapperException>(async () => await sut.InsertAsync(onlineEvent, rm));
-        }
-
+       
         [Test]
         public async Task Verify_generate_notification_on_last_event_avoid_notification_on_intermediate_events()
         {

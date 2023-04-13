@@ -164,11 +164,25 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
         public async Task FlushAsync()
         {
-            //Not efficient, use a bulk write
-            foreach (var c in _inMemoryCheckpoint)
+            var requests = new List<WriteModel<AtomicProjectionCheckpoint>>();
+
+            // Add the replace operations to the requests list
+            foreach (var inMemoryCheckpoint in _inMemoryCheckpoint.Values)
             {
-                await _collection.SaveAsync(c.Value, c.Value.Id).ConfigureAwait(false);
+                var replaceOneModel = new ReplaceOneModel<AtomicProjectionCheckpoint>(
+                    Builders<AtomicProjectionCheckpoint>.Filter.Eq("_id", inMemoryCheckpoint.Id),
+                    inMemoryCheckpoint)
+                {
+                    IsUpsert = true
+                };
+                requests.Add(replaceOneModel);
             }
+
+            await _collection.BulkWriteAsync(requests,
+                new BulkWriteOptions()
+            {
+                IsOrdered = false,
+            });
         }
 
         private class AtomicProjectionCheckpoint

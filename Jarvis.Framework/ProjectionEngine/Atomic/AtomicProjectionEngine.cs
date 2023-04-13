@@ -31,7 +31,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
     /// This is a real reduced form of Projection Engine that is 
     /// capable of building only classes that derives from <see cref="AbstractAtomicReadModel" />.
     /// </para>
-    /// 
     /// <para>
     /// This component automatically flushes with an internal timer the checkpoint.
     /// </para>
@@ -162,7 +161,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
         private Int64 _defaultPollerStartingPoint;
 
-        public async Task StartAsync()
+        public async Task StartAsync(int pollingIntervalInMilliseconds, int catchupPollingIntervalInMilliseconds)
         {
             if (_started)
             {
@@ -192,7 +191,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             //we need to create a poller to dispatch everything to each readmodel.
             CreateTplChain(ref _tplBuffer, ref _tplBroadcaster);
 
-            _defaultPollerStartingPoint = CreatePollerAndStart(ref _mainPoller, DefaultPollerId, _maxCommitInStream, DispatchToTpl);
+            _defaultPollerStartingPoint = CreatePollerAndStart(ref _mainPoller, DefaultPollerId, _maxCommitInStream, DispatchToTpl, pollingIntervalInMilliseconds: pollingIntervalInMilliseconds);
 
             //Need to know if we ned to start catchup poller
             var behindReadmodels = _consumerBlocks
@@ -212,11 +211,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 Logger.InfoFormat("Catchup Poller started because some readmodel are too far behind: {0}", String.Join(", ", behindReadmodels.Select(_ => _.Consumer.AtomicReadmodelInfoAttribute.Name)));
                 if (JarvisFrameworkGlobalConfiguration.AtomicProjectionEngineOptimizedCatchup)
                 {
-                    CreatePollerAndStart(ref _catchupPoller, CatchupPollerId, _maxCommitInStream, DispatchCatchupToTpl);
+                    //really slow polling, it will dispatch only old commits.
+                    CreatePollerAndStart(ref _catchupPoller, CatchupPollerId, _maxCommitInStream, DispatchCatchupToTpl, pollingIntervalInMilliseconds: catchupPollingIntervalInMilliseconds);
                 }
                 else
                 {
-                    CreatePollerAndStart(ref _catchupPoller, CatchupPollerId, _maxCommitInStream, DispatchToTpl);
+                    CreatePollerAndStart(ref _catchupPoller, CatchupPollerId, _maxCommitInStream, DispatchToTpl, pollingIntervalInMilliseconds: catchupPollingIntervalInMilliseconds);
                 }
             }
 
@@ -239,7 +239,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             ref AtomicProjectionNstorePoller poller,
             Int32 pollerId,
             Int64 maxCommitInStream,
-            Func<AtomicDispatchChunk, Task<Boolean>> dispatchToTplFunction)
+            Func<AtomicDispatchChunk, Task<Boolean>> dispatchToTplFunction,
+            int pollingIntervalInMilliseconds)
         {
             if (poller != null)
             {
@@ -249,7 +250,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             var startingPosition = TryGetStartingPoint(pollerId, 0);
             Logger.InfoFormat("AtomicProjectionEngine: Starting poller id {0} from position {1}", pollerId, startingPosition);
             var subscription = new JarvisFrameworkLambdaSubscription(c => dispatchToTplFunction(new AtomicDispatchChunk(pollerId, c)), $"atomicPoller-{pollerId}");
-            poller = new AtomicProjectionNstorePoller(_persistence, startingPosition, maxCommitInStream, subscription, _nStoreLoggerFactory);
+            poller = new AtomicProjectionNstorePoller(_persistence, startingPosition, maxCommitInStream, subscription, _nStoreLoggerFactory, pollingIntervalInMilliseconds: pollingIntervalInMilliseconds);
             poller.Start();
             return startingPosition;
         }
@@ -372,6 +373,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                     await _tplBroadcaster.Completion;
                 }
             }
+        }
+
+        /// <summary>
+        /// Force a polling for the main poller.
+        /// </summary>
+        /// <returns></returns>
+        public Task Poll()
+        {
+            _mainPoller.Poll();
+            return Task.CompletedTask;
         }
 
         #region TPL
