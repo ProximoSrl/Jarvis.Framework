@@ -3,6 +3,7 @@ using Jarvis.Framework.Kernel.ProjectionEngine;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 using Jarvis.Framework.Shared.Helpers;
 using Jarvis.Framework.Shared.Messages;
+using Jarvis.Framework.Shared.Support;
 using Machine.Specifications;
 using MongoDB.Driver;
 using NSubstitute;
@@ -31,7 +32,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         {
             var connectionString = ConfigurationManager.ConnectionStrings["readmodel"].ConnectionString;
             var url = new MongoUrl(connectionString);
-            var client = new MongoClient(url);
+            var client = new MongoClient(url.CreateMongoClientSettings());
             _db = client.GetDatabase(url.DatabaseName);
             _checkPoints = _db.GetCollection<Checkpoint>("checkpoints");
             _checkPoints.Drop();

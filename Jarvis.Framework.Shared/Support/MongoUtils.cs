@@ -1,5 +1,6 @@
 ﻿using MongoDB.Driver;
 using MongoDB.Driver.Core.Events;
+using MongoDB.Driver.Linq;
 using System;
 using System.Collections.Concurrent;
 
@@ -7,7 +8,7 @@ namespace Jarvis.Framework.Shared.Support
 {
     /// <summary>
     /// To avoid direct dependency from Application insight this is the interface
-    /// that should be implemneted 
+    /// that should be implemented. 
     /// </summary>
     public interface IMongoQueryInterceptorConsumer
     {
@@ -36,6 +37,27 @@ namespace Jarvis.Framework.Shared.Support
 
         private static readonly ConcurrentDictionary<String, IMongoClient> _mongoClientCache = new ConcurrentDictionary<string, IMongoClient>();
 
+        public static MongoClientSettings CreateMongoClientSettings(this MongoUrl url)
+        {
+            var settings = MongoClientSettings.FromUrl(url);
+            return ConfigureSettings(settings);
+        }
+
+        public static MongoClientSettings CreateMongoClientSettings(this string url)
+        {
+            var settings = MongoClientSettings.FromConnectionString(url);
+            return ConfigureSettings(settings);
+        }
+
+        private static MongoClientSettings ConfigureSettings(MongoClientSettings settings)
+        {
+            if (!JarvisFrameworkGlobalConfiguration.IsMongodbLinq3Enabled)
+            {
+                settings.LinqProvider = LinqProvider.V2;
+            }
+            return settings;
+        }
+
         /// <summary>
         /// Creates a mongo client and enable interception through <see cref="MongoQueryInterptorConsumer"/> class.
         /// </summary>
@@ -49,12 +71,11 @@ namespace Jarvis.Framework.Shared.Support
             {
                 if (enableInterception)
                 {
-                    var settings = MongoClientSettings.FromUrl(url);
-                    client = CreateClient(settings);
+                    client = CreateClient(url.CreateMongoClientSettings());
                 }
                 else
                 {
-                    client = new MongoClient(url);
+                    client = new MongoClient(url.CreateMongoClientSettings());
                 }
 
                 _mongoClientCache.TryAdd(connectionKey, client);

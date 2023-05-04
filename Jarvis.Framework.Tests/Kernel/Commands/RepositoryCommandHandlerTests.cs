@@ -9,6 +9,7 @@ using Jarvis.Framework.Shared.Messages;
 using Jarvis.Framework.Shared.Persistence;
 using Jarvis.Framework.Tests.EngineTests;
 using Jarvis.Framework.Tests.Support;
+using Jarvis.Framework.Shared.Support;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using NStore.Core.Logging;
@@ -39,7 +40,7 @@ namespace Jarvis.Framework.Tests.Kernel.Commands
         {
             var connectionString = ConfigurationManager.ConnectionStrings["eventstore"].ConnectionString;
             var url = new MongoUrl(connectionString);
-            var client = new MongoClient(url);
+            var client = new MongoClient(url.CreateMongoClientSettings());
             var _db = client.GetDatabase(url.DatabaseName);
             _eventsCollection = _db.GetCollection<BsonDocument>(EventStoreFactoryTest.PartitionCollectionName);
 

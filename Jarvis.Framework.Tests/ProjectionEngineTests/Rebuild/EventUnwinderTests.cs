@@ -12,6 +12,7 @@ using Jarvis.Framework.Kernel.ProjectionEngine.Rebuild;
 using Jarvis.Framework.Shared.IdentitySupport.Serialization;
 using Jarvis.Framework.Kernel.ProjectionEngine;
 using Jarvis.Framework.Kernel.Engine;
+using Jarvis.Framework.Shared.Support;
 using System.Threading.Tasks;
 using NStore.Core.Persistence;
 using NStore.Domain;
@@ -40,7 +41,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 		{
 			_eventStoreConnectionString = ConfigurationManager.ConnectionStrings["eventstore"].ConnectionString;
 			var url = new MongoUrl(_eventStoreConnectionString);
-			var client = new MongoClient(url);
+			var client = new MongoClient(url.CreateMongoClientSettings());
 			_db = client.GetDatabase(url.DatabaseName);
 			_db.Drop();
 

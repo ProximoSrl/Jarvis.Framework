@@ -1,39 +1,40 @@
-﻿using Jarvis.Framework.Shared.IdentitySupport;
+﻿using Castle.Core.Logging;
+using Jarvis.Framework.Kernel.Engine;
+using Jarvis.Framework.Kernel.Events;
+using Jarvis.Framework.Kernel.ProjectionEngine;
+using Jarvis.Framework.Kernel.ProjectionEngine.Client;
+using Jarvis.Framework.Kernel.ProjectionEngine.Rebuild;
+using Jarvis.Framework.Kernel.Support;
+using Jarvis.Framework.Shared.Helpers;
+using Jarvis.Framework.Shared.IdentitySupport;
+using Jarvis.Framework.Shared.IdentitySupport.Serialization;
+using Jarvis.Framework.Shared.Logging;
+using Jarvis.Framework.Shared.Messages;
+using Jarvis.Framework.Shared.MultitenantSupport;
+using Jarvis.Framework.Shared.ReadModel;
+using Jarvis.Framework.Shared.Support;
+using Jarvis.Framework.TestHelpers;
+using Jarvis.Framework.Tests.EngineTests;
+using Jarvis.Framework.Tests.Support;
+using MongoDB.Bson;
 using MongoDB.Driver;
+using NStore.Core.Logging;
+using NStore.Core.Persistence;
+using NStore.Core.Streams;
+using NStore.Domain;
+using NSubstitute;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
-using System.Threading.Tasks;
-using Jarvis.Framework.Shared.Helpers;
-using Jarvis.Framework.Tests.EngineTests;
-using NSubstitute;
-using Castle.Core.Logging;
-using Jarvis.Framework.TestHelpers;
-using Jarvis.Framework.Kernel.ProjectionEngine.Rebuild;
-using Jarvis.Framework.Kernel.ProjectionEngine.Client;
-using Jarvis.Framework.Shared.IdentitySupport.Serialization;
-using Jarvis.Framework.Shared.ReadModel;
-using Jarvis.Framework.Kernel.Events;
-using Jarvis.Framework.Kernel.ProjectionEngine;
-using Jarvis.Framework.Shared.MultitenantSupport;
-using Jarvis.Framework.Shared.Messages;
-using System.Threading;
-using Jarvis.Framework.Kernel.Support;
 using System.Reflection;
-using MongoDB.Bson;
-using Jarvis.Framework.Kernel.Engine;
-using NStore.Core.Persistence;
-using NStore.Domain;
-using NStore.Core.Logging;
-using NStore.Core.Streams;
-using Jarvis.Framework.Shared.Logging;
-using Jarvis.Framework.Tests.Support;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 {
-	[TestFixture]
+    [TestFixture]
     public abstract class RebuildProjectionEngineBaseTests
     {
         private string _eventStoreConnectionString;
@@ -65,7 +66,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             _eventStoreConnectionString = ConfigurationManager.ConnectionStrings["eventstore"].ConnectionString;
 
             var url = new MongoUrl(_eventStoreConnectionString);
-            var client = new MongoClient(url);
+            var client = new MongoClient(url.CreateMongoClientSettings());
             _db = client.GetDatabase(url.DatabaseName);
             _db.Drop();
 
@@ -205,7 +206,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             //prepare the tracker
             ConcurrentCheckpointTracker thisTracker = new ConcurrentCheckpointTracker(_db, 60);
             thisTracker.SetUp(new[] { _projection }, 1, false);
-			await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection.Info.SlotName, new[] { _projection.Info.CommonName }, 2, true); //Set the projection as dispatched
+            await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection.Info.SlotName, new[] { _projection.Info.CommonName }, 2, true); //Set the projection as dispatched
 
             CreateSut();
             var status = await sut.RebuildAsync().ConfigureAwait(false);
@@ -256,8 +257,8 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             //prepare the tracker
             ConcurrentCheckpointTracker thisTracker = new ConcurrentCheckpointTracker(_db, 60);
             thisTracker.SetUp(new[] { _projection1, _projection3 }, 1, false);
-			await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection1.Info.SlotName, new[] { _projection1.Info.CommonName }, 2, true);
-			await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection3.Info.SlotName, new[] { _projection3.Info.CommonName }, 1, true);
+            await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection1.Info.SlotName, new[] { _projection1.Info.CommonName }, 2, true);
+            await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection3.Info.SlotName, new[] { _projection3.Info.CommonName }, 1, true);
 
             CreateSut();
             var status = await sut.RebuildAsync().ConfigureAwait(false);
@@ -301,8 +302,8 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 
             ConcurrentCheckpointTracker thisTracker = new ConcurrentCheckpointTracker(_db, 60);
             thisTracker.SetUp(new IProjection[] { _projection1, _projection3 }, 1, false);
-			await thisTracker.UpdateSlotAndSetCheckpointAsync(((IProjection)_projection1).Info.SlotName, new[] { ((IProjection)_projection1).Info.CommonName }, 1, true);
-			await thisTracker.UpdateSlotAndSetCheckpointAsync(((IProjection)_projection3).Info.SlotName, new[] { ((IProjection)_projection3).Info.CommonName }, 1, true);
+            await thisTracker.UpdateSlotAndSetCheckpointAsync(((IProjection)_projection1).Info.SlotName, new[] { ((IProjection)_projection1).Info.CommonName }, 1, true);
+            await thisTracker.UpdateSlotAndSetCheckpointAsync(((IProjection)_projection3).Info.SlotName, new[] { ((IProjection)_projection3).Info.CommonName }, 1, true);
 
             //now change signature.
             _projection3.Signature = "Modified";
@@ -345,7 +346,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             ConcurrentCheckpointTracker thisTracker = new ConcurrentCheckpointTracker(_db, 60);
             thisTracker.SetUp(new[] { _projection1, _projection3 }, 1, false);
             await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection1.Info.SlotName, new[] { _projection1.Info.CommonName }, 1, true);
-			await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection3.Info.SlotName, new[] { _projection3.Info.CommonName }, 1, true);
+            await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection3.Info.SlotName, new[] { _projection3.Info.CommonName }, 1, true);
 
             CreateSut();
             RebuildStatus status = await sut.RebuildAsync().ConfigureAwait(false);

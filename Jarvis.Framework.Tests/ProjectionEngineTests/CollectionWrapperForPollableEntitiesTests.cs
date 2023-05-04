@@ -3,6 +3,7 @@ using Jarvis.Framework.Shared.Messages;
 using Jarvis.Framework.Tests.EngineTests;
 using Jarvis.Framework.Tests.SharedTests.IdentitySupport;
 using Jarvis.Framework.Tests.Support;
+using Jarvis.Framework.Shared.Support;
 using MongoDB.Driver;
 using NUnit.Framework;
 using System;
@@ -27,7 +28,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         {
             var connectionString = ConfigurationManager.ConnectionStrings["readmodel"].ConnectionString;
             var url = new MongoUrl(connectionString);
-            _client = new MongoClient(url);
+            _client = new MongoClient(url.CreateMongoClientSettings());
             _db = _client.GetDatabase(url.DatabaseName);
 
             TestHelper.RegisterSerializerForFlatId<TestId>();

@@ -22,11 +22,11 @@
     <PackageReference Include="Castle.Core" Version="4.4.1" />
     <PackageReference Include="Castle.LoggingFacility" Version="5.1.1" />
     <PackageReference Include="Castle.Windsor" Version="5.1.1" />
-    <PackageReference Include="MongoDB.Bson" Version="2.18.0" />
-    <PackageReference Include="MongoDB.Driver" Version="2.18.0" />
-    <PackageReference Include="MongoDB.Driver.Core" Version="2.18.0" />
-    <PackageReference Include="MongoDB.Driver.GridFS" Version="2.18.0" />
-    <PackageReference Include="MongoDB.Libmongocrypt" Version="1.6.0" />
+    <PackageReference Include="MongoDB.Bson" Version="2.19.1" />
+    <PackageReference Include="MongoDB.Driver" Version="2.19.1" />
+    <PackageReference Include="MongoDB.Driver.Core" Version="2.19.1" />
+    <PackageReference Include="MongoDB.Driver.GridFS" Version="2.19.1" />
+    <PackageReference Include="MongoDB.Libmongocrypt" Version="1.7.0" />
     <PackageReference Include="NStore.Core" Version="0.14.0" />
     <PackageReference Include="NStore.Domain" Version="0.14.0" />
     <PackageReference Include="NStore.Persistence.Mongo" Version="0.14.0" />

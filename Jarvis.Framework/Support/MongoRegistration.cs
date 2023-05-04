@@ -19,8 +19,18 @@ namespace Jarvis.Framework.Kernel.Support
 {
     public static class MongoRegistration
     {
+        static bool _configured = false;
+
         public static void ConfigureMongoForJarvisFramework(params String[] protectedAssemblies)
         {
+            if (_configured) return;
+
+            _configured = true;
+            //After version 2.19 of the driver. https://github.com/mongodb/mongo-csharp-driver/releases/tag/v2.19.0
+            var objectSerializer = new ObjectSerializer(type => ObjectSerializer.AllAllowedTypes(type));
+            BsonSerializer.RegisterSerializer(objectSerializer);
+
+            //After version 2.16
             var guidConversion = new ConventionPack();
             guidConversion.Add(new GuidAsStringRepresentationConvention(protectedAssemblies.ToList()));
             ConventionRegistry.Register("guidstring", guidConversion, _ => true);

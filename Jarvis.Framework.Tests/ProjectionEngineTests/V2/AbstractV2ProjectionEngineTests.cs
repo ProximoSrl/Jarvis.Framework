@@ -12,6 +12,7 @@ using Jarvis.Framework.Shared.IdentitySupport;
 using Jarvis.Framework.Shared.Logging;
 using Jarvis.Framework.Shared.MultitenantSupport;
 using Jarvis.Framework.Shared.ReadModel;
+using Jarvis.Framework.Shared.Support;
 using Jarvis.Framework.Tests.EngineTests;
 using Jarvis.Framework.Tests.Support;
 using MongoDB.Driver;
@@ -119,7 +120,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
         private void DropDb()
         {
             var url = new MongoUrl(_eventStoreConnectionString);
-            var client = new MongoClient(url);
+            var client = new MongoClient(url.CreateMongoClientSettings());
             Database = client.GetDatabase(url.DatabaseName);
             _checkpoints = Database.GetCollection<Checkpoint>("checkpoints");
             client.DropDatabase(url.DatabaseName);
