@@ -1,7 +1,8 @@
 # J.A.R.V.I.S. Framework - Proximo srl (c)
 
-## vNext
+## 7.2.0
 
+- Updated mongodb drivers. 
 - Added ability to query on secondary with reamodel classic/atomic
 
 ## 7.1.3
