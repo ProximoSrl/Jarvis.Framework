@@ -19,6 +19,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         private const string ConcurrencyException = "E1100";
         private readonly INotifyToSubscribers _notifyToSubscribers;
         private readonly IMongoStorage<TModel, TKey> _storage;
+
+        /// <summary>
+        /// To avoid problem when we update lots of readmodels in a single commit we start
+        /// with a number of current ticks then increment by one for each save, so we can
+        /// always disambiguate when the primary polling key (checkpoint token) is the same.
+        /// </summary>
         private Int64 _pollableSecondaryIndexCounter;
 
         public CollectionWrapper(
