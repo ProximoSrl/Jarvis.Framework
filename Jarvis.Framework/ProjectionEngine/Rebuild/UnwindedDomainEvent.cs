@@ -88,6 +88,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
                     domainEvent.Context = new ReadOnlyDictionary<string, object>(Context);
                 }
                 domainEvent.CheckpointToken = CheckpointToken;
+                domainEvent.EventPosition = EventSequence;
 
                 Event = StaticUpcaster.UpcastEvent(domainEvent);
             }

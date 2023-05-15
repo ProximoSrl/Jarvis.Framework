@@ -2,6 +2,10 @@
 
 ## vNext
 
+## 7.1.1
+
+- Fix for unwinded events that does not set event sequence.
+
 ## 7.1.0
 
 - Optimization for pollers (allows user to use Watch)

@@ -46,7 +46,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
 
             var loaded = _collection.Where(x => x.Id == evt.AggregateId.AsString()).Single();
 
-            Assert.AreEqual(5001, loaded.LastEventIndexProjected);
+            Assert.AreEqual(10001, loaded.LastEventIndexProjected);
             Assert.AreEqual("one", loaded.Text);
             Assert.AreEqual(1, SpyNotifier.Counter);
         }
@@ -67,7 +67,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
 
             var loaded = _collection.Where(x => x.Id == insert.AggregateId.AsString()).Single();
 
-            Assert.AreEqual(10002, loaded.LastEventIndexProjected);
+            Assert.AreEqual(20002, loaded.LastEventIndexProjected);
             Assert.AreEqual("update 2", loaded.Text);
             Assert.AreEqual(3, SpyNotifier.Counter);
 
@@ -77,7 +77,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
 
             loaded = _collection.Where(x => x.Id == insert.AggregateId.AsString()).Single();
 
-            Assert.AreEqual(10002, loaded.LastEventIndexProjected);
+            Assert.AreEqual(20002, loaded.LastEventIndexProjected);
             Assert.AreEqual("update 2", loaded.Text);
             Assert.AreEqual(3, SpyNotifier.Counter);
         }
