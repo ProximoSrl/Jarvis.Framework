@@ -2,6 +2,10 @@
 
 ## vNext
 
+## 7.1.2
+
+- Fix Upcaster events during projection unwind #62 (Azdo 15222)
+
 ## 7.1.1
 
 - Fix for unwinded events that does not set event sequence.
