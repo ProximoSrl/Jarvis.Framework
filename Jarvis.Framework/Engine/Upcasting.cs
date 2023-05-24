@@ -148,6 +148,7 @@ namespace Jarvis.Framework.Kernel.Engine
             upcasted.Version = eventToUpcast.Version;
             upcasted.Context = eventToUpcast.Context;
             upcasted.CheckpointToken = eventToUpcast.CheckpointToken;
+            upcasted.EventPosition = eventToUpcast.EventPosition;
 
             return upcasted;
         }

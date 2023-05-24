@@ -134,6 +134,21 @@ namespace Jarvis.Framework.Tests.EngineTests
         }
 
         [Test]
+        public void Upcast_of_single_event_copy_event_sequence()
+        {
+            var evt = new UpcastedEvent("Hello world")
+                .AssignIdForTest(new UpcastClassTestId(1));
+            evt.SetPropertyValue(e => e.CommitId, Guid.NewGuid().ToString());
+            evt.SetPropertyValue(e => e.Version, 42L);
+            evt.SetPropertyValue(e => e.CheckpointToken, 42L);
+            evt.SetPropertyValue(e => e.EventPosition, 3);
+
+             var upcaster = new UpcastedEvent.Upcaster();
+            var evtUpcasted = upcaster.Upcast(evt);
+            Assert.That(evtUpcasted.EventPosition, Is.EqualTo(3));
+        }
+
+        [Test]
         public void Cannot_Register_two_distinct_upcasters()
         {
             StaticUpcaster.Clear();

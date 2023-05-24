@@ -79,6 +79,11 @@ $assemblyFileVersion = $gitversion.assemblyFileVersion
 $nugetVersion = $gitversion.nugetVersion
 $assemblyInformationalVersion = $gitversion.assemblyInformationalVersion
 
+# Since this is an old project that uses <GenerateAssemblyInfo>false</GenerateAssemblyInfo> we
+# cannot rely on command line of dotnet.exe to manipulate file and assembly version during build.
+Write-Host "Changing assembly informations directly on properties.cs files: Update-SourceVersion -SrcPath $runningDirectory -assemblyVersion $assemblyVersion -fileAssemblyVersion $assemblyFileVersion -assemblyInformationalVersion $assemblyInformationalVersion"
+Update-SourceVersion -SrcPath $runningDirectory -assemblyVersion $assemblyVersion -fileAssemblyVersion $assemblyFileVersion -assemblyInformationalVersion $assemblyInformationalVersion      
+
 # These commands are used in azure DevOps pipeline, no need to be run in standard buil
 # but it is convenient to check if the commands are correct
 Write-Host "##vso[build.updatebuildnumber]$BuildName - $($gitversion.fullSemver)"
@@ -94,7 +99,7 @@ Write-Host "Restoring solution dependencies"
 dotnet restore $solutionName
 Assert-LastExecution -message "Unable to restore dependencies of the project." -haltExecution $true
 
-Write-Host "Building solution"
+Write-Host "Building solution  $assemblyVersion FileVersion: $assemblyFileVersion informational $assemblyInformationalVersion"
 dotnet build $solutionName -p:IncludeSymbols=true --configuration $Configuration /p:assemblyVersion=$assemblyVersion /p:FileVersion=$assemblyFileVersion /p:InformationalVersion=$assemblyInformationalVersion 
 Assert-LastExecution -message "Build solution failed." -haltExecution $true
 
@@ -114,7 +119,7 @@ if (!$SkipTest) {
 
 if ($CreateNugetPackages) {
     # Step 7: publish nuget package, important the --no-build will reduce time avoiding to rebuild the solution because it was build before.
-    Write-Host "AssemblyVersion: $assemblyVersion FileVersion: $assemblyFileVersion"
+    Write-Host "Creating nuget packages AssemblyVersion: $assemblyVersion FileVersion: $assemblyFileVersion informational $assemblyInformationalVersion"
 
     # we need to publish all packages.
     dotnet pack "Jarvis.Framework.Shared/Jarvis.Framework.Shared.csproj" -o $publishDirectory --configuration $Configuration /p:PackageVersion=$nugetVersion /p:assemblyVersion=$assemblyVersion /p:FileVersion=$assemblyFileVersion /p:InformationalVersion=$assemblyInformationalVersion -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg
