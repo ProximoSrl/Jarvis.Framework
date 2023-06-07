@@ -3,6 +3,8 @@ using System.Configuration;
 using NUnit.Framework;
 using Jarvis.Framework.Kernel.Support;
 using Jarvis.Framework.Shared.IdentitySupport;
+using MongoDB.Bson.Serialization;
+using MongoDB.Bson.Serialization.Serializers;
 
 namespace Jarvis.Framework.Tests
 {
@@ -12,6 +14,8 @@ namespace Jarvis.Framework.Tests
         [SetUp]
         public void Global_initialization_of_all_tests()
         {
+            var objectSerializer = new ObjectSerializer(type => ObjectSerializer.DefaultAllowedTypes(type) || type.FullName.StartsWith("Jarvis"));
+            BsonSerializer.RegisterSerializer(objectSerializer);
             MongoRegistration.RegisterMongoConversions(
                 "NEventStore.Persistence.MongoDB"
                 );
