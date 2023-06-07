@@ -2,6 +2,11 @@
 
 ## vNext
 
+## 7.1.3
+
+- Better log for MongoStorage when a readmodel cannot be saved.
+- Removed unnecessary index for atomic readmodel.
+
 ## 7.1.2
 
 - Fix Upcaster events during projection unwind #62 (Azdo 15222)

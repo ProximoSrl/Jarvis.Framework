@@ -1,4 +1,5 @@
 using Castle.Core.Logging;
+using Jarvis.Framework.Shared.Exceptions;
 using Jarvis.Framework.Shared.Helpers;
 using Jarvis.Framework.Shared.ReadModel;
 using MongoDB.Driver;
@@ -172,6 +173,21 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 {
                     Sort = Builders<TModel>.Sort.Ascending(s => s.Id)
                 }).ConfigureAwait(false);
+
+            if (result == null)
+            {
+                //something bad happended, we believe that we have readmodel with that id and original version but it does not
+                //seems to be so
+                var reloaded = await _collection.FindOneByIdAsync(model.Id);
+                Logger.ErrorFormat("Unable to save model {0} with id {1} and original version {2} with new version {3}. In database we found a record with actual version {4} that is not equal to original version!",
+                    model.GetType().FullName,
+                    model.Id,
+                    orignalVersion,
+                    model.Version,
+                    reloaded?.Version);
+                //original code throws because we do not have a way to recover from this, we just added the log.
+                throw new JarvisFrameworkEngineException($"Unable to save model {model.GetType().FullName} with id {model.Id} and original version {orignalVersion} with new version {model.Version}. In database we found a record with actual version {reloaded?.Version} that is not equal to original version!");
+            }
 
             return new SaveResult()
             {
