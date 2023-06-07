@@ -68,23 +68,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
 			DropOldIndexes(allIndex);
 
-			if (!allIndex.Contains("ProjectedPosition"))
-			{
-				//Auto create the basic index you need
-				_logger.InfoFormat($"About to create index ProjectedPosition for Readmodel collection {0}", _collection.CollectionNamespace.CollectionName);
-				_collection.Indexes.CreateOne(
-					new CreateIndexModel<TModel>(
-						Builders<TModel>.IndexKeys
-							.Ascending(_ => _.ProjectedPosition),
-						new CreateIndexOptions()
-						{
-							Name = "ProjectedPosition",
-							Background = false
-						}
-					)
-				 );
-			}
-			if (!allIndex.Contains("ReadModelVersionForFixer2"))
+            if (!allIndex.Contains("ReadModelVersionForFixer2"))
 			{
 				//This is the base index that will be used from the fixer to find 
 				//readmodel that are old and needs to be fixed.
@@ -123,7 +107,21 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 					//Ignore all exceptions, if we cannot drop the index we can proceed
 				}
 			}
-			if (allIndex.Contains("ReadModelVersionForFixer"))
+            if (allIndex.Contains("ProjectedPosition"))
+            {
+                try
+                {
+                    //Auto create the basic index you need
+                    _logger.InfoFormat($"Drop old ProjectedPositionIndex since we have ReadModelVersionForFixer2 for collection {0}", _collection.CollectionNamespace.CollectionName);
+                    _collection.Indexes.DropOne("ProjectedPosition");
+                }
+                catch (Exception ex)
+                {
+                    _logger.ErrorFormat(ex, "Error dropping ProjectedPosition Index from readmodel collection {0}", _collection.CollectionNamespace.CollectionName);
+                    //Ignore all exceptions, if we cannot drop the index we can proceed
+                }
+            }
+            if (allIndex.Contains("ReadModelVersionForFixer"))
 			{
 				try
 				{
