@@ -2,6 +2,8 @@
 
 ## vNext
 
+- Added ability to query on secondary with reamodel classic/atomic
+
 ## 7.1.3
 
 - Better log for MongoStorage when a readmodel cannot be saved.

@@ -3,6 +3,9 @@ using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.ReadModel
 {
+    /// <summary>
+    /// Interface for working on read models.
+    /// </summary>
     public interface IReader
     {
     }
@@ -41,5 +44,18 @@ namespace Jarvis.Framework.Shared.ReadModel
         /// <param name="id"></param>
         /// <returns></returns>
         TModel FindOneById(TKey id);
+
+        /// <summary>
+        /// <para>
+        /// This is the same of <see cref="AllUnsorted"/>, but this will read preferred on secondary if we have replicaset.
+        /// Actually we have all readmodels on mongodb, so this is somewhat leaked abstraction. If we will ever use a SQL
+        /// Server or other storage, this method will be probably is equal to <see cref="AllUnsorted"/>.
+        /// </para>
+        /// <para>
+        /// This is used to allow reading on secondary in mongo, accepting the fact that we can read stale data but not 
+        /// using the primary.
+        /// </para>
+        /// </summary>
+        IQueryable<TModel> AllUnsortedSecondaryPreferred { get; }
     }
 }

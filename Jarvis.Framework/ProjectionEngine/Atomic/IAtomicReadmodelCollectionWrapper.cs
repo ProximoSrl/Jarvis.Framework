@@ -18,6 +18,19 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// Allow standard IQueryable interface
         /// </summary>
         IQueryable<TModel> AsQueryable();
+
+        /// <summary>
+        /// <para>
+        /// This is the same of <see cref="AsQueryable"/>, but this will read preferred on secondary if we have replicaset.
+        /// Actually we have all readmodels on mongodb, so this is somewhat leaked abstraction. If we will ever use a SQL
+        /// Server or other storage, this method will be probably is equal to <see cref="AsQueryable"/>.
+        /// </para>
+        /// <para>
+        /// This is used to allow reading on secondary in mongo, accepting the fact that we can read stale data but not 
+        /// using the primary.
+        /// </para>
+        /// </summary>
+        IQueryable<TModel> AsQueryableSecondaryPreferred();
     }
 
     /// <summary>

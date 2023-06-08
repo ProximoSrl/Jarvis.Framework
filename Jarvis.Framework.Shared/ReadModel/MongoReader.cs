@@ -10,11 +10,17 @@ namespace Jarvis.Framework.Shared.ReadModel
     {
         private readonly IMongoDatabase _readmodelDb;
         private IMongoCollection<TModel> _collection;
+        private IMongoCollection<TModel> _collectionOnSecondary;
+
+        private static ReadPreference secondaryReadPreference = new ReadPreference(ReadPreferenceMode.SecondaryPreferred);
 
         public MongoReader(IMongoDatabase readmodelDb)
         {
             _readmodelDb = readmodelDb;
             CollectionName = CollectionNames.GetCollectionName<TModel>();
+            _collectionOnSecondary = _readmodelDb
+                .GetCollection<TModel>(CollectionName)
+                .WithReadPreference(secondaryReadPreference);
         }
 
         public string CollectionName { get; private set; }
@@ -48,5 +54,9 @@ namespace Jarvis.Framework.Shared.ReadModel
         {
             get { return Collection.AsQueryable(); }
         }
+
+        public IQueryable<TModel> AllUnsortedSecondaryPreferred =>
+            _collectionOnSecondary
+            .AsQueryable();
     }
 }
