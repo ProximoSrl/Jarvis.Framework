@@ -19,8 +19,16 @@ namespace Jarvis.Framework.Kernel.Support
 {
     public static class MongoRegistration
     {
+        static bool _configured = false;
+
         public static void ConfigureMongoForJarvisFramework(params String[] protectedAssemblies)
         {
+            if (_configured) return;
+
+            _configured = true;
+            FixSerialzierForDriver2_19();
+
+            //After version 2.16
             var guidConversion = new ConventionPack();
             guidConversion.Add(new GuidAsStringRepresentationConvention(protectedAssemblies.ToList()));
             ConventionRegistry.Register("guidstring", guidConversion, _ => true);
@@ -44,6 +52,20 @@ namespace Jarvis.Framework.Kernel.Support
             if (!BsonClassMap.IsClassMapRegistered(typeof(MessageReaction)))
             {
                 BsonClassMap.RegisterClassMap<MessageReaction>(map => map.AutoMap());
+            }
+        }
+
+        private static void FixSerialzierForDriver2_19()
+        {
+            try
+            {
+                //After version 2.19 of the driver. https://github.com/mongodb/mongo-csharp-driver/releases/tag/v2.19.0
+                var objectSerializer = new ObjectSerializer(type => ObjectSerializer.AllAllowedTypes(type));
+                BsonSerializer.RegisterSerializer(objectSerializer);
+            }
+            catch (Exception)
+            {
+                //ignore errors because the serializer could be already registered.
             }
         }
 

@@ -4,6 +4,7 @@ using MongoDB.Bson.Serialization.Options;
 using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
 using NUnit.Framework;
+using Jarvis.Framework.Shared.Support;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
@@ -23,7 +24,7 @@ namespace Jarvis.Framework.Tests.External.MongoDriver
         {
             var connectionString = ConfigurationManager.ConnectionStrings["readmodel"].ConnectionString;
             var url = new MongoUrl(connectionString);
-            var client = new MongoClient(url);
+            var client = new MongoClient(url.CreateMongoClientSettings());
             db = client.GetDatabase(url.DatabaseName);
         }
 

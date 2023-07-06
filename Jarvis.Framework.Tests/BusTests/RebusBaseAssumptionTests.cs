@@ -17,6 +17,7 @@ using Rebus.Pipeline;
 using Rebus.Retry.Simple;
 using Rebus.Routing.TypeBased;
 using Rebus.Serialization.Json;
+using Jarvis.Framework.Shared.Support;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
@@ -57,7 +58,7 @@ namespace Jarvis.Framework.Tests.BusTests
 
             _connectionString = ConfigurationManager.ConnectionStrings["rebus"].ConnectionString;
             var url = new MongoUrl(_connectionString);
-            var db = new MongoClient(url).GetDatabase(url.DatabaseName);
+            var db = new MongoClient(url.CreateMongoClientSettings()).GetDatabase(url.DatabaseName);
             db.Drop();
 
             //Init processes
@@ -92,7 +93,7 @@ namespace Jarvis.Framework.Tests.BusTests
                 //ok, from the first process I send a message, it should arrive to the second handler not to the first handler.
                 await process1.Bus.Send(new AnotherSampleMessage(1)).ConfigureAwait(false);
 
-                AssertOnCondition(() => handler2.CallCount == 1, 3, $"{_configurationType} Process 2 did not handle the first message count = { handler2.CallCount} {Dump()}");
+                AssertOnCondition(() => handler2.CallCount == 1, 3, $"{_configurationType} Process 2 did not handle the first message count = {handler2.CallCount} {Dump()}");
                 AssertOnCondition(() => handler1.CallCount == 0, 3, $"{_configurationType} Process 1 incorrectly handled the first message");
 
                 //First process should not handle the message
@@ -104,7 +105,7 @@ namespace Jarvis.Framework.Tests.BusTests
                 //Now send another message, it is a SEND not publish, so it should not be broadcasted.
                 await process2.Bus.Send(new AnotherSampleMessage(1)).ConfigureAwait(false);
 
-                AssertOnCondition(() => handler2.CallCount == 2, 3, $"{_configurationType} Process 2 did not handle the second message count = { handler2.CallCount} {Dump()}");
+                AssertOnCondition(() => handler2.CallCount == 2, 3, $"{_configurationType} Process 2 did not handle the second message count = {handler2.CallCount} {Dump()}");
                 AssertOnCondition(() => handler1.CallCount == 0, 3, $"{_configurationType} Process 1 incorrectly handled the second message (is a SEND not publish)");
 
                 await process1.Bus.Unsubscribe<AnotherSampleMessage>().ConfigureAwait(false);
@@ -244,7 +245,7 @@ namespace Jarvis.Framework.Tests.BusTests
                 else
                 {
                     var mongoUrl = new MongoUrl(connectionString);
-                    var mongoClient = new MongoClient(mongoUrl);
+                    var mongoClient = new MongoClient(mongoUrl.CreateMongoClientSettings());
                     var _mongoDatabase = mongoClient.GetDatabase(mongoUrl.DatabaseName);
 
                     var busConfiguration = global::Rebus.Config.Configure.With(new CastleWindsorContainerAdapter(_container))

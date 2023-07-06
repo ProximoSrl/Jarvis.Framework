@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 
 namespace Jarvis.Framework.Shared
 {
     public static class JarvisFrameworkGlobalConfiguration
     {
+        public static Boolean IsMongodbLinq3Enabled { get; private set; }
+
         public static Boolean OfflineEventsReadmodelIdempotencyCheck { get; private set; }
 
         public static Boolean AtomicProjectionEngineOptimizedCatchup { get; private set; }
@@ -26,6 +29,14 @@ namespace Jarvis.Framework.Shared
         public static void DisableMongoDbAsync()
         {
             MongoDbAsyncDisabled = true;
+        }
+
+        /// <summary>
+        /// Enable mongodb driver linq3 support (introduced with 2.19 version of driver and full of bug in that version);
+        /// </summary>
+        public static void EnableMongodbDriverLinq3()
+        {
+            IsMongodbLinq3Enabled = true;
         }
 
         public static void EnableOfflineEventsReadmodelIdempotencyCheck()

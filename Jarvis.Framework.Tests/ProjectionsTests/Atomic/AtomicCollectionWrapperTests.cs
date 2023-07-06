@@ -14,6 +14,7 @@ using MongoDB.Driver;
 using NStore.Core.Persistence;
 using NUnit.Framework;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
@@ -438,6 +439,32 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 
         #endregion
 
+        #region Reading tests
+
+        /// <summary>
+        /// tests are executed in a single-server mongodb environment.
+        /// </summary>
+        /// <returns></returns>
+        [Test]
+        public async Task Can_read_on_secondary_not_error_single_server()
+        {
+            //save a readmodel
+            var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
+            var evt = GenerateCreatedEvent(false);
+            rm.ProcessChangeset(evt);
+            var evtTouch = GenerateTouchedEvent(false);
+            rm.ProcessChangeset(evtTouch);
+            await _sut.UpsertAsync(rm).ConfigureAwait(false);
+
+            //check
+            var reloaded = _sut.AsQueryableSecondaryPreferred()
+                .Single(r => r.Id == rm.Id);
+
+            Assert.That(reloaded.TouchCount, Is.EqualTo(rm.TouchCount));
+        }
+
+        #endregion
+
         #region Infrastructure tests
 
         [Test]
@@ -494,4 +521,3 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         #endregion
     }
 }
-

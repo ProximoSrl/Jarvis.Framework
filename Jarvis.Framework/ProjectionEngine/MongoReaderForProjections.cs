@@ -44,5 +44,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         {
             get { return _storage.Collection.AsQueryable(); }
         }
+
+        public IQueryable<TModel> AllUnsortedSecondaryPreferred => _storage.All;
     }
 }

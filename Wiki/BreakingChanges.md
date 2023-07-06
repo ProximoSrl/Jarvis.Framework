@@ -6,6 +6,7 @@
 - Removed EventHappenedEventArgs due to metrics consolidation, now framework uses metrics directly
 - Removed completely aggregate cached repository, because it introuces a lots of complexity.
 - ProcessManagerDispatcher does not implements anymore ISTartable, you need to start manually.
+- Mongodb driver updated to 2.19.0, please read [Release notes](https://github.com/mongodb/mongo-csharp-driver/releases/tag/v2.19.0)
 
 ## 6.3.0
 

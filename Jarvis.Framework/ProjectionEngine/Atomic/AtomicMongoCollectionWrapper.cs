@@ -14,14 +14,16 @@ using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 {
-	/// <inheritdoc />
-	public class AtomicMongoCollectionWrapper<TModel> : IAtomicCollectionWrapper<TModel>
+    /// <inheritdoc />
+    public class AtomicMongoCollectionWrapper<TModel> : IAtomicCollectionWrapper<TModel>
 		where TModel : class, IAtomicReadModel
 	{
 		private const string ConcurrencyException = "E1100";
 
 		private readonly IMongoCollection<TModel> _collection;
-		private readonly Int32 _actualVersion;
+        private readonly IMongoCollection<TModel> _collectionOnSecondary;
+
+        private readonly Int32 _actualVersion;
 		private readonly ILiveAtomicReadModelProcessor _liveAtomicReadModelProcessor;
 
 		internal const int MaxNumberOfRetryToReprojectFaultedReadmodels = 3;
@@ -40,7 +42,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 			MeasurementUnit = Unit.Calls
 		};
 
-		private static readonly CounterOptions FindOneByIdAndCachupCounter = new CounterOptions()
+        private static readonly CounterOptions QueryCounterSecondary = new CounterOptions()
+        {
+            Name = "AtomicRmQueryOnSecondary",
+            MeasurementUnit = Unit.Calls
+        };
+
+        private static readonly CounterOptions FindOneByIdAndCachupCounter = new CounterOptions()
 		{
 			Name = "AtomicRmFindOneByIdAndCachup",
 			MeasurementUnit = Unit.Calls
@@ -52,7 +60,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 			MeasurementUnit = Unit.Calls
 		};
 
-		public AtomicMongoCollectionWrapper(
+        private static ReadPreference secondaryReadPreference = new ReadPreference(ReadPreferenceMode.SecondaryPreferred);
+
+        public AtomicMongoCollectionWrapper(
 			IMongoDatabase readmodelDb,
 			IAtomicReadModelFactory atomicReadModelFactory,
 			ILiveAtomicReadModelProcessor liveAtomicReadModelProcessor,
@@ -63,6 +73,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
 			var collectionName = CollectionNames.GetCollectionName<TModel>();
 			_collection = readmodelDb.GetCollection<TModel>(collectionName);
+            _collectionOnSecondary = readmodelDb.GetCollection<TModel>(collectionName).WithReadPreference(secondaryReadPreference);
 
 			var allIndex = _collection.Indexes.List().ToList().Select(i => i["name"].AsString).ToList();
 
@@ -144,8 +155,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 			return _collection.AsQueryable();
 		}
 
-		/// <inheritdoc />
-		public async Task<TModel> FindOneByIdAsync(String id)
+        public IQueryable<TModel> AsQueryableSecondaryPreferred()
+        {
+            JarvisFrameworkMetricsHelper.Counter.Increment(QueryCounterSecondary, 1, typeof(TModel).Name);
+            return _collectionOnSecondary.AsQueryable();
+        }
+
+        /// <inheritdoc />
+        public async Task<TModel> FindOneByIdAsync(String id)
 		{
 			TModel rm = null;
 			Boolean fixableExceptions = false;
