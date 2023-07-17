@@ -22,11 +22,14 @@ namespace Jarvis.Framework.Kernel.Events
         /// <param name="filter">Required: Filter to perform to the store</param>
         /// <param name="projection">Projection: can be null if you want the entire chunk</param>
         /// <param name="sort">Sort order, it can be null if you do not require ordering.</param>
-        /// <returns>Maximum 50 elements from the stream.</returns>
+        /// <param name="limit">Limit number of element to return. Maximum value is 50, you cannot
+        /// retrieve more than 50 elements.</param>
+        /// <returns>Chunks projected. </returns>
         Task<List<BsonDocument>> DirectQueryStore(
             FilterDefinition<BsonDocument> filter,
             ProjectionDefinition<BsonDocument> projection,
-            SortDefinition<BsonDocument> sort);
+            SortDefinition<BsonDocument> sort,
+            int limit);
 
         /// <summary>
         /// Retrieve all commits for a specific list of aggregates created
