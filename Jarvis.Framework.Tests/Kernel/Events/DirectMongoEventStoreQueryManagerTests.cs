@@ -2,6 +2,8 @@
 using Jarvis.Framework.Kernel.Events;
 using Jarvis.Framework.Tests.EngineTests;
 using Jarvis.Framework.Tests.Support;
+using MongoDB.Bson;
+using MongoDB.Driver;
 using NStore.Domain;
 using NUnit.Framework;
 using System;
@@ -91,6 +93,57 @@ namespace Jarvis.Framework.Tests.Kernel.Events
             Assert.That(returnValue.Any(e => e.PartitionId == id3));
         }
 
+        [Test]
+        public async Task verify_direct_query_with_no_ordering_or_projection()
+        {
+            SampleAggregateId id = GenerateId();
+            Dictionary<String, String> headers = new Dictionary<string, string>()
+            {
+                ["test"] = "blah",
+                ["anothertest"] = "blah blah"
+            };
+
+            await SaveAggregateWithHeaders(id, headers).ConfigureAwait(false);
+            await AddEvents(id).ConfigureAwait(false);
+
+            var element = await sut.DirectQueryStore(
+                Builders<BsonDocument>.Filter.Eq("PartitionId", id.ToString()),
+                projection: null,
+                sortDefinition: null);
+
+            Assert.That(element.Count, Is.EqualTo(2));
+            Assert.That(element[0]["PartitionId"].AsString, Is.EqualTo(id.ToString()));
+            Assert.That(element[0]["Payload"], Is.Not.Null);
+
+            Assert.That(element[1]["Index"].AsInt64, Is.EqualTo(2));
+        }
+
+        [Test]
+        public async Task verify_direct_query_with_ordering_and_projection()
+        {
+            SampleAggregateId id = GenerateId();
+            Dictionary<String, String> headers = new Dictionary<string, string>()
+            {
+                ["test"] = "blah",
+                ["anothertest"] = "blah blah"
+            };
+
+            await SaveAggregateWithHeaders(id, headers).ConfigureAwait(false);
+            await AddEvents(id).ConfigureAwait(false);
+
+            var element = await sut.DirectQueryStore(
+                Builders<BsonDocument>.Filter.Eq("PartitionId", id.ToString()),
+                projection: Builders<BsonDocument>.Projection.Include("_id").Include("Index").Include("PartitionId"),
+                sortDefinition: Builders<BsonDocument>.Sort.Descending("Index"));
+
+            Assert.That(element.Count, Is.EqualTo(2));
+            Assert.That(element[0]["PartitionId"].AsString, Is.EqualTo(id.ToString()));
+            Assert.That(element[0].Names.Contains("Payload"), Is.False);
+
+            Assert.That(element[0]["Index"].AsInt64, Is.EqualTo(2));
+            Assert.That(element[1]["Index"].AsInt64, Is.EqualTo(1));
+        }
+
         private async Task SaveAggregateWithHeaders(SampleAggregateId id, Dictionary<string, string> headers)
         {
             var sampleAggregate = await repository.GetByIdAsync<SampleAggregate>(id).ConfigureAwait(false);
@@ -107,6 +160,14 @@ namespace Jarvis.Framework.Tests.Kernel.Events
                     }
                 }
             }).ConfigureAwait(false);
+        }
+
+        private async Task AddEvents(SampleAggregateId id)
+        {
+            var sampleAggregate = await repository.GetByIdAsync<SampleAggregate>(id).ConfigureAwait(false);
+            sampleAggregate.Touch();
+
+            await repository.SaveAsync(sampleAggregate, Guid.NewGuid().ToString()).ConfigureAwait(false);
         }
     }
 }

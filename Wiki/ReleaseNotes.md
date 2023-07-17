@@ -1,5 +1,9 @@
 # J.A.R.V.I.S. Framework - Proximo srl (c)
 
+## 7.2.1
+
+- Better support for direct query of stream in IEventStoreQueryManager
+
 ## 7.2.0
 
 - Updated mongodb drivers. 
