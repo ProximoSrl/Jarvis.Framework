@@ -2,6 +2,7 @@
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -38,6 +39,26 @@ namespace Jarvis.Framework.Kernel.Events
                     .Select(d => BsonSerializer.Deserialize<CommitShortInfo>(d))
                     .ToList();
             }
+        }
+
+        public Task<List<BsonDocument>> DirectQueryStore(
+             FilterDefinition<BsonDocument> filter,
+             ProjectionDefinition<BsonDocument> projection,
+             SortDefinition<BsonDocument> sortDefinition)
+        {
+            var query = _collection.Find(filter);
+
+            if (projection != null)
+            {
+                query = query.Project(projection);
+            }
+
+            if (sortDefinition != null)
+            {
+                query = query.Sort(sortDefinition);
+            }
+
+            return query.ToListAsync();
         }
     }
 }
