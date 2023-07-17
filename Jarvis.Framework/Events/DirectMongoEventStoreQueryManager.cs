@@ -44,7 +44,8 @@ namespace Jarvis.Framework.Kernel.Events
         public Task<List<BsonDocument>> DirectQueryStore(
              FilterDefinition<BsonDocument> filter,
              ProjectionDefinition<BsonDocument> projection,
-             SortDefinition<BsonDocument> sortDefinition)
+             SortDefinition<BsonDocument> sortDefinition,
+             int limit)
         {
             var query = _collection.Find(filter);
 
@@ -57,6 +58,8 @@ namespace Jarvis.Framework.Kernel.Events
             {
                 query = query.Sort(sortDefinition);
             }
+
+            query.Limit(limit);
 
             return query.ToListAsync();
         }

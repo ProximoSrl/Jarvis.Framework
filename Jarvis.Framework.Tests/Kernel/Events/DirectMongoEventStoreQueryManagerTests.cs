@@ -109,7 +109,8 @@ namespace Jarvis.Framework.Tests.Kernel.Events
             var element = await sut.DirectQueryStore(
                 Builders<BsonDocument>.Filter.Eq("PartitionId", id.ToString()),
                 projection: null,
-                sortDefinition: null);
+                sortDefinition: null,
+                10);
 
             Assert.That(element.Count, Is.EqualTo(2));
             Assert.That(element[0]["PartitionId"].AsString, Is.EqualTo(id.ToString()));
@@ -134,7 +135,8 @@ namespace Jarvis.Framework.Tests.Kernel.Events
             var element = await sut.DirectQueryStore(
                 Builders<BsonDocument>.Filter.Eq("PartitionId", id.ToString()),
                 projection: Builders<BsonDocument>.Projection.Include("_id").Include("Index").Include("PartitionId"),
-                sortDefinition: Builders<BsonDocument>.Sort.Descending("Index"));
+                sortDefinition: Builders<BsonDocument>.Sort.Descending("Index"),
+                10);
 
             Assert.That(element.Count, Is.EqualTo(2));
             Assert.That(element[0]["PartitionId"].AsString, Is.EqualTo(id.ToString()));
@@ -142,6 +144,29 @@ namespace Jarvis.Framework.Tests.Kernel.Events
 
             Assert.That(element[0]["Index"].AsInt64, Is.EqualTo(2));
             Assert.That(element[1]["Index"].AsInt64, Is.EqualTo(1));
+        }
+
+        [Test]
+        public async Task Verify_limit()
+        {
+            SampleAggregateId id = GenerateId();
+            Dictionary<String, String> headers = new Dictionary<string, string>()
+            {
+                ["test"] = "blah",
+                ["anothertest"] = "blah blah"
+            };
+
+            await SaveAggregateWithHeaders(id, headers).ConfigureAwait(false);
+            await AddEvents(id).ConfigureAwait(false);
+
+            var element = await sut.DirectQueryStore(
+                Builders<BsonDocument>.Filter.Eq("PartitionId", id.ToString()),
+                projection: Builders<BsonDocument>.Projection.Include("_id").Include("Index").Include("PartitionId"),
+                sortDefinition: Builders<BsonDocument>.Sort.Descending("Index"),
+                1);
+
+            Assert.That(element.Count, Is.EqualTo(1));
+            Assert.That(element[0]["Index"].AsInt64, Is.EqualTo(2));
         }
 
         private async Task SaveAggregateWithHeaders(SampleAggregateId id, Dictionary<string, string> headers)

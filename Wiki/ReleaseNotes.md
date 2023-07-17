@@ -1,5 +1,9 @@
 # J.A.R.V.I.S. Framework - Proximo srl (c)
 
+## 7.2.2
+
+- Added limit number of record in IeventStoreQueryManager
+
 ## 7.2.1
 
 - Better support for direct query of stream in IEventStoreQueryManager
