@@ -60,7 +60,7 @@ namespace Jarvis.Framework.Kernel.Support
         {
             try
             {
-                //Just peed for one second and ignore the timeout, without the first peed sometimes
+                //Just peek for one second and ignore the timeout, without the first peek sometimes
                 //the process is unable to monitor health check correctly.
                 using (var queue = new MessageQueue(_queueName))
                 {

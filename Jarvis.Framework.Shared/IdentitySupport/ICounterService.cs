@@ -1,16 +1,41 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.IdentitySupport
 {
     public interface ICounterService
     {
         /// <summary>
-        /// Get next counter for a given serie.
+        /// Get next counter for a given serie and update underlying storage.
         /// </summary>
         /// <param name="serie"></param>
         /// <returns></returns>
         long GetNext(string serie);
+
+        /// <summary>
+        /// Async version of <see cref="GetNext(string)"/>
+        /// </summary>
+        /// <param name="serie"></param>
+        /// <returns></returns>
+        Task<long> GetNextAsync(string serie);
+
+        /// <summary>
+        /// Force next id to be the one specified, will throw if the id is already used.
+        /// </summary>
+        /// <param name="nextIdToReturn">Specify the next id that will be returned by the counter
+        /// service. If the value is less or equal of already generated id this will throw.</param>
+        /// ù <param name="serie">The serie to force</param>
+        /// <returns></returns>
+        Task ForceNextIdAsync(string serie, long nextIdToReturn);
+
+        /// <summary>
+        /// Return the next id that will be generated for the specified identity but without incrementing
+        /// internal counter. It is only used to understand what is the next id that will be generated.
+        /// </summary>
+        /// <param name="serie">Serie to query</param>
+        /// <returns></returns>
+        Task<long> PeekNextAsync(string serie);
     }
 
     /// <summary>
@@ -22,6 +47,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         /// Ensure that the next value is not less than given value. It is sometimes
         /// necessary when you need a sequence that does not collide with some other 
         /// already existing value (ex. when you import data from other systems.)
+        /// This is somewhat obsolete after the introduction of <see cref="ForceNextIdAsync(string, long)"/>
         /// </summary>
         /// <param name="serie"></param>
         /// <param name="minValue"></param>

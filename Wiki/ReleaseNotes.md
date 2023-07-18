@@ -1,5 +1,10 @@
 # J.A.R.V.I.S. Framework - Proximo srl (c)
 
+## vNext
+
+- Identity now can generate async
+- To easy import we can peek and force next id for a given type.
+
 ## 7.2.3
 
 - Updated Nstore to latest version.

@@ -7,10 +7,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.IdentitySupport
 {
-    public class IdentityManager : IIdentityManager
+    public class IdentityManager : IIdentityManager, IIdentityImportManager
     {
         private readonly ICounterService _counterService;
 
@@ -93,6 +94,14 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             return (TIdentity)factory(_counterService.GetNext(tag));
         }
 
+        public async Task<TIdentity> NewAsync<TIdentity>()
+        {
+            var tag = EventStoreIdentity.GetTagForIdentityClass(typeof(TIdentity));
+            Func<long, IIdentity> factory = GetFactoryForTag(tag);
+
+            return (TIdentity)factory(await _counterService.GetNextAsync(tag));
+        }
+
         private Func<long, IIdentity> GetFactoryForTag(string tag)
         {
             Func<long, IIdentity> factory;
@@ -125,6 +134,18 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
             typedIdentity = default(T);
             return false;
+        }
+
+        public Task ForceNextIdAsync<TIdentity>(long nextIdToReturn)
+        {
+            var tag = EventStoreIdentity.GetTagForIdentityClass(typeof(TIdentity));
+            return _counterService.ForceNextIdAsync(tag, nextIdToReturn);    
+        }
+
+        public Task<long> PeekNextIdAsync<TIdentity>()
+        {
+            var tag = EventStoreIdentity.GetTagForIdentityClass(typeof(TIdentity));
+            return _counterService.PeekNextAsync(tag);
         }
     }
 }

@@ -9,6 +9,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System;
 using MongoDB.Bson;
+using Jarvis.Framework.Shared.Exceptions;
 
 namespace Jarvis.Framework.Tests.ServicesTests
 {
@@ -90,6 +91,47 @@ namespace Jarvis.Framework.Tests.ServicesTests
             var reservation = _service.Reserve("test", 100);
             Assert.That(reservation.StartIndex, Is.EqualTo(1));
             Assert.That(reservation.EndIndex, Is.EqualTo(100));
+        }
+
+        [Test]
+        public async Task Can_peek_next_id()
+        {
+            var id = Guid.NewGuid().ToString();
+            var reservation = await _service.PeekNextAsync(id);
+            Assert.That(reservation, Is.EqualTo(1));
+            Assert.That(await _service.GetNextAsync(id), Is.EqualTo(1));
+            Assert.That(await _service.GetNextAsync(id), Is.EqualTo(2));
+        }
+
+        [Test]
+        public async Task Can_force_next_id()
+        {
+            var id = Guid.NewGuid().ToString();
+            await _service.ForceNextIdAsync(id, 100);
+            var reservation = await _service.PeekNextAsync(id);
+            Assert.That(reservation, Is.EqualTo(100));
+            Assert.That(await _service.GetNextAsync(id), Is.EqualTo(100));
+        }
+
+        [Test]
+        public void Cannot_Force_negative_value()
+        {
+            var id = Guid.NewGuid().ToString();
+            //Cannot set negative value.
+            Assert.ThrowsAsync<JarvisFrameworkEngineException>(async () => await _service.ForceNextIdAsync(id, -1));
+        }
+
+        [Test]
+        public async Task Force_next_id_throws_if_invalid()
+        {
+            var id = Guid.NewGuid().ToString();
+
+            await _service.GetNextAsync(id);
+            Assert.ThrowsAsync<JarvisFrameworkEngineException>(async () => await _service.ForceNextIdAsync(id, 1));
+
+            await _service.ForceNextIdAsync(id, 200);
+
+            Assert.ThrowsAsync<JarvisFrameworkEngineException>(async () => await _service.ForceNextIdAsync(id, 200));
         }
 
         [Test]
