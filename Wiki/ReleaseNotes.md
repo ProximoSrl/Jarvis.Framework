@@ -1,5 +1,9 @@
 # J.A.R.V.I.S. Framework - Proximo srl (c)
 
+## 7.2.3
+
+- Updated Nstore to latest version.
+
 ## 7.2.2
 
 - Added limit number of record in IeventStoreQueryManager
