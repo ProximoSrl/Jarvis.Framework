@@ -2,6 +2,10 @@
 
 ## vNext
 
+## 7.3.1
+
+- Fixed bug in GetProjectionStatus that triggers too many queries.
+
 ## 7.3.0
 
 - Allow managing of MongoClientSettings via JarvisFrameworkMongoClientConfigurationOptions class
