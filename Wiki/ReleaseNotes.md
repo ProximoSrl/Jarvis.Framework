@@ -2,6 +2,8 @@
 
 ## vNext
 
+## 7.3.0
+
 - Allow managing of MongoClientSettings via JarvisFrameworkMongoClientConfigurationOptions class
 - Identity now can generate async
 - To easy import we can peek and force next id for a given type.
