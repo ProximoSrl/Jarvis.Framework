@@ -186,7 +186,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         /// <summary>
         /// Ensure for each instance class to have a completely different seed.
         /// </summary>
-        protected static Int64 globalAggregateIdSeed = new Random().Next(100000);
+        protected static Int64 globalAggregateIdSeed = new Random().Next(100000) + new Random().Next(100000);
 
         protected Int64 _aggregateIdSeed = 1 + (globalAggregateIdSeed++ * 1000) ;
         protected Int32 _aggregateVersion = 1;

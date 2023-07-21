@@ -98,13 +98,12 @@ namespace Jarvis.Framework.Kernel.Support
             {
                 try
                 {
-                    if (DateTime.Now.Subtract(_lastPoll).TotalSeconds > _pollingIntervalInSeconds)
+                    if (DateTime.UtcNow.Subtract(_lastPoll).TotalSeconds > _pollingIntervalInSeconds)
                     {
                         //common code, grab latest commit
                         if (_eventStoreDatabase.Client.Cluster.Description.State != ClusterState.Connected)
                         {
                             //database is down, we cannot read values.
-                            _lastPoll = DateTime.UtcNow;
                             return;
                         }
 
@@ -126,11 +125,11 @@ namespace Jarvis.Framework.Kernel.Support
                         {
                             UpdateValueQueryingTheDatabase(lastCommit);
                         }
-                        _lastPoll = DateTime.UtcNow;
                     }
                 }
                 finally
                 {
+                    _lastPoll = DateTime.UtcNow;
                     Interlocked.Exchange(ref _isRetrievingData, 0);
                 }
             }

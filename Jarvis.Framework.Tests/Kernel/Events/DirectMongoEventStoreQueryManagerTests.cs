@@ -28,11 +28,13 @@ namespace Jarvis.Framework.Tests.Kernel.Events
             repository = TestHelper.GetRepository();
         }
 
-        private Int64 seed = 1;
+        protected static Int64 globalAggregateIdSeed = new Random().Next(100000) + new Random().Next(100000);
+
+        protected Int64 _aggregateIdSeed = 1 + (globalAggregateIdSeed++ * 1000);
 
         private SampleAggregateId GenerateId()
         {
-            return new SampleAggregateId(seed++);
+            return new SampleAggregateId(_aggregateIdSeed++);
         }
 
         [Test]
@@ -109,14 +111,16 @@ namespace Jarvis.Framework.Tests.Kernel.Events
             var element = await sut.DirectQueryStore(
                 Builders<BsonDocument>.Filter.Eq("PartitionId", id.ToString()),
                 projection: null,
-                sortDefinition: null,
+                sortDefinition: Builders<BsonDocument>.Sort.Ascending("Index"),
                 10);
 
+            Assert.That(element[0]["Index"].AsInt64, Is.EqualTo(1), "Element order is not correct");
+            Assert.That(element[1]["Index"].AsInt64, Is.EqualTo(2));
+
             Assert.That(element.Count, Is.EqualTo(2));
+
             Assert.That(element[0]["PartitionId"].AsString, Is.EqualTo(id.ToString()));
             Assert.That(element[0]["Payload"], Is.Not.Null);
-
-            Assert.That(element[1]["Index"].AsInt64, Is.EqualTo(2));
         }
 
         [Test]
