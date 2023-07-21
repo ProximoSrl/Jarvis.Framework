@@ -112,11 +112,13 @@ namespace Jarvis.Framework.Tests.Kernel.Events
                 sortDefinition: null,
                 10);
 
+            Assert.That(element[0]["Index"].AsInt64, Is.EqualTo(1));
+            Assert.That(element[1]["Index"].AsInt64, Is.EqualTo(2));
+
             Assert.That(element.Count, Is.EqualTo(2));
+
             Assert.That(element[0]["PartitionId"].AsString, Is.EqualTo(id.ToString()));
             Assert.That(element[0]["Payload"], Is.Not.Null);
-
-            Assert.That(element[1]["Index"].AsInt64, Is.EqualTo(2));
         }
 
         [Test]
