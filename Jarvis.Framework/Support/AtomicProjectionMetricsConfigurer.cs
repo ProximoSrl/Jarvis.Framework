@@ -13,6 +13,7 @@ using MongoDB.Driver;
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
+using System.Threading;
 
 namespace Jarvis.Framework.Kernel.Support
 {
@@ -111,7 +112,7 @@ namespace Jarvis.Framework.Kernel.Support
 
         public void Start()
         {
-            JarvisFrameworkMetric.Gauge("checkpoint-behind-AtomicReadModels", CheckAllAtomicsValue(), Unit.Items);
+            JarvisFrameworkMetric.Gauge("checkpoint-behind-AtomicReadModels", CheckAllAtomicsValue, Unit.Items);
             JarvisFrameworkHealthChecks.RegisterHealthCheck("Slot-All-AtomicReadmodels", CheckSlotHealth());
             foreach (var readModelType in _atomicProjectionCheckpointManager.GetAllRegisteredAtomicReadModels())
             {
@@ -152,14 +153,31 @@ namespace Jarvis.Framework.Kernel.Support
             };
         }
 
-        private Func<double> CheckAllAtomicsValue()
+        private Int32 _isRetrievingData = 0;
+        private long _lastBehindValue = 0;
+        private DateTime _lastBehindCheckTimestamp = DateTime.MinValue;
+        private double CheckAllAtomicsValue()
         {
-            return () =>
+            if (Interlocked.CompareExchange(ref _isRetrievingData, 1, 0) == 0)
             {
-                long maxCheckpoint = _checkPointLoader.GetMaxCheckpointToDispatch();
-                long minimumDispateched = _atomicProjectionCheckpointManager.GetMinimumPositionDispatched();
-                return maxCheckpoint - minimumDispateched;
-            };
+                if (DateTime.UtcNow.Subtract(_lastBehindCheckTimestamp).TotalSeconds > 30)
+                {
+                    try
+                    {
+                        //database calls, there is no need to call a database each time a metric
+                        //is requested.
+                        long maxCheckpoint = _checkPointLoader.GetMaxCheckpointToDispatch();
+                        long minimumDispateched = _atomicProjectionCheckpointManager.GetMinimumPositionDispatched();
+                        _lastBehindValue = maxCheckpoint - minimumDispateched;
+                    }
+                    finally
+                    {
+                        _lastBehindCheckTimestamp = DateTime.UtcNow;
+                    }
+                }
+            }
+
+            return _lastBehindValue;
         }
     }
 }
