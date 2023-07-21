@@ -1,5 +1,13 @@
 # J.A.R.V.I.S. Framework - Proximo srl (c)
 
+## vNext
+
+## 7.3.0
+
+- Allow managing of MongoClientSettings via JarvisFrameworkMongoClientConfigurationOptions class
+- Identity now can generate async
+- To easy import we can peek and force next id for a given type.
+
 ## 7.2.3
 
 - Updated Nstore to latest version.

@@ -1,8 +1,8 @@
 ﻿using Jarvis.Framework.Shared.Exceptions;
 using Jarvis.Framework.Shared.Helpers;
-using Jarvis.Framework.Shared.MultitenantSupport;
 using MongoDB.Driver;
 using System;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.IdentitySupport
 {
@@ -30,13 +30,13 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                 try
                 {
                     var counter = _counters.FindOneAndUpdate(
-                                    Builders<IdentityCounter>.Filter.Eq(x => x.Id, serie),
-                                    Builders<IdentityCounter>.Update.Inc(x => x.Last, 1),
-                                    new FindOneAndUpdateOptions<IdentityCounter, IdentityCounter>()
-                                    {
-                                        ReturnDocument = ReturnDocument.After,
-                                        IsUpsert = true,
-                                    });
+                        Builders<IdentityCounter>.Filter.Eq(x => x.Id, serie),
+                        Builders<IdentityCounter>.Update.Inc(x => x.Last, 1),
+                        new FindOneAndUpdateOptions<IdentityCounter, IdentityCounter>()
+                        {
+                            ReturnDocument = ReturnDocument.After,
+                            IsUpsert = true,
+                        });
                     return counter.Last;
                 }
                 catch (MongoCommandException ex)
@@ -85,38 +85,83 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                 }
             }
         }
-    }
 
-    public class InMemoryCounterService : IReservableCounterService
-    {
-        long _last = 0;
-
-        public long GetNext(string serie)
+        public async Task<long> GetNextAsync(string serie)
         {
-            return ++_last;
+            Int32 count = 0;
+            while (count++ < 5)
+            {
+                try
+                {
+                    var counter = await _counters.FindOneAndUpdateAsync(
+                        Builders<IdentityCounter>.Filter.Eq(x => x.Id, serie),
+                        Builders<IdentityCounter>.Update.Inc(x => x.Last, 1),
+                        new FindOneAndUpdateOptions<IdentityCounter, IdentityCounter>()
+                        {
+                            ReturnDocument = ReturnDocument.After,
+                            IsUpsert = true,
+                        });
+                    return counter.Last;
+                }
+                catch (MongoCommandException ex)
+                {
+                    //We can tolerate only duplicate exception
+                    if (!ex.Message.Contains("E11000"))
+                        throw;
+                }
+            }
+
+            throw new JarvisFrameworkEngineException("Unable to generate next number for serie " + serie);
         }
 
-        public ReservationSlot Reserve(string serie, int amount)
+        public async Task ForceNextIdAsync(string serie, long nextIdToReturn)
         {
-            var low = _last + 1;
-            var high = low + amount;
-            _last = high + 1;
-            return new ReservationSlot(low, high);
+            if (nextIdToReturn <= 0)
+            {
+                throw new JarvisFrameworkEngineException($"Unable to force next id for serie {serie} to {nextIdToReturn} because it is not a valid value.");
+            }
+            
+            //we need to understand if we already have a record, to avoid concurrency issues
+            var actualIndex = _counters.FindOneById(serie);
+            if (actualIndex == null)
+            {
+                //this can fail if for high concurrency we have another thread that insert record
+                //here, it is a really strange situation, but it can happen.
+                _counters.InsertOne(new IdentityCounter()
+                {
+                    Id = serie,
+                    Last = nextIdToReturn - 1
+                });
+            }
+            else
+            {
+                //we need to update the counter only if the new value is greater than the current one.
+                var last = nextIdToReturn - 1;
+                var result = await _counters.FindOneAndUpdateAsync(
+                       Builders<IdentityCounter>.Filter.And(
+                            Builders<IdentityCounter>.Filter.Eq(x => x.Id, serie),
+                            Builders<IdentityCounter>.Filter.Lt(x => x.Last, last)
+                        ),
+                        Builders<IdentityCounter>.Update.Set(x => x.Last, last),
+                        new FindOneAndUpdateOptions<IdentityCounter, IdentityCounter>()
+                        {
+                            ReturnDocument = ReturnDocument.After,
+                            IsUpsert = false,
+                        });
+
+                if (result == null)
+                {
+                    throw new JarvisFrameworkEngineException($"Unable to force next id for serie {serie} to {nextIdToReturn} because it is already greater than current value.");
+                }
+            }
         }
-    }
 
-    public class MultitenantCounterService : ICounterService
-    {
-        private readonly ITenantAccessor _tenantAccessor;
-
-        public MultitenantCounterService(ITenantAccessor tenantAccessor)
+        public async Task<long> PeekNextAsync(string serie)
         {
-            _tenantAccessor = tenantAccessor;
-        }
-
-        public long GetNext(string serie)
-        {
-            return _tenantAccessor.Current.CounterService.GetNext(serie);
+            var recordCursor = await _counters.FindAsync(
+                Builders<IdentityCounter>.Filter.Eq(x => x.Id, serie));
+            var record = await recordCursor.FirstOrDefaultAsync();
+            return record == null ? 1 : record.Last + 1;
         }
     }
 }
