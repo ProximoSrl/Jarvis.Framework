@@ -2,6 +2,10 @@
 
 ## vNext
 
+## 7.3.3
+
+- Added ability to know number of MongoClient created.
+
 ## 7.3.2
 
 - Fixed handling of MongoClient pool
