@@ -33,6 +33,8 @@ namespace Jarvis.Framework.Shared.Support
             return settings;
         }
 
+        public static object _lock = new object();  
+
         /// <summary>
         /// Creates a mongo client and enable interception through <see cref="MongoQueryInterptorConsumer"/> class.
         /// </summary>
@@ -41,24 +43,37 @@ namespace Jarvis.Framework.Shared.Support
         /// <returns></returns>
         public static IMongoClient CreateClient(this MongoUrl url, Boolean enableInterception)
         {
-            var connectionKey = url.ToString() + enableInterception;
+            var connectionKey = GetConnectionKey(url.ToString(), enableInterception);
             if (!_mongoClientCache.TryGetValue(connectionKey, out var client))
             {
-                if (enableInterception)
+                lock (_lock)
                 {
-                    client = CreateClient(url.CreateMongoClientSettings());
-                }
-                else
-                {
-                    client = new MongoClient(url.CreateMongoClientSettings());
-                }
+                    if (!_mongoClientCache.TryGetValue(connectionKey, out client))
+                    {
+                        if (enableInterception)
+                        {
+                            client = CreateClient(url.CreateMongoClientSettings());
+                        }
+                        else
+                        {
+                            client = new MongoClient(url.CreateMongoClientSettings());
+                        }
 
-                _mongoClientCache.TryAdd(connectionKey, client);
+                        _mongoClientCache[connectionKey] = client;
+                    }
+                }
             }
             return client;
         }
 
         private static readonly ConcurrentDictionary<Int64, String> _requests = new ConcurrentDictionary<Int64, String>();
+
+        private static string GetConnectionKey(string connectionString, bool? enableIntercept)
+        {
+            var connBuilder = new MongoUrlBuilder(connectionString);
+            connBuilder.DatabaseName = "admin"; //we do not want a client for different database name
+            return connBuilder.ToMongoUrl().Url + enableIntercept;
+        }
 
         /// <summary>
         /// Useful for client code to understand if there is some leak of the dictinoary (maybe mongo driver fail to 

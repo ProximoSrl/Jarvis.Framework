@@ -2,6 +2,10 @@
 
 ## vNext
 
+## 7.3.2
+
+- Fixed handling of MongoClient pool
+
 ## 7.3.1
 
 - Fixed bug in GetProjectionStatus that triggers too many queries.
