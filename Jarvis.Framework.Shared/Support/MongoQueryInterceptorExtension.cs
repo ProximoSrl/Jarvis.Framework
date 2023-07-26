@@ -15,6 +15,11 @@ namespace Jarvis.Framework.Shared.Support
 
         private static readonly ConcurrentDictionary<String, IMongoClient> _mongoClientCache = new ConcurrentDictionary<string, IMongoClient>();
 
+        /// <summary>
+        /// Allow caller to know how many Clients were created to undersatnd if we have problem with client creation.
+        /// </summary>
+        public static int NumberOfCreatedClient => _mongoClientCache.Count;
+
         public static MongoClientSettings CreateMongoClientSettings(this MongoUrl url)
         {
             var settings = MongoClientSettings.FromUrl(url);
@@ -33,7 +38,7 @@ namespace Jarvis.Framework.Shared.Support
             return settings;
         }
 
-        public static object _lock = new object();  
+        public static object _lock = new object();
 
         /// <summary>
         /// Creates a mongo client and enable interception through <see cref="MongoQueryInterptorConsumer"/> class.
