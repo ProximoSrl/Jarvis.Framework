@@ -75,7 +75,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 			_collection = readmodelDb.GetCollection<TModel>(collectionName);
             _collectionOnSecondary = readmodelDb.GetCollection<TModel>(collectionName).WithReadPreference(secondaryReadPreference);
 
-			var allIndex = _collection.Indexes.List().ToList().Select(i => i["name"].AsString).ToList();
+			var allIndex = _collection.GetIndexNames();
 
 			DropOldIndexes(allIndex);
 
@@ -102,7 +102,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 			_actualVersion = atomicReadModelFactory.GetReamdodelVersion(typeof(TModel));
 		}
 
-		private void DropOldIndexes(List<string> allIndex)
+		private void DropOldIndexes(IReadOnlyCollection<string> allIndex)
 		{
 			if (allIndex.Contains("ReadModelVersion"))
 			{

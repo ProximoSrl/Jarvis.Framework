@@ -31,8 +31,7 @@ namespace Jarvis.Framework.Tests.Support
                 PartitionsConnectionString = connectionString,
                 UseLocalSequence = true,
                 PartitionsCollectionName = PartitionCollectionName,
-                SequenceCollectionName = "event_sequence",
-                DropOnInit = false
+                SequenceCollectionName = "event_sequence"
             };
 
             var mongoPersistence = new MongoPersistence(mongoStoreOptions);
