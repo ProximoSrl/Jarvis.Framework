@@ -11,6 +11,7 @@ using MongoDB.Bson.Serialization.Serializers;
 using NStore.Core.Snapshots;
 using NStore.Domain;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -59,8 +60,7 @@ namespace Jarvis.Framework.Kernel.Support
         {
             try
             {
-                var existingObjectSerializer = BsonSerializer.LookupSerializer(typeof(object));
-                if (existingObjectSerializer == null)
+                if (!IsSerializerRegistered(typeof(object)))
                 {
                     //After version 2.19 of the driver. https://github.com/mongodb/mongo-csharp-driver/releases/tag/v2.19.0
                     var objectSerializer = new ObjectSerializer(type => ObjectSerializer.AllAllowedTypes(type));
@@ -71,6 +71,15 @@ namespace Jarvis.Framework.Kernel.Support
             {
                 //ignore errors because the serializer could be already registered.
             }
+        }
+
+        internal static bool IsSerializerRegistered(Type type)
+        {
+            var serializerRegistry = BsonSerializer.SerializerRegistry;
+            var cacheInfo = typeof(BsonSerializerRegistry).GetField("_cache", BindingFlags.NonPublic | BindingFlags.Instance)
+                ?? throw new InvalidOperationException("BsonSerializerRegistry._cache field not found. Internal implementation changed!");
+            var cache = cacheInfo.GetValue(serializerRegistry) as ConcurrentDictionary<Type, IBsonSerializer>;
+            return cache.ContainsKey(type);
         }
 
         #region Custom class map
