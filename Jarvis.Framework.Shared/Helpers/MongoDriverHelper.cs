@@ -149,7 +149,7 @@ namespace Jarvis.Framework.Shared.Helpers
         /// <returns></returns>
         public static bool CheckConnection(IMongoClient client)
         {
-            Task.Factory.StartNew(() => client.ListDatabases()); //forces a database connection
+            Task.Factory.StartNew(() => client.GetDatabase("admin")); //forces a database connection
             Int32 spinCount = 0;
             ClusterState clusterState;
 
