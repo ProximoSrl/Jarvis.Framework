@@ -72,9 +72,17 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
 
             var collection = _db.GetCollection<TrackedMessageModel>("messages");
 
+            var indexList = collection.GetIndexNames();
+
             //Drop old index of version <= 4.x
-            collection.Indexes.DropOneAsync("MessageId_1");
-            collection.Indexes.DropOneAsync("IssuedBy_1");
+            if (indexList.Any(n => n.Equals("MessageId_1", StringComparison.OrdinalIgnoreCase)))
+            {
+                collection.Indexes.DropOneAsync("MessageId_1");
+            }
+            if (indexList.Any(n => n.Equals("IssuedBy_1", StringComparison.OrdinalIgnoreCase)))
+            {
+                collection.Indexes.DropOneAsync("IssuedBy_1");
+            }
 
             //Add new indexes of version > 4.x
             collection.Indexes.CreateMany(
