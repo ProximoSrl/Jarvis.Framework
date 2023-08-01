@@ -2,6 +2,11 @@
 
 ## vNext
 
+## 7.3.4
+
+- Small fixes for adding object serializer.
+- Small optimization for mongodb index creation
+
 ## 7.3.3
 
 - Added ability to know number of MongoClient created.

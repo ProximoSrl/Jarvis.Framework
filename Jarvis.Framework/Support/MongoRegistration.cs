@@ -59,9 +59,13 @@ namespace Jarvis.Framework.Kernel.Support
         {
             try
             {
-                //After version 2.19 of the driver. https://github.com/mongodb/mongo-csharp-driver/releases/tag/v2.19.0
-                var objectSerializer = new ObjectSerializer(type => ObjectSerializer.AllAllowedTypes(type));
-                BsonSerializer.RegisterSerializer(objectSerializer);
+                var existingObjectSerializer = BsonSerializer.LookupSerializer(typeof(object));
+                if (existingObjectSerializer == null)
+                {
+                    //After version 2.19 of the driver. https://github.com/mongodb/mongo-csharp-driver/releases/tag/v2.19.0
+                    var objectSerializer = new ObjectSerializer(type => ObjectSerializer.AllAllowedTypes(type));
+                    BsonSerializer.RegisterSerializer(objectSerializer);
+                }
             }
             catch (Exception)
             {

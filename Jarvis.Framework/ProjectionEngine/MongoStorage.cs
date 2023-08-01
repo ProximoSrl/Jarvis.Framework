@@ -2,6 +2,7 @@ using Castle.Core.Logging;
 using Jarvis.Framework.Shared.Exceptions;
 using Jarvis.Framework.Shared.Helpers;
 using Jarvis.Framework.Shared.ReadModel;
+using Jarvis.Framework.Shared.Support;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
 using System;
@@ -35,8 +36,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         public async Task DropIndexAsync(String name)
         {
-            var allIndexes = await _collection.Indexes.List().ToListAsync();
-            var existing = allIndexes.Any(d => d["name"].AsString.Equals(name, StringComparison.OrdinalIgnoreCase));
+            var allIndexes = await _collection.GetIndexNamesAsync();
+            var existing = allIndexes.Any(d => d.Equals(name, StringComparison.OrdinalIgnoreCase));
             if (existing)
             {
                 await _collection.Indexes.DropOneAsync(name);
