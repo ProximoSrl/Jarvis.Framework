@@ -33,7 +33,25 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 			Assert.That(rm.LastProcessedVersions, Is.EquivalentTo(new[] { 1 }));
 		}
 
-		[Test]
+        [Test]
+        public async Task Verify_track_of_version_processed_when_event_is_not_handled()
+        {
+            var cs = await GenerateCreatedEvent().ConfigureAwait(false);
+            var touch1 = await GenerateTouchedEvent().ConfigureAwait(false);
+            var invalidated = await GenerateInvalidatedEvent().ConfigureAwait(false);
+            var touch2 = await GenerateTouchedEvent().ConfigureAwait(false);
+
+            var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
+            rm.ProcessChangeset(cs);
+            rm.ProcessChangeset(touch1);
+            rm.ProcessChangeset(invalidated);
+            Assert.That(rm.LastProcessedVersions, Is.EquivalentTo(new[] { 1,2,3, }));
+
+            rm.ProcessChangeset(touch2);
+            Assert.That(rm.LastProcessedVersions, Is.EquivalentTo(new[] { 1, 2, 3, 4 }));
+        }
+
+        [Test]
 		public async Task Verify_track_of_version_processed_maintain_last_events()
 		{
 			var cs = await GenerateCreatedEvent().ConfigureAwait(false);
