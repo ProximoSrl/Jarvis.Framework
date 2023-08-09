@@ -437,6 +437,57 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             Assert.That(reloaded, Is.Null);
         }
 
+        [Test]
+        public async Task Verify_update_when_aggregate_is_not_changed()
+        {
+            var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
+            var changeset = GenerateCreatedEvent(false);
+            rm.ProcessChangeset(changeset);
+            await _sut.UpsertAsync(rm).ConfigureAwait(false);
+
+            //ok now we process a changeset with events that are not processed
+            var newChangeset = GenerateInvalidatedEvent(false);
+            rm.ProcessChangeset(newChangeset);
+
+            //Check that the event is applied
+            Assert.That(newChangeset.AggregateVersion, Is.EqualTo(changeset.AggregateVersion + 1));
+            Assert.That(rm.AggregateVersion, Is.EqualTo(newChangeset.AggregateVersion));
+            Assert.That(rm.ProjectedPosition, Is.EqualTo(newChangeset.GetChunkPosition()));
+
+            //ok now we want to upgrade the record partially
+            await _sut.UpdateVersionAsync(rm);
+
+            //ASSERT CHeck
+            var reloaded = await _sut.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
+            Assert.That(reloaded, Is. Not.Null);
+            Assert.That(reloaded.AggregateVersion, Is.EqualTo(rm.AggregateVersion));
+            Assert.That(reloaded.ProjectedPosition, Is.EqualTo(rm.ProjectedPosition));
+            Assert.That(reloaded.LastProcessedVersions, Is.EquivalentTo(new long[] { 1, 2 }));
+        }
+
+        [Test]
+        public async Task Verify_update_when_aggregate_does_not_handle_first_event()
+        {
+            var rm = new SimpleTestAtomicReadModelPrivate(new SampleAggregateId(_aggregateIdSeed));
+
+            var anotherSut = new AtomicMongoCollectionWrapper<SimpleTestAtomicReadModelPrivate>(
+               _db,
+               new AtomicReadModelFactory(),
+               new LiveAtomicReadModelProcessor(new AtomicReadModelFactory(), new CommitEnhancer(), _persistence),
+               NullLogger.Instance);
+
+            var changeset = GenerateCreatedEvent(false);
+            Assert.False( rm.ProcessChangeset(changeset));
+            await anotherSut.UpdateVersionAsync(rm).ConfigureAwait(false);
+
+            //ASSERT CHeck
+            var reloaded = await anotherSut.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
+            Assert.That(reloaded, Is.Not.Null);
+            Assert.That(reloaded.AggregateVersion, Is.EqualTo(rm.AggregateVersion));
+            Assert.That(reloaded.ProjectedPosition, Is.EqualTo(rm.ProjectedPosition));
+            Assert.That(reloaded.LastProcessedVersions, Is.EquivalentTo(new long[] { 1 }));
+        }
+
         #endregion
 
         #region Reading tests
@@ -515,6 +566,29 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
                 var evt = GenerateCreatedEvent(false);
                 rm.ProcessChangeset(evt);
                 await cw.UpsertAsync(rm).ConfigureAwait(false);
+            }
+        }
+
+        #endregion
+
+        #region private classes
+
+        private class SimpleTestAtomicReadModelPrivate : AbstractAtomicReadModel
+        {
+            public SimpleTestAtomicReadModelPrivate(string id) : base(id)
+            {
+            }
+
+            public bool Invalidated { get; private set; }
+
+            protected override int GetVersion()
+            {
+                return 1;
+            }
+
+            public void On(SampleAggregateInvalidated _)
+            {
+                Invalidated = true;  
             }
         }
 

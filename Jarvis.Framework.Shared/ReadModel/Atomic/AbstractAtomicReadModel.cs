@@ -63,6 +63,8 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
         /// <summary>
         /// This is the Position of the last chunk. All <see cref="NStore.Domain.Changeset"/> are projected
         /// all events in a row. We do not save readmodel until all events of changeset are processed.
+        /// IMPORTANT: AFTER VERSION 7.4 even if readmodel process a changeset that does not contains event
+        /// that changed the readmodel this property is updated.
         /// </summary>
         public Int64 ProjectedPosition { get; private set; }
 
@@ -88,13 +90,7 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
         /// </summary>
         public const int MaxNumberOfVersionToKeep = 20;
 
-        /// <summary>
-        /// To avoid creating error in projection where we have version 2 and 3 and for some reason we
-        /// dispatch version 3 before the 2, we keep a list of all version processed. This is done because
-        /// we can admit holes, so if the aggregate is in version X we can tolerate processing X+2 version
-        /// but if later X+1 is processed we have a problem and need to throw signaling that the aggregate
-        /// is faulted due to a wrong ordering.
-        /// </summary>
+        /// <inheritdoc />
         public List<long> LastProcessedVersions
         {
             get => _lastProcessedVersions ?? (_lastProcessedVersions = new List<long>());
@@ -103,6 +99,9 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
 
         /// <summary>
         /// Version of the aggregate
+        /// IMPORTANT: AFTER VERSION 7.4 even if readmodel process a changeset that does not contains event
+        /// that changed the readmodel this property is updated.
+        /// Before 7.4 this property was updated only if the readmodel was really changed by the changeset.
         /// </summary>
         public Int64 AggregateVersion { get; private set; }
 

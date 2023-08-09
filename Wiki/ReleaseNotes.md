@@ -2,6 +2,8 @@
 
 ## vNext
 
+  - Atomic readmodel now are updated in version and position even if changeset contains events that does not change the readmodel.
+
 ## 7.3.4
 
 - Small fixes for adding object serializer.

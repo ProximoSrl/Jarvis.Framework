@@ -1,5 +1,6 @@
 ﻿using NStore.Domain;
 using System;
+using System.Collections.Generic;
 
 namespace Jarvis.Framework.Shared.ReadModel.Atomic
 {
@@ -50,11 +51,20 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
 		/// </summary>
 		Boolean ModifiedWithExtraStreamEvents { get; }
 
-		/// <summary>
-		/// Mark the readmodel as faulted.
-		/// </summary>
-		/// <param name="projectedPosition">Position that caused failure</param>
-		void MarkAsFaulted(Int64 projectedPosition);
+        /// <summary>
+        /// To avoid creating error in projection where we have version 2 and 3 and for some reason we
+        /// dispatch version 3 before the 2, we keep a list of all version processed. This is done because
+        /// we can admit holes, so if the aggregate is in version X we can tolerate processing X+2 version
+        /// but if later X+1 is processed we have a problem and need to throw signaling that the aggregate
+        /// is faulted due to a wrong ordering.
+        /// </summary>
+        List<long> LastProcessedVersions { get; }
+
+        /// <summary>
+        /// Mark the readmodel as faulted.
+        /// </summary>
+        /// <param name="projectedPosition">Position that caused failure</param>
+        void MarkAsFaulted(Int64 projectedPosition);
 
 		/// <summary>
 		/// A readmodel atomic is capable of processing events.
