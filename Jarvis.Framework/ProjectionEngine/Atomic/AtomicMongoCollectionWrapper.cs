@@ -395,5 +395,26 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
 			return readmodel;
 		}
-	}
+
+        public async Task UpdateVersionAsync(TModel model)
+        {
+            var filter = Builders<TModel>.Filter.And(
+                Builders<TModel>.Filter.Eq(_ => _.Id, model.Id)
+            );
+
+            var update = Builders<TModel>.Update
+                .Set(m => m.ProjectedPosition, model.ProjectedPosition)
+                .Set(m => m.AggregateVersion, model.AggregateVersion)
+                .Set(m => m.LastProcessedVersions, model.LastProcessedVersions);
+
+            var result = await _collection.UpdateOneAsync(filter, update);
+            if (result.ModifiedCount == 0)
+            {
+                //ok the readmodel is not present on disk, this is a rare situation when the
+                //readmodel was created in memory for the first time, and all received changeset
+                //does not change the readmodel, we will persist.
+                await UpsertAsync(model, false);
+            }
+        }
+    }
 }

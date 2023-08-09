@@ -80,7 +80,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         }
 
         [Test]
-        public async Task Not_consumed_event_does_not_generate_readmodel()
+        public async Task Not_consumed_event_does_generate_readmodel()
         {
             Changeset changeset = await GenerateSampleAggregateDerived1().ConfigureAwait(false);
 
@@ -93,7 +93,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             //ok readmodel should be projected
             var evt = changeset.Events[0] as DomainEvent;
             var rm = await _collection.FindOneByIdAsync(evt.AggregateId).ConfigureAwait(false);
-            Assert.That(rm, Is.Null);
+            Assert.That(rm, Is.Not.Null);
         }
 
         [Test]
@@ -343,6 +343,27 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
                 .DidNotReceive()
                 .ReadmodelUpdatedAsync(Arg.Any<IAtomicReadModel>(), changeset);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+        }
+
+        [Test]
+        public async Task Verify_version_and_position_are_updated_event_if_readmodel_does_not_consume_event()
+        {
+            var changeset = await GenerateSomeChangesetsAndReturnLatestsChangeset().ConfigureAwait(false);
+
+            //Generate a changeset, that has an event that was not handled by the readmodel.
+            var notHandledChangeset = await GenerateInvalidatedEvent().ConfigureAwait(false);
+
+            //And finally check if everything is projected
+            await CreateSutAndStartProjectionEngineAsync(1).ConfigureAwait(false);
+
+            //we need to wait to understand if it was projected
+            GetTrackerAndWaitForChangesetToBeProjected("SimpleTestAtomicReadModel", waitTimeInSeconds: 10);
+
+            var evt = changeset.Events[0] as DomainEvent;
+            var rm = await _collection.FindOneByIdAsync(evt.AggregateId).ConfigureAwait(false);
+            Assert.That(rm.ProjectedPosition, Is.EqualTo(notHandledChangeset.GetChunkPosition()));
+            Assert.That(rm.AggregateVersion, Is.EqualTo(notHandledChangeset.AggregateVersion));
+            Assert.That(rm.LastProcessedVersions, Is.EquivalentTo(new[] { 1L, 2L, 3L, 4L }));
         }
     }
 }

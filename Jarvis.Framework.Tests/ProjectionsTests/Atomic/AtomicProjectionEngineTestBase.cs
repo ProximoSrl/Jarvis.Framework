@@ -282,12 +282,15 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             return cs;
         }
 
-        protected AtomicProjectionCheckpointManager GetTrackerAndWaitForChangesetToBeProjected(String readmodelName, Int64? positionToCheck = null)
+        protected AtomicProjectionCheckpointManager GetTrackerAndWaitForChangesetToBeProjected(
+            String readmodelName,
+            Int64? positionToCheck = null,
+            int waitTimeInSeconds = WaitTimeInSeconds)
         {
             var tracker = _container.Resolve<AtomicProjectionCheckpointManager>();
             positionToCheck = positionToCheck ?? lastUsedPosition;
             DateTime startWait = DateTime.UtcNow;
-            while (DateTime.UtcNow.Subtract(startWait).TotalSeconds < WaitTimeInSeconds
+            while (DateTime.UtcNow.Subtract(startWait).TotalSeconds < waitTimeInSeconds
                 && tracker.GetCheckpoint(readmodelName) < positionToCheck)
             {
                 Thread.Sleep(100);

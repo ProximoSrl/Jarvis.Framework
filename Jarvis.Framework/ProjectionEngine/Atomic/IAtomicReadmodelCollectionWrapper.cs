@@ -128,5 +128,25 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// <remarks>If the readmodel is not present on database, nothing will be written.</remarks>
         /// <returns></returns>
         Task UpdateAsync(TModel model);
+
+        /// <summary>
+        /// <para>
+        /// Used in the following scenario.
+        /// I have a readmodel in version X = 6
+        /// Changeset 7 and 8 are applied but the readmodel does not handle events in those changeset
+        /// Usually projection service will not update the readmodel on Storage because it is not changed by the
+        /// events in the changeset.
+        /// Problem: Aggregate on disk is on AggregateVersion=6 and events 7 and 8 are not in the list of handled commits.
+        /// This generates lots of problem because it made almost impossible to diagnose errors.
+        /// </para>
+        /// <para>
+        /// Possible solution: Alwasy save the readmodel even if it declare that events does not change it.
+        /// Best solution: Call this method that will update only the relevant properties of the changes that will indicates
+        /// the real list of <see cref="Changeset"/> applied.
+        /// </para>
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        Task UpdateVersionAsync(TModel model);
     }
 }

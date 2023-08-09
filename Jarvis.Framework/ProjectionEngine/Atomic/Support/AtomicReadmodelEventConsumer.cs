@@ -94,6 +94,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support
                 }
                 return new AtomicReadmodelChangesetConsumerReturnValue(rm, readmodelCreated);
             }
+            else
+            {
+                //readmodel was not modified, I want only to update some key information so position and aggregate version is update correctly
+                await _atomicCollectionWrapper.UpdateVersionAsync(rm).ConfigureAwait(false);
+            }
             return null;
         }
 

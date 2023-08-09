@@ -72,7 +72,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support
 		public static bool GenerateInternalExceptionforMaxTouch { get; set; }
 	}
 
-	public class SimpleTestAtomicReadModelInitializer : IAtomicReadModelInitializer
+    public class SimpleTestAtomicReadModelInitializer : IAtomicReadModelInitializer
 	{
 		private readonly IAtomicCollectionWrapper<SimpleTestAtomicReadModel> _atomicCollectionWrapper;
 
