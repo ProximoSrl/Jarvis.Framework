@@ -2,9 +2,11 @@
 
 ## vNext
 
+- Added CommandHandlerMonitor to have a log of currently executing commands.
+ 
 ## 7.4.0
 
-  - Atomic readmodel now are updated in version and position even if changeset contains events that does not change the readmodel.
+- Atomic readmodel now are updated in version and position even if changeset contains events that does not change the readmodel.
 
 ## 7.3.4
 
