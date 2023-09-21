@@ -86,7 +86,6 @@ namespace Jarvis.Framework.Kernel.Commands
         /// <param name="id"></param>
         /// <param name="callback"></param>
         /// <param name="createIfNotExists"></param>
-        /// <returns></returns>
         protected virtual Task FindAndModifyAsync(
             EventStoreIdentity id,
             Action<TAggregate> callback,
@@ -96,6 +95,35 @@ namespace Jarvis.Framework.Kernel.Commands
             {
                 callback(a);
                 return Task.FromResult(RepositoryCommandHandlerCallbackReturnValue.Default);
+            },
+            createIfNotExists);
+        }
+
+        /// <summary>
+        /// <para>
+        /// Helper function used by the caller passing a callback that return Task, the risk is
+        /// if you use async lambda function you call the previous one <see cref="FindAndModifyAsync(EventStoreIdentity, Action{TAggregate}, bool)"/>
+        /// generating an async void that is not awaited.
+        /// </para>
+        /// <para>
+        /// Actually if you invoke FindOneAndModify with async lambda
+        /// that does not returns RepositoryCommandHandlerCallbackReturnValue
+        /// you will generate a async void that is not awaited so the command
+        /// will always fail and it is quite painful to diagnose."
+        /// </para>
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="callback"></param>
+        /// <param name="createIfNotExists"></param>
+        protected virtual Task FindAndModifyAsync(
+            EventStoreIdentity id,
+            Func<TAggregate, Task> callback,
+            bool createIfNotExists = false)
+        {
+            return FindAndModifyAsync(id, async a =>
+            {
+                await callback(a);
+                return RepositoryCommandHandlerCallbackReturnValue.Default;
             },
             createIfNotExists);
         }
