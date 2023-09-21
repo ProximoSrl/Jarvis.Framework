@@ -2,6 +2,8 @@
 
 ## vNext
 
+## 7.5.0
+
 - Added new Abstract identity translator that saves all identities in a single collection.
 - Added CommandHandlerMonitor to have a log of currently executing commands.
  
