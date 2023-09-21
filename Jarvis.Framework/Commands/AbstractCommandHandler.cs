@@ -8,13 +8,38 @@ using Jarvis.Framework.Shared.Messages;
 using Jarvis.Framework.Shared.Support;
 using NStore.Domain;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.Commands
 {
+    public static class  CommandHandlerMonitor
+    {
+        /// <summary>
+        /// Added the ability
+        /// </summary>
+        private static ConcurrentDictionary<ICommand, DateTime  > ExecutingCommands { get; set; } = new ConcurrentDictionary<ICommand, DateTime>();
+
+        public static void AddCommand(ICommand command)
+        {
+            ExecutingCommands[command] = DateTime.UtcNow;
+        }
+
+        public static void ReleaseCommand(ICommand command)
+        {
+            ExecutingCommands[command] = DateTime.MinValue;
+            ExecutingCommands.TryRemove(command, out _);
+        }
+
+        public static int GetExecutingCommandCount() => ExecutingCommands.Count;
+
+        public static (ICommand Command, DateTime StartedAt)[] GetExecutingCommands() => ExecutingCommands.Select(k => (k.Key, k.Value)).ToArray();
+    }
+
     public abstract class AbstractCommandHandler<TCommand> : ICommandHandler<TCommand> where TCommand : ICommand
     {
         public ILogger Logger { get; set; }
@@ -36,16 +61,25 @@ namespace Jarvis.Framework.Kernel.Commands
 
         public virtual async Task HandleAsync(TCommand cmd)
         {
-            var claims = await GetCurrentClaimsAsync(cmd).ConfigureAwait(false);
-            using (var x = SecurityContextManager.SetCurrentClaims(claims))
+            CommandHandlerMonitor.AddCommand(cmd);
+            try
             {
-                await OnCheckSecurityAsync(cmd).ConfigureAwait(false);
-
-                using (var context = JarvisFrameworkSharedMetricsHelper.StartCommandTimer(cmd))
+                var claims = await GetCurrentClaimsAsync(cmd).ConfigureAwait(false);
+                using (var x = SecurityContextManager.SetCurrentClaims(claims))
                 {
-                    await Execute(cmd).ConfigureAwait(false);
-                    JarvisFrameworkSharedMetricsHelper.MarkCommandExecuted(cmd);
+                    await OnCheckSecurityAsync(cmd).ConfigureAwait(false);
+
+                    using (var context = JarvisFrameworkSharedMetricsHelper.StartCommandTimer(cmd))
+                    {
+                        await Execute(cmd).ConfigureAwait(false);
+                        JarvisFrameworkSharedMetricsHelper.MarkCommandExecuted(cmd);
+                    }
                 }
+            }
+            finally
+            {
+                //Remove from the list of executing command.
+                CommandHandlerMonitor.ReleaseCommand(cmd);
             }
         }
 
