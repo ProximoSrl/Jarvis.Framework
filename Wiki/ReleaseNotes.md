@@ -2,6 +2,10 @@
 
 ## vNext
 
+## 7.5.1
+
+- Fixed dispatch of the process manager.
+
 ## 7.5.0
 
 - Added new Abstract identity translator that saves all identities in a single collection.

@@ -144,26 +144,26 @@ namespace Jarvis.Framework.Kernel.Engine
 
         private async Task Dispatch(Object payload, TimeSpan? delay)
         {
-            if (payload is IMessage)
+            if (payload is ICommand command)
             {
-                if (delay == null)
+                if (delay == null || delay.Value == TimeSpan.Zero)
                 {
-                    await Dispatch((IMessage)payload).ConfigureAwait(false);
+                    await Dispatch(command).ConfigureAwait(false);
                 }
                 else
                 {
-                    await Dispatch((IMessage)payload, delay.Value).ConfigureAwait(false);
+                    await Dispatch(command, delay.Value).ConfigureAwait(false);
                 }
             }
-            else if (payload is ICommand)
+            else if (payload is IMessage message)
             {
-                if (delay == null)
+                if (delay == null || delay.Value == TimeSpan.Zero)
                 {
-                    await Dispatch((ICommand)payload).ConfigureAwait(false);
+                    await Dispatch(message).ConfigureAwait(false);
                 }
                 else
                 {
-                    await Dispatch((ICommand)payload, delay.Value).ConfigureAwait(false);
+                    await Dispatch(message, delay.Value).ConfigureAwait(false);
                 }
             }
             else
