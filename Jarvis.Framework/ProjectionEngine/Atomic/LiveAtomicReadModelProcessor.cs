@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using static Jarvis.Framework.Shared.ReadModel.Atomic.AtomicReadmodelMultiAggregateSubscription;
-using static MongoDB.Driver.WriteConcern;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 {
@@ -18,13 +17,15 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 		private readonly IPersistence _persistence;
 		private readonly IAtomicReadModelFactory _atomicReadModelFactory;
 
-		/// <summary>
-		/// Constructor
-		/// </summary>
-		/// <param name="atomicReadModelFactory"></param>
-		/// <param name="commitEnhancer"></param>
-		/// <param name="persistence"></param>
-		public LiveAtomicReadModelProcessor(
+        public ILiveAtomicreadmodelProcessorCache LiveAtomicreadmodelProcessorCache { get; set; } = new NullLiveAtomicreadmodelProcessorCache();
+
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="atomicReadModelFactory"></param>
+        /// <param name="commitEnhancer"></param>
+        /// <param name="persistence"></param>
+        public LiveAtomicReadModelProcessor(
 			IAtomicReadModelFactory atomicReadModelFactory,
 			ICommitEnhancer commitEnhancer,
 			IPersistence persistence)
@@ -48,9 +49,21 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 		/// <inheritdoc/>
 		public async Task<TModel> ProcessAsyncUntilChunkPosition<TModel>(string id, long positionUpTo) where TModel : IAtomicReadModel
 		{
-			var readmodel = _atomicReadModelFactory.Create<TModel>(id);
+            TModel readmodel;
+            long startAtInclusive = 1L;
+            //First try to get from cache
+            readmodel = LiveAtomicreadmodelProcessorCache.GetReadmodelAtCheckpoint<TModel>(id, positionUpTo);
+            if (readmodel == null)
+            {
+                readmodel = _atomicReadModelFactory.Create<TModel>(id);
+            }
+            else
+            {
+                startAtInclusive = readmodel.ProjectedPosition + 1;
+            }
+
 			var subscription = new AtomicReadModelSubscription<TModel>(_commitEnhancer, readmodel, cs => cs.GetChunkPosition() > positionUpTo);
-			await _persistence.ReadForwardAsync(id, 0, subscription, Int64.MaxValue).ConfigureAwait(false);
+			await _persistence.ReadForwardAsync(id, startAtInclusive, subscription, Int64.MaxValue).ConfigureAwait(false);
 			return readmodel.AggregateVersion == 0 ? default : readmodel;
 		}
 
