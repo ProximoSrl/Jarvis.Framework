@@ -1,8 +1,11 @@
 ﻿using Fasterflect;
+using Jarvis.Framework.Kernel.ProjectionEngine.Atomic;
 using Jarvis.Framework.Shared.Events;
+using Jarvis.Framework.Shared.Helpers;
 using Jarvis.Framework.Shared.ReadModel.Atomic;
 using Jarvis.Framework.Tests.EngineTests;
 using Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support;
+using NSubstitute;
 using NUnit.Framework;
 using System;
 using System.Linq;
@@ -236,7 +239,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             SimpleTestAtomicReadModel.TouchMax = touchCount + 1;
             try
             {
-                //Act, ask to catchup events, we expect c3 to be projected but c4 no because it will exceed touchmax     
+                //Act, ask to catchup events, we expect c3 to be projected but c4 no because it will exceed touchmax
                 await sut.CatchupAsync(rm).ConfigureAwait(false);
                 Assert.Fail("We need an exception to be trhown");
             }
@@ -456,7 +459,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             //The condition was never met, we will process everything up to the end of the stream.
             Assert.That(processResult.TouchCount, Is.EqualTo(3));
         }
- 
+
         #endregion
 
         #region Multi aggregate
@@ -629,6 +632,74 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             processedSimple = processedResult.Get<SimpleAtomicReadmodelWithSingleEventHandled>();
             Assert.That(processedSimple.TouchCount, Is.EqualTo(3));
             Assert.That(processedSimple.AggregateVersion, Is.EqualTo(4));
+        }
+
+        #endregion
+
+        #region Cache usage
+
+        [Test]
+        public async Task Project_up_until_certain_date_with_cache()
+        {
+            //remember this will generate 2 touch event
+            var c1 = await GenerateSomeChangesetsAndReturnLatestsChangeset().ConfigureAwait(false);
+
+            var c2 = await GenerateTouchedEvent().ConfigureAwait(false);
+            var c3 = await GenerateTouchedEvent().ConfigureAwait(false);
+            var c4 = await GenerateTouchedEvent().ConfigureAwait(false);
+
+            //ok we need to check that events are not mixed.
+            var sut = (LiveAtomicReadModelProcessor)_container.Resolve<ILiveAtomicReadModelProcessor>();
+            //forcefully substitute the cache.
+            sut.LiveAtomicreadmodelProcessorCache = Substitute.For<ILiveAtomicreadmodelProcessorCache>();
+
+            //Process until now, we should have everythign up to latest two events.
+            string id = c1.GetIdentity().AsString();
+            var processed = await sut.ProcessUntilChunkPositionAsync<SimpleTestAtomicReadModel>(
+                id,
+                c3.GetChunkPosition()).ConfigureAwait(false);
+
+            Assert.That(processed.TouchCount, Is.EqualTo(4));
+            Assert.That(processed.AggregateVersion, Is.EqualTo(c3.AggregateVersion));
+
+            //now verify that cache has NOT been used, all 5 changeset are processed.
+            Assert.That(processed.ChangesetProcessed, Is.EqualTo(5));
+
+            //now kick in the cache using the old object
+            sut.LiveAtomicreadmodelProcessorCache.GetReadmodelAtCheckpoint<SimpleTestAtomicReadModel>(
+                c1.GetIdentity().AsString(),
+                c3.GetChunkPosition()).Returns(processed.Clone());
+
+            var processed2 = await sut.ProcessUntilChunkPositionAsync<SimpleTestAtomicReadModel>(
+                c1.GetIdentity().AsString(),
+                c3.GetChunkPosition()).ConfigureAwait(false);
+
+            Assert.That(processed2.TouchCount, Is.EqualTo(4));
+            Assert.That(processed2.AggregateVersion, Is.EqualTo(c3.AggregateVersion));
+
+            //now verify that cache is used and no changeset are processed.
+            Assert.That(processed2.ChangesetProcessed, Is.EqualTo(0));
+
+            //now create another readmodel projected ad c1
+            processed = await sut.ProcessUntilChunkPositionAsync<SimpleTestAtomicReadModel>(
+               id,
+               c2.GetChunkPosition()).ConfigureAwait(false);
+            sut.LiveAtomicreadmodelProcessorCache = Substitute.For<ILiveAtomicreadmodelProcessorCache>();
+
+            //now a cache projected at checpoint 2
+            sut.LiveAtomicreadmodelProcessorCache.GetReadmodelAtCheckpoint<SimpleTestAtomicReadModel>(
+                c1.GetIdentity().AsString(),
+                c3.GetChunkPosition()).Returns(processed.Clone());
+
+            var processed3 = await sut.ProcessUntilChunkPositionAsync<SimpleTestAtomicReadModel>(
+               c1.GetIdentity().AsString(),
+               c3.GetChunkPosition()).ConfigureAwait(false);
+
+            Assert.That(processed3.TouchCount, Is.EqualTo(4));
+            Assert.That(processed3.AggregateVersion, Is.EqualTo(c3.AggregateVersion));
+
+            //now verify that cache is used and only latest changeset was used.
+            Assert.That(processed3.ChangesetProcessed, Is.EqualTo(1));
         }
 
         #endregion
