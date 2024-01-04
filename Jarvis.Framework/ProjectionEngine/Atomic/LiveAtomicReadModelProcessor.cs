@@ -1,4 +1,4 @@
-﻿using Jarvis.Framework.Kernel.ProjectionEngine.Client;
+using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 using Jarvis.Framework.Shared.Helpers;
 using Jarvis.Framework.Shared.ReadModel.Atomic;
 using NStore.Core.Persistence;
@@ -42,30 +42,31 @@ public class LiveAtomicReadModelProcessor : ILiveAtomicReadModelProcessor, ILive
 			where TModel : IAtomicReadModel
 		{
 			//Stop condition is version greater than the version we want to apply
-			var readmodel = _atomicReadModelFactory.Create<TModel>(id);
+            var readmodel = await GetReadmodelFromCache(
+                         id,
+                         () => LiveAtomicreadmodelProcessorCache.GetReadmodelAtVersionAsync<TModel>(id, versionUpTo));
+            var startAtInclusive = readmodel.AggregateVersion + 1;
+
 			var subscription = new AtomicReadModelSubscription<TModel>(_commitEnhancer, readmodel, cs => cs.AggregateVersion > versionUpTo);
-			await _persistence.ReadForwardAsync(id, 0, subscription, Int64.MaxValue, Int32.MaxValue, cancellationToken).ConfigureAwait(false);
+			await _persistence.ReadForwardAsync(id, startAtInclusive, subscription, Int64.MaxValue, Int32.MaxValue, cancellationToken).ConfigureAwait(false);
+
+            if (readmodel.AggregateVersion > 0) await LiveAtomicreadmodelProcessorCache.SaveReadmodelInCacheAsync(readmodel);
 			return readmodel.AggregateVersion == 0 ? default : readmodel;
 		}
 
 		/// <inheritdoc/>
 		public async Task<TModel> ProcessUntilChunkPositionAsync<TModel>(string id, long positionUpTo, CancellationToken cancellationToken = default) where TModel : IAtomicReadModel
 		{
-            TModel readmodel;
-            long startAtInclusive = 1L;
             //First try to get from cache
-            readmodel = LiveAtomicreadmodelProcessorCache.GetReadmodelAtCheckpoint<TModel>(id, positionUpTo);
-            if (readmodel == null)
-            {
-                readmodel = _atomicReadModelFactory.Create<TModel>(id);
-            }
-            else
-            {
-                startAtInclusive = readmodel.ProjectedPosition + 1;
-            }
+            var readmodel = await GetReadmodelFromCache(
+                id,
+                () => LiveAtomicreadmodelProcessorCache.GetReadmodelAtCheckpointAsync<TModel>(id, positionUpTo));
+            var startAtInclusive = readmodel.AggregateVersion + 1;
 
 			var subscription = new AtomicReadModelSubscription<TModel>(_commitEnhancer, readmodel, cs => cs.GetChunkPosition() > positionUpTo);
 			await _persistence.ReadForwardAsync(id, startAtInclusive, subscription, Int64.MaxValue, Int32.MaxValue, cancellationToken).ConfigureAwait(false);
+
+            if (readmodel.AggregateVersion > 0) await LiveAtomicreadmodelProcessorCache.SaveReadmodelInCacheAsync(readmodel);
 			return readmodel.AggregateVersion == 0 ? default : readmodel;
 		}
 
@@ -131,16 +132,50 @@ public class LiveAtomicReadModelProcessor : ILiveAtomicReadModelProcessor, ILive
 				throw new ArgumentNullException(nameof(request));
 			}
 
+            var cache = LiveAtomicreadmodelProcessorCache.GetCacheForMultipleReadmodel(request, checkpointUpToIncluded);
+
+            var will = new Will(cache, _atomicReadModelFactory);
+
 			//Need to prepare readmodel
 			var rmDictionary = request.ToDictionary(
 				r => r.AggregateId,
-				r => ReadModelProjectionInstruction.SimpleProjection(r.ReadmodelTypes.Select(t => _atomicReadModelFactory.Create(t, r.AggregateId)).ToList()));
+				r => ReadModelProjectionInstruction.SimpleProjection(r.ReadmodelTypes.Select(t => will.CreateReadmodel(t, r.AggregateId)).ToList()));
 
 			var subscription = new AtomicReadmodelMultiAggregateSubscription(_commitEnhancer, rmDictionary, cs => cs.GetChunkPosition() > checkpointUpToIncluded);
 			var idList = request.Select(r => r.AggregateId).ToList();
 			await _persistence.ReadForwardMultiplePartitionsAsync(idList, 0, subscription, checkpointUpToIncluded, cancellation).ConfigureAwait(false);
 			return new MultiStreamProcessorResult(rmDictionary.Values.Select(v => v.Readmodels));
 		}
+
+        private class Will
+        {
+            private long _startingPoint = long.MaxValue;
+            private readonly Dictionary<string, IAtomicReadModel> _cache;
+            private readonly IAtomicReadModelFactory _atomicReadModelFactory;
+
+            public Will(IReadOnlyCollection<IAtomicReadModel> cache, IAtomicReadModelFactory atomicReadModelFactory)
+            {
+                _cache = cache.ToDictionary(c => c.Id);
+                _atomicReadModelFactory = atomicReadModelFactory;
+            }
+
+            internal IAtomicReadModel CreateReadmodel(Type t, string aggregateId)
+            {
+                if (_cache.TryGetValue(aggregateId, out var readmodel))
+                {
+                    if (readmodel.GetType() == t)
+                    {
+                        if (_startingPoint > readmodel.AggregateVersion)
+                        {
+                            _startingPoint = readmodel.AggregateVersion;
+                        }
+                        return readmodel;
+                    }
+                }
+
+                return _atomicReadModelFactory.Create(t, aggregateId);
+            }
+        }
 
 		public async Task<MultiStreamProcessorResult> ProcessAsync(
         IReadOnlyCollection<MultiStreamProcessRequest> request, DateTime dateTimeUpTo, CancellationToken cancellation = default)
@@ -238,4 +273,22 @@ public class LiveAtomicReadModelProcessor : ILiveAtomicReadModelProcessor, ILive
         await _persistence.ReadForwardAsync(id, startReading, subscription, Int64.MaxValue, Int32.MaxValue, cancellationToken).ConfigureAwait(false);
         return readModel.AggregateVersion == 0 ? default : readModel;
     }
+
+    #region Cache management
+
+    private async Task<TModel> GetReadmodelFromCache<TModel>(
+        string id,
+        Func<Task<TModel>> cacheFunctionGetAsync) where TModel : IAtomicReadModel
+    {
+        TModel cachedReadmodel = await cacheFunctionGetAsync();
+        var readmodel = _atomicReadModelFactory.Create<TModel>(id);
+        if (cachedReadmodel != null && cachedReadmodel.ReadModelVersion == readmodel.ReadModelVersion)
+        {
+            readmodel = cachedReadmodel;
+        }
+
+        return readmodel;
+    }
+
+    #endregion
 }

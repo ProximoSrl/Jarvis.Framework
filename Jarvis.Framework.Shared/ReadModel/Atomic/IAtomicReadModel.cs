@@ -26,7 +26,10 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
 
 		/// <summary>
 		/// Signature identify when a readmodel change, it should be changed every time
-		/// that the readmodel changes.
+		/// that the readmodel shape changes. This is used to understand if a persisted
+        /// readmodel is compatible with the current readmodel class version. This number
+        /// is supposed to be ascending, each time that you change the readmodel you should
+        /// increment this value.
 		/// </summary>
 		Int32 ReadModelVersion { get; }
 
@@ -86,5 +89,10 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
 		/// </summary>
 		/// <param name="changeset"></param>
 		void ProcessExtraStreamChangeset(Changeset changeset);
-	}
+
+        /// <summary>
+        /// Last modification date of the readmodel.
+        /// </summary>
+        DateTime LastModify { get; set; }
+    }
 }
