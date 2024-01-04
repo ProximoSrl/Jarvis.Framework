@@ -70,7 +70,7 @@ namespace Jarvis.Framework.Tests.DomainTests
             var json = e.ToJson();
             Debug.WriteLine(json);
 
-            Assert.AreEqual(
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(
                 "{ \"MessageId\" : \"cfbb68da-b598-417c-84c7-e951e8a36b8e\", \"AggregateId\" : \"Sample_1\", \"Value\" : \"this is a test\" }",
                 json
             );
@@ -82,7 +82,7 @@ namespace Jarvis.Framework.Tests.DomainTests
             var json = "{ \"MessageId\" : \"cfbb68da-b598-417c-84c7-e951e8a36b8e\", \"AggregateId\" : \"Sample_1\", \"Value\" : \"this is a test\" }";
             var e = BsonSerializer.Deserialize<SampleEvent>(json);
 
-            Assert.AreEqual(new SampleId("Sample_1"), e.AggregateId);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(new SampleId("Sample_1"), e.AggregateId);
         }
     }
 }

@@ -85,7 +85,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 			var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
 			rm.ProcessChangeset(cs);
 
-			Assert.IsTrue(rm.Created);
+			NUnit.Framework.Legacy.ClassicAssert.IsTrue(rm.Created);
 		}
 
 		//[Test]
@@ -101,7 +101,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 		//	var rm2 = new SimpleAtomicAggregateReadModel(new AtomicAggregateId(_aggregateIdSeed));
 		//	var processed = rm2.ProcessChangeset(cs);
 
-		//	Assert.IsFalse(processed);
+		//	NUnit.Framework.Legacy.ClassicAssert.IsFalse(processed);
 		//}
 
 		[Test]
@@ -129,7 +129,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 			var evta = new SampleAggregateDerived1();
 			var evtb = new SampleAggregateTouched();
 			var cs2 = await ProcessEvents(new DomainEvent[] { evta, evtb }, p => new SampleAggregateId(p)).ConfigureAwait(false);
-			Assert.IsTrue(rm.ProcessChangeset(cs2));
+			NUnit.Framework.Legacy.ClassicAssert.IsTrue(rm.ProcessChangeset(cs2));
 		}
 
 		[Test]
@@ -137,7 +137,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 		{
 			var cs = await GenerateSampleAggregateDerived1().ConfigureAwait(false);
 			var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
-			Assert.IsFalse(rm.ProcessChangeset(cs));
+			NUnit.Framework.Legacy.ClassicAssert.IsFalse(rm.ProcessChangeset(cs));
 		}
 
 		[Test]
@@ -292,7 +292,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 			cs = await GenerateTouchedEvent(issuedBy: "admin2").ConfigureAwait(false);
 			processed = rm.ProcessChangeset(cs);
 
-			Assert.IsTrue(processed, "Touched event should be processed");
+			NUnit.Framework.Legacy.ClassicAssert.IsTrue(processed, "Touched event should be processed");
 		}
 
 		[Test]

@@ -24,7 +24,7 @@ namespace Jarvis.Framework.Tests.EngineTests
             var id = new SampleAggregateId(1);
             var asString = _manager.ToString(id);
 
-            Assert.AreEqual("SampleAggregate_1", asString);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual("SampleAggregate_1", asString);
         }
 
         [Test]
@@ -33,9 +33,9 @@ namespace Jarvis.Framework.Tests.EngineTests
             var asString = EventStoreIdentity.Format(typeof(SampleAggregateId), 1L);
             var identity = (EventStoreIdentity)_manager.ToIdentity(asString);
 
-            Assert.IsTrue(identity is SampleAggregateId);
-            Assert.AreEqual("SampleAggregate", identity.GetTag());
-            Assert.AreEqual(1L, identity.Id);
+            NUnit.Framework.Legacy.ClassicAssert.IsTrue(identity is SampleAggregateId);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual("SampleAggregate", identity.GetTag());
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(1L, identity.Id);
         }
 
         //[Test, Explicit]
@@ -65,7 +65,7 @@ namespace Jarvis.Framework.Tests.EngineTests
             var asString = id.AsString();
             var toString = id.ToString();
 
-            Assert.AreEqual(asString, toString);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(asString, toString);
         }
 
         [Test]
@@ -73,7 +73,7 @@ namespace Jarvis.Framework.Tests.EngineTests
         {
             var identity = _manager.ToIdentity(null);
 
-            Assert.IsNull(identity);
+            NUnit.Framework.Legacy.ClassicAssert.IsNull(identity);
         }
 
         [Test]
@@ -81,7 +81,7 @@ namespace Jarvis.Framework.Tests.EngineTests
         {
             var identity = _manager.ToIdentity(String.Empty);
 
-            Assert.IsNull(identity);
+            NUnit.Framework.Legacy.ClassicAssert.IsNull(identity);
         }
 
         [Test]
@@ -89,7 +89,7 @@ namespace Jarvis.Framework.Tests.EngineTests
         {
             var ex = Assert.Catch<Exception>(() => _manager.ToIdentity(" "));
 
-            Assert.AreEqual("invalid identity value  ", ex.Message);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual("invalid identity value  ", ex.Message);
         }
 
         [Test]
@@ -97,7 +97,7 @@ namespace Jarvis.Framework.Tests.EngineTests
         {
             var ex = Assert.Catch<Exception>(() => _manager.ToIdentity("pluto_1"));
 
-            Assert.AreEqual("pluto not registered in IdentityManager", ex.Message);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual("pluto not registered in IdentityManager", ex.Message);
         }
 
         [TestCase("SampleAggregate_1")]

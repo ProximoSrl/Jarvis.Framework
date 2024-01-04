@@ -84,7 +84,7 @@ namespace Jarvis.Framework.Tests.EngineTests.AggregateTests
 
 			Assert.That(snapshotRestored);
 			Assert.That(sut.InternalState.TouchCount, Is.EqualTo(1));
-			Assert.IsFalse(Object.ReferenceEquals(sut.InternalState, originalState), "Restored state is the same instance of payload state");
+			NUnit.Framework.Legacy.ClassicAssert.IsFalse(Object.ReferenceEquals(sut.InternalState, originalState), "Restored state is the same instance of payload state");
 			Assert.That(sut.Version, Is.EqualTo(1));
 			Assert.That(sut.Id, Is.EqualTo("AggregateTestSampleAggregate1_42"));
 		}
@@ -102,7 +102,7 @@ namespace Jarvis.Framework.Tests.EngineTests.AggregateTests
 			var snapshotRestored = snapshottable.TryRestore(snapshot);
 
 			Assert.That(snapshotRestored);
-			Assert.IsFalse(Object.ReferenceEquals(sut.SampleEntity.InternalState, originalState), "Restored state is the same instance of payload state for child entity.");
+			NUnit.Framework.Legacy.ClassicAssert.IsFalse(Object.ReferenceEquals(sut.SampleEntity.InternalState, originalState), "Restored state is the same instance of payload state for child entity.");
 			var entityState = sut.SampleEntity.InternalState;
 			Assert.That(entityState.Accumulator, Is.EqualTo(19));
 		}

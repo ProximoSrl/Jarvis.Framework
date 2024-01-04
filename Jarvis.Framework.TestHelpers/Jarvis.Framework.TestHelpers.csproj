@@ -18,7 +18,7 @@
     <PackageReference Include="NStore.Core" Version="0.16.1" />
     <PackageReference Include="NStore.Domain" Version="0.16.1" />
     <PackageReference Include="NStore.Persistence.Mongo" Version="0.16.1" />
-    <PackageReference Include="NUnit" Version="3.13.3" />
+    <PackageReference Include="NUnit" Version="4.0.1" />
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0" />
   </ItemGroup>
 

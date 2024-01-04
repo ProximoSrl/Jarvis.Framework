@@ -39,8 +39,8 @@ namespace Jarvis.Framework.Tests.EngineTests
         {
             _factory.BuildEventStore(_connectionString).Wait();
 
-            Assert.IsTrue(_db.Client.ListDatabases().ToList().Any(n => n["name"].AsString == _db.DatabaseNamespace.DatabaseName));
-            Assert.IsTrue(_db.ListCollections().ToList().Any(c => c["name"].AsString == EventStoreFactory.PartitionCollectionName));
+            NUnit.Framework.Legacy.ClassicAssert.IsTrue(_db.Client.ListDatabases().ToList().Any(n => n["name"].AsString == _db.DatabaseNamespace.DatabaseName));
+            NUnit.Framework.Legacy.ClassicAssert.IsTrue(_db.ListCollections().ToList().Any(c => c["name"].AsString == EventStoreFactory.PartitionCollectionName));
         }
 
         [Test]

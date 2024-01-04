@@ -27,7 +27,7 @@ namespace Jarvis.Framework.Tests.DomainTests
             var instance = new ClassWithTypedStringValueLowerCase { Value = new TypedStringValueLowerCase("abc_123") };
             var json = JsonConvert.SerializeObject(instance, _settings);
 
-            Assert.AreEqual("{\"Value\":\"abc_123\"}", json);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual("{\"Value\":\"abc_123\"}", json);
         }
 
         [Test]
@@ -36,21 +36,21 @@ namespace Jarvis.Framework.Tests.DomainTests
             var instance = new ClassWithTypedStringValue { Value = new TypedStringValue("aBc_123") };
             var json = JsonConvert.SerializeObject(instance, _settings);
 
-            Assert.AreEqual("{\"Value\":\"aBc_123\"}", json);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual("{\"Value\":\"aBc_123\"}", json);
         }
 
         [Test]
         public void should_deserialize_lowercase()
         {
             var instance = JsonConvert.DeserializeObject<ClassWithTypedStringValueLowerCase>("{ Value:\"abc_123\"}",_settings);
-            Assert.AreEqual("abc_123", (string)instance.Value);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual("abc_123", (string)instance.Value);
         }
 
         [Test]
         public void should_deserialize()
         {
             var instance = JsonConvert.DeserializeObject<ClassWithTypedStringValue>("{ Value:\"aBC_123\"}", _settings);
-            Assert.AreEqual("aBC_123", (string)instance.Value);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual("aBC_123", (string)instance.Value);
         }
 
         [Test]
@@ -58,7 +58,7 @@ namespace Jarvis.Framework.Tests.DomainTests
         {
             var instance = new ClassWithTypedStringValue();
             var json = JsonConvert.SerializeObject(instance, _settings);
-            Assert.AreEqual("{\"Value\":null}", json);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual("{\"Value\":null}", json);
         }
 
         [Test]
@@ -66,14 +66,14 @@ namespace Jarvis.Framework.Tests.DomainTests
         {
             var instance = new ClassWithTypedStringValueLowerCase();
             var json = JsonConvert.SerializeObject(instance, _settings);
-            Assert.AreEqual("{\"Value\":null}", json);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual("{\"Value\":null}", json);
         }
 
         [Test]
         public void should_deserialize_null()
         {
             var instance = JsonConvert.DeserializeObject<ClassWithTypedStringValueLowerCase>("{ AnId:null}", _settings);
-            Assert.IsNull(instance.Value);
+            NUnit.Framework.Legacy.ClassicAssert.IsNull(instance.Value);
         }
     
     }

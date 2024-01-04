@@ -310,8 +310,8 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 				"not_existing_aggregate_id",
 				Int32.MaxValue).ConfigureAwait(false);
 
-			Assert.Null(processResult.Get<SimpleTestAtomicReadModel>());
-			Assert.Null(processResult.Get<SimpleAtomicReadmodelWithSingleEventHandled>());
+            NUnit.Framework.Legacy.ClassicAssert.Null(processResult.Get<SimpleTestAtomicReadModel>());
+            NUnit.Framework.Legacy.ClassicAssert.Null(processResult.Get<SimpleAtomicReadmodelWithSingleEventHandled>());
 		}
 
 		[Test]

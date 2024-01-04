@@ -47,7 +47,7 @@
 //            Repository.Save(aggregate,Guid.NewGuid().ToString(), h => { }).Wait();
 
 //            await Engine.UpdateAndWait();
-//            Assert.AreEqual(1, reader.AllSortedById.Count());
+//            NUnit.Framework.Legacy.ClassicAssert.AreEqual(1, reader.AllSortedById.Count());
 
 //            aggregate = TestAggregateFactory.Create<SampleAggregate, SampleAggregate.State>(new SampleAggregateId(2));
 //            aggregate.Create();
@@ -55,7 +55,7 @@
 
 //            await Engine.UpdateAndWait();
 
-//            Assert.AreEqual(2, reader.AllSortedById.Count());
+//            NUnit.Framework.Legacy.ClassicAssert.AreEqual(2, reader.AllSortedById.Count());
 //        }
 
 //    }

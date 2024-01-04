@@ -21,21 +21,21 @@ namespace Jarvis.Framework.Tests.ClaimsTests
         public void simple_match_true()
         {
             var matcher = ClaimsMatcher.Require("admin", "True");
-            Assert.IsTrue(matcher.Matches(Claim.For("admin", "True")));
+            NUnit.Framework.Legacy.ClassicAssert.IsTrue(matcher.Matches(Claim.For("admin", "True")));
         }
 
         [Test]
         public void simple_match_false()
         {
             var matcher = ClaimsMatcher.Require("admin", "True");
-            Assert.IsFalse(matcher.Matches(Claim.For("admin", "False")));
+            NUnit.Framework.Legacy.ClassicAssert.IsFalse(matcher.Matches(Claim.For("admin", "False")));
         }
 
         [Test]
         public void should_match_claim_negation()
         {
             var matcher = ClaimsMatcher.Not("disabled", "True");
-            Assert.IsFalse(matcher.Matches(Claim.For("disabled", "True")));
+            NUnit.Framework.Legacy.ClassicAssert.IsFalse(matcher.Matches(Claim.For("disabled", "True")));
         }
 
         [Test]
@@ -46,9 +46,9 @@ namespace Jarvis.Framework.Tests.ClaimsTests
                 ClaimsMatcher.Require("role", "admin")
             );
 
-            Assert.IsFalse(matcher.Matches(Claim.For("role", "guest")));
-            Assert.IsTrue(matcher.Matches(Claim.For("role", "user")));
-            Assert.IsTrue(matcher.Matches(Claim.For("role", "admin")));
+            NUnit.Framework.Legacy.ClassicAssert.IsFalse(matcher.Matches(Claim.For("role", "guest")));
+            NUnit.Framework.Legacy.ClassicAssert.IsTrue(matcher.Matches(Claim.For("role", "user")));
+            NUnit.Framework.Legacy.ClassicAssert.IsTrue(matcher.Matches(Claim.For("role", "admin")));
         }
 
         [Test]
@@ -59,13 +59,13 @@ namespace Jarvis.Framework.Tests.ClaimsTests
                 ClaimsMatcher.Require("role", "admin")
             );
 
-            Assert.IsFalse(matcher.Matches(Claim.For("role", "user")));
-            Assert.IsFalse(matcher.Matches(Claim.For("role", "admin")));
-            Assert.IsTrue(matcher.Matches(
+            NUnit.Framework.Legacy.ClassicAssert.IsFalse(matcher.Matches(Claim.For("role", "user")));
+            NUnit.Framework.Legacy.ClassicAssert.IsFalse(matcher.Matches(Claim.For("role", "admin")));
+            NUnit.Framework.Legacy.ClassicAssert.IsTrue(matcher.Matches(
                 Claim.For("role", "admin"),
                 Claim.For("role", "user")
             ));
-            Assert.IsTrue(matcher.Matches(
+            NUnit.Framework.Legacy.ClassicAssert.IsTrue(matcher.Matches(
                 Claim.For("role", "user"),
                 Claim.For("role", "admin")
             ));
@@ -76,7 +76,7 @@ namespace Jarvis.Framework.Tests.ClaimsTests
         {
             var adminRole = Claim.For("role", "admin");
             var matched = ClaimsMatcher.Matches<RequireAdminRoleCommand>(adminRole);
-            Assert.IsTrue(matched);
+            NUnit.Framework.Legacy.ClassicAssert.IsTrue(matched);
         }
 
         [Test]
@@ -84,7 +84,7 @@ namespace Jarvis.Framework.Tests.ClaimsTests
         {
             var userRole = Claim.For("role", "user");
             var matched = ClaimsMatcher.Matches<RequireAdminRoleCommand>(userRole);
-            Assert.IsFalse(matched);
+            NUnit.Framework.Legacy.ClassicAssert.IsFalse(matched);
         }
 
         [Test]
@@ -92,7 +92,7 @@ namespace Jarvis.Framework.Tests.ClaimsTests
         {
             var userRole = Claim.For("role", "user");
             var matched = ClaimsMatcher.Matches<ForbiddenToUsers>(userRole);
-            Assert.IsFalse(matched);
+            NUnit.Framework.Legacy.ClassicAssert.IsFalse(matched);
         }
 
         [Test]
@@ -100,7 +100,7 @@ namespace Jarvis.Framework.Tests.ClaimsTests
         {
             var guestRole = Claim.For("role", "guest");
             var matched = ClaimsMatcher.Matches<ForbiddenToUsers>(guestRole);
-            Assert.IsTrue(matched);
+            NUnit.Framework.Legacy.ClassicAssert.IsTrue(matched);
         }
     }
 }

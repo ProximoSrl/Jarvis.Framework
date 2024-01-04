@@ -114,10 +114,10 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 			Assert.That(rms.AggregateVersion, Is.EqualTo(c2.AggregateVersion));
 
 			var cms = result.Get<ComplexAggregateReadModel>(c4.GetIdentity().AsString());
-			Assert.IsNull(cms);
+			NUnit.Framework.Legacy.ClassicAssert.IsNull(cms);
 
 			var other = result.Get<ComplexAggregateReadModel>(c3.GetIdentity().AsString());
-			Assert.IsNull(other);
+			NUnit.Framework.Legacy.ClassicAssert.IsNull(other);
 		}
 
 		[Test]

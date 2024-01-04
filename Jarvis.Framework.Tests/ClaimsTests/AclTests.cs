@@ -17,7 +17,7 @@ namespace Jarvis.Framework.Tests.ClaimsTests
         public void missing_is_inherited()
         {
             var acl = new AccessControlList(new[] { "group", "user" });
-            Assert.AreEqual(GrantType.Inherited, acl.GetGrantAccess("not_found", _claims));
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(GrantType.Inherited, acl.GetGrantAccess("not_found", _claims));
         }
 
         [Test]
@@ -26,7 +26,7 @@ namespace Jarvis.Framework.Tests.ClaimsTests
             var acl = new AccessControlList(new[] { "group", "user" });
             acl.Set("read", Claim.For("group", "Group_1"), GrantType.Allowed);
             var grant = acl.GetGrantAccess("read", _claims);
-            Assert.AreEqual(GrantType.Allowed, grant);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(GrantType.Allowed, grant);
         }
 
         [Test]
@@ -35,7 +35,7 @@ namespace Jarvis.Framework.Tests.ClaimsTests
             var acl = new AccessControlList(new[] { "group", "user" });
             acl.Set("read", Claim.For("group", "*"), GrantType.Allowed);
             var grant = acl.GetGrantAccess("read", _claims);
-            Assert.AreEqual(GrantType.Allowed, grant);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(GrantType.Allowed, grant);
         }
 
         [Test]
@@ -44,7 +44,7 @@ namespace Jarvis.Framework.Tests.ClaimsTests
             var acl = new AccessControlList(new[] { "group", "user" });
             acl.Set("read", Claim.For("group", "Group_1"), GrantType.Allowed);
             var grant = acl.GetGrantAccess("read", new []{Claim.For("group", "Group_2")});
-            Assert.AreEqual(GrantType.Inherited, grant);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(GrantType.Inherited, grant);
         }
 
         [Test]
@@ -55,7 +55,7 @@ namespace Jarvis.Framework.Tests.ClaimsTests
             acl.Set("read", Claim.For("group", "Group_2"), GrantType.Denied);
             
             var grant = acl.GetGrantAccess("read", new[] { Claim.For("group", "Group_2") });
-            Assert.AreEqual(GrantType.Denied, grant);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(GrantType.Denied, grant);
         }
 
         [Test]
@@ -70,7 +70,7 @@ namespace Jarvis.Framework.Tests.ClaimsTests
                     Claim.For("group", "Group_1")
             });
             
-            Assert.AreEqual(GrantType.Denied, grant);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(GrantType.Denied, grant);
         }
 
         [Test]
@@ -85,7 +85,7 @@ namespace Jarvis.Framework.Tests.ClaimsTests
                     Claim.For("group", "Group_1")
             });
 
-            Assert.AreEqual(GrantType.Denied, grant);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(GrantType.Denied, grant);
         }
 
         [Test]
@@ -96,7 +96,7 @@ namespace Jarvis.Framework.Tests.ClaimsTests
             acl.Set("read", Claim.For("user", "User_1"), GrantType.Allowed);
 
             var grant = acl.GetGrantAccess("read", _claims);
-            Assert.AreEqual(GrantType.Allowed, grant);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(GrantType.Allowed, grant);
         }
 
         [Test]
@@ -107,7 +107,7 @@ namespace Jarvis.Framework.Tests.ClaimsTests
             acl.Set("read", Claim.For("user", "User_1"), GrantType.Allowed);
 
             var grant = acl.GetGrantAccess("read", _claims);
-            Assert.AreEqual(GrantType.Allowed, grant);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(GrantType.Allowed, grant);
         }
 
         [Test]
@@ -118,7 +118,7 @@ namespace Jarvis.Framework.Tests.ClaimsTests
             acl.Set("read", Claim.For("user", "User_1"), GrantType.Allowed);
 
             var grant = acl.GetGrantAccess("read", _claims);
-            Assert.AreEqual(GrantType.Allowed, grant);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(GrantType.Allowed, grant);
         }
 
         [Test]
@@ -130,7 +130,7 @@ namespace Jarvis.Framework.Tests.ClaimsTests
             acl.Set("read", Claim.For("user", "User_1"), GrantType.Denied);
 
             var grant = acl.GetGrantAccess("read", _claims);
-            Assert.AreEqual(GrantType.Denied, grant);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(GrantType.Denied, grant);
         }
 
         [Test]
@@ -140,8 +140,8 @@ namespace Jarvis.Framework.Tests.ClaimsTests
             acl.Set("read", Claim.For("group", "*"), GrantType.Denied);
             acl.Set("read", Claim.For("group", "*"), GrantType.Allowed);
             var grant = acl.GetGrantAccess("read", _claims);
-            Assert.AreEqual(GrantType.Allowed, grant);
-            Assert.AreEqual(1, acl.Count());
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(GrantType.Allowed, grant);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(1, acl.Count());
         }
 
         [Test]
@@ -154,8 +154,8 @@ namespace Jarvis.Framework.Tests.ClaimsTests
             acl.UnSet("read", Claim.For("group", "Group_1"));
 
             var grant = acl.GetGrantAccess("read", _claims);
-            Assert.AreEqual(GrantType.Allowed, grant);
-            Assert.AreEqual(1, acl.Count());
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(GrantType.Allowed, grant);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(1, acl.Count());
         }
 
         [Test]
@@ -167,8 +167,8 @@ namespace Jarvis.Framework.Tests.ClaimsTests
 
             var grant = acl.GetGrantAccess("read", _claims);
 
-            Assert.AreEqual(GrantType.Inherited, grant);
-            Assert.AreEqual(0, acl.Count());
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(GrantType.Inherited, grant);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(0, acl.Count());
         }
     }
 }

@@ -477,7 +477,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
                NullLogger.Instance);
 
             var changeset = GenerateCreatedEvent(false);
-            Assert.False( rm.ProcessChangeset(changeset));
+            NUnit.Framework.Legacy.ClassicAssert.False( rm.ProcessChangeset(changeset));
             await anotherSut.UpdateVersionAsync(rm).ConfigureAwait(false);
 
             //ASSERT CHeck

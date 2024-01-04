@@ -55,14 +55,14 @@ namespace Jarvis.Framework.Tests.EngineTests
             var doc = evt.ToJson();
             Debug.WriteLine(doc);
 
-            Assert.AreEqual(Expected, doc);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(Expected, doc);
         }
 
         [Test]
         public void deserialize_from_bson()
         {
             var d = BsonSerializer.Deserialize<SampleAggregateCreated>(Expected);
-            Assert.AreEqual(Guid.Parse("fc3e5f0a-c4f0-47d5-91cf-a1c87fee600f"), d.MessageId);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(Guid.Parse("fc3e5f0a-c4f0-47d5-91cf-a1c87fee600f"), d.MessageId);
         }
     }
 }

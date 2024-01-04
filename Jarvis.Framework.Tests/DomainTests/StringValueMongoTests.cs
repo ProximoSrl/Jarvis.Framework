@@ -16,7 +16,7 @@ namespace Jarvis.Framework.Tests.DomainTests
             var instance = new ClassWithTypedStringValueLowerCase { Value = new TypedStringValueLowerCase("abc_123") };
             var json = instance.ToJson();
 
-            Assert.AreEqual("{ \"Value\" : \"abc_123\" }", json);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual("{ \"Value\" : \"abc_123\" }", json);
         }
 
         [Test]
@@ -25,7 +25,7 @@ namespace Jarvis.Framework.Tests.DomainTests
             var instance = new ClassWithTypedStringValueLowerCase { Value = null };
             var json = instance.ToJson();
 
-            Assert.AreEqual("{ \"Value\" : null }", json);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual("{ \"Value\" : null }", json);
         }
 
         [Test]
@@ -34,7 +34,7 @@ namespace Jarvis.Framework.Tests.DomainTests
             var instance = new ClassWithTypedStringValueLowerCase { Value = new TypedStringValueLowerCase(null) };
             var json = instance.ToJson();
 
-            Assert.AreEqual("{ \"Value\" : null }", json);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual("{ \"Value\" : null }", json);
         }
 
         [Test]
@@ -43,21 +43,21 @@ namespace Jarvis.Framework.Tests.DomainTests
             var instance = new ClassWithTypedStringValue { Value = new TypedStringValue("aBC_123") };
             var json = instance.ToJson();
 
-            Assert.AreEqual("{ \"Value\" : \"aBC_123\" }", json);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual("{ \"Value\" : \"aBC_123\" }", json);
         }
 
         [Test]
         public void should_deserialize_lowercase()
         {
             var instance = BsonSerializer.Deserialize<ClassWithTypedStringValueLowerCase>("{ Value:\"abc_123\"}");
-            Assert.AreEqual("abc_123", (string)instance.Value);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual("abc_123", (string)instance.Value);
         }
 
         [Test]
         public void should_deserialize()
         {
             var instance = BsonSerializer.Deserialize<ClassWithTypedStringValue>("{ Value:\"ABC_123\"}");
-            Assert.AreEqual("ABC_123", (string)instance.Value);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual("ABC_123", (string)instance.Value);
         }
 
         [Test]
@@ -65,14 +65,14 @@ namespace Jarvis.Framework.Tests.DomainTests
         {
             var instance = new ClassWithTypedStringValueLowerCase();
             var json = instance.ToJson();
-            Assert.AreEqual("{ \"Value\" : null }", json);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual("{ \"Value\" : null }", json);
         }
 
         [Test]
         public void should_deserialize_null()
         {
             var instance = BsonSerializer.Deserialize<ClassWithTypedStringValueLowerCase>("{ Value: null}");
-            Assert.IsNull(instance.Value);
+            NUnit.Framework.Legacy.ClassicAssert.IsNull(instance.Value);
         }
 
         [Test]
@@ -80,7 +80,7 @@ namespace Jarvis.Framework.Tests.DomainTests
         {
             StringValueCustomBsonTypeMapper.Register<TypedStringValueLowerCase>();
             var val = BsonValue.Create(new TypedStringValueLowerCase("abc"));
-            Assert.IsInstanceOf<BsonString>(val);
+            NUnit.Framework.Legacy.ClassicAssert.IsInstanceOf<BsonString>(val);
         }
 
         [Test]
@@ -88,7 +88,7 @@ namespace Jarvis.Framework.Tests.DomainTests
         {
             StringValueCustomBsonTypeMapper.Register<TypedStringValue>();
             var val = BsonValue.Create(new TypedStringValue("ABC"));
-            Assert.IsInstanceOf<BsonString>(val);
+            NUnit.Framework.Legacy.ClassicAssert.IsInstanceOf<BsonString>(val);
         }
     }
 
@@ -109,7 +109,7 @@ namespace Jarvis.Framework.Tests.DomainTests
     //        var instance = new ClassWithTypedStringValueLowerCaseWithoutAttribute { Value = new TypedStringValueWithoutAttributeLowerCase("abc_123") };
     //        var json = instance.ToJson();
 
-    //        Assert.AreEqual("{ \"Value\" : \"abc_123\" }", json);
+    //        NUnit.Framework.Legacy.ClassicAssert.AreEqual("{ \"Value\" : \"abc_123\" }", json);
     //    }
 
     //    [Test]
@@ -118,21 +118,21 @@ namespace Jarvis.Framework.Tests.DomainTests
     //        var instance = new ClassWithTypedStringValueWithoutAttribute { Value = new TypedStringValueWithoutAttribute("aBC_123") };
     //        var json = instance.ToJson();
 
-    //        Assert.AreEqual("{ \"Value\" : \"aBC_123\" }", json);
+    //        NUnit.Framework.Legacy.ClassicAssert.AreEqual("{ \"Value\" : \"aBC_123\" }", json);
     //    }
 
     //    [Test]
     //    public void should_deserialize_lowercase()
     //    {
     //        var instance = BsonSerializer.Deserialize<ClassWithTypedStringValueLowerCaseWithoutAttribute>("{ Value:\"abc_123\"}");
-    //        Assert.AreEqual("abc_123", (string)instance.Value);
+    //        NUnit.Framework.Legacy.ClassicAssert.AreEqual("abc_123", (string)instance.Value);
     //    }
 
     //    [Test]
     //    public void should_deserialize()
     //    {
     //        var instance = BsonSerializer.Deserialize<ClassWithTypedStringValueWithoutAttribute>("{ Value:\"ABC_123\"}");
-    //        Assert.AreEqual("ABC_123", (string)instance.Value);
+    //        NUnit.Framework.Legacy.ClassicAssert.AreEqual("ABC_123", (string)instance.Value);
     //    }
 
     //    [Test]
@@ -140,14 +140,14 @@ namespace Jarvis.Framework.Tests.DomainTests
     //    {
     //        var instance = new ClassWithTypedStringValueLowerCaseWithoutAttribute();
     //        var json = instance.ToJson();
-    //        Assert.AreEqual("{ \"Value\" : null }", json);
+    //        NUnit.Framework.Legacy.ClassicAssert.AreEqual("{ \"Value\" : null }", json);
     //    }
 
     //    [Test]
     //    public void should_deserialize_null()
     //    {
     //        var instance = BsonSerializer.Deserialize<ClassWithTypedStringValueLowerCaseWithoutAttribute>("{ Value: null}");
-    //        Assert.IsNull(instance.Value);
+    //        NUnit.Framework.Legacy.ClassicAssert.IsNull(instance.Value);
     //    }
     //}
 }

@@ -58,7 +58,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             await Repository.SaveAsync(aggregate, Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
             Thread.Sleep(50);
             await Engine.UpdateAndWaitAsync().ConfigureAwait(false);
-            Assert.AreEqual(1, reader.AllSortedById.Count());
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(1, reader.AllSortedById.Count());
         }
     }
 
@@ -82,7 +82,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             await Repository.SaveAsync(aggregate, Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
             Thread.Sleep(50);
             await Engine.UpdateAndWaitAsync().ConfigureAwait(false);
-            Assert.AreEqual(1, reader.AllSortedById.Count());
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(1, reader.AllSortedById.Count());
 
             // now stop the engine
             Engine.Stop();
@@ -126,7 +126,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             await Repository.SaveAsync(aggregate, Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
             Thread.Sleep(50);
             await Engine.UpdateAndWaitAsync().ConfigureAwait(false);
-            Assert.AreEqual(1, reader.AllSortedById.Count());
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(1, reader.AllSortedById.Count());
             var checkpoint = _checkpoints.FindOneById("Projection");
             Assert.That(checkpoint.Value, Is.EqualTo(1), "Checkpoint is written after rebuild.");
         }

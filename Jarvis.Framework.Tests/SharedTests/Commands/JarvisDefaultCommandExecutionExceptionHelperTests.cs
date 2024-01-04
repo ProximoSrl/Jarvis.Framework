@@ -34,8 +34,8 @@ namespace Jarvis.Framework.Tests.SharedTests.Commands
             Exception cex = PrepareConcurrencyException(wrapInAggregateException);
 
             var result = sut.Handle(cex, command, 5, out retry, out replyCommand);
-            Assert.IsTrue(result, "Concurrency exception is handled, no need to rethrow");
-            Assert.IsTrue(retry, "We should retry execution.");
+            NUnit.Framework.Legacy.ClassicAssert.IsTrue(result, "Concurrency exception is handled, no need to rethrow");
+            NUnit.Framework.Legacy.ClassicAssert.IsTrue(retry, "We should retry execution.");
         }
 
         [TestCase(true)]
@@ -44,8 +44,8 @@ namespace Jarvis.Framework.Tests.SharedTests.Commands
         {
             Exception cex = PrepareConcurrencyException(wrapInAggregateException);
             var result = sut.Handle(cex, command, MaximumNumberOfRetry + 1, out retry, out replyCommand);
-            Assert.IsTrue(result, "Concurrency exception is handled, no need to rethrow");
-            Assert.IsFalse(retry, "Too many retry, we should stop retrying execution.");
+            NUnit.Framework.Legacy.ClassicAssert.IsTrue(result, "Concurrency exception is handled, no need to rethrow");
+            NUnit.Framework.Legacy.ClassicAssert.IsFalse(retry, "Too many retry, we should stop retrying execution.");
         }
 
         [TestCase(true)]
@@ -55,9 +55,9 @@ namespace Jarvis.Framework.Tests.SharedTests.Commands
             Exception dex = PrepareDomainException(wrapInAggregateException);
 
             var result = sut.Handle(dex, command, 5, out retry, out replyCommand);
-            Assert.IsTrue(result, "DomainException is handled, no need to rethrow");
-            Assert.IsFalse(retry, "We should not retry execution, a domain exception will always fail upon retrying.");
-            Assert.IsNotNull(replyCommand, "Domain exception should reply notification");
+            NUnit.Framework.Legacy.ClassicAssert.IsTrue(result, "DomainException is handled, no need to rethrow");
+            NUnit.Framework.Legacy.ClassicAssert.IsFalse(retry, "We should not retry execution, a domain exception will always fail upon retrying.");
+            NUnit.Framework.Legacy.ClassicAssert.IsNotNull(replyCommand, "Domain exception should reply notification");
         }
 
         [TestCase(true)]
@@ -67,9 +67,9 @@ namespace Jarvis.Framework.Tests.SharedTests.Commands
             Exception dex = PrepareSecurityException(wrapInAggregateException);
 
             var result = sut.Handle(dex, command, 5, out retry, out replyCommand);
-            Assert.IsTrue(result, "Security is handled, no need to rethrow");
-            Assert.IsFalse(retry, "We should not retry execution, a Security exception will always fail upon retrying.");
-            Assert.IsNotNull(replyCommand, "Security exception should reply notification");
+            NUnit.Framework.Legacy.ClassicAssert.IsTrue(result, "Security is handled, no need to rethrow");
+            NUnit.Framework.Legacy.ClassicAssert.IsFalse(retry, "We should not retry execution, a Security exception will always fail upon retrying.");
+            NUnit.Framework.Legacy.ClassicAssert.IsNotNull(replyCommand, "Security exception should reply notification");
         }
 
         [TestCase(true)]
@@ -79,8 +79,8 @@ namespace Jarvis.Framework.Tests.SharedTests.Commands
             Exception dex = PrepareGenericException(wrapInAggregateException);
 
             var result = sut.Handle(dex, command, 5, out retry, out replyCommand);
-            Assert.IsFalse(result, "Generic exception is not handled, should rethrow");
-            Assert.IsFalse(retry, "We should not retry execution, unknown exception should fail the handler (and optionally use the retry of the bus or handler.");
+            NUnit.Framework.Legacy.ClassicAssert.IsFalse(result, "Generic exception is not handled, should rethrow");
+            NUnit.Framework.Legacy.ClassicAssert.IsFalse(retry, "We should not retry execution, unknown exception should fail the handler (and optionally use the retry of the bus or handler.");
         }
 
         private static Exception PrepareConcurrencyException(bool wrapInAggregateException)

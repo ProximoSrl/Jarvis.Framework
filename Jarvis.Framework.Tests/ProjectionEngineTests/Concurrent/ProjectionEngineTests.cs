@@ -49,7 +49,7 @@
 //            Repository.Save(aggregate,Guid.NewGuid().ToString(), h => { }).Wait();
 //            Thread.Sleep(50);
 //            await Engine.UpdateAndWait();
-//            Assert.AreEqual(1, reader.AllSortedById.Count());
+//            NUnit.Framework.Legacy.ClassicAssert.AreEqual(1, reader.AllSortedById.Count());
 //        }
 //    }
 //}

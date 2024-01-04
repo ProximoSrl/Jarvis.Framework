@@ -33,14 +33,14 @@ namespace Jarvis.Framework.Tests.EngineTests
         public void id_should_be_uppercase()
         {
             var id = new UppercaseSampleId("abc");
-            Assert.AreEqual("ABC", (string)id);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual("ABC", (string)id);
         }
 
         [Test]
         public void id_setter_should_convert_to_uppercase()
         {
             var id = new UppercaseSampleId("abc");
-            Assert.AreEqual("ABC", (string)id);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual("ABC", (string)id);
         }
 
         [Test]
@@ -51,7 +51,7 @@ namespace Jarvis.Framework.Tests.EngineTests
         public void null_or_whitespace_id_should_be_invalid(string val)
         {
             var id = new SampleId(val);
-            Assert.IsFalse(id.IsValid());
+            NUnit.Framework.Legacy.ClassicAssert.IsFalse(id.IsValid());
         }
 
         [Test]
@@ -60,11 +60,11 @@ namespace Jarvis.Framework.Tests.EngineTests
             var a = new SampleId("a");
             var b = new SampleId("a");
 
-            Assert.AreEqual(a, b);
-            Assert.IsTrue(a.Equals(b));
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(a, b);
+            NUnit.Framework.Legacy.ClassicAssert.IsTrue(a.Equals(b));
 
-            Assert.IsTrue(a.Equals(a));
-            Assert.IsTrue(a == b);
+            NUnit.Framework.Legacy.ClassicAssert.IsTrue(a.Equals(a));
+            NUnit.Framework.Legacy.ClassicAssert.IsTrue(a == b);
         }
 
         [Test]
@@ -73,13 +73,13 @@ namespace Jarvis.Framework.Tests.EngineTests
             var a = new SampleId("a");
             var b = new SampleId("b");
 
-            Assert.AreNotEqual(a, null);
-            Assert.AreNotEqual(a, b);
+            NUnit.Framework.Legacy.ClassicAssert.AreNotEqual(a, null);
+            NUnit.Framework.Legacy.ClassicAssert.AreNotEqual(a, b);
 
-            Assert.IsFalse(a.Equals(b));
-            Assert.IsFalse(a.Equals(null));
+            NUnit.Framework.Legacy.ClassicAssert.IsFalse(a.Equals(b));
+            NUnit.Framework.Legacy.ClassicAssert.IsFalse(a.Equals(null));
 
-            Assert.IsFalse(a == b);
+            NUnit.Framework.Legacy.ClassicAssert.IsFalse(a == b);
         }
 
         [Test]
@@ -88,7 +88,7 @@ namespace Jarvis.Framework.Tests.EngineTests
             var a = new SampleId("a");
             var b = new AnotherSampleId("a");
 
-            Assert.IsFalse(a.Equals(b));
+            NUnit.Framework.Legacy.ClassicAssert.IsFalse(a.Equals(b));
         }
     }
 }
