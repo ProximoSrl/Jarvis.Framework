@@ -6,8 +6,6 @@ using Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support;
 using NSubstitute;
 using NUnit.Framework;
 using System;
-using System.IO;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
@@ -436,15 +434,24 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 
         #region Cache usage
 
+        /// <summary>
+        /// Full scenario in cache usage for a single readmodel based on checkpoint (position)
+        /// </summary>
         [Test]
-        public async Task Project_up_until_certain_date_with_cache()
+        public async Task Project_up_until_certain_global_position_with_cache()
         {
+            //we start creating changeset, than change id so the globa id is not the same as the
+            //aggregate version id, be sure that the test is ok
+            var c0 = await GenerateSomeChangesetsAndReturnLatestsChangeset().ConfigureAwait(false);
+            _aggregateIdSeed++;
+            _aggregateVersion = 1;
+
             //remember this will generate 2 touch event
             var c1 = await GenerateSomeChangesetsAndReturnLatestsChangeset().ConfigureAwait(false);
 
             var c2 = await GenerateTouchedEvent().ConfigureAwait(false);
             var c3 = await GenerateTouchedEvent().ConfigureAwait(false);
-            var c4 = await GenerateTouchedEvent().ConfigureAwait(false);
+            await GenerateTouchedEvent().ConfigureAwait(false);
 
             //ok we need to check that events are not mixed.
             var sut = (LiveAtomicReadModelProcessor)_container.Resolve<ILiveAtomicReadModelProcessor>();
@@ -464,9 +471,9 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             Assert.That(processed.ChangesetProcessed, Is.EqualTo(5));
 
             //now kick in the cache using the old object
-            sut.LiveAtomicreadmodelProcessorCache.GetReadmodelAtCheckpoint<SimpleTestAtomicReadModel>(
+            sut.LiveAtomicreadmodelProcessorCache.GetReadmodelAtCheckpointAsync<SimpleTestAtomicReadModel>(
                 c1.GetIdentity().AsString(),
-                c3.GetChunkPosition()).Returns(processed.Clone());
+                c3.GetChunkPosition()).Returns(Task.FromResult(processed.Clone()));
 
             var processed2 = await sut.ProcessAsyncUntilChunkPosition<SimpleTestAtomicReadModel>(
                 c1.GetIdentity().AsString(),
@@ -485,9 +492,9 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             sut.LiveAtomicreadmodelProcessorCache = Substitute.For<ILiveAtomicreadmodelProcessorCache>();
 
             //now a cache projected at checpoint 2
-            sut.LiveAtomicreadmodelProcessorCache.GetReadmodelAtCheckpoint<SimpleTestAtomicReadModel>(
+            sut.LiveAtomicreadmodelProcessorCache.GetReadmodelAtCheckpointAsync<SimpleTestAtomicReadModel>(
                 c1.GetIdentity().AsString(),
-                c3.GetChunkPosition()).Returns(processed.Clone());
+                c3.GetChunkPosition()).Returns(Task.FromResult(processed.Clone()));
 
             var processed3 = await sut.ProcessAsyncUntilChunkPosition<SimpleTestAtomicReadModel>(
                c1.GetIdentity().AsString(),
@@ -500,6 +507,177 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             Assert.That(processed3.ChangesetProcessed, Is.EqualTo(1));
         }
 
+        /// <summary>
+        /// Full scenario in cache usage for a single readmodel based on checkpoint (position)
+        /// </summary>
+        [Test]
+        public async Task Project_up_until_certain_aggregate_version_with_cache()
+        {
+            //we start creating changeset, than change id so the globa id is not the same as the
+            //aggregate version id, be sure that the test is ok
+            var c0 = await GenerateSomeChangesetsAndReturnLatestsChangeset().ConfigureAwait(false);
+            _aggregateIdSeed++;
+            _aggregateVersion = 1;
+
+            //remember this will generate 2 touch event
+            var c1 = await GenerateSomeChangesetsAndReturnLatestsChangeset().ConfigureAwait(false);
+
+            await GenerateTouchedEvent().ConfigureAwait(false);
+            await GenerateTouchedEvent().ConfigureAwait(false);
+            await GenerateTouchedEvent().ConfigureAwait(false);
+
+            //ok we need to check that events are not mixed.
+            var sut = (LiveAtomicReadModelProcessor)_container.Resolve<ILiveAtomicReadModelProcessor>();
+            //forcefully substitute the cache.
+            sut.LiveAtomicreadmodelProcessorCache = Substitute.For<ILiveAtomicreadmodelProcessorCache>();
+
+            //Process until now, we should have everythign up to latest two events.
+            string id = c1.GetIdentity().AsString();
+
+            //This version of the call will process up to version of an aggregate.
+            //we will process up to version 4, this comprehend first creation and three touches
+            var processed = await sut.ProcessAsync<SimpleTestAtomicReadModel>(id, 4).ConfigureAwait(false);
+
+            Assert.That(processed.TouchCount, Is.EqualTo(3));
+            Assert.That(processed.AggregateVersion, Is.EqualTo(4));
+
+            //now verify that cache has NOT been used, all 4 changeset are processed.
+            Assert.That(processed.ChangesetProcessed, Is.EqualTo(4));
+
+            //now kick in the cache using the old object
+            sut.LiveAtomicreadmodelProcessorCache.GetReadmodelAtVersionAsync<SimpleTestAtomicReadModel>(id, 4).Returns(Task.FromResult(processed.Clone()));
+
+            var processed2 = await sut.ProcessAsync<SimpleTestAtomicReadModel>(id, 4).ConfigureAwait(false);
+
+            Assert.That(processed2.TouchCount, Is.EqualTo(3));
+            Assert.That(processed2.AggregateVersion, Is.EqualTo(4));
+
+            //now verify that cache is used and no changeset are processed.
+            Assert.That(processed2.ChangesetProcessed, Is.EqualTo(0));
+
+            //now create another readmodel projected ad c1
+            processed = await sut.ProcessAsync<SimpleTestAtomicReadModel>(id, 3).ConfigureAwait(false);
+
+            //now a cache projected at checpoint 2
+            sut.LiveAtomicreadmodelProcessorCache = Substitute.For<ILiveAtomicreadmodelProcessorCache>();
+            sut.LiveAtomicreadmodelProcessorCache.GetReadmodelAtVersionAsync<SimpleTestAtomicReadModel>(id, 4).Returns(Task.FromResult(processed.Clone()));
+
+            var processed3 = await sut.ProcessAsync<SimpleTestAtomicReadModel>(id, 4).ConfigureAwait(false);
+
+            Assert.That(processed3.TouchCount, Is.EqualTo(3));
+            Assert.That(processed3.AggregateVersion, Is.EqualTo(4));
+
+            //now verify that cache is used and only latest changeset was used.
+            Assert.That(processed3.ChangesetProcessed, Is.EqualTo(1));
+        }
+
+        [Test]
+        public async Task If_cache_has_old_readmodel_version_cache_is_not_used()
+        {
+            //remember this will generate 2 touch event
+            var c1 = await GenerateSomeChangesetsAndReturnLatestsChangeset().ConfigureAwait(false);
+
+            await GenerateTouchedEvent().ConfigureAwait(false);
+            var c3 = await GenerateTouchedEvent().ConfigureAwait(false);
+            await GenerateTouchedEvent().ConfigureAwait(false);
+
+            //ok we need to check that events are not mixed.
+            var sut = (LiveAtomicReadModelProcessor)_container.Resolve<ILiveAtomicReadModelProcessor>();
+            //forcefully substitute the cache.
+            sut.LiveAtomicreadmodelProcessorCache = Substitute.For<ILiveAtomicreadmodelProcessorCache>();
+
+            //Process until now, we should have everythign up to latest two events.
+            string id = c1.GetIdentity().AsString();
+            var processed = await sut.ProcessAsyncUntilChunkPosition<SimpleTestAtomicReadModel>(
+                id,
+                c3.GetChunkPosition()).ConfigureAwait(false);
+
+            Assert.That(processed.TouchCount, Is.EqualTo(4));
+            Assert.That(processed.AggregateVersion, Is.EqualTo(c3.AggregateVersion));
+
+            //now verify that cache has NOT been used, all 5 changeset are processed.
+            Assert.That(processed.ChangesetProcessed, Is.EqualTo(5));
+
+            //now kick in the cache using the old object
+            processed.InstanceFakeSignature = -1; //different signature.
+            sut.LiveAtomicreadmodelProcessorCache.GetReadmodelAtCheckpointAsync<SimpleTestAtomicReadModel>(
+                c1.GetIdentity().AsString(),
+                c3.GetChunkPosition()).Returns(Task.FromResult(processed.Clone()));
+
+            var processed2 = await sut.ProcessAsyncUntilChunkPosition<SimpleTestAtomicReadModel>(
+                c1.GetIdentity().AsString(),
+                c3.GetChunkPosition()).ConfigureAwait(false);
+
+            Assert.That(processed2.TouchCount, Is.EqualTo(4));
+            Assert.That(processed2.AggregateVersion, Is.EqualTo(c3.AggregateVersion));
+
+            //now verify that cache is used and no changeset are processed.
+            Assert.That(processed2.ChangesetProcessed, Is.EqualTo(5), "We need to re-project all because version of readmodel is not correct.");
+        }
+
+        [Test]
+        public async Task Verify_write_cache_when_finished_rehyidrating_readmodel()
+        {
+            //we start creating changeset, than change id so the globa id is not the same as the
+            //aggregate version id, be sure that the test is ok
+            var c0 = await GenerateSomeChangesetsAndReturnLatestsChangeset().ConfigureAwait(false);
+            _aggregateIdSeed++;
+            _aggregateVersion = 1;
+
+            //remember this will generate 2 touch event
+            var c1 = await GenerateSomeChangesetsAndReturnLatestsChangeset().ConfigureAwait(false);
+
+            var c2 = await GenerateTouchedEvent().ConfigureAwait(false);
+            var c3 = await GenerateTouchedEvent().ConfigureAwait(false);
+            await GenerateTouchedEvent().ConfigureAwait(false);
+
+            //ok we need to check that events are not mixed.
+            var sut = (LiveAtomicReadModelProcessor)_container.Resolve<ILiveAtomicReadModelProcessor>();
+            //forcefully substitute the cache.
+            sut.LiveAtomicreadmodelProcessorCache = Substitute.For<ILiveAtomicreadmodelProcessorCache>();
+
+            //Process until now, we should have everythign up to latest two events.
+            string id = c1.GetIdentity().AsString();
+            var processed = await sut.ProcessAsyncUntilChunkPosition<SimpleTestAtomicReadModel>(
+                id,
+                c3.GetChunkPosition()).ConfigureAwait(false);
+
+            //VErify with Nsubstitute taht we called save for the readmodel.
+            await sut.LiveAtomicreadmodelProcessorCache.Received(1).SaveReadmodelInCacheAsync<SimpleTestAtomicReadModel>(
+                Arg.Is<SimpleTestAtomicReadModel>(v => v.ProjectedPosition == c3.GetChunkPosition()));
+        }
+
+        [Test]
+        public async Task Verify_write_cache_when_finished_rehyidrating_readmodel_with_version()
+        {
+            //we start creating changeset, than change id so the globa id is not the same as the
+            //aggregate version id, be sure that the test is ok
+            var c0 = await GenerateSomeChangesetsAndReturnLatestsChangeset().ConfigureAwait(false);
+            _aggregateIdSeed++;
+            _aggregateVersion = 1;
+
+            //remember this will generate 2 touch event
+            var c1 = await GenerateSomeChangesetsAndReturnLatestsChangeset().ConfigureAwait(false);
+
+            var c2 = await GenerateTouchedEvent().ConfigureAwait(false);
+            var c3 = await GenerateTouchedEvent().ConfigureAwait(false);
+            await GenerateTouchedEvent().ConfigureAwait(false);
+
+            //ok we need to check that events are not mixed.
+            var sut = (LiveAtomicReadModelProcessor)_container.Resolve<ILiveAtomicReadModelProcessor>();
+            //forcefully substitute the cache.
+            sut.LiveAtomicreadmodelProcessorCache = Substitute.For<ILiveAtomicreadmodelProcessorCache>();
+
+            //Process until now, we should have everythign up to latest two events.
+            string id = c1.GetIdentity().AsString();
+            var processed = await sut.ProcessAsync<SimpleTestAtomicReadModel>(
+                id,
+                c3.AggregateVersion).ConfigureAwait(false);
+
+            //VErify with Nsubstitute taht we called save for the readmodel.
+            await sut.LiveAtomicreadmodelProcessorCache.Received(1).SaveReadmodelInCacheAsync<SimpleTestAtomicReadModel>(
+                Arg.Is<SimpleTestAtomicReadModel>(v => v.ProjectedPosition == c3.GetChunkPosition()));
+        }
         #endregion
     }
 }

@@ -82,10 +82,15 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support
 
 		protected override int GetVersion()
 		{
-			return FakeSignature;
+			return InstanceFakeSignature ?? FakeSignature;
 		}
 
         public static Int32 FakeSignature { get; set; }
+
+        /// <summary>
+        /// OVerride this specific signature.
+        /// </summary>
+        public int? InstanceFakeSignature { get; set; }
 
 		public static Int32 TouchMax { get; set; } = Int32.MaxValue;
 		public static bool GenerateInternalExceptionforMaxTouch { get; set; }

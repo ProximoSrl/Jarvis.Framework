@@ -20,7 +20,9 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
         /// <param name="request">List of aggregate to project.</param>
         /// <param name="checkpointUpToIncluded">Global checkpoint, included, to use as a limit for projection</param>
         /// <returns></returns>
-        Task<MultiStreamProcessorResult> ProcessAsync(IReadOnlyCollection<MultiStreamProcessRequest> request, Int64 checkpointUpToIncluded);
+        Task<MultiStreamProcessorResult> ProcessAsync(
+            IReadOnlyCollection<MultiStreamProcessRequest> request,
+            Int64 checkpointUpToIncluded);
 
         /// <summary>
         /// Project multiple aggregate id, each one with potentially multiple <see cref="IAtomicReadModel"/> in a single
@@ -29,7 +31,9 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
         /// <param name="request">List of aggregate to project.</param>
         /// <param name="dateTimeUpTo">Project up to that date.</param>
         /// <returns></returns>
-        Task<MultiStreamProcessorResult> ProcessAsync(IReadOnlyCollection<MultiStreamProcessRequest> request, DateTime dateTimeUpTo);
+        Task<MultiStreamProcessorResult> ProcessAsync(
+            IReadOnlyCollection<MultiStreamProcessRequest> request,
+            DateTime dateTimeUpTo);
 
         /// <summary>
         /// This is a very special projection request, we ask for multiple aggregates and multiple readmodels, but for each aggregate

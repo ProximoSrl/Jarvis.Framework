@@ -10,12 +10,12 @@ using static Jarvis.Framework.Shared.ReadModel.Atomic.AtomicReadmodelMultiAggreg
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 {
-	/// <inheritdoc/>
-	public class LiveAtomicReadModelProcessor : ILiveAtomicReadModelProcessor, ILiveAtomicMultistreamReadModelProcessor, ILiveAtomicReadModelProcessorEnhanced
-	{
-		private readonly ICommitEnhancer _commitEnhancer;
-		private readonly IPersistence _persistence;
-		private readonly IAtomicReadModelFactory _atomicReadModelFactory;
+    /// <inheritdoc/>
+    public class LiveAtomicReadModelProcessor : ILiveAtomicReadModelProcessor, ILiveAtomicMultistreamReadModelProcessor, ILiveAtomicReadModelProcessorEnhanced
+    {
+        private readonly ICommitEnhancer _commitEnhancer;
+        private readonly IPersistence _persistence;
+        private readonly IAtomicReadModelFactory _atomicReadModelFactory;
 
         public ILiveAtomicreadmodelProcessorCache LiveAtomicreadmodelProcessorCache { get; set; } = new NullLiveAtomicreadmodelProcessorCache();
 
@@ -26,87 +26,122 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// <param name="commitEnhancer"></param>
         /// <param name="persistence"></param>
         public LiveAtomicReadModelProcessor(
-			IAtomicReadModelFactory atomicReadModelFactory,
-			ICommitEnhancer commitEnhancer,
-			IPersistence persistence)
-		{
-			_commitEnhancer = commitEnhancer;
-			_persistence = persistence;
-			_atomicReadModelFactory = atomicReadModelFactory;
-		}
+            IAtomicReadModelFactory atomicReadModelFactory,
+            ICommitEnhancer commitEnhancer,
+            IPersistence persistence)
+        {
+            _commitEnhancer = commitEnhancer;
+            _persistence = persistence;
+            _atomicReadModelFactory = atomicReadModelFactory;
+        }
 
-		/// <inheritdoc/>
-		public async Task<TModel> ProcessAsync<TModel>(String id, Int64 versionUpTo)
-			where TModel : IAtomicReadModel
-		{
-			//Stop condition is version greater than the version we want to apply
-			var readmodel = _atomicReadModelFactory.Create<TModel>(id);
-			var subscription = new AtomicReadModelSubscription<TModel>(_commitEnhancer, readmodel, cs => cs.AggregateVersion > versionUpTo);
-			await _persistence.ReadForwardAsync(id, 0, subscription).ConfigureAwait(false);
-			return readmodel.AggregateVersion == 0 ? default : readmodel;
-		}
+        /// <inheritdoc/>
+        public async Task<TModel> ProcessAsync<TModel>(String id, Int64 versionUpTo)
+            where TModel : IAtomicReadModel
+        {
+            //Stop condition is version greater than the version we want to apply
+            var readmodel = await GetReadmodelFromCache(
+                         id,
+                         () => LiveAtomicreadmodelProcessorCache.GetReadmodelAtVersionAsync<TModel>(id, versionUpTo));
+            var startAtInclusive = readmodel.AggregateVersion + 1;
 
-		/// <inheritdoc/>
-		public async Task<TModel> ProcessAsyncUntilChunkPosition<TModel>(string id, long positionUpTo) where TModel : IAtomicReadModel
-		{
-            TModel readmodel;
-            long startAtInclusive = 1L;
+            var subscription = new AtomicReadModelSubscription<TModel>(_commitEnhancer, readmodel, cs => cs.AggregateVersion > versionUpTo);
+            await _persistence.ReadForwardAsync(id, startAtInclusive, subscription, Int64.MaxValue).ConfigureAwait(false);
+
+            if (readmodel.AggregateVersion > 0) await LiveAtomicreadmodelProcessorCache.SaveReadmodelInCacheAsync(readmodel);
+            return readmodel.AggregateVersion == 0 ? default : readmodel;
+        }
+
+        /// <inheritdoc/>
+        public async Task<TModel> ProcessAsyncUntilChunkPosition<TModel>(string id, long positionUpTo) where TModel : IAtomicReadModel
+        {
             //First try to get from cache
-            readmodel = LiveAtomicreadmodelProcessorCache.GetReadmodelAtCheckpoint<TModel>(id, positionUpTo);
-            if (readmodel == null)
+            var readmodel = await GetReadmodelFromCache(
+                id,
+                () => LiveAtomicreadmodelProcessorCache.GetReadmodelAtCheckpointAsync<TModel>(id, positionUpTo));
+            var startAtInclusive = readmodel.AggregateVersion + 1;
+
+            var subscription = new AtomicReadModelSubscription<TModel>(_commitEnhancer, readmodel, cs => cs.GetChunkPosition() > positionUpTo);
+            await _persistence.ReadForwardAsync(id, startAtInclusive, subscription, Int64.MaxValue).ConfigureAwait(false);
+
+            if (readmodel.AggregateVersion > 0) await LiveAtomicreadmodelProcessorCache.SaveReadmodelInCacheAsync(readmodel);
+            return readmodel.AggregateVersion == 0 ? default : readmodel;
+        }
+
+        /// <inheritdoc/>
+        public Task CatchupAsync<TModel>(TModel readModel) where TModel : IAtomicReadModel
+        {
+            var subscription = new AtomicReadModelSubscription<TModel>(_commitEnhancer, readModel, cs => false);
+            return _persistence.ReadForwardAsync(readModel.Id, readModel.AggregateVersion + 1, subscription, Int64.MaxValue);
+        }
+
+        /// <inheritdoc/>
+        public async Task<TModel> ProcessAsyncUntilUtcTimestamp<TModel>(string id, DateTime dateTimeUpTo) where TModel : IAtomicReadModel
+        {
+            var readmodel = _atomicReadModelFactory.Create<TModel>(id);
+            var subscription = new AtomicReadModelSubscription<TModel>(_commitEnhancer, readmodel, cs => cs.GetTimestamp() > dateTimeUpTo);
+            await _persistence.ReadForwardAsync(id, 0, subscription, Int64.MaxValue).ConfigureAwait(false);
+            return readmodel.AggregateVersion == 0 ? default : readmodel;
+        }
+
+        public async Task<MultiStreamProcessorResult> ProcessAsync(
+            IReadOnlyCollection<MultiStreamProcessRequest> request,
+            long checkpointUpToIncluded)
+        {
+            if (request is null)
             {
-                readmodel = _atomicReadModelFactory.Create<TModel>(id);
+                throw new ArgumentNullException(nameof(request));
             }
-            else
+
+            var cache = LiveAtomicreadmodelProcessorCache.GetCacheForMultipleReadmodel(request, checkpointUpToIncluded);
+
+            var will = new Will(cache);
+
+            //Need to prepare readmodel
+            var rmDictionary = request.ToDictionary(
+                r => r.AggregateId,
+                r => ReadModelProjectionInstruction.SimpleProjection(r.ReadmodelTypes.Select(t => will.CreateReadmodel(t, r.AggregateId) ).ToList()));
+
+            var subscription = new AtomicReadmodelMultiAggregateSubscription(_commitEnhancer, rmDictionary, cs => cs.GetChunkPosition() > checkpointUpToIncluded);
+            var idList = request.Select(r => r.AggregateId).ToList();
+            await _persistence.ReadForwardMultiplePartitionsAsync(idList, 0, subscription, checkpointUpToIncluded).ConfigureAwait(false);
+            return new MultiStreamProcessorResult(rmDictionary.Values.Select(v => v.Readmodels));
+        }
+
+        private class Will
+        {
+            private long _startingPoint = long.MaxValue;
+            private Dictionary<string, IAtomicReadModel> _cache;
+
+            public Will(IReadOnlyCollection<IAtomicReadModel> cache)
             {
-                startAtInclusive = readmodel.ProjectedPosition + 1;
+                _cache = cache.ToDictionary(c => c.Id);
             }
 
-			var subscription = new AtomicReadModelSubscription<TModel>(_commitEnhancer, readmodel, cs => cs.GetChunkPosition() > positionUpTo);
-			await _persistence.ReadForwardAsync(id, startAtInclusive, subscription, Int64.MaxValue).ConfigureAwait(false);
-			return readmodel.AggregateVersion == 0 ? default : readmodel;
-		}
+            internal object CreateReadmodel(Type t, string aggregateId)
+            {
+                if (_cache.TryGetValue(aggregateId, out var readmodel))
+                {
+                    if (readmodel.GetType() == t)
+                    {
+                        if (_startingPoint > readmodel.AggregateVersion)
+                        {
+                            _startingPoint = readmodel.AggregateVersion;
+                        }
+                        return readmodel;
+                    }
+                }
 
-		/// <inheritdoc/>
-		public Task CatchupAsync<TModel>(TModel readModel) where TModel : IAtomicReadModel
-		{
-			var subscription = new AtomicReadModelSubscription<TModel>(_commitEnhancer, readModel, cs => false);
-			return _persistence.ReadForwardAsync(readModel.Id, readModel.AggregateVersion + 1, subscription, Int64.MaxValue);
-		}
+                return null;
+            }
+        }
 
-		/// <inheritdoc/>
-		public async Task<TModel> ProcessAsyncUntilUtcTimestamp<TModel>(string id, DateTime dateTimeUpTo) where TModel : IAtomicReadModel
-		{
-			var readmodel = _atomicReadModelFactory.Create<TModel>(id);
-			var subscription = new AtomicReadModelSubscription<TModel>(_commitEnhancer, readmodel, cs => cs.GetTimestamp() > dateTimeUpTo);
-			await _persistence.ReadForwardAsync(id, 0, subscription, Int64.MaxValue).ConfigureAwait(false);
-			return readmodel.AggregateVersion == 0 ? default : readmodel;
-		}
-
-		public async Task<MultiStreamProcessorResult> ProcessAsync(IReadOnlyCollection<MultiStreamProcessRequest> request, long checkpointUpToIncluded)
-		{
-			if (request is null)
-			{
-				throw new ArgumentNullException(nameof(request));
-			}
-
-			//Need to prepare readmodel
-			var rmDictionary = request.ToDictionary(
-				r => r.AggregateId,
-				r => ReadModelProjectionInstruction.SimpleProjection(r.ReadmodelTypes.Select(t => _atomicReadModelFactory.Create(t, r.AggregateId)).ToList()));
-
-			var subscription = new AtomicReadmodelMultiAggregateSubscription(_commitEnhancer, rmDictionary, cs => cs.GetChunkPosition() > checkpointUpToIncluded);
-			var idList = request.Select(r => r.AggregateId).ToList();
-			await _persistence.ReadForwardMultiplePartitionsAsync(idList, 0, subscription, checkpointUpToIncluded).ConfigureAwait(false);
-			return new MultiStreamProcessorResult(rmDictionary.Values.Select(v => v.Readmodels));
-		}
-
-		public async Task<MultiStreamProcessorResult> ProcessAsync(IReadOnlyCollection<MultiStreamProcessRequest> request, DateTime dateTimeUpTo)
-		{
-			if (request is null)
-			{
-				throw new ArgumentNullException(nameof(request));
-			}
+        public async Task<MultiStreamProcessorResult> ProcessAsync(IReadOnlyCollection<MultiStreamProcessRequest> request, DateTime dateTimeUpTo)
+        {
+            if (request is null)
+            {
+                throw new ArgumentNullException(nameof(request));
+            }
 
             //Need to prepare readmodel
             var rmDictionary = request.ToDictionary(
@@ -114,20 +149,20 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 r => ReadModelProjectionInstruction.SimpleProjection(r.ReadmodelTypes.Select(t => _atomicReadModelFactory.Create(t, r.AggregateId)).ToList()));
 
             var subscription = new AtomicReadmodelMultiAggregateSubscription(_commitEnhancer, rmDictionary, cs => cs.GetTimestamp() > dateTimeUpTo);
-			var idList = request.Select(r => r.AggregateId).ToList();
-			await _persistence.ReadForwardMultiplePartitionsAsync(idList, 0, subscription, Int32.MaxValue).ConfigureAwait(false);
-			return new MultiStreamProcessorResult(rmDictionary.Values.Select(v => v.Readmodels));
-		}
+            var idList = request.Select(r => r.AggregateId).ToList();
+            await _persistence.ReadForwardMultiplePartitionsAsync(idList, 0, subscription, Int32.MaxValue).ConfigureAwait(false);
+            return new MultiStreamProcessorResult(rmDictionary.Values.Select(v => v.Readmodels));
+        }
 
-		/// <inheritdoc/>
-		public async Task<MultipleReadmodelProjectionResult> ProcessAsync(IEnumerable<Type> types, string id, long versionUpTo)
-		{
-			//Stop condition is version greater than the version we want to apply
-			List<IAtomicReadModel> readModels = types.Select(rmt => _atomicReadModelFactory.Create(rmt, id)).ToList();
-			var subscription = new MultipleAtomicReadModelSubscription(_commitEnhancer, readModels, cs => cs.AggregateVersion > versionUpTo);
-			await _persistence.ReadForwardAsync(id, 0, subscription).ConfigureAwait(false);
-			return new MultipleReadmodelProjectionResult(readModels);
-		}
+        /// <inheritdoc/>
+        public async Task<MultipleReadmodelProjectionResult> ProcessAsync(IEnumerable<Type> types, string id, long versionUpTo)
+        {
+            //Stop condition is version greater than the version we want to apply
+            List<IAtomicReadModel> readModels = types.Select(rmt => _atomicReadModelFactory.Create(rmt, id)).ToList();
+            var subscription = new MultipleAtomicReadModelSubscription(_commitEnhancer, readModels, cs => cs.AggregateVersion > versionUpTo);
+            await _persistence.ReadForwardAsync(id, 0, subscription).ConfigureAwait(false);
+            return new MultipleReadmodelProjectionResult(readModels);
+        }
 
         /// <inheritdoc/>
         public async Task<MultiStreamProcessorResult> ProcessAsync(IReadOnlyCollection<CheckpointMultiStreamProcessRequest> request)
@@ -154,20 +189,38 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
         /// <inheritdoc/>
         public async Task<MultipleReadmodelProjectionResult> ProcessAsyncUntilChunkPosition(IEnumerable<Type> types, string id, long positionUpTo)
-		{
-			List<IAtomicReadModel> readModels = types.Select(rmt => _atomicReadModelFactory.Create(rmt, id)).ToList();
-			var subscription = new MultipleAtomicReadModelSubscription(_commitEnhancer, readModels, cs => cs.GetChunkPosition() > positionUpTo);
-			await _persistence.ReadForwardAsync(id, 0, subscription, Int64.MaxValue).ConfigureAwait(false);
-			return new MultipleReadmodelProjectionResult(readModels);
-		}
+        {
+            List<IAtomicReadModel> readModels = types.Select(rmt => _atomicReadModelFactory.Create(rmt, id)).ToList();
+            var subscription = new MultipleAtomicReadModelSubscription(_commitEnhancer, readModels, cs => cs.GetChunkPosition() > positionUpTo);
+            await _persistence.ReadForwardAsync(id, 0, subscription, Int64.MaxValue).ConfigureAwait(false);
+            return new MultipleReadmodelProjectionResult(readModels);
+        }
 
-		/// <inheritdoc/>
-		public async Task<MultipleReadmodelProjectionResult> ProcessAsyncUntilUtcTimestamp<TModel>(IEnumerable<Type> types, string id, DateTime dateTimeUpTo)
-		{
-			List<IAtomicReadModel> readModels = types.Select(rmt => _atomicReadModelFactory.Create(rmt, id)).ToList();
-			var subscription = new MultipleAtomicReadModelSubscription(_commitEnhancer, readModels, cs => cs.GetTimestamp() > dateTimeUpTo);
-			await _persistence.ReadForwardAsync(id, 0, subscription, Int64.MaxValue).ConfigureAwait(false);
-			return new MultipleReadmodelProjectionResult(readModels);
-		}
+        /// <inheritdoc/>
+        public async Task<MultipleReadmodelProjectionResult> ProcessAsyncUntilUtcTimestamp<TModel>(IEnumerable<Type> types, string id, DateTime dateTimeUpTo)
+        {
+            List<IAtomicReadModel> readModels = types.Select(rmt => _atomicReadModelFactory.Create(rmt, id)).ToList();
+            var subscription = new MultipleAtomicReadModelSubscription(_commitEnhancer, readModels, cs => cs.GetTimestamp() > dateTimeUpTo);
+            await _persistence.ReadForwardAsync(id, 0, subscription, Int64.MaxValue).ConfigureAwait(false);
+            return new MultipleReadmodelProjectionResult(readModels);
+        }
+
+        #region Cache management
+
+        private async Task<TModel> GetReadmodelFromCache<TModel>(
+            string id,
+            Func<Task<TModel>> cacheFunctionGetAsync) where TModel : IAtomicReadModel
+        {
+            TModel cachedReadmodel = await cacheFunctionGetAsync();
+            var readmodel = _atomicReadModelFactory.Create<TModel>(id);
+            if (cachedReadmodel != null && cachedReadmodel.ReadModelVersion == readmodel.ReadModelVersion)
+            {
+                readmodel = cachedReadmodel;
+            }
+
+            return readmodel;
+        }
+
+        #endregion
     }
 }
