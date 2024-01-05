@@ -24,9 +24,9 @@
     <PackageReference Include="MongoDB.Driver.Core" Version="2.23.1" />
     <PackageReference Include="MongoDB.Libmongocrypt" Version="1.8.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="NStore.Core" Version="0.16.1" />
-    <PackageReference Include="NStore.Domain" Version="0.16.1" />
-    <PackageReference Include="NStore.Persistence.Mongo" Version="0.16.1" />
+    <PackageReference Include="NStore.Core" Version="0.17.0" />
+    <PackageReference Include="NStore.Domain" Version="0.17.0" />
+    <PackageReference Include="NStore.Persistence.Mongo" Version="0.17.0" />
     <PackageReference Include="NSubstitute" Version="4.3.0" />
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="8.0.0" />
     <PackageReference Include="NUnit" Version="4.0.1" />
