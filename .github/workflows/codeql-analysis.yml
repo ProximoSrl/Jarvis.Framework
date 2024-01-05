@@ -73,7 +73,7 @@ jobs:
     - name: Setup .NET Core SDK
       uses: actions/setup-dotnet@v1.7.2
       with:
-        dotnet-version: 6.0.400
+        dotnet-version: 7.x
      
     - run: dotnet restore ./Jarvis.Framework.sln --configfile $GITHUB_WORKSPACE/NuGet.Config
       
