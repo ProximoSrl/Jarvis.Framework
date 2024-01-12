@@ -155,11 +155,11 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 			Assert.That(allEvents.Count, Is.EqualTo(2));
 			var rawEvent = allEvents[0];
 			var evt = rawEvent.GetEvent() as DomainEvent;
-			Assert.False(evt.Context.Any(e => e.Key == ChangesetCommonHeaders.Command));
+            NUnit.Framework.Legacy.ClassicAssert.False(evt.Context.Any(e => e.Key == ChangesetCommonHeaders.Command));
 
 			rawEvent = allEvents[1];
 			evt = rawEvent.GetEvent() as DomainEvent;
-			Assert.False(evt.Context.Any(e => e.Key == ChangesetCommonHeaders.Command));
+            NUnit.Framework.Legacy.ClassicAssert.False(evt.Context.Any(e => e.Key == ChangesetCommonHeaders.Command));
 		}
 
 		[Test]

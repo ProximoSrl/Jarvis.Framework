@@ -49,7 +49,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 			await Repository.SaveAsync(aggregate, Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
 
 			Boolean checkpointPassed = WaitForCheckpoint(1);
-			Assert.IsTrue(checkpointPassed, "Automatic poller does not work.");
+			NUnit.Framework.Legacy.ClassicAssert.IsTrue(checkpointPassed, "Automatic poller does not work.");
 
 			Engine.Stop();
 
@@ -58,12 +58,12 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 			await Repository.SaveAsync(aggregate, Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
 
 			checkpointPassed = WaitForCheckpoint(2);
-			Assert.IsFalse(checkpointPassed, "Automatic poller is still working after stop.");
+			NUnit.Framework.Legacy.ClassicAssert.IsFalse(checkpointPassed, "Automatic poller is still working after stop.");
 
 			await Engine.StartAsync(100).ConfigureAwait(false);
 
 			checkpointPassed = WaitForCheckpoint(2);
-			Assert.IsTrue(checkpointPassed, "Automatic poller is not restarted correctly.");
+			NUnit.Framework.Legacy.ClassicAssert.IsTrue(checkpointPassed, "Automatic poller is not restarted correctly.");
 		}
 
 		private Boolean WaitForCheckpoint(Int64 checkpointToken)

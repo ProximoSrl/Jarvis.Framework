@@ -71,7 +71,7 @@ namespace Jarvis.Framework.Tests.EngineTests.SagaTests
             //Verify that we can save the saga.
             await repo.SaveAsync(saga, Guid.NewGuid().ToString(), null).ConfigureAwait(false);
 
-            Assert.AreEqual(4, events.Events.Length);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(4, events.Events.Length);
         }
 
         [Test]
@@ -97,7 +97,7 @@ namespace Jarvis.Framework.Tests.EngineTests.SagaTests
 
             Assert.That(sagaReloaded, Is.Not.Null);
             var events = ((IEventSourcedAggregate)saga).GetChangeSet();
-            Assert.AreEqual(0, events.Events.Length);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(0, events.Events.Length);
         }
 
         [Test]
@@ -142,10 +142,10 @@ namespace Jarvis.Framework.Tests.EngineTests.SagaTests
             var received = new PaymentReceived(orderId, Guid.NewGuid());
             var delivered = new PizzaDelivered(orderId);
             var prefix = listener.Prefix;
-            Assert.AreEqual(prefix + (string)orderId, listener.GetCorrelationId(placed));
-            Assert.AreEqual(prefix + (string)orderId, listener.GetCorrelationId(printed));
-            Assert.AreEqual(prefix + (string)orderId, listener.GetCorrelationId(received));
-            Assert.AreEqual(prefix + (string)orderId, listener.GetCorrelationId(delivered));
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(prefix + (string)orderId, listener.GetCorrelationId(placed));
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(prefix + (string)orderId, listener.GetCorrelationId(printed));
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(prefix + (string)orderId, listener.GetCorrelationId(received));
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(prefix + (string)orderId, listener.GetCorrelationId(delivered));
         }
 
         [Test]
@@ -159,10 +159,10 @@ namespace Jarvis.Framework.Tests.EngineTests.SagaTests
             var received = new PaymentReceived(orderId, Guid.NewGuid());
             var delivered = new PizzaDelivered(orderId);
 
-            Assert.AreEqual("DeliverPizzaSaga2_" + (string)orderId, listener.GetCorrelationId(placed));
-            Assert.AreEqual("DeliverPizzaSaga2_" + (string)orderId, listener.GetCorrelationId(printed));
-            Assert.AreEqual("DeliverPizzaSaga2_" + (string)orderId, listener.GetCorrelationId(received));
-            Assert.AreEqual("DeliverPizzaSaga2_" + (string)orderId, listener.GetCorrelationId(delivered));
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual("DeliverPizzaSaga2_" + (string)orderId, listener.GetCorrelationId(placed));
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual("DeliverPizzaSaga2_" + (string)orderId, listener.GetCorrelationId(printed));
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual("DeliverPizzaSaga2_" + (string)orderId, listener.GetCorrelationId(received));
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual("DeliverPizzaSaga2_" + (string)orderId, listener.GetCorrelationId(delivered));
         }
     }
 

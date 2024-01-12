@@ -41,7 +41,7 @@ namespace Jarvis.Framework.Tests.ServicesTests
         public void Create_first()
         {
             var first = _service.GetNext("test");
-            Assert.AreEqual(1, first);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(1, first);
         }
 
         [Test]
@@ -50,7 +50,7 @@ namespace Jarvis.Framework.Tests.ServicesTests
             var serie = Guid.NewGuid().ToString();
             _service.EnsureMinimumValue(serie, 1023);
             var generated = _service.GetNext(serie);
-            Assert.AreEqual(1023, generated);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(1023, generated);
         }
 
         [Test]
@@ -58,7 +58,7 @@ namespace Jarvis.Framework.Tests.ServicesTests
         {
             _service.GetNext("test");
             var second = _service.GetNext("test");
-            Assert.AreEqual(2, second);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(2, second);
         }
 
         /// <summary>

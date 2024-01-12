@@ -104,7 +104,7 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             var instance = new TestAbstractId(1);
             var json = instance.ToJson();
 
-            Assert.AreEqual("\"TestAbstract_1\"", json);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual("\"TestAbstract_1\"", json);
         }
 
         [Test]
@@ -113,7 +113,7 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             var instance = new WithAbstractId() { AbstractId = new TestAbstractId(42) };
             var json = instance.ToJson();
 
-            Assert.AreEqual("{ \"AbstractId\" : \"TestAbstract_42\" }", json);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual("{ \"AbstractId\" : \"TestAbstract_42\" }", json);
         }
 
         [Test]

@@ -29,7 +29,7 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
 
             //now serialize back
             var deserialzed = JsonConvert.DeserializeObject<SampleAggregateId>(serialized, new EventStoreIdentityJsonConverter(_identityManager));
-            Assert.AreEqual(id, deserialzed);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(id, deserialzed);
         }
 
         [Test]
@@ -42,7 +42,7 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
 
             //now serialize back
             var deserialzed = JsonConvert.DeserializeObject<WithId>(serialized, new EventStoreIdentityJsonConverter(_identityManager));
-            Assert.AreEqual(obj.MyId, deserialzed.MyId);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(obj.MyId, deserialzed.MyId);
         }
 
         [Test]
@@ -62,7 +62,7 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
 
             //now serialize back
             var deserialzed = JsonConvert.DeserializeObject<WithId>(serialized, new EventStoreIdentityJsonConverter(_identityManager));
-            Assert.AreEqual(obj.MyId, deserialzed.MyId);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(obj.MyId, deserialzed.MyId);
         }
 
         [Test]

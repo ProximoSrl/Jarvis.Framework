@@ -33,7 +33,7 @@ namespace Jarvis.Framework.Tests.MultitenantSupportTests
         public void asking_for_an_invalid_tenant_should_return_null()
         {
             var tenant = _manager.GetTenant(new TenantId("not_found"));
-            Assert.AreSame(NullTenant.Instance, tenant);
+            NUnit.Framework.Legacy.ClassicAssert.AreSame(NullTenant.Instance, tenant);
         }
 
         [Test]
@@ -42,7 +42,7 @@ namespace Jarvis.Framework.Tests.MultitenantSupportTests
             _manager.AddTenant(_settings_a);
             var tenant = _manager.GetTenant(_tenant_a);
 
-            Assert.NotNull(tenant);
+            NUnit.Framework.Legacy.ClassicAssert.NotNull(tenant);
         }
 
         [Test]
@@ -54,7 +54,7 @@ namespace Jarvis.Framework.Tests.MultitenantSupportTests
                 _manager.AddTenant(_settings_a);
             });
 
-            Assert.AreEqual(_tenant_a, ex.TenantId);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(_tenant_a, ex.TenantId);
         }
     }
 }

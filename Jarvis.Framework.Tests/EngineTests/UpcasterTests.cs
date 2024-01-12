@@ -210,7 +210,7 @@ namespace Jarvis.Framework.Tests.EngineTests
         public void Upcast_should_be_resilient_to_null()
         {
             var upcasted = StaticUpcaster.UpcastChangeset(null);
-            Assert.IsNull(upcasted);
+            NUnit.Framework.Legacy.ClassicAssert.IsNull(upcasted);
         }
 
         [Test]

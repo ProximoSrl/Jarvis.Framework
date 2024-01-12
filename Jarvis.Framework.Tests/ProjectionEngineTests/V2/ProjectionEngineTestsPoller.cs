@@ -48,7 +48,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             await Repository.SaveAsync(aggregate, Guid.NewGuid().ToString(), h => { }).ConfigureAwait(false);
 
             await Engine.UpdateAndWaitAsync().ConfigureAwait(false);
-            Assert.AreEqual(1, reader.AllSortedById.Count());
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(1, reader.AllSortedById.Count());
 
             aggregate = await Repository.GetByIdAsync<SampleAggregate>(new SampleAggregateId(2)).ConfigureAwait(false);
             aggregate.Create();
@@ -56,7 +56,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 
             await Engine.UpdateAndWaitAsync().ConfigureAwait(false);
 
-            Assert.AreEqual(2, reader.AllSortedById.Count());
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(2, reader.AllSortedById.Count());
         }
     }
 

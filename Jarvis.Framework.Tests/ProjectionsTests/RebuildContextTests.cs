@@ -30,7 +30,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
                 Id = "a"
             };
             _inmemoryCollection.Save(model);
-            Assert.AreEqual(1, _inmemoryCollection.GetAll().Count());
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(1, _inmemoryCollection.GetAll().Count());
         }
 
         [Test]
@@ -44,8 +44,8 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
 
             var loaded = _inmemoryCollection.GetById("a");
 
-            Assert.AreSame(model, loaded);
-            Assert.AreEqual(1, _inmemoryCollection.GetAll().Count());
+            NUnit.Framework.Legacy.ClassicAssert.AreSame(model, loaded);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(1, _inmemoryCollection.GetAll().Count());
         }
 
         [Test]
@@ -59,7 +59,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
 
             _inmemoryCollection.Delete("a");
 
-            Assert.AreEqual(0, _inmemoryCollection.GetAll().Count());
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(0, _inmemoryCollection.GetAll().Count());
         }
 
         [Test]
@@ -73,7 +73,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
             
             _inmemoryCollection.Clear();
 
-            Assert.AreEqual(0, _inmemoryCollection.GetAll().Count());
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(0, _inmemoryCollection.GetAll().Count());
         }
 
         [Test]
@@ -87,7 +87,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
             _inmemoryCollection.Insert(model);
 
             var ex = Assert.Throws<DuplicatedElementException>(() => _inmemoryCollection.Insert(model));
-            Assert.AreEqual("Duplicated element with id a", ex.Message);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual("Duplicated element with id a", ex.Message);
         }
     }
 }

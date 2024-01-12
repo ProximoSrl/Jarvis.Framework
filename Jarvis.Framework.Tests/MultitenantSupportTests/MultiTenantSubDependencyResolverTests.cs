@@ -57,7 +57,7 @@ namespace Jarvis.Framework.Tests.MultitenantSupportTests
         public void resolving_a_component_with_tenant_dependency_outside_a_tenant_context_should_resolve_null_tenant()
         {
             var service = _container.Resolve<Service>();
-            Assert.AreSame(NullTenant.Instance, service.Tenant);
+            NUnit.Framework.Legacy.ClassicAssert.AreSame(NullTenant.Instance, service.Tenant);
         }
 
         [Test]
@@ -65,7 +65,7 @@ namespace Jarvis.Framework.Tests.MultitenantSupportTests
         {
             TenantContext.Enter(new TenantId("not_yet_registered_in_container"));
             var service = _container.Resolve<Service>();
-            Assert.AreSame(NullTenant.Instance, service.Tenant);
+            NUnit.Framework.Legacy.ClassicAssert.AreSame(NullTenant.Instance, service.Tenant);
         }
 
         [Test]
@@ -78,7 +78,7 @@ namespace Jarvis.Framework.Tests.MultitenantSupportTests
             TenantContext.Enter(tenantId);
             var service = _container.Resolve<Service>();
 
-            Assert.AreSame(_tenantManager.GetTenant(tenantId), service.Tenant);
+            NUnit.Framework.Legacy.ClassicAssert.AreSame(_tenantManager.GetTenant(tenantId), service.Tenant);
         }
 
         [Test]
@@ -94,8 +94,8 @@ namespace Jarvis.Framework.Tests.MultitenantSupportTests
             TenantContext.Enter(tenant_b);
             var service_b = _container.Resolve<Service>();
 
-            Assert.AreSame(_tenantManager.GetTenant(tenant_a), service_a.Tenant);
-            Assert.AreSame(_tenantManager.GetTenant(tenant_b), service_b.Tenant);
+            NUnit.Framework.Legacy.ClassicAssert.AreSame(_tenantManager.GetTenant(tenant_a), service_a.Tenant);
+            NUnit.Framework.Legacy.ClassicAssert.AreSame(_tenantManager.GetTenant(tenant_b), service_b.Tenant);
         }
 
         [Test]
@@ -108,10 +108,10 @@ namespace Jarvis.Framework.Tests.MultitenantSupportTests
             TenantContext.Enter(tenant_a);
             using (var service = _container.Resolve<DisposableService>())
             {
-                Assert.AreSame(tenant, service.Tenant);
+                NUnit.Framework.Legacy.ClassicAssert.AreSame(tenant, service.Tenant);
             }
 
-            Assert.IsFalse(tenant.HasBeedDisposed);
+            NUnit.Framework.Legacy.ClassicAssert.IsFalse(tenant.HasBeedDisposed);
         }
     }
 }

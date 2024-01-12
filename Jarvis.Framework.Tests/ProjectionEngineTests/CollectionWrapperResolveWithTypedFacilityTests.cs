@@ -48,7 +48,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         public void ResolveCollectionWrapper_using_TypedFactoryFacility_Failure()
         {
             var c = _container.Resolve<ICollectionWrapper<SampleReadModelTest, String>>();
-            Assert.IsNotNull(c);
+            NUnit.Framework.Legacy.ClassicAssert.IsNotNull(c);
             Assert.That(c.TransformForNotification.Target.ToString().Contains("Castle.Proxies"));
             Assert.Throws<ComponentNotFoundException>(() =>
             {
@@ -91,8 +91,8 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         public void ResolveCollectionWrapper_using_JarvisTypedFactoryFacility_Success()
         {
             var c = _container.Resolve<ICollectionWrapper<SampleReadModelTest, String>>();
-            Assert.IsNotNull(c, "Resolved collection should not be null");
-            Assert.IsNotNull(c.TransformForNotification, "TransformForNotification should not be null.");
+            NUnit.Framework.Legacy.ClassicAssert.IsNotNull(c, "Resolved collection should not be null");
+            NUnit.Framework.Legacy.ClassicAssert.IsNotNull(c.TransformForNotification, "TransformForNotification should not be null.");
 
             Assert.That(c.TransformForNotification.Target == null || !c.TransformForNotification.Target.ToString().Contains("Castle.Proxies"));
             Assert.DoesNotThrow(() =>

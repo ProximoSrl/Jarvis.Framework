@@ -46,9 +46,9 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
 
             var loaded = _collection.Where(x => x.Id == evt.AggregateId.AsString()).Single();
 
-            Assert.AreEqual(10001, loaded.LastEventIndexProjected);
-            Assert.AreEqual("one", loaded.Text);
-            Assert.AreEqual(1, SpyNotifier.Counter);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(10001, loaded.LastEventIndexProjected);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual("one", loaded.Text);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(1, SpyNotifier.Counter);
         }
 
         [Test]
@@ -67,9 +67,9 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
 
             var loaded = _collection.Where(x => x.Id == insert.AggregateId.AsString()).Single();
 
-            Assert.AreEqual(20002, loaded.LastEventIndexProjected);
-            Assert.AreEqual("update 2", loaded.Text);
-            Assert.AreEqual(3, SpyNotifier.Counter);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(20002, loaded.LastEventIndexProjected);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual("update 2", loaded.Text);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(3, SpyNotifier.Counter);
 
             //re-test with the second event, we need to be pretty sure that everyting works with both the events
             update2.Text = "skipped update 2";
@@ -77,9 +77,9 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
 
             loaded = _collection.Where(x => x.Id == insert.AggregateId.AsString()).Single();
 
-            Assert.AreEqual(20002, loaded.LastEventIndexProjected);
-            Assert.AreEqual("update 2", loaded.Text);
-            Assert.AreEqual(3, SpyNotifier.Counter);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(20002, loaded.LastEventIndexProjected);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual("update 2", loaded.Text);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(3, SpyNotifier.Counter);
         }
 
         [Test]
@@ -94,7 +94,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
 
             var loaded = await _collection.FindOneByIdAsync(delete.AggregateId.AsString()).ConfigureAwait(false);
 
-            Assert.IsNull(loaded);
+            NUnit.Framework.Legacy.ClassicAssert.IsNull(loaded);
         }
 
         [Test]
@@ -107,7 +107,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
             await _projection.On(delete).ConfigureAwait(false);
             await _projection.On(delete).ConfigureAwait(false);
 
-            Assert.AreEqual(2, SpyNotifier.Counter);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(2, SpyNotifier.Counter);
         }
 
         [Test]
@@ -128,8 +128,8 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
 
             var saved = _collection.All.FirstOrDefault(x => x.Id == insert.AggregateId.AsString());
 
-            Assert.IsNotNull(saved);
-            Assert.AreEqual("created", saved.Text);
+            NUnit.Framework.Legacy.ClassicAssert.IsNotNull(saved);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual("created", saved.Text);
         }
 
         [Test]
@@ -158,14 +158,14 @@ namespace Jarvis.Framework.Tests.ProjectionsTests
 
             var saved = _collection.All.FirstOrDefault(x => x.Id == insert.AggregateId.AsString());
 
-            Assert.IsNotNull(saved);
-            Assert.AreEqual("updated", saved.Text);
+            NUnit.Framework.Legacy.ClassicAssert.IsNotNull(saved);
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual("updated", saved.Text);
         }
 
         [Test]
         public async Task Collection_has_index()
         {
-            Assert.IsTrue
+            NUnit.Framework.Legacy.ClassicAssert.IsTrue
             (
                 await _collection.IndexExistsAsync(MyProjection.IndexName).ConfigureAwait(false)
             );
