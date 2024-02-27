@@ -2,6 +2,12 @@
 
 ## vNext
 
+- Added a TryGetTag for IIDentityTranslator also fixed some bugs.
+
+## 7.6.0
+
+- Updated nunit and mongodb driver.
+
 ## 7.5.1
 
 - Fixed dispatch of the process manager.

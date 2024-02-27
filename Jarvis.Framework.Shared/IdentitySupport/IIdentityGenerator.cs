@@ -14,13 +14,13 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         /// </summary>
         /// <typeparam name="TIdentity">Type of the identity to generate.</typeparam>
         /// <returns>The newly generated identity</returns>
-        TIdentity New<TIdentity>();
+        TIdentity New<TIdentity>() where TIdentity : IIdentity;
 
         /// <summary>
         /// Generate the next identity for a given type.
         /// </summary>
         /// <typeparam name="TIdentity">Type of the identity to generate.</typeparam>
         /// <returns>The newly generated identity</returns>
-        Task<TIdentity> NewAsync<TIdentity>();
+        Task<TIdentity> NewAsync<TIdentity>() where TIdentity : IIdentity;
     }
 }

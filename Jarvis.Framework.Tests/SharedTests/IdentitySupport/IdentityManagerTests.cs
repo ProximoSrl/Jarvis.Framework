@@ -99,5 +99,129 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             Assert.ThrowsAsync<JarvisFrameworkEngineException>(
                 async () => await sut.ForceNextIdAsync<TestId>(nextId.Id));
         }
+
+        [TestCase("Test_1", true, 1)]
+        [TestCase("Test_2", true, 2)]
+        [TestCase("Test_9223372036854775808", false, 2)]
+        [TestCase("Test_9223372036854775807", true, 9223372036854775807L)]
+        [TestCase("Test_banana", false, 0)]
+        [TestCase("_2", false, 0)]
+        public void Verify_to_identity(string id, bool expected, long expectedId)
+        {
+            IIdentity result = null;
+            try
+            {
+                result = sut.ToIdentity(id);
+                if (!expected)
+                {
+                    Assert.Fail("Expected exception for invalid identity");
+                }
+            }
+            catch (Exception)
+            {
+                if (expected)
+                {
+                    Assert.Fail("Unexpected exception for valid identity");
+                }
+            }
+
+            if (expected)
+            {
+                Assert.That(result, Is.EqualTo(new TestId(expectedId)));
+            }
+        }
+
+        [TestCase("Test_1", true, 1)]
+        [TestCase("Test_2", true, 2)]
+        [TestCase("Test_9223372036854775808", false, 2)]
+        [TestCase("Test_9223372036854775807", true, 9223372036854775807L)]
+        [TestCase("Test_banana", false, 0)]
+        [TestCase("_2", false, 0)]
+        public void Verify_to_identity_typed(string id, bool expected, long expectedId)
+        {
+            IIdentity result = null;
+            try
+            {
+                result = sut.ToIdentity<TestId>(id);
+                if (!expected)
+                {
+                    Assert.Fail("Expected exception for invalid identity");
+                }
+            }
+            catch (Exception)
+            {
+                if (expected)
+                {
+                    Assert.Fail("Unexpected exception for valid identity");
+                }
+            }
+
+            if (expected)
+            {
+                Assert.That(result, Is.EqualTo(new TestId(expectedId)));
+            }
+        }
+
+        [Test]
+        public void Verify_to_identity_typed_with_wrong_type()
+        {
+            IIdentity result = null;
+            Assert.Throws<JarvisFrameworkIdentityException>(() => result = sut.ToIdentity<TestFlatId>("Test_123"));
+        }
+
+        [TestCase("Test_1", true, 1)]
+        [TestCase("Test_2", true, 2)]
+        [TestCase("Test_9223372036854775808", false, 2)]
+        [TestCase("Test_9223372036854775807", true, 9223372036854775807L)]
+        [TestCase("Test_banana", false, 0)]
+        [TestCase("_2", false, 0)]
+        [TestCase("", false, 0)]
+        [TestCase(null, false, 0)]
+        public void Verify_try_parse(string id, bool expected, long expectedId)
+        {
+            var result = sut.TryParse(id, out TestId typedIdentity);
+            Assert.That(result, Is.EqualTo(expected));
+            if (expected)
+            {
+                Assert.That(typedIdentity, Is.EqualTo(new TestId(expectedId)));
+            }
+        }
+
+        /// <summary>
+        /// Verify that we can parse an identity using the base interface
+        /// </summary>
+        [Test]
+        public void Verify_try_parse_with_base_interface()
+        {
+            var result = sut.TryParse<IIdentity>("Test_234", out var typedIdentity);
+            Assert.That(result, Is.True);
+            Assert.That(typedIdentity, Is.EqualTo(new TestId("Test_234")));
+        }
+
+        [Test]
+        public void Verify_try_parse_with_different_id()
+        {
+            var result = sut.TryParse<TestFlatId>("Test_234", out var typedIdentity);
+            Assert.That(result, Is.False);
+            Assert.That(typedIdentity, Is.EqualTo(null));
+        }
+
+        [TestCase("Test_1", true, "Test")]
+        [TestCase(null, false, "")]
+        [TestCase("", false, "")]
+        [TestCase("Test_2", true, "Test")]
+        [TestCase("Test_a2", false, "")]
+        [TestCase("Test_2a", false, "")]
+        [TestCase("Test_9223372036854775808", false, "")]
+        [TestCase("_1", false, "")]
+        [TestCase("Test_9223372036854775807", true, "Test")]
+        [TestCase("NotAnId_2", false, "")]
+        [TestCase("Test_banana", false, "")]
+        public void Verify_try_get_tag(string id, bool expected, string expectedTag)
+        {
+            var result = sut.TryGetTag(id, out string tag);
+            Assert.That(result, Is.EqualTo(expected));
+            Assert.That(tag, Is.EqualTo(expectedTag));
+        }
     }
 }

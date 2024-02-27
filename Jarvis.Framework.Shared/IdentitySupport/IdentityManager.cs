@@ -41,22 +41,33 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             {
                 throw new JarvisFrameworkIdentityException(string.Format("invalid identity value {0}", identityAsString));
             }
-            
+
             var tag = identityAsString.Substring(0, pos);
-            if (!ulong.TryParse(identityAsString.Substring(pos + 1), out var id))
+            if (!long.TryParse(identityAsString.Substring(pos + 1), out var id))
             {
                 throw new JarvisFrameworkIdentityException(string.Format("invalid identity value {0}", identityAsString));
             }
+
+            if (id < 0)
+            {
+                throw new JarvisFrameworkIdentityException(string.Format("invalid identity value {0} - id value greater than long.maxvalue", identityAsString));
+            }
+
             if (!_longBasedFactories.TryGetValue(tag, out Func<long, IIdentity> factory))
             {
                 throw new JarvisFrameworkIdentityException(string.Format("{0} not registered in IdentityManager", tag));
             }
-            return factory((long) id);
+            return factory(id);
         }
 
-        public TIdentity ToIdentity<TIdentity>(string identityAsString)
+        public TIdentity ToIdentity<TIdentity>(string identityAsString) where TIdentity : IIdentity
         {
-            return (TIdentity)this.ToIdentity(identityAsString);
+            var identity = ToIdentity(identityAsString);
+            if (identity is TIdentity typedIdentity)
+            {
+                return typedIdentity;
+            }
+            throw new JarvisFrameworkIdentityException(string.Format("Identity {0} is not of type {1}", identityAsString, typeof(TIdentity).FullName));
         }
 
         public void RegisterIdentitiesFromAssembly(Assembly assembly)
@@ -86,7 +97,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                 throw new JarvisFrameworkEngineException("Found identities with errors:\n" + errors);
         }
 
-        public TIdentity New<TIdentity>()
+        public TIdentity New<TIdentity>() where TIdentity : IIdentity
         {
             var tag = EventStoreIdentity.GetTagForIdentityClass(typeof(TIdentity));
             Func<long, IIdentity> factory = GetFactoryForTag(tag);
@@ -94,7 +105,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             return (TIdentity)factory(_counterService.GetNext(tag));
         }
 
-        public async Task<TIdentity> NewAsync<TIdentity>()
+        public async Task<TIdentity> NewAsync<TIdentity>() where TIdentity : IIdentity
         {
             var tag = EventStoreIdentity.GetTagForIdentityClass(typeof(TIdentity));
             Func<long, IIdentity> factory = GetFactoryForTag(tag);
@@ -113,39 +124,84 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             return factory;
         }
 
-        public bool TryParse<T>(string id, out T typedIdentity) where T : class, IIdentity
+        public bool TryParse<T>(string id, out T typedIdentity) where T : IIdentity
         {
-            try
+            typedIdentity = default;
+            if (!TryGetTag(id, out var tag, out var longId, out var factoryFunc))
             {
-                typedIdentity = ToIdentity<T>(id);
-                if (typedIdentity == null)
-                {
-                    return false;
-                }
+                return false;
+            }
+
+            //ok we can generate the id but we need to check if returned id is of the correct type.
+            var createdIdentity = factoryFunc(longId);
+            if (createdIdentity is T correctIdentity)
+            {
+                typedIdentity = correctIdentity;
                 return true;
             }
-#pragma warning disable S2486 // Generic exceptions should not be ignored
-            catch
-#pragma warning disable S108 // Nested blocks of code should not be left empty
-            {
-            }
-#pragma warning restore S108 // Nested blocks of code should not be left empty
-#pragma warning restore S2486 // Generic exceptions should not be ignored
 
-            typedIdentity = default(T);
             return false;
         }
 
         public Task ForceNextIdAsync<TIdentity>(long nextIdToReturn)
         {
             var tag = EventStoreIdentity.GetTagForIdentityClass(typeof(TIdentity));
-            return _counterService.ForceNextIdAsync(tag, nextIdToReturn);    
+            return _counterService.ForceNextIdAsync(tag, nextIdToReturn);
         }
 
         public Task<long> PeekNextIdAsync<TIdentity>()
         {
             var tag = EventStoreIdentity.GetTagForIdentityClass(typeof(TIdentity));
             return _counterService.PeekNextAsync(tag);
+        }
+
+        public bool TryGetTag(string id, out string tag)
+        {
+            return TryGetTag(id, out tag, out var _, out var __);
+        }
+
+        private bool TryGetTag(string id, out string tag, out long longId, out Func<long, IIdentity> factoryFunc)
+        {
+            longId = 0;
+            tag = String.Empty;
+            factoryFunc = null;
+            if (string.IsNullOrEmpty(id))
+            {
+                return false;
+            }
+
+            //then we check for the separator, if not present is not an id.
+            var pos = id.IndexOf(EventStoreIdentity.Separator);
+            if (pos < 1)
+            {
+                return false;
+            }
+
+            //everything after the separator must be a digit
+            StringBuilder sb = new StringBuilder(20);
+            for (int i = pos + 1; i < id.Length; i++)
+            {
+                if (!char.IsDigit(id[i]))
+                {
+                    return false;
+                }
+
+                sb.Append(id[i]);
+            }
+
+            //now we need to parse the long id
+            if (!long.TryParse(sb.ToString(), out longId))
+            {
+                return false;
+            }
+
+            tag = id.Substring(0, pos);
+            if (!_longBasedFactories.TryGetValue(tag, out factoryFunc))
+            {
+                tag = string.Empty;
+                return false;
+            }
+            return true;
         }
     }
 }
