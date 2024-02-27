@@ -2,6 +2,8 @@
 
 ## vNext
 
+## 7.7.0
+
 - Added a TryGetTag for IIDentityTranslator also fixed some bugs.
 
 ## 7.6.0
