@@ -156,20 +156,19 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                             fixCheckpoint = elementToFix.ProjectedPosition;
                             count++;
                             _logger.DebugFormat("Fixing readmodel {0}", elementToFix.Id);
-                            T fixedRm = default(T);
+
+                            //To avoid problem with exception we will create a readmodel without any event then catchup
+                            T fixedRm = _atomicReadModelFactory.Create<T>(elementToFix.Id);
                             try
                             {
-                                fixedRm = await _liveAtomicReadModelProcessor.ProcessAsync<T>(elementToFix.Id, Int32.MaxValue).ConfigureAwait(false);
+                                await _liveAtomicReadModelProcessor.CatchupAsync(fixedRm).ConfigureAwait(false);
                             }
                             catch (Exception ex)
                             {
                                 _logger.ErrorFormat(ex, "Error during polling for fixer of readmodel {0}/{1} Last Position {2} - {3}", typeof(T), elementToFix.Id, fixedRm?.ProjectedPosition, ex.Message);
-                                fixedRm?.MarkAsFaulted(fixedRm.ProjectedPosition);
+                                fixedRm.MarkAsFaulted(fixedRm.ProjectedPosition);
                             }
-                            if (fixedRm != null)
-                            {
-                                await _collection.UpdateAsync(fixedRm).ConfigureAwait(false);
-                            }
+                            await _collection.UpdateAsync(fixedRm).ConfigureAwait(false);
                         }
                     }
                     catch (Exception ex)
