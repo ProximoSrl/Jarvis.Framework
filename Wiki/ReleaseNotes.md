@@ -2,6 +2,10 @@
 
 ## vNext
 
+## 7.7.1
+
+- Fixed bug that does not fixes Atomic Readmodel if faulted when signature changed.
+
 ## 7.7.0
 
 - Added a TryGetTag for IIDentityTranslator also fixed some bugs.
