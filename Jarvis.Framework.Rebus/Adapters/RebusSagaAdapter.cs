@@ -2,7 +2,6 @@
 using Jarvis.Framework.Kernel.Engine;
 using Jarvis.Framework.Shared.Exceptions;
 using Jarvis.Framework.Shared.Messages;
-using Jarvis.Framework.Shared.Persistence;
 using NStore.Core.Streams;
 using NStore.Domain;
 using Rebus.Handlers;
@@ -26,15 +25,16 @@ namespace Jarvis.Framework.Rebus.Adapters
         where TProcessManager : ProcessManager<TState>
     {
         private readonly ILogger _logger;
-        private readonly IRepositoryFactory _repositoryFactory;
+        private readonly IRepository _repository;
         private readonly IProcessManagerListener<TProcessManager, TState> _listener;
         private readonly int _numberOfConcurrencyExceptionBeforeRandomSleeping = 5;
 
-        public RebusSagaAdapter(IRepositoryFactory repositoryFactory, IProcessManagerListener<TProcessManager, TState> listener, ILogger logger)
+        public RebusSagaAdapter(IRepository repository, IProcessManagerListener<TProcessManager, TState> listener, ILogger logger)
         {
-            _repositoryFactory = repositoryFactory;
+            _repository = repository;
             _listener = listener;
             _logger = logger;
+            _repository = repository;
         }
 
         public async Task Handle(TMessage message)
@@ -42,7 +42,6 @@ namespace Jarvis.Framework.Rebus.Adapters
             TProcessManager pm = null;
             int i = 0;
             bool done = false;
-            IRepository repository = null;
             while (!done && i < 100)
             {
                 try
@@ -50,11 +49,13 @@ namespace Jarvis.Framework.Rebus.Adapters
                     var id = _listener.GetCorrelationId(message);
                     if (string.IsNullOrEmpty(id))
                         return;
-
-                    repository = _repositoryFactory.Create();
-                    pm = await repository.GetByIdAsync<TProcessManager>(id).ConfigureAwait(false);
+                    if (i > 0)
+                    {
+                        _repository.Clear(); //remember to clear, we are retrying.
+                    }
+                    pm = await _repository.GetByIdAsync<TProcessManager>(id).ConfigureAwait(false);
                     pm.MessageReceived(message);
-                    await repository.SaveAsync(pm, message.MessageId.ToString(), null).ConfigureAwait(false);
+                    await _repository.SaveAsync(pm, message.MessageId.ToString(), null).ConfigureAwait(false);
                     done = true;
                 }
                 catch (ConcurrencyException ex)
@@ -77,13 +78,6 @@ namespace Jarvis.Framework.Rebus.Adapters
                 {
                     _logger.ErrorFormat(ex, $"Saga [{pm?.GetType()?.Name}]: Generic Exception on command {message.GetType()} [MessageId: {message.MessageId}] : {message.Describe()} : {ex.Message}", ex);
                     throw; //rethrow exception.
-                }
-                finally
-                {
-                    if (repository != null)
-                    {
-                        _repositoryFactory.Release(repository);
-                    }
                 }
             }
             if (!done)
