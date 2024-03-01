@@ -2,6 +2,10 @@
 
 ## vNext
 
+## 7.7.2
+
+- Fix Repository usage in SagaAdapter
+
 ## 7.7.1
 
 - Fixed bug that does not fixes Atomic Readmodel if faulted when signature changed.
