@@ -2,8 +2,8 @@
 using Jarvis.Framework.Kernel.Engine;
 using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.Helpers;
-using Jarvis.Framework.Tests.Support;
 using Jarvis.Framework.Shared.Support;
+using Jarvis.Framework.Tests.Support;
 using MongoDB.Driver;
 using NStore.Core.Logging;
 using NStore.Core.Persistence;
@@ -26,6 +26,7 @@ namespace Jarvis.Framework.Tests.EngineTests.SagaTests
         private string _connectionString;
         private WindsorContainer _container;
         private IMongoDatabase _db;
+        private long _seed = 3456;
 
         [OneTimeSetUp]
         public void TestFixtureSetUp()
@@ -98,6 +99,74 @@ namespace Jarvis.Framework.Tests.EngineTests.SagaTests
             Assert.That(sagaReloaded, Is.Not.Null);
             var events = ((IEventSourcedAggregate)saga).GetChangeSet();
             NUnit.Framework.Legacy.ClassicAssert.AreEqual(0, events.Events.Length);
+        }
+
+        [Test]
+        public async Task Verify_correct_replay_of_events()
+        {
+            var orderId = new OrderId(_seed++);
+            var sagaId = orderId;
+            var eventStore = await _factory.BuildEventStore(_connectionString).ConfigureAwait(false);
+            var streamsFactory = new StreamsFactory(eventStore);
+            var repo = new Repository(new AggregateFactoryEx(_container.Kernel), streamsFactory, new NullSnapshots());
+
+            var saga = await repo.GetByIdAsync<DeliverPizzaSaga2>(sagaId).ConfigureAwait(false);
+
+            saga.MessageReceived(new OrderPlaced(orderId));
+            saga.MessageReceived(new BillPrinted(orderId));
+            await repo.SaveAsync(saga, Guid.NewGuid().ToString(), null).ConfigureAwait(false);
+            Assert.That(saga.AccessState.EventCount, Is.EqualTo(2));
+            Assert.That(saga.AccessState.ReplayEventCount, Is.EqualTo(0), "All events are not in replay");
+
+            //reload and other events
+            var secondRepo = new Repository(new AggregateFactoryEx(_container.Kernel), streamsFactory, new NullSnapshots());
+            var sagaReloaded = await secondRepo.GetByIdAsync<DeliverPizzaSaga2>(sagaId).ConfigureAwait(false);
+            sagaReloaded.MessageReceived(new PaymentReceived(orderId, Guid.NewGuid()));
+            sagaReloaded.MessageReceived(new PizzaDelivered(orderId));
+            await secondRepo.SaveAsync(sagaReloaded, Guid.NewGuid().ToString(), null).ConfigureAwait(false);
+
+            Assert.That(sagaReloaded.AccessState.EventCount, Is.EqualTo(4));
+            Assert.That(sagaReloaded.AccessState.ReplayEventCount, Is.EqualTo(2), "All events are not in replay");
+
+            var newRepo = new Repository(new AggregateFactoryEx(_container.Kernel), streamsFactory, new NullSnapshots());
+            sagaReloaded = await newRepo.GetByIdAsync<DeliverPizzaSaga2>(sagaId).ConfigureAwait(false);
+
+            Assert.That(sagaReloaded, Is.Not.Null);
+            var events = ((IEventSourcedAggregate)saga).GetChangeSet();
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(0, events.Events.Length);
+
+            Assert.That(sagaReloaded.AccessState.ReplayEventCount, Is.EqualTo(4), "All events are replayed");
+            Assert.That(sagaReloaded.AccessState.EventCount, Is.EqualTo(4));
+        }
+
+        [Test]
+        public async Task Verify_same_repo_do_not_replay()
+        {
+            var orderId = new OrderId(_seed++);
+            var sagaId = orderId;
+            var eventStore = await _factory.BuildEventStore(_connectionString).ConfigureAwait(false);
+            var streamsFactory = new StreamsFactory(eventStore);
+            var repo = new Repository(new AggregateFactoryEx(_container.Kernel), streamsFactory, new NullSnapshots());
+
+            var saga = await repo.GetByIdAsync<DeliverPizzaSaga2>(sagaId).ConfigureAwait(false);
+
+            saga.MessageReceived(new OrderPlaced(orderId));
+            saga.MessageReceived(new BillPrinted(orderId));
+            saga.MessageReceived(new PaymentReceived(orderId, Guid.NewGuid()));
+            saga.MessageReceived(new PizzaDelivered(orderId));
+
+            Assert.That(saga.AccessState.EventCount, Is.EqualTo(4));
+            Assert.That(saga.AccessState.ReplayEventCount, Is.EqualTo(0), "All events are not in replay");
+            await repo.SaveAsync(saga, Guid.NewGuid().ToString(), null).ConfigureAwait(false);
+
+            var sagaReloaded = await repo.GetByIdAsync<DeliverPizzaSaga2>(sagaId).ConfigureAwait(false);
+
+            Assert.That(sagaReloaded, Is.Not.Null);
+            var events = ((IEventSourcedAggregate)saga).GetChangeSet();
+            NUnit.Framework.Legacy.ClassicAssert.AreEqual(0, events.Events.Length);
+
+            Assert.That(sagaReloaded.AccessState.EventCount, Is.EqualTo(4));
+            Assert.That(sagaReloaded.AccessState.ReplayEventCount, Is.EqualTo(0), "All events are replayed");
         }
 
         [Test]

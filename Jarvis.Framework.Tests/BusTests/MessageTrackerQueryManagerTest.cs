@@ -17,7 +17,6 @@ namespace Jarvis.Framework.Tests.BusTests
     [TestFixture]
     public class MessageTrackerQueryManagerTest
     {
-        private IMongoCollection<TrackedMessageModel> _messages;
         private MongoDbMessagesTracker _tracker;
 
         [OneTimeSetUp]
@@ -28,7 +27,6 @@ namespace Jarvis.Framework.Tests.BusTests
             var client = url.CreateClient(false);
             var db = client.GetDatabase(url.DatabaseName);
             db.Drop();
-            _messages = db.GetCollection<TrackedMessageModel>("messages");
             _tracker = new MongoDbMessagesTracker(db);
             TestHelper.RegisterSerializerForFlatId<SampleAggregateId>();
 
