@@ -5,6 +5,7 @@ using Jarvis.Framework.Shared.ReadModel.Atomic;
 using Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support;
 using NStore.Domain;
 using NUnit.Framework;
+using NUnit.Framework.Internal.Commands;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,6 +33,45 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 
             //ok I'm expecting the fix to correct the readmodel
             AssertForReadmodelCondition<SimpleTestAtomicReadModel>(changeset, rm => rm.ReadModelVersion == 2 && rm.TouchCount == 4);
+        }
+
+        [Test]
+        public async Task Verify_event_for_end_fixing()
+        {
+            //Arrange: Generate some commit and project them
+            SimpleTestAtomicReadModel.FakeSignature = 1;
+            Changeset changeset = await GenerateSomeChangesetsAndReturnLatestsChangeset().ConfigureAwait(false);
+            var engine = await CreateSutAndStartProjectionEngineAsync().ConfigureAwait(false);
+            GetTrackerAndWaitForChangesetToBeProjected("SimpleTestAtomicReadModel");
+            await engine.StopAsync().ConfigureAwait(false);
+
+            //Act, start the fixer and change signature
+            SimpleTestAtomicReadModel.FakeSignature = 2;
+            var sut = GenerateSut();
+            AtomicReadmodelFixedEventArgs atomicReadmodelFixedEventArgs = null;
+            sut.ReadmodelFixed += (sender, args) =>
+            {
+                atomicReadmodelFixedEventArgs = args;
+            };
+            sut.AddReadmodelToFix(typeof(SimpleTestAtomicReadModel));
+            sut.StartFixing();
+
+            //ok I'm expecting the fix to correct the readmodel
+            AssertForReadmodelCondition<SimpleTestAtomicReadModel>(changeset, rm => rm.ReadModelVersion == 2 && rm.TouchCount == 4);
+
+            //event should be raised, wait for a little bit
+            DateTime startWait = DateTime.UtcNow;
+            while (DateTime.UtcNow.Subtract(startWait).TotalSeconds < 5)
+            {
+                if (atomicReadmodelFixedEventArgs != null)
+                {
+                    break;
+                }
+                Thread.Sleep(100);
+            }
+
+            Assert.That(atomicReadmodelFixedEventArgs, Is.Not.Null);
+            Assert.That(atomicReadmodelFixedEventArgs.ReadmodelType, Is.EqualTo(typeof(SimpleTestAtomicReadModel)));
         }
 
         [Test]

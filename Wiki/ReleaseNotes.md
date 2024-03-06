@@ -2,6 +2,11 @@
 
 ## vNext
 
+## 7.7.3
+
+- Atomic projection checkpoint manager fix for minumum dispatched
+- Introduced events for finishing fixing atomic readmodels.
+
 ## 7.7.2
 
 - Fix Repository usage in SagaAdapter

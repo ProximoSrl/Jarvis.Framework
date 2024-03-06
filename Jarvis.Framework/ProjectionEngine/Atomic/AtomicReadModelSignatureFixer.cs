@@ -18,7 +18,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         private readonly List<IFixExecutor> _executors;
         private readonly IAtomicReadModelFactory _atomicReadModelFactory;
 
-        public ILogger Logger { get; set; }
+        /// <summary>
+        /// Logger
+        /// </summary>
+        public ILogger Logger { get; set; } = NullLogger.Instance;
 
         public AtomicReadModelSignatureFixer(
             IAtomicReadModelFactory atomicReadModelFactory,
@@ -33,22 +36,35 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         }
 
         /// <summary>
+        /// Allow to subscribe to the event when a readmodel is fixed
+        /// </summary>
+        public event EventHandler<AtomicReadmodelFixedEventArgs> ReadmodelFixed;
+
+        private void OnReadmodelFixed(Type readmodelType)
+        {
+            ReadmodelFixed?.Invoke(this, new AtomicReadmodelFixedEventArgs { ReadmodelType = readmodelType });
+        }
+
+        /// <summary>
         /// We do not want to depend on anything else, we simply want to fix a bunch of readmodels
         /// without <see cref="AtomicProjectionEngine"/> or other dependencies
         /// </summary>
         /// <param name="readmodelToFix"></param>
         public void AddReadmodelToFix(Type readmodelToFix)
         {
-            var executor = typeof(ActionExecutor<>).MakeGenericType(readmodelToFix);
-            _executors.Add((IFixExecutor)Activator.CreateInstance(executor,
+            var executorType = typeof(ActionExecutor<>).MakeGenericType(readmodelToFix);
+            IFixExecutor executorInstance = (IFixExecutor)Activator.CreateInstance(executorType,
                 new Object[]
                 {
                     _atomicReadModelFactory,
                     _atomicMongoCollectionWrapperFactory,
                     _liveAtomicReadModelProcessor,
                     Logger
-                })
-           );
+                });
+
+            executorInstance.ReadmodelFixed += (s, e) => OnReadmodelFixed(e.ReadmodelType);
+
+            _executors.Add(executorInstance);
         }
 
         public void StartFixing()
@@ -73,6 +89,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             void StartFixing();
 
             void StopFixing();
+
+            event EventHandler<AtomicReadmodelFixedEventArgs> ReadmodelFixed;
         }
 
         private class ActionExecutor<T> : IFixExecutor
@@ -82,6 +100,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             private readonly ILiveAtomicReadModelProcessor _liveAtomicReadModelProcessor;
             private readonly IAtomicReadModelFactory _atomicReadModelFactory;
             private readonly ILogger _logger;
+
+            public event EventHandler<AtomicReadmodelFixedEventArgs> ReadmodelFixed;
+
+            private void OnReadmodelFixed(Type readmodelType)
+            {
+                ReadmodelFixed?.Invoke(this, new AtomicReadmodelFixedEventArgs { ReadmodelType = readmodelType });
+            }
 
 #pragma warning disable S1144 // Unused private types or members should be removed
             public ActionExecutor(
@@ -144,6 +169,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                         if (blockList.Count == 0)
                         {
                             _logger.InfoFormat("Finished fixing {0} - Fixed {1} readmodels", typeof(T), count);
+                            //Signal that the readmodel is finished fixhin
+                            OnReadmodelFixed(typeof(T));
                             return;
                         }
                         foreach (var elementToFix in blockList)
@@ -178,5 +205,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 }
             }
         }
+    }
+
+    public class AtomicReadmodelFixedEventArgs : EventArgs
+    {
+        public Type ReadmodelType { get; set; }
     }
 }
