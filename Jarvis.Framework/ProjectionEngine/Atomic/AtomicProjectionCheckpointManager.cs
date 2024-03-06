@@ -147,7 +147,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             if (_inMemoryCheckpoint.Count == 0)
                 return 0;
 
-            return _inMemoryCheckpoint.Values.Min(_ => _.Position);
+            return _inMemoryCheckpoint.Values.Where(m => !m.ReadmodelMissing).Min(_ => _.Position);
         }
 
         /// <summary>
