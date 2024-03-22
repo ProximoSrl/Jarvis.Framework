@@ -2,6 +2,10 @@
 
 ## vNext
 
+## 7.7.4
+
+- Fixed concurrent bug in AtomicReadmodelFactory, added fasterflect to create readmodels.
+
 ## 7.7.3
 
 - Atomic projection checkpoint manager fix for minumum dispatched

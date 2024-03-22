@@ -1,5 +1,6 @@
 ﻿using Fasterflect;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 
 namespace Jarvis.Framework.Shared.ReadModel.Atomic
@@ -10,7 +11,7 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
     /// </summary>
     public class AtomicReadModelFactory : IAtomicReadModelFactory
     {
-        private readonly Dictionary<Type, Func<String, IAtomicReadModel>> _factoryFunctions = new Dictionary<Type, Func<String, IAtomicReadModel>>();
+        private readonly ConcurrentDictionary<Type, Func<String, IAtomicReadModel>> _factoryFunctions = new ConcurrentDictionary<Type, Func<String, IAtomicReadModel>>();
 
         /// <summary>
         /// Create an explicit readmodel given string Id, id should not be accessible
@@ -34,10 +35,15 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
         {
             if (!_factoryFunctions.TryGetValue(type, out Func<String, IAtomicReadModel> factoryFunc))
             {
-                var constructor = type.GetConstructor(new Type[] { typeof(String) });
-                _factoryFunctions[type] = _ => (IAtomicReadModel)constructor.CreateInstance(new Object[] { _ });
+                //new code uses fasterflect
+                var constructor = type.DelegateForCreateInstance(typeof(string));
+                _factoryFunctions[type] = iid => (IAtomicReadModel)constructor(iid);
+
+                //OLD code use reflection
+                //var constructor = type.GetConstructor(new Type[] { typeof(String) });
+                //_factoryFunctions[type] = iid => (IAtomicReadModel)constructor.CreateInstance(new Object[] { iid });
             }
-            return (IAtomicReadModel)_factoryFunctions[type](id);
+            return _factoryFunctions[type](id);
         }
 
         public AtomicReadModelFactory AddFactory<T>(Func<String, IAtomicReadModel> function)
