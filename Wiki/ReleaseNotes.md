@@ -2,6 +2,10 @@
 
 ## vNext
 
+## 7.7.6
+
+- Parametrized timeout for GuaranteedDeliveryBroadcastBlock
+
 ## 7.7.5
 
 - Fixed concurrent bug in AtomicReadmodelFactory, added fasterflect to create readmodels.
