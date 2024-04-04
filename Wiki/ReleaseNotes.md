@@ -5,6 +5,7 @@
 ## 7.7.6
 
 - Parametrized timeout for GuaranteedDeliveryBroadcastBlock
+- Changed interception in mongodb, breaking changes in the interface.
 
 ## 7.7.5
 

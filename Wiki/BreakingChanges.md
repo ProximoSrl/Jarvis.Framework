@@ -1,6 +1,10 @@
 # Version 6
 
-## vnext
+## 7.7.6
+
+- Changed IMongoQueryInterceptorConsumer to allow for better interception.
+
+## 7.7.0
 
 - When init MetricsHelper you need to pass a complete build app.metrics configuration
 - Removed EventHappenedEventArgs due to metrics consolidation, now framework uses metrics directly
