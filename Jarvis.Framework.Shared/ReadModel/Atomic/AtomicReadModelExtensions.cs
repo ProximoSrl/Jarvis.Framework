@@ -1,4 +1,5 @@
-﻿using Castle.MicroKernel.Registration;
+﻿using Castle.Core.Logging;
+using Castle.MicroKernel.Registration;
 using Castle.Windsor;
 using System;
 using System.Collections.Generic;
@@ -8,16 +9,26 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
 {
     public static class AtomicReadModelExtensions
     {
-        public static IEnumerable<Type> GetAllAtomicReadmodelFromCurrentAppDomain()
+        public static IEnumerable<Type> GetAllAtomicReadmodelFromCurrentAppDomain(ILogger logger)
         {
+            List<Type> result = new List<Type>();
             foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
             {
-                foreach (var type in assembly.GetTypes()
-                    .Where(t => !t.IsAbstract && typeof(AbstractAtomicReadModel).IsAssignableFrom(t)))
+                try
                 {
-                    yield return type;
+                    foreach (var type in assembly.GetTypes()
+                        .Where(t => !t.IsAbstract && typeof(AbstractAtomicReadModel).IsAssignableFrom(t)))
+                    {
+                        result.Add( type);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    //We ignore exception, maybe some assembly cannot be loaded.
+                    logger.ErrorFormat(ex, "GetAllAtomicReadmodelFromCurrentAppDomain: Error loading assembly {0}", assembly.FullName);    
                 }
             }
+            return result.AsReadOnly();
         }
 
         public static void RegisterAllConventionsForAtomicReadmodelsInCurrentAppDomain(this IWindsorContainer container)
