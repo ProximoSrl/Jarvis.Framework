@@ -16,7 +16,6 @@
     <PackageReference Include="App.Metrics" Version="4.3.0" />
     <PackageReference Include="Castle.Core" Version="4.4.1" />
     <PackageReference Include="Castle.LoggingFacility" Version="5.1.1" />
-    <PackageReference Include="Castle.LoggingFacility" Version="5.1.1" />
     <PackageReference Include="Castle.Windsor" Version="5.1.1" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageReference Include="MongoDB.Bson" Version="2.23.1" />
