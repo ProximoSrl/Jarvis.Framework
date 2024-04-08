@@ -2,6 +2,10 @@
 
 ## vNext
 
+## 7.7.7
+
+- Fix duplicate reference for tests project.
+
 ## 7.7.6
 
 - Parametrized timeout for GuaranteedDeliveryBroadcastBlock
