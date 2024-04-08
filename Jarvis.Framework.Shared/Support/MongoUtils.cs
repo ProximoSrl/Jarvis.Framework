@@ -2,7 +2,6 @@
 using MongoDB.Driver.Core.Events;
 using MongoDB.Driver.Linq;
 using System;
-using System.Collections.Concurrent;
 
 namespace Jarvis.Framework.Shared.Support
 {
@@ -12,7 +11,11 @@ namespace Jarvis.Framework.Shared.Support
     /// </summary>
     public interface IMongoQueryInterceptorConsumer
     {
-        void TrackMongoOperation(Boolean succeeded, String commandType, String commandDescription, TimeSpan duration, Exception exception);
+        void TrackMongoOperation(
+            Boolean succeeded,
+            CommandStartedEventInfo commandStartedEvent,
+            CommandSucceededEvent? commandSucceeded,
+            CommandFailedEvent? commandFailedEvent);
     }
 
     public class NullMongoQueryInterptorConsumer : IMongoQueryInterceptorConsumer
@@ -23,14 +26,18 @@ namespace Jarvis.Framework.Shared.Support
         {
         }
 
-        public void TrackMongoOperation(Boolean succeeded, String commandType, String commandDescription, TimeSpan duration, Exception exception)
+        public void TrackMongoOperation(
+            bool succeeded,
+            CommandStartedEventInfo commandStartedEvent,
+            CommandSucceededEvent? commandSucceeded,
+            CommandFailedEvent? commandFailedEvent)
         {
         }
     }
 
     public static class JarvisFrameworkMongoClientConfigurationOptions
     {
-        internal static Action<MongoClientSettings> ConfigureClientSettings = (settings) => 
+        internal static Action<MongoClientSettings> ConfigureClientSettings = (settings) =>
         {
             if (!JarvisFrameworkGlobalConfiguration.IsMongodbLinq3Enabled)
             {

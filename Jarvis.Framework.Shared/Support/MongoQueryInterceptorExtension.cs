@@ -1,4 +1,5 @@
-﻿using MongoDB.Driver;
+﻿using MongoDB.Bson;
+using MongoDB.Driver;
 using MongoDB.Driver.Core.Events;
 using MongoDB.Driver.Linq;
 using System;
@@ -57,7 +58,7 @@ namespace Jarvis.Framework.Shared.Support
                     {
                         if (enableInterception)
                         {
-                            client = CreateClient(url.CreateMongoClientSettings());
+                            client = CreateClientWithInterceptionEnabled(url.CreateMongoClientSettings());
                         }
                         else
                         {
@@ -71,7 +72,7 @@ namespace Jarvis.Framework.Shared.Support
             return client;
         }
 
-        private static readonly ConcurrentDictionary<Int64, String> _requests = new ConcurrentDictionary<Int64, String>();
+        private static readonly ConcurrentDictionary<Int64, CommandStartedEventInfo> _requests = new ConcurrentDictionary<Int64, CommandStartedEventInfo>();
 
         private static string GetConnectionKey(string connectionString, bool? enableIntercept)
         {
@@ -95,7 +96,14 @@ namespace Jarvis.Framework.Shared.Support
             _requests.Clear();
         }
 
-        public static IMongoClient CreateClient(this MongoClientSettings settings)
+        /// <summary>
+        /// Create a client enabling interception. Even if interception does
+        /// nothing if MongoQueryInterptorConsumer property is null, we still
+        /// generate burden on driver infrastructrure.
+        /// </summary>
+        /// <param name="settings"></param>
+        /// <returns></returns>
+        public static IMongoClient CreateClientWithInterceptionEnabled(this MongoClientSettings settings)
         {
             settings.ClusterConfigurator = clusterConfigurator =>
             {
@@ -106,7 +114,14 @@ namespace Jarvis.Framework.Shared.Support
 
                     if (e.OperationId.HasValue)
                     {
-                        _requests.TryAdd(e.OperationId.Value, e.Command.ToString());
+                        _requests.TryAdd(e.OperationId.Value, new CommandStartedEventInfo
+                        {
+                            //Need to perform a ToString because the real implementation of e.Command is disposable and
+                            //will be disposed at the time that completion event are called.
+                            Command = e.Command.ToString(),
+                            CommandName = e.CommandName,
+                            DatabaseNamespace = e.DatabaseNamespace
+                        });
                     }
                 });
 
@@ -115,11 +130,9 @@ namespace Jarvis.Framework.Shared.Support
                     if (MongoQueryInterptorConsumer == NullMongoQueryInterptorConsumer.Instance)
                         return;
 
-                    if (!_requests.TryRemove(e.OperationId ?? -1, out var command))
-                    {
-                        command = $"Command unknown: operation id {e.OperationId}";
-                    }
-                    MongoQueryInterptorConsumer.TrackMongoOperation(true, e.CommandName, command, e.Duration, null);
+                    CommandStartedEventInfo commandStartedEvent = GetStartedEvent( e.OperationId);
+
+                    MongoQueryInterptorConsumer.TrackMongoOperation(true, commandStartedEvent, e, null);
                 });
 
                 clusterConfigurator.Subscribe<CommandFailedEvent>(e =>
@@ -127,14 +140,31 @@ namespace Jarvis.Framework.Shared.Support
                     if (MongoQueryInterptorConsumer == NullMongoQueryInterptorConsumer.Instance)
                         return;
 
-                    if (!_requests.TryRemove(e.OperationId ?? -1, out var command))
-                    {
-                        command = $"Command unknown: operation id {e.OperationId}";
-                    }
-                    MongoQueryInterptorConsumer.TrackMongoOperation(false, e.CommandName, command, e.Duration, e.Failure);
+                    CommandStartedEventInfo commandStartedEvent = GetStartedEvent(e.OperationId);
+
+                    MongoQueryInterptorConsumer.TrackMongoOperation(false, commandStartedEvent, null, e);
                 });
             };
             return new MongoClient(settings);
         }
+
+        private static CommandStartedEventInfo GetStartedEvent(long? operationId)
+        {
+            CommandStartedEventInfo commandStartedEvent = null;
+            if (_requests.TryRemove(operationId ?? -1, out var commandSe))
+            {
+                commandStartedEvent = commandSe;
+            }
+
+            return commandStartedEvent;
+        }
+    }
+
+    public class CommandStartedEventInfo
+    {
+        public string Command { get; set; }
+
+        public DatabaseNamespace DatabaseNamespace { get; set; }
+        public string CommandName { get; internal set; }
     }
 }

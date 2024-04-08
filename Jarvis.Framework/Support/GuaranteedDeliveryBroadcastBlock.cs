@@ -3,7 +3,7 @@ using Jarvis.Framework.Shared.Exceptions;
 using Jarvis.Framework.Shared.Support;
 using System;
 using System.Collections.Generic;
-using System.Threading;
+using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 
 namespace Jarvis.Framework.Kernel.Support
@@ -13,7 +13,8 @@ namespace Jarvis.Framework.Kernel.Support
         public static ActionBlock<T> Create<T>(
             IEnumerable<ITargetBlock<T>> targets,
             String commitPollingClientId,
-            Int32 boundedCapacity)
+            Int32 boundedCapacity,
+            Int32 secondsToWaitBeforeThrowError = 10)
         {
             var options = new ExecutionDataflowBlockOptions();
             if (boundedCapacity > 0)
@@ -29,10 +30,11 @@ namespace Jarvis.Framework.Kernel.Support
                         Int32 errorCount = 0;
                         while (!(await target.SendAsync(item).ConfigureAwait(false)))
                         {
-                            Thread.Sleep(1000); //give some time to free some resource.
-                            if (errorCount > 2)
+                            //message was not sent to the target, we need to wait a little bit and retry, if we fail too many times we raise an exception.
+                            await Task.Delay(1000);
+                            if (errorCount > secondsToWaitBeforeThrowError)
                             {
-                                throw new JarvisFrameworkEngineException("GuaranteedDeliveryBroadcastBlock: Unable to send message to a target id " + commitPollingClientId);
+                                throw new JarvisFrameworkEngineException("GuaranteedDeliveryBroadcastBlock: Unable to send message to a target id " + commitPollingClientId + "  of type " + item.GetType());
                             }
                             errorCount++;
                         }
