@@ -2,6 +2,10 @@
 
 ## vNext
 
+## 7.7.8
+
+- Updated gitversion-tool to latest version.
+
 ## 7.7.7
 
 - Fix duplicate reference for tests project.
