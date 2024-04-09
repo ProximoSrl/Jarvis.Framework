@@ -6,6 +6,7 @@ using MongoDB.Driver;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -21,7 +22,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         private readonly ConcurrentDictionary<String, AtomicProjectionCheckpoint> _inMemoryCheckpoint;
         private readonly Dictionary<String, Type> _registeredTypeNames = new Dictionary<String, Type>();
 
+        /// <summary>
+        /// The logger
+        /// </summary>
         public ILogger Logger { get; set; }
+
+        /// <summary>
+        /// Asyncrounsly tell when a checkpoint changed, so if you are interested in this event
+        /// you can be notified when a specific checkpoint changed.
+        /// </summary>
+        public event EventHandler<AtomicProjectionCheckpointChangedEventArgs> CheckpointChanged;
 
         /// <summary>
         /// Create the manager and load from db all existing checkpoints.
@@ -41,6 +51,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
             _inMemoryCheckpoint = new ConcurrentDictionary<String, AtomicProjectionCheckpoint>(dictionary);
             Logger = NullLogger.Instance;
+        }
+
+        /// <summary>
+        /// Raises event
+        /// </summary>
+        /// <param name="e"></param>
+        protected virtual void OnCheckpointChanged(AtomicProjectionCheckpointChangedEventArgs e)
+        {
+            // fire and forget.
+            Task.Run(() => CheckpointChanged?.Invoke(this, e));
         }
 
         public IEnumerable<Type> GetAllRegisteredAtomicReadModels()
@@ -136,6 +156,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             {
                 Logger.ErrorFormat("Unable to mark position to readmodel {0}, readmodel not known", name);
             }
+            OnCheckpointChanged(new AtomicProjectionCheckpointChangedEventArgs(name));
         }
 
         /// <summary>
@@ -180,9 +201,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
             await _collection.BulkWriteAsync(requests,
                 new BulkWriteOptions()
-            {
-                IsOrdered = false,
-            });
+                {
+                    IsOrdered = false,
+                });
         }
 
         private class AtomicProjectionCheckpoint
@@ -206,5 +227,18 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             /// </summary>
             public Boolean ReadmodelMissing { get; set; }
         }
+    }
+
+    /// <summary>
+    /// A checkpoint changed for a specific atomic readmodel.
+    /// </summary>
+    public class AtomicProjectionCheckpointChangedEventArgs : EventArgs
+    {
+        public AtomicProjectionCheckpointChangedEventArgs(string atomicReadmodelName)
+        {
+            AtomicReadmodelName = atomicReadmodelName;
+        }
+
+        public string AtomicReadmodelName { get; private set; }
     }
 }

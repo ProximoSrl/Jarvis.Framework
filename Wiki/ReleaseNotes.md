@@ -2,6 +2,8 @@
 
 ## vNext
 
+- AtomicProjectionCheckpointManager raises events when the checkpoint changed.
+
 ## 7.7.8
 
 - Updated gitversion-tool to latest version.
