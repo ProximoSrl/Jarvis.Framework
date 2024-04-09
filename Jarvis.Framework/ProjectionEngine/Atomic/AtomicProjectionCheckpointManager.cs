@@ -6,7 +6,6 @@ using MongoDB.Driver;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -44,7 +43,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 #pragma warning disable S2971 // "IEnumerable" LINQs should be simplified
             var dictionary = _collection
                 .AsQueryable()
-                .Where(c => c.ReadmodelMissing == false)
+                .Where(c => !c.ReadmodelMissing)
                 .ToList()
                 .Select(_ => new KeyValuePair<String, AtomicProjectionCheckpoint>(_.Id, _));
 #pragma warning restore S2971 // "IEnumerable" LINQs should be simplified
