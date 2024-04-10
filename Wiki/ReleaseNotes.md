@@ -4,6 +4,10 @@
 
 - AtomicProjectionCheckpointManager raises events when the checkpoint changed.
 
+## 7.7.9
+
+- Lowered a log (it was error but it was misleading).
+
 ## 7.7.8
 
 - Updated gitversion-tool to latest version.
