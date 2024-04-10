@@ -19,13 +19,13 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
                     foreach (var type in assembly.GetTypes()
                         .Where(t => !t.IsAbstract && typeof(AbstractAtomicReadModel).IsAssignableFrom(t)))
                     {
-                        result.Add( type);
+                        result.Add(type);
                     }
                 }
                 catch (Exception ex)
                 {
-                    //We ignore exception, maybe some assembly cannot be loaded.
-                    logger.ErrorFormat(ex, "GetAllAtomicReadmodelFromCurrentAppDomain: Error loading assembly {0}", assembly.FullName);    
+                    //We ignore exception, maybe some assembly cannot be loaded, it happens for SQL client for example.
+                    logger.InfoFormat(ex, "GetAllAtomicReadmodelFromCurrentAppDomain: Error loading assembly {0}", assembly.FullName);
                 }
             }
             return result.AsReadOnly();
