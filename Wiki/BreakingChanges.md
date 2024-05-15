@@ -1,5 +1,9 @@
 # Version 6
 
+## 7.7.10
+
+- GuaranteedDeliveryBroadcastBlock allows for meter name to be specified.
+
 ## 7.7.6
 
 - Changed IMongoQueryInterceptorConsumer to allow for better interception.

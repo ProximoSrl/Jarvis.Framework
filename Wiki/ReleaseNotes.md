@@ -8,6 +8,10 @@
 
 ## 7.7.9
 
+- GuaranteedDeliveryBroadcastBlock accepts meter name.
+
+## 7.7.9
+
 - Lowered a log (it was error but it was misleading).
 
 ## 7.7.8
