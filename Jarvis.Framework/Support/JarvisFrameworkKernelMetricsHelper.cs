@@ -69,25 +69,10 @@ namespace Jarvis.Framework.Kernel.Support
             JarvisFrameworkMetricsHelper.CreateGauge(gaugeName, valueProvider, Unit.Items);
         }
 
-        private static readonly Dictionary<string, JarvisFrameworkMeter> CommitDispatchedBySlot = new Dictionary<string, JarvisFrameworkMeter>();
         private static readonly Dictionary<string, JarvisFrameworkMeter> CommitDispatchedByAtomicReadmodel = new Dictionary<string, JarvisFrameworkMeter>();
 
         private static readonly Dictionary<string, JarvisFrameworkMeter> RebuildCommitDispatchedBySlot = new Dictionary<string, JarvisFrameworkMeter>();
         private static readonly Dictionary<string, JarvisFrameworkMeter> RebuildEventDispatchedByBucket = new Dictionary<string, JarvisFrameworkMeter>();
-
-        public static void CreateMeterForDispatcherCountSlot(String slotName)
-        {
-            if (!CommitDispatchedBySlot.ContainsKey(slotName))
-            {
-                var meter = JarvisFrameworkMetric.Meter("projection-chunk-dispatched-" + slotName, Unit.Items, TimeUnit.Seconds);
-                CommitDispatchedBySlot[slotName] = meter;
-            }
-        }
-
-        public static void MarkCommitDispatchedCount(String slotName, Int32 count)
-        {
-            CommitDispatchedBySlot[slotName].Mark(count);
-        }
 
         /// <summary>
         /// Each aggregateId can have one or more readmodel to project, we want to have a meter that tells us
@@ -143,7 +128,7 @@ namespace Jarvis.Framework.Kernel.Support
             if (!RebuildEventDispatchedByBucket.ContainsKey(bucketKey))
             {
                 var meter = JarvisFrameworkMetric.Meter("rebuild-event-processed-" + bucketKey, Unit.Items, TimeUnit.Seconds);
-                CommitDispatchedBySlot[bucketKey] = meter;
+                RebuildEventDispatchedByBucket[bucketKey] = meter;
             }
         }
 

@@ -4,6 +4,10 @@
 
 - AtomicProjectionCheckpointManager raises events when the checkpoint changed.
 
+## 7.7.11
+
+- Better metrics for standard projection engine.
+
 ## 7.7.10
 
 - Small fix of a .Result in an await call.

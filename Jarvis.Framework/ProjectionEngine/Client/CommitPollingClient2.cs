@@ -14,7 +14,7 @@ using System.Threading.Tasks.Dataflow;
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 {
     /// <summary>
-    /// This was completely rewritten for NEventstore 6 beta then 
+    /// This was completely rewritten for NEventstore 6 beta then
     /// completely re-adapted for NStore.
     /// </summary>
     public class CommitPollingClient2 : ICommitPollingClient
@@ -41,28 +41,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             ILogger logger,
             INStoreLoggerFactory factory)
         {
-            if (persistStreams == null)
-            {
-                throw new ArgumentNullException(nameof(persistStreams));
-            }
-
-            if (enhancer == null)
-            {
-                throw new ArgumentNullException(nameof(enhancer));
-            }
-
-            if (logger == null)
-            {
-                throw new ArgumentNullException(nameof(logger));
-            }
-
-            _enhancer = enhancer;
-            _consumers = new List<ITargetBlock<IChunk>>();
-            _logger = logger;
             _id = id;
-            Status = CommitPollingClientStatus.Stopped;
-            _persistence = persistStreams;
             _factory = factory;
+            _enhancer = enhancer ?? throw new ArgumentNullException(nameof(enhancer));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _persistence = persistStreams ?? throw new ArgumentNullException(nameof(persistStreams));
+
+            _consumers = new List<ITargetBlock<IChunk>>();
+            Status = CommitPollingClientStatus.Stopped;
 
             _logger.InfoFormat("Created Commit Polling client id: {0}", id);
         }
@@ -367,7 +353,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             ExecutionDataflowBlockOptions executionOption = new ExecutionDataflowBlockOptions();
             executionOption.BoundedCapacity = _bufferSize;
 
-            _broadcaster = GuaranteedDeliveryBroadcastBlock.Create(_consumers, _id, 3000);
+            _broadcaster = GuaranteedDeliveryBroadcastBlock.Create(_consumers, _id, 3000, meterName: _id);
 
             _buffer.LinkTo(_broadcaster, new DataflowLinkOptions() { PropagateCompletion = true });
         }
