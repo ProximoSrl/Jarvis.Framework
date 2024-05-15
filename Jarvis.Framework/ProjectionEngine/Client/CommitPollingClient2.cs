@@ -285,7 +285,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             return 0;
         }
 
-        private Task<Boolean> DispatchChunk(IChunk chunk)
+        private async Task<Boolean> DispatchChunk(IChunk chunk)
         {
             try
             {
@@ -297,7 +297,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                 if (_stopRequested.IsCancellationRequested)
                 {
                     CloseTplChain();
-                    return Task.FromResult(false);
+                    return false;
                 }
 
                 if (chunk.PartitionId.StartsWith("system.empty"))
@@ -325,27 +325,28 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                     if (_stopRequested.IsCancellationRequested)
                     {
                         _buffer.Complete();
-                        return Task.FromResult(false);
+                        return false;
                     }
                 }
 
                 //Check if block postponed the message, if for some
                 //reason the message is postponed, exit from the polling
-                if (!task.Result)
+                var result = await task;
+                if (!result)
                 {
                     //TPL is somewhat stuck
                     _logger.ErrorFormat("CommitPollingClient {0}: Unable to dispatch commit {1} into TPL chain, buffer block did not accept message", _id, chunk.Position);
                     _stopRequested.Cancel();
-                    return Task.FromResult(false); //stop polling.
+                    return false; //stop polling.
                 }
 
                 _lastDispatchedPosition = chunk.Position;
-                return Task.FromResult(true);
+                return true;
             }
             catch (Exception ex)
             {
                 _logger.ErrorFormat(ex, "CommitPollingClient2 {0}: Error in dispatching commit {1} - {2}", _id, chunk.Position, ex.Message);
-                return Task.FromResult(false);
+                return false;
             }
         }
 

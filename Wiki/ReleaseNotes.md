@@ -4,6 +4,14 @@
 
 - AtomicProjectionCheckpointManager raises events when the checkpoint changed.
 
+## 7.7.10
+
+- Small fix of a .Result in an await call.
+
+## 7.7.9
+
+- GuaranteedDeliveryBroadcastBlock accepts meter name.
+
 ## 7.7.9
 
 - Lowered a log (it was error but it was misleading).
