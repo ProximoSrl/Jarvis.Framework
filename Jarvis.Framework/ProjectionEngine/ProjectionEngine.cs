@@ -240,7 +240,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             //recreate all polling clients.
             foreach (var bucket in _config.BucketInfo)
             {
-                string pollerId = "bucket: " + String.Join(",", bucket.Slots);
+                string pollerId = "projection-bucket: " + String.Join(",", bucket.Slots);
                 var client = _pollingClientFactory.Create(_persistence, pollerId);
                 allClients.Add(client);
                 _bucketToClient.Add(bucket, client);
@@ -261,8 +261,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                     foreach (var otherBucket in _bucketToClient.Keys.Where(b => b != bucket))
                     {
                         asteriskSlots.RemoveAll(s => otherBucket.Slots.Contains(s));
-                    }
-    
+                    }  
                     slots = asteriskSlots.ToArray();
                 }
 
@@ -273,7 +272,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
             foreach (var slotName in allSlots)
             {
-                JarvisFrameworkKernelMetricsHelper.CreateMeterForDispatcherCountSlot(slotName);
                 var startCheckpoint = GetStartCheckpointForSlot(slotName);
                 _logger.InfoFormat("Slot {0} starts from {1}", slotName, startCheckpoint);
 
@@ -485,7 +483,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 projections.Select(_ => _.Info.CommonName),
                 chunk.Position,
                 someEventDispatched: someProjectionProcessedTheEvent).ConfigureAwait(false);
-            JarvisFrameworkKernelMetricsHelper.MarkCommitDispatchedCount(slotName, 1);
 
             await _notifyCommitHandled.SetDispatched(slotName, chunk).ConfigureAwait(false);
 
