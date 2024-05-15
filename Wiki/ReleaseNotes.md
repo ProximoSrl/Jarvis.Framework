@@ -2,6 +2,10 @@
 
 ## vNext
 
+## 7.7.12
+
+- Fixed FindAndModifyAsync to include missing version with async
+
 ## 7.7.11
 
 - Better metrics for standard projection engine.
