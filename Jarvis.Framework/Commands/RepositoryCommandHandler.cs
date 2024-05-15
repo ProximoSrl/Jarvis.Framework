@@ -98,6 +98,26 @@ namespace Jarvis.Framework.Kernel.Commands
         }
 
         /// <summary>
+        /// To maintain compatibility with the old command handler.
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="callback"></param>
+        /// <param name="createIfNotExists"></param>
+        /// <returns></returns>
+        protected virtual Task FindAndModifyAsync(
+            EventStoreIdentity id,
+            Func<TAggregate, Task> callback,
+            bool createIfNotExists = false)
+        {
+            return FindAndModifyAsync(id, async a =>
+            {
+                await callback(a);
+                return RepositoryCommandHandlerCallbackReturnValue.Default;
+            },
+            createIfNotExists);
+        }
+
+        /// <summary>
         /// This is a very special way to interact with an aggregate, it is the standard pattern
         /// where a command handler load an aggregate, invokes some methods on it then save.
         /// </summary>
