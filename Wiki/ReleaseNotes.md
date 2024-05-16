@@ -4,6 +4,10 @@
 
 - AtomicProjectionCheckpointManager raises events when the checkpoint changed.
 
+## 7.7.13
+
+- Seems that CommandHAndled mongodb mapping was missing, restored.
+
 ## 7.7.12
 
 - Fixed FindAndModifyAsync to include missing version with async

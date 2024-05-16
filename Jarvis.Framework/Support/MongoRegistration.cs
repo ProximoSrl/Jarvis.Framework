@@ -54,6 +54,11 @@ namespace Jarvis.Framework.Kernel.Support
             {
                 BsonClassMap.RegisterClassMap<MessageReaction>(map => map.AutoMap());
             }
+
+            if (!BsonClassMap.IsClassMapRegistered(typeof(CommandHandled)))
+            {
+                BsonClassMap.RegisterClassMap(new AliasClassMap(typeof(CommandHandled)));
+            }
         }
 
         private static void FixSerialzierForDriver2_19()
