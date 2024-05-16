@@ -59,7 +59,6 @@ namespace Jarvis.Framework.Kernel.Support
             {
                 BsonClassMap.RegisterClassMap(new AliasClassMap(typeof(CommandHandled)));
             }
-
         }
 
         private static void FixSerialzierForDriver2_19()
