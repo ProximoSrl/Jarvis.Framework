@@ -48,6 +48,33 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         }
 
         [Test]
+        public async Task Verify_update_all()
+        {
+            var sut = GenerateSut();
+            sut.Register(typeof(SimpleTestAtomicReadModel));
+            sut.Register(typeof(AnotherSimpleTestAtomicReadModel));
+            sut.MarkPositionToAllReadModel(42);
+
+            var position1 = sut.GetCheckpoint("SimpleTestAtomicReadModel");
+            var position2 = sut.GetCheckpoint("AnotherSimpleTestAtomicReadModel");
+            //Verify position is updated
+            Assert.That(position1, Is.EqualTo(42));
+            Assert.That(position2, Is.EqualTo(42));
+
+            //now flush
+            await sut.FlushAsync().ConfigureAwait(false);
+
+            //ok we need to verify that now, if we recreate another instance, everything is reloaded
+            sut = GenerateSut();
+            var checkpoint = sut.GetCheckpoint("SimpleTestAtomicReadModel");
+            Assert.That(checkpoint, Is.EqualTo(42));
+
+            checkpoint = sut.GetCheckpoint("AnotherSimpleTestAtomicReadModel");
+            Assert.That(checkpoint, Is.EqualTo(42));
+        }
+
+
+        [Test]
         public void Does_not_throw_with_multiple_registration()
         {
             var sut = GenerateSut();

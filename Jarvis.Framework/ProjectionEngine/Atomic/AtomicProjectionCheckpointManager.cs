@@ -158,10 +158,17 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             OnCheckpointChanged(new AtomicProjectionCheckpointChangedEventArgs(name));
         }
 
+        public void MarkPositionToAllReadModel(int newGlobalCheckpointPosition)
+        {
+            foreach (var cp in _inMemoryCheckpoint.Values)
+            {
+                cp.Position = newGlobalCheckpointPosition;
+            }
+        }
+
         /// <summary>
         /// Simply return the minimum checkpoint already dispatched.
         /// </summary>
-        /// <returns></returns>
         public long GetMinimumPositionDispatched()
         {
             if (_inMemoryCheckpoint.Count == 0)
@@ -173,7 +180,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// <summary>
         /// Simply return the Maximum checkpoint already dispatched.
         /// </summary>
-        /// <returns></returns>
         public long GetLastPositionDispatched()
         {
             if (_inMemoryCheckpoint.Count == 0)
@@ -182,6 +188,15 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             return _inMemoryCheckpoint.Values.Max(_ => _.Position);
         }
 
+        /// <summary>
+        /// <para>
+        /// Flush data on the database, remember that this component does not immediately
+        /// update the record in mongodb because there is absolutely no need to have the
+        /// data immediately consistent due to strong idempotency.
+        /// </para>
+        /// <para>We prefer not to kill mongodb with too many updates.</para>
+        /// </summary>
+        /// <returns></returns>
         public async Task FlushAsync()
         {
             var requests = new List<WriteModel<AtomicProjectionCheckpoint>>();
