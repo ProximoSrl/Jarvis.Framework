@@ -321,7 +321,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// be fully projected with a special catcher.
         /// </summary>
         /// <param name="name"></param>
-        void MarkAsCatchedUp(string name);
+        Task MarkAsCatchedUpAsync(string name);
     }
 
     /// <summary>
