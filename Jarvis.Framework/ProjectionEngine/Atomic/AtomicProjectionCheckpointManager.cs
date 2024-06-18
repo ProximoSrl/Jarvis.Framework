@@ -11,11 +11,8 @@ using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 {
-    /// <summary>
-    /// Simple manager to store in mongodb the position of the last
-    /// dispatched checkpoint for each atomic readmodel.
-    /// </summary>
-    public class AtomicProjectionCheckpointManager
+    /// <inheritdoc />
+    public class AtomicProjectionCheckpointManager : IAtomicProjectionCheckpointManager
     {
         private readonly IMongoCollection<AtomicProjectionCheckpoint> _collection;
         private readonly ConcurrentDictionary<String, AtomicProjectionCheckpoint> _inMemoryCheckpoint;
@@ -45,7 +42,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 .AsQueryable()
                 .Where(c => !c.ReadmodelMissing)
                 .ToList()
-                .Select(_ => new KeyValuePair<String, AtomicProjectionCheckpoint>(_.Id, _));
+                .Select(_ => new KeyValuePair<String, AtomicProjectionCheckpoint>(_.Id, _))
+                .ToList();
 #pragma warning restore S2971 // "IEnumerable" LINQs should be simplified
 
             _inMemoryCheckpoint = new ConcurrentDictionary<String, AtomicProjectionCheckpoint>(dictionary);
@@ -62,11 +60,21 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             Task.Run(() => CheckpointChanged?.Invoke(this, e));
         }
 
+        /// <inheritdoc />
         public IEnumerable<Type> GetAllRegisteredAtomicReadModels()
         {
             return _registeredTypeNames.Values;
         }
 
+        /// <inheritdoc />
+        public IEnumerable<Type> GetAllReadmodelWithoutCatchUp()
+        {
+            return _inMemoryCheckpoint.Values
+                .Where(c => !c.ReadmodelMissing && !c.CatchupDone)
+                .Select(c => _registeredTypeNames[c.Id]);
+        }
+
+        /// <inheritdoc />
         public void Register(Type atomicAggregateType)
         {
             var attribute = AtomicReadmodelInfoAttribute.GetFrom(atomicAggregateType);
@@ -97,11 +105,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             _registeredTypeNames.Add(attribute.Name, atomicAggregateType);
         }
 
-        /// <summary>
-        /// After the caller called <see cref="Register(Type)"/> for all the readmodels, calling this
-        /// method will mark all other readmodel as missing.
-        /// </summary>
-        /// <returns></returns>
+        /// <inheritdoc />
         public async Task MarkMissingReadmodels()
         {
             HashSet<String> allregisteredTypes = new HashSet<string>();
@@ -118,11 +122,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             }
         }
 
-        /// <summary>
-        /// Retrieve checkpoint for a single readmodel.
-        /// </summary>
-        /// <param name="atomicReadmodelName"></param>
-        /// <returns></returns>
+        /// <inheritdoc />
         public long GetCheckpoint(string atomicReadmodelName)
         {
             if (_inMemoryCheckpoint.TryGetValue(atomicReadmodelName, out var checkpoint))
@@ -132,11 +132,21 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             return 0;
         }
 
-        /// <summary>
-        /// Mark last dispatched checkpoint for a given readmodel.
-        /// </summary>
-        /// <param name="name">The name of the Atomic Readmodel, as taken from attribute.</param>
-        /// <param name="value">Last checkpoint dispatched.</param>
+        /// <inheritdoc/>
+        public async Task MarkAsCatchedUpAsync(string name)
+        {
+            if (_inMemoryCheckpoint.TryGetValue(name, out var checkpoint))
+            {
+                checkpoint.CatchupDone = true;
+                await FlushAsync();
+            }
+            else
+            {
+                Logger.ErrorFormat("Unable to mark position to readmodel {0}, readmodel not known", name);
+            }
+        }
+
+        /// <inheritdoc />
         public void MarkPosition(String name, Int64 value)
         {
             if (_inMemoryCheckpoint.TryGetValue(name, out var checkpoint))
@@ -158,6 +168,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             OnCheckpointChanged(new AtomicProjectionCheckpointChangedEventArgs(name));
         }
 
+        /// <inheritdoc />
         public void MarkPositionToAllReadModel(int newGlobalCheckpointPosition)
         {
             foreach (var cp in _inMemoryCheckpoint.Values)
@@ -166,9 +177,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             }
         }
 
-        /// <summary>
-        /// Simply return the minimum checkpoint already dispatched.
-        /// </summary>
+        /// <inheritdoc />
         public long GetMinimumPositionDispatched()
         {
             if (_inMemoryCheckpoint.Count == 0)
@@ -177,9 +186,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             return _inMemoryCheckpoint.Values.Where(m => !m.ReadmodelMissing).Min(_ => _.Position);
         }
 
-        /// <summary>
-        /// Simply return the Maximum checkpoint already dispatched.
-        /// </summary>
+        /// <inheritdoc />
         public long GetLastPositionDispatched()
         {
             if (_inMemoryCheckpoint.Count == 0)
@@ -188,15 +195,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             return _inMemoryCheckpoint.Values.Max(_ => _.Position);
         }
 
-        /// <summary>
-        /// <para>
-        /// Flush data on the database, remember that this component does not immediately
-        /// update the record in mongodb because there is absolutely no need to have the
-        /// data immediately consistent due to strong idempotency.
-        /// </para>
-        /// <para>We prefer not to kill mongodb with too many updates.</para>
-        /// </summary>
-        /// <returns></returns>
+        /// <inheritdoc />
         public async Task FlushAsync()
         {
             var requests = new List<WriteModel<AtomicProjectionCheckpoint>>();
@@ -240,7 +239,89 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             /// show that the readmodel is really missing.
             /// </summary>
             public Boolean ReadmodelMissing { get; set; }
+
+            /// <summary>
+            /// If we have a new readmodel, we need to catchup up to the last checkpoint.
+            /// This property will allow us to understand if a specific readmodel already
+            /// catched up.
+            /// </summary>
+            public Boolean CatchupDone { get; set; }
         }
+    }
+
+    /// <summary>
+    /// Simple manager to store in mongodb the position of the last
+    /// dispatched checkpoint for each atomic readmodel.
+    /// </summary>
+    public interface IAtomicProjectionCheckpointManager
+    {
+        /// <summary>
+        /// <para>
+        /// Flush data on the database, remember that this component does not immediately
+        /// update the record in mongodb because there is absolutely no need to have the
+        /// data immediately consistent due to strong idempotency.
+        /// </para>
+        /// <para>We prefer not to kill mongodb with too many updates.</para>
+        /// </summary>
+        Task FlushAsync();
+
+        /// <summary>
+        /// Return the list of all registered atomic readmodels.
+        /// </summary>
+        IEnumerable<Type> GetAllRegisteredAtomicReadModels();
+
+        /// <summary>
+        /// Return all readmodels that needs to catchup.
+        /// </summary>
+        /// <returns></returns>
+        IEnumerable<Type> GetAllReadmodelWithoutCatchUp();
+
+        /// <summary>
+        /// Retrieve checkpoint for a single readmodel.
+        /// </summary>
+        long GetCheckpoint(string atomicReadmodelName);
+
+        /// <summary>
+        /// Simply return the Maximum checkpoint already dispatched.
+        /// </summary>
+        long GetLastPositionDispatched();
+
+        /// <summary>
+        /// Simply return the minimum checkpoint already dispatched.
+        /// </summary>
+        long GetMinimumPositionDispatched();
+
+        /// <summary>
+        /// After the caller called <see cref="Register(Type)"/> for all the readmodels, calling this
+        /// method will mark all other readmodel as missing.
+        /// </summary>
+        Task MarkMissingReadmodels();
+
+        /// <summary>
+        /// Mark last dispatched checkpoint for a given readmodel.
+        /// </summary>
+        /// <param name="name">The name of the Atomic Readmodel, as taken from attribute.</param>
+        /// <param name="value">Last checkpoint dispatched.</param>
+        void MarkPosition(string name, long value);
+
+        /// <summary>
+        /// Allow to set the same checkpoint for all readmodels.
+        /// </summary>
+        /// <param name="newGlobalCheckpointPosition">Last checkpoint dispatched for all readmodel.</param>
+        void MarkPositionToAllReadModel(int newGlobalCheckpointPosition);
+
+        /// <summary>
+        /// Register a new atomic readmodel.
+        /// </summary>
+        void Register(Type atomicAggregateType);
+
+        /// <summary>
+        /// With the new version this checkpoint manager is capable of storing another information
+        /// the fact that the readmodel is correctly catched up. This allow for new reamodel to
+        /// be fully projected with a special catcher.
+        /// </summary>
+        /// <param name="name"></param>
+        void MarkAsCatchedUp(string name);
     }
 
     /// <summary>
@@ -253,6 +334,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             AtomicReadmodelName = atomicReadmodelName;
         }
 
+        /// <summary>
+        /// Name of the readmodel.
+        /// </summary>
         public string AtomicReadmodelName { get; private set; }
     }
 }

@@ -2,6 +2,8 @@
 
 ## vNext
 
+- AtomicProjectionCheckpointManager handle catchup into checkpoint.
+- AtomicProjectionCheckpointManager extracted interface.
 - AtomicProjectionCheckpointManager raises events when the checkpoint changed.
 
 ## 7.7.13
