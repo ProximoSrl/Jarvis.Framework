@@ -5,7 +5,6 @@ using Jarvis.Framework.Shared.ReadModel.Atomic;
 using Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support;
 using NStore.Domain;
 using NUnit.Framework;
-using NUnit.Framework.Internal.Commands;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -75,12 +74,44 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         }
 
         [Test]
+        public async Task Verify_event_for_end_fixing_not_Raised_if_no_fix_happened()
+        {
+            //Arrange: Generate some commit and project them
+            SimpleTestAtomicReadModel.FakeSignature = 1;
+            Changeset changeset = await GenerateSomeChangesetsAndReturnLatestsChangeset().ConfigureAwait(false);
+            var engine = await CreateSutAndStartProjectionEngineAsync().ConfigureAwait(false);
+            GetTrackerAndWaitForChangesetToBeProjected("SimpleTestAtomicReadModel");
+            await engine.StopAsync().ConfigureAwait(false);
+
+            //Act, start the fixer but we do not change signature.
+            SimpleTestAtomicReadModel.FakeSignature = 1;
+            var sut = GenerateSut();
+            AtomicReadmodelFixedEventArgs atomicReadmodelFixedEventArgs = null;
+            sut.ReadmodelFixed += (sender, args) => atomicReadmodelFixedEventArgs = args;
+            sut.AddReadmodelToFix(typeof(SimpleTestAtomicReadModel));
+            sut.StartFixing();
+ 
+            //event should NOT be raised, wait for a little bit
+            DateTime startWait = DateTime.UtcNow;
+            while (DateTime.UtcNow.Subtract(startWait).TotalSeconds < 5)
+            {
+                if (sut.AllFixerFinishedFixing())
+                {
+                    break;
+                }
+                Thread.Sleep(100);
+            }
+
+            Assert.That(atomicReadmodelFixedEventArgs, Is.Null);
+        }
+
+        [Test]
         public async Task Verify_fix_for_readmodel_persists_faulted_with_new_version()
         {
             //Arrange: Generate some commit and project them
             SimpleTestAtomicReadModel.FakeSignature = 1;
             Changeset changeset = await GenerateSomeChangesetsAndReturnLatestsChangeset().ConfigureAwait(false);
-            
+
             for (int i = 0; i < 10; i++)
             {
                 await GenerateTouchedEvent();

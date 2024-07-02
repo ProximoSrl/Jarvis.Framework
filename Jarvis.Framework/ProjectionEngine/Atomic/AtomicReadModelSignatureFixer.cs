@@ -84,6 +84,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             }
         }
 
+        public bool AllFixerFinishedFixing() => _executors.All(_ => _.FinishedFixing);
+
+        /// <summary>
+        /// Needed to work with Activator CreateInstance to cast to a simple interface that
+        /// allows for basic functionality.
+        /// </summary>
         private interface IFixExecutor
         {
             void StartFixing();
@@ -91,6 +97,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             void StopFixing();
 
             event EventHandler<AtomicReadmodelFixedEventArgs> ReadmodelFixed;
+
+            bool FinishedFixing { get; }
         }
 
         private class ActionExecutor<T> : IFixExecutor
@@ -107,6 +115,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             {
                 ReadmodelFixed?.Invoke(this, new AtomicReadmodelFixedEventArgs { ReadmodelType = readmodelType });
             }
+
+            public bool FinishedFixing { get; private set; }
 
 #pragma warning disable S1144 // Unused private types or members should be removed
             public ActionExecutor(
@@ -149,6 +159,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 var actualVersion = _atomicReadModelFactory.GetReamdodelVersion(typeof(T));
                 Int32 count = 0;
                 //cycle until exit point.
+                bool fixedAtLeastOne = false;
                 while (true)
                 {
                     try
@@ -169,8 +180,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                         if (blockList.Count == 0)
                         {
                             _logger.InfoFormat("Finished fixing {0} - Fixed {1} readmodels", typeof(T), count);
-                            //Signal that the readmodel is finished fixhin
-                            OnReadmodelFixed(typeof(T));
+                            //Signal that the readmodel is finished fixing and we at least fixed one readmodel
+                            if (fixedAtLeastOne)
+                            {
+                                OnReadmodelFixed(typeof(T));
+                            }
+                            FinishedFixing = true;
                             return;
                         }
                         foreach (var elementToFix in blockList)
@@ -189,6 +204,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                             try
                             {
                                 await _liveAtomicReadModelProcessor.CatchupAsync(fixedRm).ConfigureAwait(false);
+                                fixedAtLeastOne = true;
                             }
                             catch (Exception ex)
                             {
