@@ -10,6 +10,14 @@
         <RootNamespace>Jarvis.Framework.Kernel</RootNamespace>
         <CodeAnalysisRuleSet>Jarvis.Framework.ruleset</CodeAnalysisRuleSet>
         <LangVersion>latest</LangVersion>
+
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+        <Deterministic>true</Deterministic>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+        <ContinuousIntegrationBuild Condition="'$(TF_BUILD)' == 'true'">True</ContinuousIntegrationBuild>
+        <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">True</ContinuousIntegrationBuild>
     </PropertyGroup>
 
     <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard2.0'">
@@ -26,14 +34,18 @@
         <PackageReference Include="Castle.LoggingFacility" Version="5.1.1" />
         <PackageReference Include="Castle.Windsor" Version="5.1.1" />
         <PackageReference Include="fasterflect" Version="3.0.0" />
-        <PackageReference Include="MongoDB.Bson" Version="2.27.0" />
-        <PackageReference Include="MongoDB.Driver" Version="2.27.0" />
-        <PackageReference Include="MongoDB.Driver.Core" Version="2.27.0" />
-        <PackageReference Include="MongoDB.Libmongocrypt" Version="1.10.0" />
+        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0">
+          <PrivateAssets>all</PrivateAssets>
+          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="MongoDB.Bson" Version="2.23.1" />
+        <PackageReference Include="MongoDB.Driver" Version="2.23.1" />
+        <PackageReference Include="MongoDB.Driver.Core" Version="2.23.1" />
+        <PackageReference Include="MongoDB.Libmongocrypt" Version="1.8.0" />
         <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-        <PackageReference Include="NStore.Core" Version="0.18.0" />
-        <PackageReference Include="NStore.Domain" Version="0.18.0" />
-        <PackageReference Include="NStore.Persistence.Mongo" Version="0.18.0" />
+        <PackageReference Include="NStore.Core" Version="0.17.0" />
+        <PackageReference Include="NStore.Domain" Version="0.17.0" />
+        <PackageReference Include="NStore.Persistence.Mongo" Version="0.17.0" />
         <PackageReference Include="System.Threading.Tasks.Dataflow" Version="8.0.0" />
     </ItemGroup>
 

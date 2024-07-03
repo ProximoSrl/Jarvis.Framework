@@ -1,43 +1,47 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFrameworks Condition="'$(DOTNETMULTITARGET)' == 'false'">netstandard2.0</TargetFrameworks>
-    <TargetFrameworks Condition="'$(DOTNETMULTITARGET)' == 'true'">netstandard2.0;net461</TargetFrameworks>
-    <TargetFrameworks Condition="'$(DOTNETMULTITARGET)' == ''">net461;netstandard2.0</TargetFrameworks>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <DebugType>full</DebugType>
-    <DebugSymbols>true</DebugSymbols>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <CodeAnalysisRuleSet>Jarvis.Framework.Rebus.ruleset</CodeAnalysisRuleSet>
-  </PropertyGroup>
+    <PropertyGroup>
+        <TargetFrameworks Condition="'$(DOTNETMULTITARGET)' == 'false'">netstandard2.0</TargetFrameworks>
+        <TargetFrameworks Condition="'$(DOTNETMULTITARGET)' == 'true'">netstandard2.0;net461</TargetFrameworks>
+        <TargetFrameworks Condition="'$(DOTNETMULTITARGET)' == ''">net461;netstandard2.0</TargetFrameworks>
+        <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+        <DebugType>full</DebugType>
+        <DebugSymbols>true</DebugSymbols>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <CodeAnalysisRuleSet>Jarvis.Framework.Rebus.ruleset</CodeAnalysisRuleSet>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net461' ">
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+        <Deterministic>true</Deterministic>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+        <ContinuousIntegrationBuild Condition="'$(TF_BUILD)' == 'true'">True</ContinuousIntegrationBuild>
+        <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">True</ContinuousIntegrationBuild>
+    </PropertyGroup>
 
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Castle.Core" Version="4.4.1" />
+        <PackageReference Include="Castle.LoggingFacility" Version="5.1.1" />
+        <PackageReference Include="Castle.Windsor" Version="5.1.1" />
+        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="MongoDB.Bson" Version="2.23.1" />
+        <PackageReference Include="MongoDB.Driver" Version="2.23.1" />
+        <PackageReference Include="MongoDB.Driver.Core" Version="2.23.1" />
+        <PackageReference Include="MongoDB.Driver.GridFS" Version="2.23.1" />
+        <PackageReference Include="MongoDB.Libmongocrypt" Version="1.8.0" />
+        <PackageReference Include="NStore.Core" Version="0.17.0" />
+        <PackageReference Include="NStore.Domain" Version="0.17.0" />
+        <PackageReference Include="NStore.Persistence.Mongo" Version="0.17.0" />
+        <PackageReference Include="Rebus" Version="6.6.5" />
+        <PackageReference Include="Rebus.Castle.Windsor" Version="6.0.0" />
+        <PackageReference Include="Rebus.Events" Version="4.0.2" />
+        <PackageReference Include="Rebus.MongoDb" Version="6.0.1013" />
+    </ItemGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
-
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Castle.Core" Version="4.4.1" />
-    <PackageReference Include="Castle.LoggingFacility" Version="5.1.1" />
-    <PackageReference Include="Castle.Windsor" Version="5.1.1" />
-    <PackageReference Include="MongoDB.Bson" Version="2.27.0" />
-    <PackageReference Include="MongoDB.Driver" Version="2.27.0" />
-    <PackageReference Include="MongoDB.Driver.Core" Version="2.27.0" />
-    <PackageReference Include="MongoDB.Driver.GridFS" Version="2.27.0" />
-    <PackageReference Include="MongoDB.Libmongocrypt" Version="1.10.0" />
-    <PackageReference Include="NStore.Core" Version="0.18.0" />
-    <PackageReference Include="NStore.Domain" Version="0.18.0" />
-    <PackageReference Include="NStore.Persistence.Mongo" Version="0.18.0" />
-    <PackageReference Include="Rebus" Version="6.6.5" />
-    <PackageReference Include="Rebus.Castle.Windsor" Version="6.0.0" />
-    <PackageReference Include="Rebus.Events" Version="4.0.2" />
-    <PackageReference Include="Rebus.MongoDb" Version="6.0.1013" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Jarvis.Framework.Shared\Jarvis.Framework.Shared.csproj" />
-    <ProjectReference Include="..\Jarvis.Framework\Jarvis.Framework.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Jarvis.Framework.Shared\Jarvis.Framework.Shared.csproj" />
+        <ProjectReference Include="..\Jarvis.Framework\Jarvis.Framework.csproj" />
+    </ItemGroup>
 </Project>
