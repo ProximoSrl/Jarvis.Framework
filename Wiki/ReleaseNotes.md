@@ -2,6 +2,10 @@
 
 ## vNext
 
+## 7.8.1
+
+- Updated nstore, mongodb, and test libraries.
+
 ## 7.8.0
 
 - Atomic Readmodel fixer raises event when a readmodel is fixed (and for complete fixing an entire type)
