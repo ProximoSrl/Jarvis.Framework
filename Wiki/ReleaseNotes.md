@@ -1,5 +1,7 @@
 # J.A.R.V.I.S. Framework - Proximo srl (c)
 
+## vNext
+
 ## 7.8.0
 
 - Atomic Readmodel fixer raises event when a readmodel is fixed (and for complete fixing an entire type)
