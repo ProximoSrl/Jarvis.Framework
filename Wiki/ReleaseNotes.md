@@ -4,6 +4,7 @@
 
 ## 7.8.1
 
+- Removed support for full framework, only netstandard2.0 is supported.
 - Updated nstore, mongodb, and test libraries.
 
 ## 7.8.0
