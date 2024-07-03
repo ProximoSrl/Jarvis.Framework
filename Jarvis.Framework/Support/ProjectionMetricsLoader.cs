@@ -165,7 +165,6 @@ namespace Jarvis.Framework.Kernel.Support
 
             var options = new AggregateOptions();
             options.AllowDiskUse = true;
-            options.UseCursor = true;
             var allCheckpoints = _checkpointCollection.Aggregate(options)
                 .Match(pipeline[0])
                 .Project(pipeline[1])

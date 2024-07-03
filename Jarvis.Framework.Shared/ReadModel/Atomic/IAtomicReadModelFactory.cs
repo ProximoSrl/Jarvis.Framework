@@ -34,7 +34,6 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
         /// <summary>
         /// Create an instance of <see cref="IAtomicReadModel"/> based on Type and Id
         /// </summary>
-        /// <param name="type"></param>
         /// <param name="id"></param>
         /// <returns></returns>
         T Create<T>(String id) where T : IAtomicReadModel;

@@ -1,8 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFrameworks Condition="'$(DOTNETMULTITARGET)' == 'false'">netstandard2.0</TargetFrameworks>
-        <TargetFrameworks Condition="'$(DOTNETMULTITARGET)' == 'true'">netstandard2.0;net461</TargetFrameworks>
-        <TargetFrameworks Condition="'$(DOTNETMULTITARGET)' == ''">net461;netstandard2.0</TargetFrameworks>
+        <TargetFramework>netstandard2.0</TargetFramework>
         <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
         <DebugType>full</DebugType>
         <DebugSymbols>true</DebugSymbols>
@@ -19,25 +17,25 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Castle.Core" Version="4.4.1" />
-        <PackageReference Include="Castle.LoggingFacility" Version="5.1.1" />
-        <PackageReference Include="Castle.Windsor" Version="5.1.1" />
-        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0">
+        <PackageReference Include="Castle.Core" />
+        <PackageReference Include="Castle.LoggingFacility" />
+        <PackageReference Include="Castle.Windsor" />
+        <PackageReference Include="Microsoft.SourceLink.GitHub">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="MongoDB.Bson" Version="2.23.1" />
-        <PackageReference Include="MongoDB.Driver" Version="2.23.1" />
-        <PackageReference Include="MongoDB.Driver.Core" Version="2.23.1" />
-        <PackageReference Include="MongoDB.Driver.GridFS" Version="2.23.1" />
-        <PackageReference Include="MongoDB.Libmongocrypt" Version="1.8.0" />
-        <PackageReference Include="NStore.Core" Version="0.17.0" />
-        <PackageReference Include="NStore.Domain" Version="0.17.0" />
-        <PackageReference Include="NStore.Persistence.Mongo" Version="0.17.0" />
-        <PackageReference Include="Rebus" Version="6.6.5" />
-        <PackageReference Include="Rebus.Castle.Windsor" Version="6.0.0" />
-        <PackageReference Include="Rebus.Events" Version="4.0.2" />
-        <PackageReference Include="Rebus.MongoDb" Version="6.0.1013" />
+        <PackageReference Include="MongoDB.Bson" />
+        <PackageReference Include="MongoDB.Driver" />
+        <PackageReference Include="MongoDB.Driver.Core" />
+        <PackageReference Include="MongoDB.Driver.GridFS" />
+        <PackageReference Include="MongoDB.Libmongocrypt" />
+        <PackageReference Include="NStore.Core" />
+        <PackageReference Include="NStore.Domain" />
+        <PackageReference Include="NStore.Persistence.Mongo" />
+        <PackageReference Include="Rebus" />
+        <PackageReference Include="Rebus.Castle.Windsor" />
+        <PackageReference Include="Rebus.Events" />
+        <PackageReference Include="Rebus.MongoDb" />
     </ItemGroup>
 
     <ItemGroup>

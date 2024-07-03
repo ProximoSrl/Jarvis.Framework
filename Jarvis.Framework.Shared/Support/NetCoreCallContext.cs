@@ -36,10 +36,10 @@ namespace Jarvis.Framework.Shared.Support
     /// <summary>
     /// Call context generic.
     /// </summary>
-    /// <typeparam name="T"><typeparam name="T">The type of the data being retrieved. Must match the type used when the <paramref name="name"/> was set via <see cref="SetData{T}(string, T)"/>.</typeparam></typeparam>
+    /// <typeparam name="T">The type of the data being retrieved. Must match the type used when the name parameter was set via <see cref="SetData{T}(string, T)"/>.</typeparam>
     public static class CallContext<T>
     {
-        static ConcurrentDictionary<string, AsyncLocal<T>> state = new ConcurrentDictionary<string, AsyncLocal<T>>();
+        static readonly ConcurrentDictionary<string, AsyncLocal<T>> state = new ConcurrentDictionary<string, AsyncLocal<T>>();
 
         /// <summary>
         /// Stores a given object and associates it with the specified name.

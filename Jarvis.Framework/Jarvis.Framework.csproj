@@ -1,8 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFrameworks Condition="'$(DOTNETMULTITARGET)' == 'false'">netstandard2.0</TargetFrameworks>
-        <TargetFrameworks Condition="'$(DOTNETMULTITARGET)' == 'true'">netstandard2.0;net461</TargetFrameworks>
-        <TargetFrameworks Condition="'$(DOTNETMULTITARGET)' == ''">net461;netstandard2.0</TargetFrameworks>
+        <TargetFramework>netstandard2.0</TargetFramework>
         <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
         <DebugType>full</DebugType>
         <DebugSymbols>true</DebugSymbols>
@@ -24,34 +22,25 @@
         <DefineConstants>NETCORE;NETSTANDARD;NETSTANDARD2_0</DefineConstants>
     </PropertyGroup>
 
-    <PropertyGroup Condition=" '$(TargetFramework)' == 'net461'">
-        <DefineConstants>NET45;NETFULL</DefineConstants>
-    </PropertyGroup>
-
     <ItemGroup>
-        <PackageReference Include="App.Metrics" Version="4.3.0" />
-        <PackageReference Include="Castle.Core" Version="4.4.1" />
-        <PackageReference Include="Castle.LoggingFacility" Version="5.1.1" />
-        <PackageReference Include="Castle.Windsor" Version="5.1.1" />
-        <PackageReference Include="fasterflect" Version="3.0.0" />
-        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0">
+        <PackageReference Include="App.Metrics" />
+        <PackageReference Include="Castle.Core" />
+        <PackageReference Include="Castle.LoggingFacility" />
+        <PackageReference Include="Castle.Windsor" />
+        <PackageReference Include="fasterflect" />
+        <PackageReference Include="Microsoft.SourceLink.GitHub">
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="MongoDB.Bson" Version="2.23.1" />
-        <PackageReference Include="MongoDB.Driver" Version="2.23.1" />
-        <PackageReference Include="MongoDB.Driver.Core" Version="2.23.1" />
-        <PackageReference Include="MongoDB.Libmongocrypt" Version="1.8.0" />
-        <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-        <PackageReference Include="NStore.Core" Version="0.17.0" />
-        <PackageReference Include="NStore.Domain" Version="0.17.0" />
-        <PackageReference Include="NStore.Persistence.Mongo" Version="0.17.0" />
-        <PackageReference Include="System.Threading.Tasks.Dataflow" Version="8.0.0" />
-    </ItemGroup>
-
-    <ItemGroup Condition=" '$(TargetFramework)' == 'net461' ">
-        <Reference Include="System.Messaging" />
-        <Reference Include="System.Runtime.Caching" />
+        <PackageReference Include="MongoDB.Bson" />
+        <PackageReference Include="MongoDB.Driver" />
+        <PackageReference Include="MongoDB.Driver.Core" />
+        <PackageReference Include="MongoDB.Libmongocrypt" />
+        <PackageReference Include="Newtonsoft.Json" />
+        <PackageReference Include="NStore.Core" />
+        <PackageReference Include="NStore.Domain" />
+        <PackageReference Include="NStore.Persistence.Mongo" />
+        <PackageReference Include="System.Threading.Tasks.Dataflow" />
     </ItemGroup>
 
     <ItemGroup>

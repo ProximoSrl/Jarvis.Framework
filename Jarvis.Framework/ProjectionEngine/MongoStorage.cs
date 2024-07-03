@@ -89,7 +89,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         {
             try
             {
-                await _collection.Indexes.CreateOneAsync(keys, options).ConfigureAwait(false);
+                await _collection.Indexes.CreateOneAsync(new CreateIndexModel<TModel>(keys, options)).ConfigureAwait(false);
                 return true;
             }
             catch (MongoCommandException ex)

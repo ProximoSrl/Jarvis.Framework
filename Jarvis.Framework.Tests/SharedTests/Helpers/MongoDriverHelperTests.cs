@@ -67,11 +67,12 @@ namespace Jarvis.Framework.Tests.SharedTests.Helpers
         public async Task verify_index_exists()
         {
             await _collection.Indexes.CreateOneAsync(
+                new CreateIndexModel<MongoDriverHelperTestsClass>(
                 Builders<MongoDriverHelperTestsClass>.IndexKeys.Ascending(_ => _.Name),
                 new CreateIndexOptions()
                 {
                     Name = "TestIndex"
-                }).ConfigureAwait(false);
+                })).ConfigureAwait(false);
             var result = await _collection.IndexExistsAsync("TestIndex").ConfigureAwait(false);
             Assert.That(result, Is.True);
         }
