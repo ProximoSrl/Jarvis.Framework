@@ -169,7 +169,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         }
 
         /// <inheritdoc />
-        public void MarkPositionToAllReadModel(int newGlobalCheckpointPosition)
+        public void MarkPositionToAllReadModel(long newGlobalCheckpointPosition)
         {
             foreach (var cp in _inMemoryCheckpoint.Values)
             {
@@ -308,7 +308,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// Allow to set the same checkpoint for all readmodels.
         /// </summary>
         /// <param name="newGlobalCheckpointPosition">Last checkpoint dispatched for all readmodel.</param>
-        void MarkPositionToAllReadModel(int newGlobalCheckpointPosition);
+        void MarkPositionToAllReadModel(long newGlobalCheckpointPosition);
 
         /// <summary>
         /// Register a new atomic readmodel.
@@ -321,7 +321,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// be fully projected with a special catcher.
         /// </summary>
         /// <param name="name"></param>
-        void MarkAsCatchedUp(string name);
+        Task MarkAsCatchedUpAsync(string name);
     }
 
     /// <summary>
