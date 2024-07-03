@@ -1,6 +1,11 @@
 # J.A.R.V.I.S. Framework - Proximo srl (c)
 
-## vNext
+## 7.8.0
+
+- Atomic Readmodel fixer raises event when a readmodel is fixed (and for complete fixing an entire type)
+- AtomicProjectionCheckpointManager handle catchup into checkpoint.
+- AtomicProjectionCheckpointManager extracted interface.
+- AtomicProjectionCheckpointManager raises events when the checkpoint changed.
 
 ## 7.7.13
 

@@ -5,6 +5,7 @@ using Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support;
 using MongoDB.Driver;
 using NUnit.Framework;
 using System.Configuration;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
@@ -44,6 +45,73 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             //ok we need to verify that now, if we recreate another instance, everything is reloaded
             sut = GenerateSut();
             var checkpoint = sut.GetCheckpoint("SimpleTestAtomicReadModel");
+            Assert.That(checkpoint, Is.EqualTo(42));
+        }
+
+        [Test]
+        public void Readmodel_registered_is_not_catched_up_upon_registration()
+        {
+            var sut = GenerateSut();
+            sut.Register(typeof(SimpleTestAtomicReadModel));
+
+            var allNotCachedUp = sut.GetAllReadmodelWithoutCatchUp();
+            Assert.That(allNotCachedUp.Count(), Is.EqualTo(1));
+            Assert.That(allNotCachedUp.First(), Is.EqualTo(typeof(SimpleTestAtomicReadModel)));
+        }
+
+        [Test]
+        public void Support_catch_up_marker()
+        {
+            var sut = GenerateSut();
+            sut.Register(typeof(SimpleTestAtomicReadModel));
+            sut.MarkAsCatchedUpAsync("SimpleTestAtomicReadModel");
+            var allNotCachedUp = sut.GetAllReadmodelWithoutCatchUp();
+            Assert.That(allNotCachedUp.Count(), Is.EqualTo(0));
+        }
+
+        [Test]
+        public async Task Catch_up_marker_will_flush()
+        {
+            var sut = GenerateSut();
+            sut.Register(typeof(SimpleTestAtomicReadModel));
+            sut.MarkPosition("SimpleTestAtomicReadModel", 42);
+            //This call should flush
+            await sut.MarkAsCatchedUpAsync("SimpleTestAtomicReadModel");
+            var allNotCachedUp = sut.GetAllReadmodelWithoutCatchUp();
+            Assert.That(allNotCachedUp.Count(), Is.EqualTo(0));
+
+            //ok we need to verify that now, if we recreate another instance, everything is reloaded
+            //and this verify that we flushed and the catchup is handled correctly.
+            sut = GenerateSut();
+            var checkpoint = sut.GetCheckpoint("SimpleTestAtomicReadModel");
+            Assert.That(checkpoint, Is.EqualTo(42));
+            allNotCachedUp = sut.GetAllReadmodelWithoutCatchUp();
+            Assert.That(allNotCachedUp.Count(), Is.EqualTo(0));
+        }
+
+        [Test]
+        public async Task Verify_update_all()
+        {
+            var sut = GenerateSut();
+            sut.Register(typeof(SimpleTestAtomicReadModel));
+            sut.Register(typeof(AnotherSimpleTestAtomicReadModel));
+            sut.MarkPositionToAllReadModel(42);
+
+            var position1 = sut.GetCheckpoint("SimpleTestAtomicReadModel");
+            var position2 = sut.GetCheckpoint("AnotherSimpleTestAtomicReadModel");
+            //Verify position is updated
+            Assert.That(position1, Is.EqualTo(42));
+            Assert.That(position2, Is.EqualTo(42));
+
+            //now flush
+            await sut.FlushAsync().ConfigureAwait(false);
+
+            //ok we need to verify that now, if we recreate another instance, everything is reloaded
+            sut = GenerateSut();
+            var checkpoint = sut.GetCheckpoint("SimpleTestAtomicReadModel");
+            Assert.That(checkpoint, Is.EqualTo(42));
+
+            checkpoint = sut.GetCheckpoint("AnotherSimpleTestAtomicReadModel");
             Assert.That(checkpoint, Is.EqualTo(42));
         }
 
