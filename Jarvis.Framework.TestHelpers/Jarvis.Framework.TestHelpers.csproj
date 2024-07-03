@@ -10,15 +10,15 @@
     <PackageReference Include="Castle.LoggingFacility" Version="5.1.1" />
     <PackageReference Include="fasterflect" Version="3.0.0" />
     <PackageReference Include="Machine.Specifications" Version="1.1.1" />
-    <PackageReference Include="MongoDB.Bson" Version="2.23.1" />
-    <PackageReference Include="MongoDB.Driver" Version="2.23.1" />
-    <PackageReference Include="MongoDB.Driver.Core" Version="2.23.1" />
-    <PackageReference Include="MongoDB.Libmongocrypt" Version="1.8.0" />
+    <PackageReference Include="MongoDB.Bson" Version="2.27.0" />
+    <PackageReference Include="MongoDB.Driver" Version="2.27.0" />
+    <PackageReference Include="MongoDB.Driver.Core" Version="2.27.0" />
+    <PackageReference Include="MongoDB.Libmongocrypt" Version="1.10.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="NStore.Core" Version="0.17.0" />
-    <PackageReference Include="NStore.Domain" Version="0.17.0" />
-    <PackageReference Include="NStore.Persistence.Mongo" Version="0.17.0" />
-    <PackageReference Include="NUnit" Version="4.0.1" />
+    <PackageReference Include="NStore.Core" Version="0.18.0" />
+    <PackageReference Include="NStore.Domain" Version="0.18.0" />
+    <PackageReference Include="NStore.Persistence.Mongo" Version="0.18.0" />
+    <PackageReference Include="NUnit" Version="4.1.0" />
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0" />
   </ItemGroup>
 
