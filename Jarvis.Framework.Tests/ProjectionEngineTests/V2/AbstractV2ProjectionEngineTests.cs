@@ -174,7 +174,6 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
                 Persistence,
                 _tracker,
                 BuildProjections().ToArray(),
-                new NullHouseKeeper(),
                 new NullNotifyCommitHandled(),
                 config,
                 NullLogger.Instance,

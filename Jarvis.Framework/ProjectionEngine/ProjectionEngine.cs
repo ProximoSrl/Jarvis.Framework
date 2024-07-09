@@ -31,7 +31,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         private readonly IConcurrentCheckpointTracker _checkpointTracker;
 
-        private readonly IHousekeeper _housekeeper;
         private readonly INotifyCommitHandled _notifyCommitHandled;
 
         private long _maxDispatchedCheckpoint = 0;
@@ -74,7 +73,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             IPersistence persistence,
             IConcurrentCheckpointTracker checkpointTracker,
             IProjection[] projections,
-            IHousekeeper housekeeper,
             INotifyCommitHandled notifyCommitHandled,
             ProjectionEngineConfig config,
             ILogger logger,
@@ -101,7 +99,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
             _pollingClientFactory = pollingClientFactory ?? throw new ArgumentNullException(nameof(pollingClientFactory));
             _checkpointTracker = checkpointTracker ?? throw new ArgumentNullException(nameof(checkpointTracker));
-            _housekeeper = housekeeper ?? throw new ArgumentNullException(nameof(housekeeper));
+            
             _notifyCommitHandled = notifyCommitHandled ?? throw new ArgumentNullException(nameof(notifyCommitHandled));
             _config = config;
 
@@ -226,12 +224,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
             TenantContext.Enter(_config.TenantId);
 
-            await _housekeeper.InitAsync().ConfigureAwait(false);
-
             await ConfigureProjectionsAsync().ConfigureAwait(false);
-
-            // cleanup
-            await _housekeeper.RemoveAllAsync(_persistence).ConfigureAwait(false);
 
             var allSlots = _projectionsBySlot.Keys.ToArray();
 

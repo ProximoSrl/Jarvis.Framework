@@ -1,4 +1,8 @@
-# Version 6
+# Version 7
+
+## 7.10
+
+- Removed projection engine IHousekeeper, there is not a replacement.
 
 ## 7.7.10
 

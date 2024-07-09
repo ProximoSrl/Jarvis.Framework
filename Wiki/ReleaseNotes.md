@@ -2,6 +2,8 @@
 
 ## vNext
 
+- Removed projection engine IHousekeeper
+
 ## 7.8.1
 
 - Removed support for full framework, only netstandard2.0 is supported.
