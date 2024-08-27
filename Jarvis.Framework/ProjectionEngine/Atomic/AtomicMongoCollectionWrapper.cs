@@ -10,6 +10,7 @@ using MongoDB.Driver.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
@@ -162,7 +163,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         }
 
         /// <inheritdoc />
-        public async Task<TModel> FindOneByIdAsync(String id)
+        public async Task<TModel> FindOneByIdAsync(String id, CancellationToken cancellationToken)
 		{
 			TModel rm = null;
 			Boolean fixableExceptions = false;
@@ -172,7 +173,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 			//serialization on mongodb.
 			try
 			{
-				rm = await _collection.FindOneByIdAsync(id).ConfigureAwait(false);
+				rm = await _collection.FindOneByIdAsync(id, cancellationToken).ConfigureAwait(false);
 
 				//if readmodel is faulted we can retry up to MaxNumberOfRetryToReprojectFaultedReadmodels to reproject.
 				if (rm?.Faulted == true && rm.FaultRetryCount < MaxNumberOfRetryToReprojectFaultedReadmodels) fixableExceptions = true;

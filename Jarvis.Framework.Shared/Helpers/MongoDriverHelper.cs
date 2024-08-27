@@ -50,6 +50,12 @@ namespace Jarvis.Framework.Shared.Helpers
             return await finder.SingleOrDefaultAsync().ConfigureAwait(false);
         }
 
+        public static async Task<T> FindOneByIdAsync<T, Tid>(this IMongoCollection<T> collection, Tid idValue, CancellationToken cancellationToken)
+        {
+            var finder = await collection.FindAsync(Builders<T>.Filter.Eq("_id", idValue), cancellationToken: cancellationToken).ConfigureAwait(false);
+            return await finder.SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        }
+
         public static T FindOneById<T>(this IMongoCollection<T> collection, BsonValue idValue)
         {
             var value = BsonTypeMapper.MapToDotNetValue(idValue);

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.ReadModel.Atomic
@@ -19,8 +20,9 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
         /// <param name="versionUpTo">Version of aggregate to project, it is NOT the global
         /// position, but version of aggregate.
         /// </param>
+        /// <param name="cancellationToken">Cancellation token</param>
         /// <returns></returns>
-        Task<TModel> ProcessAsync<TModel>(String id, Int64 versionUpTo)
+        Task<TModel> ProcessAsync<TModel>(String id, Int64 versionUpTo, CancellationToken cancellationToken = default)
             where TModel : IAtomicReadModel;
 
         /// <summary>
@@ -30,8 +32,9 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
         /// <typeparam name="TModel">Type of atomic readmodel to be projected</typeparam>
         /// <param name="id">If of the aggregate</param>
         /// <param name="positionUpTo">Global position in the stream to use for projection.</param>
+        /// <param name="cancellationToken">Cancellation token</param>
         /// <returns></returns>
-        Task<TModel> ProcessAsyncUntilChunkPosition<TModel>(String id, Int64 positionUpTo)
+        Task<TModel> ProcessAsyncUntilChunkPosition<TModel>(String id, Int64 positionUpTo, CancellationToken cancellationToken = default)
             where TModel : IAtomicReadModel;
 
         /// <summary>
@@ -42,8 +45,9 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
         /// <typeparam name="TModel">Type of atomic readmodel to be projected</typeparam>
         /// <param name="id">If of the aggregate</param>
         /// <param name="dateTimeUpTo">Date to project up to, you must specify UTC date time value not local time</param>
+        /// <param name="cancellationToken">Cancellation token</param>
         /// <returns></returns>
-        Task<TModel> ProcessAsyncUntilUtcTimestamp<TModel>(String id, DateTime dateTimeUpTo)
+        Task<TModel> ProcessAsyncUntilUtcTimestamp<TModel>(String id, DateTime dateTimeUpTo, CancellationToken cancellationToken = default)
             where TModel : IAtomicReadModel;
 
         /// <summary>
@@ -54,8 +58,39 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
         /// </summary>
         /// <param name="readModel">Readmodel to catchup, if there are newer events not still projected
         /// at the end of this method this reamodel will be modified applying missing events.</param>
+        /// <param name="cancellationToken">Cancellation token</param>
         /// <returns></returns>
-        Task CatchupAsync<TModel>(TModel readModel)
+        Task CatchupAsync<TModel>(TModel readModel, CancellationToken cancellationToken = default)
             where TModel : IAtomicReadModel;
+    }
+
+    /// <summary>
+    /// Extension methods for ILiveAtomicReadModelProcessor to allow calling functions without cancellation token
+    /// </summary>
+    public static class LiveAtomicReadModelProcessorExtensions
+    {
+        public static Task<TModel> ProcessAsync<TModel>(this ILiveAtomicReadModelProcessor processor, String id, Int64 versionUpTo)
+            where TModel : IAtomicReadModel
+        {
+            return processor.ProcessAsync<TModel>(id, versionUpTo, CancellationToken.None);
+        }
+
+        public static Task<TModel> ProcessAsyncUntilChunkPosition<TModel>(this ILiveAtomicReadModelProcessor processor, String id, Int64 positionUpTo)
+            where TModel : IAtomicReadModel
+        {
+            return processor.ProcessAsyncUntilChunkPosition<TModel>(id, positionUpTo, CancellationToken.None);
+        }
+
+        public static Task<TModel> ProcessAsyncUntilUtcTimestamp<TModel>(this ILiveAtomicReadModelProcessor processor, String id, DateTime dateTimeUpTo)
+            where TModel : IAtomicReadModel
+        {
+            return processor.ProcessAsyncUntilUtcTimestamp<TModel>(id, dateTimeUpTo, CancellationToken.None);
+        }
+
+        public static Task CatchupAsync<TModel>(this ILiveAtomicReadModelProcessor processor, TModel readModel)
+            where TModel : IAtomicReadModel
+        {
+            return processor.CatchupAsync(readModel, CancellationToken.None);
+        }
     }
 }
