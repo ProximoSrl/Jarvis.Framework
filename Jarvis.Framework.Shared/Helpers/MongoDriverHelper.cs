@@ -44,10 +44,10 @@ namespace Jarvis.Framework.Shared.Helpers
             return collection.Find(Builders<T>.Filter.Eq("_id", idValue)).SingleOrDefault();
         }
 
-        public static async Task<T> FindOneByIdAsync<T, Tid>(this IMongoCollection<T> collection, Tid idValue)
+        public static async Task<T> FindOneByIdAsync<T, Tid>(this IMongoCollection<T> collection, Tid idValue, CancellationToken cancellationToken = default)
         {
             var finder = await collection.FindAsync(Builders<T>.Filter.Eq("_id", idValue)).ConfigureAwait(false);
-            return await finder.SingleOrDefaultAsync().ConfigureAwait(false);
+            return await finder.SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false);
         }
 
         public static T FindOneById<T>(this IMongoCollection<T> collection, BsonValue idValue)
@@ -86,14 +86,15 @@ namespace Jarvis.Framework.Shared.Helpers
                 DefaultReplaceOptions);
         }
 
-        public static Task SaveAsync<T, Tid>(this IMongoCollection<T> collection, T objToSave, Tid objectId)
+        public static Task SaveAsync<T, Tid>(this IMongoCollection<T> collection, T objToSave, Tid objectId, CancellationToken cancellationToken = default)
         {
             if (ObjectId.Empty.Equals(objectId))
                 throw new ArgumentException("Cannot save with null objectId", nameof(objectId));
             return collection.ReplaceOneAsync(
                 Builders<T>.Filter.Eq("_id", objectId),
                 objToSave,
-                DefaultReplaceOptions);
+                DefaultReplaceOptions,
+                cancellationToken);
         }
 
         public static DeleteResult RemoveById<T, Tid>(this IMongoCollection<T> collection, Tid idValue)
@@ -101,9 +102,9 @@ namespace Jarvis.Framework.Shared.Helpers
             return collection.DeleteOne(Builders<T>.Filter.Eq("_id", idValue));
         }
 
-        public static Task<DeleteResult> RemoveByIdAsync<T, Tid>(this IMongoCollection<T> collection, Tid idValue)
+        public static Task<DeleteResult> RemoveByIdAsync<T, Tid>(this IMongoCollection<T> collection, Tid idValue, CancellationToken cancellationToken = default)
         {
-            return collection.DeleteOneAsync(Builders<T>.Filter.Eq("_id", idValue));
+            return collection.DeleteOneAsync(Builders<T>.Filter.Eq("_id", idValue), cancellationToken);
         }
 
         public static Dictionary<Tkey, Tvalue> AsDictionary<Tkey, Tvalue>(this BsonValue bsonValue)
@@ -122,10 +123,10 @@ namespace Jarvis.Framework.Shared.Helpers
             }
         }
 
-        public static async Task<Boolean> IndexExistsAsync<T>(this IMongoCollection<T> collection, String indexName)
+        public static async Task<Boolean> IndexExistsAsync<T>(this IMongoCollection<T> collection, String indexName, CancellationToken cancellationToken = default)
         {
-            var indexesQuery = await collection.Indexes.ListAsync().ConfigureAwait(false);
-            var indexes = await indexesQuery.ToListAsync().ConfigureAwait(false);
+            var indexesQuery = await collection.Indexes.ListAsync(cancellationToken).ConfigureAwait(false);
+            var indexes = await indexesQuery.ToListAsync(cancellationToken).ConfigureAwait(false);
             return indexes.Any(x => x["name"].AsString == indexName);
         }
 

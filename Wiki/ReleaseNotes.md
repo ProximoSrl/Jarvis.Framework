@@ -1,5 +1,9 @@
 # J.A.R.V.I.S. Framework - Proximo srl (c)
 
+## 7.8.2
+
+- Better support for cancellation token. 
+
 ## 7.8.1
 
 - Updated nstore, mongodb, and test libraries.
