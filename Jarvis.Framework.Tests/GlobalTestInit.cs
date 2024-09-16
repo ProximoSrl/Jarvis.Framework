@@ -1,15 +1,14 @@
-﻿using System;
-using System.Configuration;
-using NUnit.Framework;
+﻿using App.Metrics;
 using Jarvis.Framework.Kernel.Support;
+using Jarvis.Framework.Shared;
 using Jarvis.Framework.Shared.IdentitySupport;
+using Jarvis.Framework.Shared.Support;
+using Jarvis.Framework.TestHelpers;
+using NUnit.Framework;
+using System;
+using System.Configuration;
 using System.IO;
 using System.Reflection;
-using Jarvis.Framework.TestHelpers;
-using Jarvis.Framework.Shared.Support;
-using App.Metrics;
-using MongoDB.Bson.Serialization.Serializers;
-using MongoDB.Bson.Serialization;
 
 namespace Jarvis.Framework.Tests
 {
@@ -20,6 +19,7 @@ namespace Jarvis.Framework.Tests
         public void Global_initialization_of_all_tests()
         {
             JarvisFrameworkMetricsHelper.InitMetrics(new MetricsBuilder().Build());
+            JarvisFrameworkGlobalConfiguration.EnableMongodbDriverLinq3();
 
             //Nunit3 fix for test adapter of visual studio, it uses visual studio test directory
             Environment.CurrentDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
