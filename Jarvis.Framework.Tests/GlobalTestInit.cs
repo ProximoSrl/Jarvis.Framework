@@ -19,7 +19,6 @@ namespace Jarvis.Framework.Tests
         public void Global_initialization_of_all_tests()
         {
             JarvisFrameworkMetricsHelper.InitMetrics(new MetricsBuilder().Build());
-            JarvisFrameworkGlobalConfiguration.EnableMongodbDriverLinq3();
 
             //Nunit3 fix for test adapter of visual studio, it uses visual studio test directory
             Environment.CurrentDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
