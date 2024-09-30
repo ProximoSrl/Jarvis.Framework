@@ -1,5 +1,9 @@
 # Version 6
 
+## 7.8.2
+
+- Default version of LINQ driver for Mongodb is version 3. To revert to default you need to call JarvisFrameworkGlobalConfiguration.EnableMongodbDriverLinq2() to re-enable linq2 driver.
+
 ## 7.7.10
 
 - GuaranteedDeliveryBroadcastBlock allows for meter name to be specified.
