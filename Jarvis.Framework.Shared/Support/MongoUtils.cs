@@ -39,10 +39,6 @@ namespace Jarvis.Framework.Shared.Support
     {
         internal static Action<MongoClientSettings> ConfigureClientSettings = (settings) =>
         {
-            if (!JarvisFrameworkGlobalConfiguration.IsMongodbLinq3Enabled)
-            {
-                settings.LinqProvider = LinqProvider.V2;
-            }
             CustomClientSettingsConfiguration(settings);
         };
 
