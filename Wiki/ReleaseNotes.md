@@ -1,5 +1,9 @@
 # J.A.R.V.I.S. Framework - Proximo srl (c)
 
+## 7.8.3
+
+- Optimization for Atomic Readmodel Wrapper Update 
+
 ## 7.8.2
 
 - Linq driver for MongoDB now default to version 3.

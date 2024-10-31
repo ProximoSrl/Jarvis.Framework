@@ -330,19 +330,25 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 				return; //nothing to do, we already have a model with higer version
 			}
 
-			//ok I'll do an upsert, the condition is different, we need to try to insert
-			try
-			{
-				await _collection.InsertOneAsync(model).ConfigureAwait(false);
-				return;
-			}
-			catch (MongoException mex)
-			{
-				if (!mex.Message.Contains(ConcurrencyException))
-				{
-					throw;
-				}
-			}
+            //ok I'll do an upsert, the condition is different, we need to try to insert
+            //if we do not have an existing element in the database.
+            if (existing == null)
+            {
+                //we do not have the readmodel, we can insert, but we check for concurrency to be safe
+                //in the case we have a concurrent insert.
+                try
+                {
+                    await _collection.InsertOneAsync(model).ConfigureAwait(false);
+                    return;
+                }
+                catch (MongoException mex)
+                {
+                    if (!mex.Message.Contains(ConcurrencyException))
+                    {
+                        throw;
+                    }
+                }
+            }
 
 			//ok if we reach here, we incurr in concurrent exception, a record is alreay
 			//present and inserted between the two call, we need to update and let the idempotency avoid corruption
