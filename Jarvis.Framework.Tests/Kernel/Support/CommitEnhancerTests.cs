@@ -35,8 +35,20 @@ namespace Jarvis.Framework.Tests.Kernel.Support
             var evt = chunk.DomainEvents[0];
 
             //no specific data, standard commit data should be used.
-            Assert.That(evt.Context.Single().Key, Is.EqualTo("Foo"));
-            Assert.That(evt.Context.Single().Value, Is.EqualTo("Bar"));
+            Assert.That(evt.Context["Foo"], Is.EqualTo("Bar"));
+        }
+
+        [Test]
+        public void Does_not_copy_command_header()
+        {
+            var chunk = CreateTestChunk(new Object(), CreateAnEvent(), new Object());
+            _payload.Add("Foo", "Bar");
+            _sut.Enhance(chunk);
+
+            var evt = chunk.DomainEvents[0];
+
+            //no specific data, standard commit data should be used.
+            Assert.That(evt.Context.ContainsKey(ChangesetCommonHeaders.Command), Is.False);
         }
 
         [Test]
@@ -151,6 +163,7 @@ namespace Jarvis.Framework.Tests.Kernel.Support
         private TestChunk CreateTestChunk(params Object[] events)
         {
             _payload = new Changeset(1, events);
+            _payload.Headers.Add(ChangesetCommonHeaders.Command, new object());
             return new TestChunk(1, _sampleAggregateId, 1, _payload, Guid.NewGuid());
         }
 
