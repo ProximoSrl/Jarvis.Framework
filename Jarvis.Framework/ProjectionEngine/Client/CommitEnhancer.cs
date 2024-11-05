@@ -31,12 +31,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             {
                 DomainEvent evt = null;
                 int eventPosition = 1;
+                var headers = commit.Headers;
                 foreach (var eventMessage in commit.Events.Where(m => m is DomainEvent))
                 {
                     evt = (DomainEvent)eventMessage;
-                    var headers = commit.Headers;
                     evt.CommitId = chunk.OperationId;
-
                     evt.Version = commit.AggregateVersion;
                     evt.Context = headers;
                     evt.CheckpointToken = chunk.Position;
