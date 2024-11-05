@@ -4,6 +4,10 @@
 
 - Solution now uses centralized nuget version, removed the full framework version. Since we target netstandard this can be used on full framework too.
 
+## 7.8.3
+
+- Optimization for Atomic Readmodel Wrapper Update 
+
 ## 7.8.2
 
 - Linq driver for MongoDB now default to version 3.
