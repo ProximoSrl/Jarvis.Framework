@@ -13,7 +13,7 @@ namespace Jarvis.Framework.Shared.Events
         public const string Timestamp = "ts";
 
         /// <summary>
-        /// Command that generates the changeset.
+        /// Command that generates the changeset. It is used only for diagnostic purposes.
         /// </summary>
         public const string Command = "command";
 

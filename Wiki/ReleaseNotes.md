@@ -6,6 +6,10 @@
 
 ## 7.8.3
 
+- Removed Command header from commit enhancer.
+
+## 7.8.3
+
 - Optimization for Atomic Readmodel Wrapper Update 
 
 ## 7.8.2
