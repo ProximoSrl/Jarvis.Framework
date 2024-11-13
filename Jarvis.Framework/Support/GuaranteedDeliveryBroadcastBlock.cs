@@ -3,6 +3,7 @@ using Jarvis.Framework.Shared.Exceptions;
 using Jarvis.Framework.Shared.Support;
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 
@@ -23,7 +24,8 @@ namespace Jarvis.Framework.Kernel.Support
             String commitPollingClientId,
             Int32 boundedCapacity,
             Int32 secondsToWaitBeforeThrowError = 10,
-            string meterName = null)
+            string meterName = null,
+            CancellationToken cancellationToken = default)
         {
             var options = new ExecutionDataflowBlockOptions();
             if (boundedCapacity > 0)
@@ -38,7 +40,7 @@ namespace Jarvis.Framework.Kernel.Support
                     foreach (var target in targets)
                     {
                         Int32 errorCount = 0;
-                        while (!(await target.SendAsync(item).ConfigureAwait(false)))
+                        while (!(await target.SendAsync(item,  cancellationToken).ConfigureAwait(false)))
                         {
                             //message was not sent to the target, we need to wait a little bit and retry, if we fail too many times we raise an exception.
                             await Task.Delay(5000);
