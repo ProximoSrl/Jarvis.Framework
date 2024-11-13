@@ -2,6 +2,7 @@
 using Jarvis.Framework.Shared.ReadModel.Atomic;
 using NStore.Domain;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support
@@ -19,12 +20,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support
         /// <param name="position"></param>
         /// <param name="changeset"></param>
         /// <param name="identity"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns>The instance of the AtomicReadmodelChangesetConsumerReturnValue after modification or null if the
         /// readmodel was not modified.</returns>
         Task<AtomicReadmodelChangesetConsumerReturnValue> Handle(
             Int64 position,
             Changeset changeset,
-            IIdentity identity);
+            IIdentity identity,
+            CancellationToken cancellationToken = default);
 
         /// <summary>
         /// This method will do a full projection reprojecting the entire stream into the database
@@ -32,7 +35,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support
         /// each readmodel with a simple roundtrip
         /// </summary>
         /// <param name="identity"></param>
-        Task FullProject(IIdentity identity);
+        /// <param name="cancellationToken"></param>
+        Task FullProject(
+            IIdentity identity,
+            CancellationToken cancellationToken = default);
 
         /// <summary>
         /// A reference to the attribute of the readmodel that is handled by this instance

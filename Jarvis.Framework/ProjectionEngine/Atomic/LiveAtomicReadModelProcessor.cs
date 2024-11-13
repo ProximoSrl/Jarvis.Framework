@@ -5,6 +5,7 @@ using NStore.Core.Persistence;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using static Jarvis.Framework.Shared.ReadModel.Atomic.AtomicReadmodelMultiAggregateSubscription;
 
@@ -34,7 +35,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 		}
 
 		/// <inheritdoc/>
-		public async Task<TModel> ProcessAsync<TModel>(String id, Int64 versionUpTo)
+		public async Task<TModel> ProcessAsync<TModel>(String id, Int64 versionUpTo, CancellationToken cancellationToken)
 			where TModel : IAtomicReadModel
 		{
 			//Stop condition is version greater than the version we want to apply
@@ -45,7 +46,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 		}
 
 		/// <inheritdoc/>
-		public async Task<TModel> ProcessAsyncUntilChunkPosition<TModel>(string id, long positionUpTo) where TModel : IAtomicReadModel
+		public async Task<TModel> ProcessAsyncUntilChunkPosition<TModel>(string id, long positionUpTo, CancellationToken cancellationToken) where TModel : IAtomicReadModel
 		{
 			var readmodel = _atomicReadModelFactory.Create<TModel>(id);
 			var subscription = new AtomicReadModelSubscription<TModel>(_commitEnhancer, readmodel, cs => cs.GetChunkPosition() > positionUpTo);
@@ -54,18 +55,18 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 		}
 
 		/// <inheritdoc/>
-		public Task CatchupAsync<TModel>(TModel readModel) where TModel : IAtomicReadModel
+		public Task CatchupAsync<TModel>(TModel readModel, CancellationToken cancellationToken = default) where TModel : IAtomicReadModel
 		{
 			var subscription = new AtomicReadModelSubscription<TModel>(_commitEnhancer, readModel, cs => false);
-			return _persistence.ReadForwardAsync(readModel.Id, readModel.AggregateVersion + 1, subscription, Int64.MaxValue);
+			return _persistence.ReadForwardAsync(readModel.Id, readModel.AggregateVersion + 1, subscription, Int64.MaxValue, cancellationToken);
 		}
 
 		/// <inheritdoc/>
-		public async Task<TModel> ProcessAsyncUntilUtcTimestamp<TModel>(string id, DateTime dateTimeUpTo) where TModel : IAtomicReadModel
+		public async Task<TModel> ProcessAsyncUntilUtcTimestamp<TModel>(string id, DateTime dateTimeUpTo, CancellationToken cancellationToken = default) where TModel : IAtomicReadModel
 		{
 			var readmodel = _atomicReadModelFactory.Create<TModel>(id);
 			var subscription = new AtomicReadModelSubscription<TModel>(_commitEnhancer, readmodel, cs => cs.GetTimestamp() > dateTimeUpTo);
-			await _persistence.ReadForwardAsync(id, 0, subscription, Int64.MaxValue).ConfigureAwait(false);
+			await _persistence.ReadForwardAsync(id, 0, subscription, Int64.MaxValue, cancellationToken).ConfigureAwait(false);
 			return readmodel.AggregateVersion == 0 ? default : readmodel;
 		}
 

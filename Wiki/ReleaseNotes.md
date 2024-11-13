@@ -2,6 +2,10 @@
 
 ## vNext
 
+- Added Cancellation Token around collection wrapper.
+
+## 7.8.4
+
 - Solution now uses centralized nuget version, removed the full framework version. Since we target netstandard this can be used on full framework too.
 
 ## 7.8.3
