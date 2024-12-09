@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <TargetFramework>netstandard2.0</TargetFramework>
         <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
@@ -16,10 +16,6 @@
         <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">True</ContinuousIntegrationBuild>
     </PropertyGroup>
 
-    <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard2.0'">
-        <DefineConstants>NETCORE;NETSTANDARD;NETSTANDARD2_0</DefineConstants>
-    </PropertyGroup>
-
     <ItemGroup>
         <PackageReference Include="App.Metrics" />
         <PackageReference Include="Castle.Core" />
@@ -33,7 +29,6 @@
         </PackageReference>
         <PackageReference Include="MongoDB.Bson" />
         <PackageReference Include="MongoDB.Driver" />
-        <PackageReference Include="MongoDB.Driver.Core" />
         <PackageReference Include="MongoDB.Libmongocrypt" />
         <PackageReference Include="Newtonsoft.Json" />
         <PackageReference Include="NStore.Core" />

@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net7.0</TargetFramework>
+        <TargetFramework>net8.0</TargetFramework>
 
         <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
         <langversion>latest</langversion>
@@ -19,7 +19,6 @@
         </PackageReference>
         <PackageReference Include="MongoDB.Bson" />
         <PackageReference Include="MongoDB.Driver" />
-        <PackageReference Include="MongoDB.Driver.Core" />
         <PackageReference Include="MongoDB.Libmongocrypt" />
         <PackageReference Include="Newtonsoft.Json" />
         <PackageReference Include="NStore.Core" />

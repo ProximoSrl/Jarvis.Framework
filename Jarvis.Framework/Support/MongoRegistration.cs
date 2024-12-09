@@ -68,9 +68,14 @@ namespace Jarvis.Framework.Kernel.Support
                 if (!IsSerializerRegistered(typeof(object)))
                 {
                     //After version 2.19 of the driver. https://github.com/mongodb/mongo-csharp-driver/releases/tag/v2.19.0
-                    var objectSerializer = new ObjectSerializer(type => ObjectSerializer.AllAllowedTypes(type));
+                    var objectSerializer = new ObjectSerializer(
+                        BsonSerializer.LookupDiscriminatorConvention(typeof(object)),
+                        GuidRepresentation.CSharpLegacy,
+                        type => ObjectSerializer.AllAllowedTypes(type));
                     BsonSerializer.RegisterSerializer(objectSerializer);
                 }
+
+                BsonSerializer.TryRegisterSerializer(new GuidSerializer(GuidRepresentation.CSharpLegacy));
             }
             catch (Exception)
             {
