@@ -13,7 +13,6 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
     /// setup for every registered readmodel.
     /// </para>
     /// </summary>
-    /// <typeparam name="T"></typeparam>
     public interface IAtomicReadModelInitializer
     {
         Task Initialize();

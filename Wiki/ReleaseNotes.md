@@ -1,5 +1,11 @@
 # J.A.R.V.I.S. Framework - Proximo srl (c)
 
+## vNext
+
+## 7.9.0
+
+- Solution now uses centralized nuget version, removed the full framework version. Since we target netstandard this can be used on full framework too.
+
 ## 7.8.3
 
 - Removed Command header from commit enhancer.
@@ -15,6 +21,7 @@
 
 ## 7.8.1
 
+- Removed support for full framework, only netstandard2.0 is supported.
 - Updated nstore, mongodb, and test libraries.
 
 ## 7.8.0

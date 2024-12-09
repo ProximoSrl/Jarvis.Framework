@@ -107,7 +107,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
         public Int64 CountReservation(string serie)
         {
-            return (Int64)_offlineSlots.Count(
+            return _offlineSlots.CountDocuments(
                 Builders<OfflineIdentity>.Filter.And(
                     Builders<OfflineIdentity>.Filter.Eq(x => x.SerieName, serie),
                     Builders<OfflineIdentity>.Filter.Eq(x => x.Used, false)

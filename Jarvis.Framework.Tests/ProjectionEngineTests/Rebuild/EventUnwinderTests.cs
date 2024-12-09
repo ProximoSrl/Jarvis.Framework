@@ -114,7 +114,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 			await sut.UnwindAsync().ConfigureAwait(false);
 
 			var allEvents = sut.UnwindedCollection.FindAll();
-			Assert.That(allEvents.Count(), Is.EqualTo(1));
+			Assert.That(allEvents.CountDocuments(), Is.EqualTo(1));
 			var evt = allEvents.Single();
 			Assert.That(evt.EventType, Is.EqualTo("SampleAggregateCreated"));
 			Assert.That((evt.GetEvent() as DomainEvent).AggregateId, Is.EqualTo(id));

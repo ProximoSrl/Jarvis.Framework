@@ -252,7 +252,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
             Int64 lastCheckpointTokenDispatched = 0;
             Int32 lastSequenceDispatched = 0;
             Int64 maxEventDispatched = dispatchers.Max(d => d.LastCheckpointDispatched);
-            Int64 totalEventToDispatch = eventCollection.Count(Builders<UnwindedDomainEvent>.Filter.Lte(e => e.CheckpointToken, maxEventDispatched));
+            Int64 totalEventToDispatch = eventCollection.CountDocuments(Builders<UnwindedDomainEvent>.Filter.Lte(e => e.CheckpointToken, maxEventDispatched));
             Int64 dispatchedEvents = 0;
 
             //this is the main cycle that continue to poll events and send to the tpl buffer

@@ -41,14 +41,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Rebuild
 
             _unwindedEventCollection = _mongoDatabase.GetCollection<UnwindedDomainEvent>("UnwindedEvents");
             _unwindedEventCollection.Indexes.CreateOne(
-                Builders<UnwindedDomainEvent>.IndexKeys
-                    .Ascending(ude => ude.CheckpointToken)
-                    .Ascending(ude => ude.EventSequence)
-                    .Ascending(ude => ude.EventType),
-                new CreateIndexOptions()
-                {
-                    Name = "ScanPrimary"
-                }
+                new CreateIndexModel<UnwindedDomainEvent>(
+                    Builders<UnwindedDomainEvent>.IndexKeys
+                        .Ascending(ude => ude.CheckpointToken)
+                        .Ascending(ude => ude.EventSequence)
+                        .Ascending(ude => ude.EventType),
+                    new CreateIndexOptions()
+                    {
+                        Name = "ScanPrimary"
+                    }
+                )
             );
         }
 

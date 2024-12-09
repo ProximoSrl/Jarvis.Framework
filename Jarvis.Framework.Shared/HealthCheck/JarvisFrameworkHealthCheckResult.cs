@@ -39,7 +39,6 @@ namespace Jarvis.Framework.Shared.HealthCheck
         /// Create a healthy status response.
         /// </summary>
         /// <param name="message">Status message.</param>
-        /// <param name="values">Values to format the status message with.</param>
         /// <returns>Healthy status response.</returns>
         public static JarvisFrameworkHealthCheckResult Healthy(string message)
         {
@@ -71,7 +70,6 @@ namespace Jarvis.Framework.Shared.HealthCheck
         /// Create a unhealthy status response.
         /// </summary>
         /// <param name="message">Status message.</param>
-        /// <param name="values">Values to format the status message with.</param>
         /// <returns>Unhealthy status response.</returns>
         public static JarvisFrameworkHealthCheckResult Unhealthy(string message)
         {

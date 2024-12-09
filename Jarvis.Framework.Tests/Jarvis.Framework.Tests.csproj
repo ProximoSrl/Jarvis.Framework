@@ -1,42 +1,36 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFrameworks Condition="'$(DOTNETMULTITARGET)' == 'false'">net7.0</TargetFrameworks>
-        <TargetFrameworks Condition="'$(DOTNETMULTITARGET)' == 'true'">net7.0;net48</TargetFrameworks>
-        <TargetFrameworks Condition="'$(DOTNETMULTITARGET)' == ''">net48;net7.0</TargetFrameworks>
+        <TargetFramework>net7.0</TargetFramework>
 
         <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
         <langversion>latest</langversion>
     </PropertyGroup>
 
-    <PropertyGroup Condition=" '$(TargetFramework)' == 'net48'">
-        <DefineConstants>NET45;NETFULL</DefineConstants>
-    </PropertyGroup>
-
     <ItemGroup>
-        <PackageReference Include="App.Metrics" Version="4.3.0" />
-        <PackageReference Include="Castle.Core" Version="4.4.1" />
-        <PackageReference Include="Castle.LoggingFacility" Version="5.1.1" />
-        <PackageReference Include="Castle.Windsor" Version="5.1.1" />
-        <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
-        <PackageReference Include="MongoDB.Bson" Version="2.28.0" />
-        <PackageReference Include="MongoDB.Driver" Version="2.28.0" />
-        <PackageReference Include="MongoDB.Driver.Core" Version="2.28.0" />
-        <PackageReference Include="MongoDB.Libmongocrypt" Version="1.12.0" />
-        <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-        <PackageReference Include="NStore.Core" Version="0.18.3" />
-        <PackageReference Include="NStore.Domain" Version="0.18.3" />
-        <PackageReference Include="NStore.Persistence.Mongo" Version="0.18.3" />
-        <PackageReference Include="NSubstitute" Version="4.3.0" />
-        <PackageReference Include="System.Configuration.ConfigurationManager" Version="8.0.0" />
-        <PackageReference Include="NUnit" Version="4.1.0" />
-        <PackageReference Include="NUnit3TestAdapter" Version="4.5.0" />
-        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
-        <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0" />
-    </ItemGroup>
-
-    <ItemGroup Condition=" '$(TargetFramework)' == 'net48' ">
-        <PackageReference Include="Rebus.Msmq" Version="6.1.0" />
+        <PackageReference Include="App.Metrics" />
+        <PackageReference Include="Castle.Core" />
+        <PackageReference Include="Castle.LoggingFacility" />
+        <PackageReference Include="Castle.Windsor" />
+        <PackageReference Include="Microsoft.CSharp" />
+        <PackageReference Include="Microsoft.SourceLink.GitHub">
+          <PrivateAssets>all</PrivateAssets>
+          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="MongoDB.Bson" />
+        <PackageReference Include="MongoDB.Driver" />
+        <PackageReference Include="MongoDB.Driver.Core" />
+        <PackageReference Include="MongoDB.Libmongocrypt" />
+        <PackageReference Include="Newtonsoft.Json" />
+        <PackageReference Include="NStore.Core" />
+        <PackageReference Include="NStore.Domain" />
+        <PackageReference Include="NStore.Persistence.Mongo" />
+        <PackageReference Include="NSubstitute" />
+        <PackageReference Include="System.Configuration.ConfigurationManager" />
+        <PackageReference Include="NUnit" />
+        <PackageReference Include="NUnit3TestAdapter" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
+        <PackageReference Include="System.Runtime.CompilerServices.Unsafe" />
     </ItemGroup>
 
     <!-- Transform app.config XML files: https://github.com/microsoft/msbuild/issues/2746 -->
