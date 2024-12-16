@@ -22,7 +22,11 @@ namespace Jarvis.Framework.Tests.EngineTests
 	{
 		public class ComplexAggregateState : JarvisAggregateState
 		{
-		}
+            protected override object DeepCloneMe()
+            {
+                return MemberwiseClone();
+            }
+        }
 
 		public void Create()
 		{

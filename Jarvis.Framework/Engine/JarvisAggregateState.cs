@@ -75,15 +75,6 @@ namespace Jarvis.Framework.Kernel.Engine
         /// object.
         /// </summary>
         /// <returns></returns>
-        protected virtual Object DeepCloneMe()
-        {
-            IFormatter formatter = new BinaryFormatter();
-            using (Stream stream = new MemoryStream())
-            {
-                formatter.Serialize(stream, this);
-                stream.Seek(0, SeekOrigin.Begin);
-                return formatter.Deserialize(stream);
-            }
-        }
+        protected abstract Object DeepCloneMe();
     }
 }

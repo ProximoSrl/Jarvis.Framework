@@ -34,7 +34,7 @@ namespace Jarvis.Framework.Kernel.Events
         /// <summary>
         /// Single thread projection
         /// </summary>
-        private readonly IDictionary<string, MethodInvoker> _handlersCache = new Dictionary<string, MethodInvoker>();
+        private readonly IDictionary<string, Fasterflect.MethodInvoker> _handlersCache = new Dictionary<string, Fasterflect.MethodInvoker>();
         private readonly IList<IObserveProjection> _observers = new List<IObserveProjection>();
 
         public Castle.Core.Logging.ILogger Logger { get; set; }
@@ -81,7 +81,7 @@ namespace Jarvis.Framework.Kernel.Events
             var eventType = e.GetType();
             string key = eventType.FullName;
 
-            MethodInvoker invoker = null;
+            Fasterflect.MethodInvoker invoker = null;
             if (!_handlersCache.TryGetValue(key, out invoker))
             {
                 var methodInfo = this.GetType().Method("On", new Type[] { eventType }, Flags.InstancePublic);
