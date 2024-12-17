@@ -1,5 +1,13 @@
 # Version 6
 
+## 7.10.0
+
+- Updated mongodb driver 3.1.0
+
+## 7.9.0
+
+- Small fixes
+
 ## 7.8.2
 
 - Default version of LINQ driver for Mongodb is version 3. To revert to default you need to call JarvisFrameworkGlobalConfiguration.EnableMongodbDriverLinq2() to re-enable linq2 driver.
