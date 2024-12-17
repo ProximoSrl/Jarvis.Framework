@@ -2,6 +2,12 @@
 
 ## vNext
 
+## 7.9.1
+
+- Fix release notes and CodeQL Build
+
+## 7.9.0
+
 - Update to MongoDb driver 3.1.0
 
 ## 7.9.0
