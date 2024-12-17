@@ -130,7 +130,9 @@ namespace Jarvis.Framework.Tests.EngineTests
             Assert.That(evtUpcasted.Version, Is.EqualTo(evt.Version));
             Assert.That(evtUpcasted.CheckpointToken, Is.EqualTo(evt.CheckpointToken));
             Assert.That(evtUpcasted.Context["truth"], Is.EqualTo(42));
-            Assert.That(evtUpcasted.AggregateId, Is.EqualTo(new UpcastClassTestId(1)));
+
+            var id = new UpcastClassTestId(1);
+            Assert.That(evtUpcasted.AggregateId.AsString(), Is.EqualTo(id.AsString()));
         }
 
         [Test]

@@ -147,10 +147,10 @@ namespace Jarvis.Framework.Tests.SharedTests
             Assert.That(mapId.AsString(), Is.EqualTo("MapperTests_1"));
             sut.Replace(mapId, "TEST2");
             var remapped = sut.Map("TEST2");
-            Assert.That(remapped, Is.EqualTo(mapId));
+            Assert.That(remapped.AsString(), Is.EqualTo(mapId.AsString()));
 
             var mapAgain = sut.Map("TEST");
-            Assert.That(mapAgain.AsString(), Is.Not.EqualTo(remapped));
+            Assert.That(mapAgain.AsString(), Is.Not.EqualTo(remapped.AsString()));
         }
 
         [Test]

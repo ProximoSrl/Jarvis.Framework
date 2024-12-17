@@ -39,7 +39,7 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             String key = Guid.NewGuid().ToString();
             var id = sut.MapWithAutomaticCreate(key);
             var secondCall = sut.MapWithAutomaticCreate(key);
-            Assert.That(id, Is.EqualTo(secondCall));
+            Assert.That(id.AsString(), Is.EqualTo(secondCall.AsString()));
         }
 
         [Test]
@@ -85,8 +85,8 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             var id2 = sut.MapWithAutomaticCreate(key2);
 
             var multimap = sut.GetMultipleMapWithoutAutoCreation(key1, key2);
-            Assert.That(multimap[key1], Is.EqualTo(id1));
-            Assert.That(multimap[key2], Is.EqualTo(id2));
+            Assert.That(multimap[key1].AsString(), Is.EqualTo(id1.AsString()));
+            Assert.That(multimap[key2].AsString(), Is.EqualTo(id2.AsString()));
             Assert.That(multimap.ContainsKey(key3), Is.False);
         }
 
@@ -102,8 +102,8 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             var id2 = sut.MapWithAutomaticCreate(key2);
 
             var multimap = sut.GetMultipleMapWithoutAutoCreation(key1, key2);
-            Assert.That(multimap[key1], Is.EqualTo(id1));
-            Assert.That(multimap[key2], Is.EqualTo(id2));
+            Assert.That(multimap[key1].AsString(), Is.EqualTo(id1.AsString()));
+            Assert.That(multimap[key2].AsString(), Is.EqualTo(id2.AsString()));
             Assert.That(multimap.ContainsKey(key3), Is.False);
         }
 
@@ -219,11 +219,11 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             sut.AddAlias(identity, key2);
 
             //Both keys gets mapped to the very same identity.
-            Assert.That(sut.MapWithWithoutAutomaticCreate(key1), Is.EqualTo(identity));
-            Assert.That(sut.MapWithWithoutAutomaticCreate(key2), Is.EqualTo(identity));
+            Assert.That(sut.MapWithWithoutAutomaticCreate(key1) == identity);
+            Assert.That(sut.MapWithWithoutAutomaticCreate(key2) == identity);
 
-            Assert.That(sut.MapWithAutomaticCreate(key1), Is.EqualTo(identity));
-            Assert.That(sut.MapWithAutomaticCreate(key2), Is.EqualTo(identity));
+            Assert.That(sut.MapWithAutomaticCreate(key1) == identity);
+            Assert.That(sut.MapWithAutomaticCreate(key2) == identity);
         }
 
         [Test]

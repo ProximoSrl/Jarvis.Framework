@@ -46,7 +46,7 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             for (Int64 i = 10; i <= 20; i++)
             {
                 var next = sutOffline.New<TestId>();
-                Assert.That(next, Is.EqualTo(new TestId(i)));
+                Assert.That(next.AsString(), Is.EqualTo(new TestId(i).AsString()));
             }
         }
 
@@ -56,7 +56,7 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             for (Int64 i = 1; i <= 20; i++)
             {
                 var next = sut.New<TestId>();
-                Assert.That(next, Is.EqualTo(new TestId(i)));
+                Assert.That(next.AsString(), Is.EqualTo(new TestId(i).AsString()));
             }
         }
 
@@ -66,7 +66,7 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             for (Int64 i = 1; i <= 20; i++)
             {
                 var next = await sut.NewAsync<TestId>();
-                Assert.That(next, Is.EqualTo(new TestId(i)));
+                Assert.That(next.AsString(), Is.EqualTo(new TestId(i).AsString()));
             }
         }
 
@@ -127,7 +127,7 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
 
             if (expected)
             {
-                Assert.That(result, Is.EqualTo(new TestId(expectedId)));
+                Assert.That(result.AsString(), Is.EqualTo(new TestId(expectedId).AsString()));
             }
         }
 
@@ -158,7 +158,7 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
 
             if (expected)
             {
-                Assert.That(result, Is.EqualTo(new TestId(expectedId)));
+                Assert.That(result.AsString(), Is.EqualTo(new TestId(expectedId).AsString()));
             }
         }
 
@@ -183,7 +183,7 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             Assert.That(result, Is.EqualTo(expected));
             if (expected)
             {
-                Assert.That(typedIdentity, Is.EqualTo(new TestId(expectedId)));
+                Assert.That(typedIdentity.AsString(), Is.EqualTo(new TestId(expectedId).AsString()));
             }
         }
 
@@ -195,7 +195,7 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
         {
             var result = sut.TryParse<IIdentity>("Test_234", out var typedIdentity);
             Assert.That(result, Is.True);
-            Assert.That(typedIdentity, Is.EqualTo(new TestId("Test_234")));
+            Assert.That(typedIdentity.AsString(), Is.EqualTo(new TestId("Test_234").AsString()));
         }
 
         [Test]
