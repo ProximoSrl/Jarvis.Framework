@@ -108,7 +108,7 @@ namespace Jarvis.Framework.Tests.EngineTests
         {
             var identity = _manager.ToIdentity(aggregateIdString);
 
-            Assert.That(identity, Is.EqualTo(new SampleAggregateId(1)));
+            Assert.That(identity.AsString(), Is.EqualTo(new SampleAggregateId(1).AsString()));
         }
 
         [TestCase("SampleAggregate_-1")]

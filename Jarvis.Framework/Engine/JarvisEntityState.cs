@@ -1,12 +1,9 @@
 ﻿using NStore.Domain;
 using System;
-using System.IO;
-using System.Runtime.Serialization;
-using System.Runtime.Serialization.Formatters.Binary;
 
 namespace Jarvis.Framework.Kernel.Engine
 {
-    public class JarvisEntityState : ICloneable, IInvariantsChecker
+    public abstract class JarvisEntityState : ICloneable, IInvariantsChecker
     {
         protected JarvisEntityState()
         {
@@ -47,15 +44,6 @@ namespace Jarvis.Framework.Kernel.Engine
         /// object.
         /// </summary>
         /// <returns></returns>
-        protected virtual Object DeepCloneMe()
-        {
-            IFormatter formatter = new BinaryFormatter();
-            using (Stream stream = new MemoryStream())
-            {
-                formatter.Serialize(stream, this);
-                stream.Seek(0, SeekOrigin.Begin);
-                return formatter.Deserialize(stream);
-            }
-        }
+        protected abstract Object DeepCloneMe();
     }
 }

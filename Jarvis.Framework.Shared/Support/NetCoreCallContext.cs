@@ -1,6 +1,4 @@
-﻿#if NETSTANDARD
-
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Threading;
 
 namespace Jarvis.Framework.Shared.Support
@@ -61,4 +59,3 @@ namespace Jarvis.Framework.Shared.Support
             state.TryRemove(name, out AsyncLocal<T> _);
     }
 }
-#endif

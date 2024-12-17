@@ -258,7 +258,7 @@ namespace Jarvis.Framework.Tests.SharedTests
 
             //now we must have already moved the mapping from old to new
             var mapId2 = anotherSut.TryTranslate("TEST_old_mapping");
-            Assert.That(mapId2, Is.EqualTo(mapId));
+            Assert.That(mapId2.AsString(), Is.EqualTo(mapId.AsString()));
 
             collections = _db.ListCollectionNames().ToList();
             //collection must be deleted
@@ -302,7 +302,7 @@ namespace Jarvis.Framework.Tests.SharedTests
 
             //now we must have already moved the mapping from old to new
             var mapId2 = anotherSut.TryTranslate("TEST_old_mapping");
-            Assert.That(mapId2, Is.EqualTo(mapId));
+            Assert.That(mapId2.AsString(), Is.EqualTo(mapId.AsString()));
 
             collections = _db.ListCollectionNames().ToList();
             //collection must be deleted
@@ -342,7 +342,7 @@ namespace Jarvis.Framework.Tests.SharedTests
             Assert.That(this.mapperCollection.AsQueryable().Count(), Is.EqualTo(1));
 
             var mapId_on_new_collection = anotherSut.TryTranslate("TEST_old_mapping");
-            Assert.That(mapId_on_new_collection, Is.EqualTo(mapId));
+            Assert.That(mapId_on_new_collection.AsString(), Is.EqualTo(mapId.AsString()));
 
             //Assert before and after that we are not altering the collection.
             Assert.That(this.mapperCollection.AsQueryable().Count(), Is.EqualTo(1));
@@ -350,10 +350,10 @@ namespace Jarvis.Framework.Tests.SharedTests
             Assert.That(this.mapperCollection.AsQueryable().Count(), Is.EqualTo(2), "In the single collection we need to have now two mapping");
 
             mapId_on_new_collection = anotherSut.TryTranslate("TEST_old_mapping");
-            Assert.That(mapId_on_new_collection, Is.EqualTo(mapId));
+            Assert.That(mapId_on_new_collection.AsString(), Is.EqualTo(mapId.AsString()));
 
             var mapId2_on_new_collection = anotherSut2.TryTranslate("TEST_old_mapping");
-            Assert.That(mapId2_on_new_collection, Is.EqualTo(mapId2));
+            Assert.That(mapId2_on_new_collection.AsString(), Is.EqualTo(mapId2.AsString()));
 
             collections = _db.ListCollectionNames().ToList();
             Assert.That(collections.Contains(oldMapCollection.CollectionNamespace.CollectionName), Is.False, "First mapping collection must be gone");

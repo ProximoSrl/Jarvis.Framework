@@ -1,10 +1,5 @@
 ﻿using Jarvis.Framework.Shared.MultitenantSupport;
-
-#if NETSTANDARD
 using CurrentCallContext = Jarvis.Framework.Shared.Support.NetCoreCallContext;
-#else
-using CurrentCallContext = System.Runtime.Remoting.Messaging.CallContext;
-#endif
 
 namespace Jarvis.Framework.Kernel.MultitenantSupport
 {

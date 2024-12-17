@@ -2,6 +2,8 @@
 
 ## vNext
 
+- Update to MongoDb driver 3.1.0
+
 ## 7.9.0
 
 - Solution now uses centralized nuget version, removed the full framework version. Since we target netstandard this can be used on full framework too.

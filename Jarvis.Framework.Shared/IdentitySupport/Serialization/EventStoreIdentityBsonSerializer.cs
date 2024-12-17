@@ -177,11 +177,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport.Serialization
         {
         }
 
-        [Obsolete]
-        protected override TDictionary CreateInstance()
-        {
-            return Activator.CreateInstance<TDictionary>();
-        }
+        protected override ICollection<KeyValuePair<TKey, TValue>> CreateAccumulator() => new Dictionary<TKey, TValue>();
 
         private class ValueClassSerializer : IBsonSerializer<TValue>
         {

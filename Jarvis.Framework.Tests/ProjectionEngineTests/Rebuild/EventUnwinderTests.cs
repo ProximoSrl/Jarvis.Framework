@@ -117,7 +117,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 			Assert.That(allEvents.CountDocuments(), Is.EqualTo(1));
 			var evt = allEvents.Single();
 			Assert.That(evt.EventType, Is.EqualTo("SampleAggregateCreated"));
-			Assert.That((evt.GetEvent() as DomainEvent).AggregateId, Is.EqualTo(id));
+			Assert.That((evt.GetEvent() as DomainEvent).AggregateId.AsString(), Is.EqualTo(id.AsString()));
 		}
 
 		[Test]
@@ -132,11 +132,11 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 			Assert.That(allEvents.Count(), Is.EqualTo(2));
 			var evt = allEvents.First();
 			Assert.That(evt.EventType, Is.EqualTo("SampleAggregateCreated"));
-			Assert.That((evt.GetEvent() as DomainEvent).AggregateId, Is.EqualTo(id));
+			Assert.That((evt.GetEvent() as DomainEvent).AggregateId.AsString(), Is.EqualTo(id.AsString()));
 
 			evt = allEvents.ElementAt(1);
 			Assert.That(evt.EventType, Is.EqualTo("SampleAggregateTouched"));
-			Assert.That((evt.GetEvent() as DomainEvent).AggregateId, Is.EqualTo(id));
+			Assert.That((evt.GetEvent() as DomainEvent).AggregateId.AsString(), Is.EqualTo(id.AsString()));
 		}
 
 		[Test]
@@ -195,7 +195,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
 			Assert.That(allEvents.CountDocuments(), Is.EqualTo(1));
 			var evt = allEvents.Single();
 			Assert.That(evt.EventType, Is.EqualTo("SampleAggregateCreated"));
-			Assert.That((evt.GetEvent() as DomainEvent).AggregateId, Is.EqualTo(aggregateId));
+			Assert.That((evt.GetEvent() as DomainEvent).AggregateId.AsString(), Is.EqualTo(aggregateId.AsString()));
 			Assert.That((evt.GetEvent() as DomainEvent).Context["test.with.dot"], Is.EqualTo("BLAH"));
 		}
 

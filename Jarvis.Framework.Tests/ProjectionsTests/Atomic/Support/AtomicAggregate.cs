@@ -23,6 +23,10 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support
     {
         public class SampleAggregateState : JarvisAggregateState
         {
+            protected override object DeepCloneMe()
+            {
+                return MemberwiseClone();
+            }
         }
 
         public void Create()

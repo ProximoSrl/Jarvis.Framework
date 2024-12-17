@@ -1,5 +1,6 @@
 ﻿using MongoDB.Driver;
 using MongoDB.Driver.Linq;
+using System.Linq;
 
 namespace Jarvis.Framework.Shared.ReadModel
 {
@@ -7,6 +8,6 @@ namespace Jarvis.Framework.Shared.ReadModel
     {
         IMongoCollection<TModel> Collection { get; }
 
-        IMongoQueryable<TModel> MongoQueryable { get; }
+        IQueryable<TModel> MongoQueryable { get; }
     }
 }
