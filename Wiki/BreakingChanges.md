@@ -1,5 +1,9 @@
 # Version 6
 
+## 7.8.5
+
+- All methods from ILiveAtomicReadModelProcessorEnhanced and ILiveAtomicReadModelProcessor now ended with Async and does not contains async in the name ex: instead of ProcessAsyncUntilChunkPosition is ProcessUntilChunkPositionAsync
+
 ## 7.8.2
 
 - Default version of LINQ driver for Mongodb is version 3. To revert to default you need to call JarvisFrameworkGlobalConfiguration.EnableMongodbDriverLinq2() to re-enable linq2 driver.

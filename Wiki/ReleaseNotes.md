@@ -1,6 +1,10 @@
 # J.A.R.V.I.S. Framework - Proximo srl (c)
 
-## 7.8.3
+## 7.8.5
+
+- ILiveAtomicReadModelProcessorEnhanced now can project with custom conditions.
+
+## 7.8.4
 
 - Removed Command header from commit enhancer.
 
