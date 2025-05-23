@@ -393,7 +393,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 		{
 			JarvisFrameworkMetricsHelper.Counter.Increment(FindOneByIdAtCheckpointCachupCounter, 1, typeof(TModel).Name);
 			//TODO: cache somewhat readmodel in some cache database to avoid rebuilding always at version in memory.
-			var readmodel = await _liveAtomicReadModelProcessor.ProcessAsyncUntilChunkPosition<TModel>(id, chunkPosition);
+			var readmodel = await _liveAtomicReadModelProcessor.ProcessUntilChunkPositionAsync<TModel>(id, chunkPosition);
 			if (readmodel?.AggregateVersion == 0)
 			{
 				return null;

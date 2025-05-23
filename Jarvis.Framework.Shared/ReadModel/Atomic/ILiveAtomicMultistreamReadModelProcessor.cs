@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.ReadModel.Atomic
@@ -19,8 +20,9 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
         /// </summary>
         /// <param name="request">List of aggregate to project.</param>
         /// <param name="checkpointUpToIncluded">Global checkpoint, included, to use as a limit for projection</param>
+        /// <param name="cancellation"></param>
         /// <returns></returns>
-        Task<MultiStreamProcessorResult> ProcessAsync(IReadOnlyCollection<MultiStreamProcessRequest> request, Int64 checkpointUpToIncluded);
+        Task<MultiStreamProcessorResult> ProcessAsync(IReadOnlyCollection<MultiStreamProcessRequest> request, Int64 checkpointUpToIncluded, CancellationToken cancellation = default);
 
         /// <summary>
         /// Project multiple aggregate id, each one with potentially multiple <see cref="IAtomicReadModel"/> in a single
@@ -28,8 +30,9 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
         /// </summary>
         /// <param name="request">List of aggregate to project.</param>
         /// <param name="dateTimeUpTo">Project up to that date.</param>
+        /// <param name="cancellation"></param>
         /// <returns></returns>
-        Task<MultiStreamProcessorResult> ProcessAsync(IReadOnlyCollection<MultiStreamProcessRequest> request, DateTime dateTimeUpTo);
+        Task<MultiStreamProcessorResult> ProcessAsync(IReadOnlyCollection<MultiStreamProcessRequest> request, DateTime dateTimeUpTo, CancellationToken cancellation = default);
 
         /// <summary>
         /// This is a very special projection request, we ask for multiple aggregates and multiple readmodels, but for each aggregate
@@ -37,8 +40,9 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
         /// aggregate with a special business checkpoint
         /// </summary>
         /// <param name="request">List of aggregate to project.</param>
+        /// <param name="cancellation"></param>
         /// <returns></returns>
-        Task<MultiStreamProcessorResult> ProcessAsync(IReadOnlyCollection<CheckpointMultiStreamProcessRequest> request);
+        Task<MultiStreamProcessorResult> ProcessAsync(IReadOnlyCollection<CheckpointMultiStreamProcessRequest> request, CancellationToken cancellation = default);
     }
 
     /// <summary>

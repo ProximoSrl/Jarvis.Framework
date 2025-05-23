@@ -87,6 +87,12 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             return ProcessEvent(evt, inSameCommitAsPrevious);
         }
 
+        protected Changeset GenerateSampleAggregateNotHandledEvent(Boolean inSameCommitAsPrevious)
+        {
+            SampleAggregateNotHandled evt = new SampleAggregateNotHandled();
+            return ProcessEvent(evt, inSameCommitAsPrevious);
+        }
+
         protected Changeset GenerateTouchedEvent(Boolean inSameCommitAsPrevious)
         {
             SampleAggregateTouched evt = new SampleAggregateTouched();
