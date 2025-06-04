@@ -1,8 +1,11 @@
-﻿using Jarvis.Framework.Shared.Events;
+﻿using Fasterflect;
+using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.ReadModel.Atomic;
+using Jarvis.Framework.Tests.EngineTests;
 using Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support;
 using NUnit.Framework;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
@@ -10,7 +13,6 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
     [TestFixture]
     public class LiveAtomicReadModelProcessorTests : AtomicProjectionEngineTestBase
     {
-
         #region Classic single aggregate
 
         [Test]
@@ -55,7 +57,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         public async Task Project_non_existing_aggregate()
         {
             var sut = _container.Resolve<ILiveAtomicReadModelProcessor>();
-            var processed = await sut.ProcessAsyncUntilChunkPosition<SimpleTestAtomicReadModel>(
+            var processed = await sut.ProcessUntilChunkPositionAsync<SimpleTestAtomicReadModel>(
                   "SampleAggregate_123123123",
                   0L).ConfigureAwait(false);
 
@@ -67,7 +69,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 
             Assert.That(processed, Is.Null, "Aggregate does not exists at that checkpoint, we expect null");
 
-            processed = await sut.ProcessAsyncUntilUtcTimestamp<SimpleTestAtomicReadModel>(
+            processed = await sut.ProcessUntilUtcTimestampAsync<SimpleTestAtomicReadModel>(
               "SampleAggregate_123123123",
               DateTime.Now).ConfigureAwait(false);
 
@@ -83,7 +85,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             //ok we need to check that events are not mixed.
             var sut = _container.Resolve<ILiveAtomicReadModelProcessor>();
             DomainEvent firstEvent = (DomainEvent)c1.Events[0];
-            var processed = await sut.ProcessAsyncUntilChunkPosition<SimpleTestAtomicReadModel>(
+            var processed = await sut.ProcessUntilChunkPositionAsync<SimpleTestAtomicReadModel>(
                 firstEvent.AggregateId.AsString(),
                 firstEvent.CheckpointToken).ConfigureAwait(false);
 
@@ -91,7 +93,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             Assert.That(processed.AggregateVersion, Is.EqualTo(3));
 
             firstEvent = (DomainEvent)c2.Events[0];
-            processed = await sut.ProcessAsyncUntilChunkPosition<SimpleTestAtomicReadModel>(
+            processed = await sut.ProcessUntilChunkPositionAsync<SimpleTestAtomicReadModel>(
                   firstEvent.AggregateId.AsString(),
                   0L).ConfigureAwait(false);
 
@@ -103,7 +105,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 
             Assert.That(processed, Is.Null, "Aggregate does not exists at that checkpoint, we expect null");
 
-            processed = await sut.ProcessAsyncUntilUtcTimestamp<SimpleTestAtomicReadModel>(
+            processed = await sut.ProcessUntilUtcTimestampAsync<SimpleTestAtomicReadModel>(
               firstEvent.AggregateId.AsString(),
               DateTime.MinValue).ConfigureAwait(false);
 
@@ -119,7 +121,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             //ok we need to check that events are not mixed.
             var sut = _container.Resolve<ILiveAtomicReadModelProcessor>();
             DomainEvent firstEvent = (DomainEvent)c1.Events[0];
-            var processed = await sut.ProcessAsyncUntilChunkPosition<SimpleTestAtomicReadModel>(
+            var processed = await sut.ProcessUntilChunkPositionAsync<SimpleTestAtomicReadModel>(
                 firstEvent.AggregateId.AsString(),
                 firstEvent.CheckpointToken).ConfigureAwait(false);
 
@@ -127,7 +129,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             Assert.That(processed.AggregateVersion, Is.EqualTo(3));
 
             firstEvent = (DomainEvent)c2.Events[0];
-            processed = await sut.ProcessAsyncUntilChunkPosition<SimpleTestAtomicReadModel>(
+            processed = await sut.ProcessUntilChunkPositionAsync<SimpleTestAtomicReadModel>(
                   firstEvent.AggregateId.AsString(),
                   firstEvent.CheckpointToken).ConfigureAwait(false);
 
@@ -156,7 +158,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             DomainEvent firstEvent = (DomainEvent)c1.Events[0];
 
             //Process until now, we should have everythign up to latest two events.
-            var processed = await sut.ProcessAsyncUntilUtcTimestamp<SimpleTestAtomicReadModel>(
+            var processed = await sut.ProcessUntilUtcTimestampAsync<SimpleTestAtomicReadModel>(
                 firstEvent.AggregateId.AsString(),
                 DateTime.UtcNow).ConfigureAwait(false);
 
@@ -164,7 +166,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             Assert.That(processed.AggregateVersion, Is.EqualTo(4));
 
             //project up to future 1
-            processed = await sut.ProcessAsyncUntilUtcTimestamp<SimpleTestAtomicReadModel>(
+            processed = await sut.ProcessUntilUtcTimestampAsync<SimpleTestAtomicReadModel>(
                   firstEvent.AggregateId.AsString(),
                   future1).ConfigureAwait(false);
 
@@ -172,7 +174,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             Assert.That(processed.AggregateVersion, Is.EqualTo(5));
 
             //project up to future 2
-            processed = await sut.ProcessAsyncUntilUtcTimestamp<SimpleTestAtomicReadModel>(
+            processed = await sut.ProcessUntilUtcTimestampAsync<SimpleTestAtomicReadModel>(
                   firstEvent.AggregateId.AsString(),
                   future2).ConfigureAwait(false);
 
@@ -180,7 +182,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             Assert.That(processed.AggregateVersion, Is.EqualTo(6));
 
             //project up to the max
-            processed = await sut.ProcessAsyncUntilUtcTimestamp<SimpleTestAtomicReadModel>(
+            processed = await sut.ProcessUntilUtcTimestampAsync<SimpleTestAtomicReadModel>(
                   firstEvent.AggregateId.AsString(),
                   DateTime.UtcNow.AddYears(2000)).ConfigureAwait(false);
 
@@ -293,7 +295,171 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 
         #endregion
 
-        #region
+        #region Conditioned projection
+
+        [Test]
+        public void Project_new_up_to_condition_parameterCheck()
+        {
+            var sut = _container.Resolve<ILiveAtomicReadModelProcessorEnhanced>();
+
+            //At least one the function must be present.
+            Assert.ThrowsAsync<ArgumentException>( async () => await sut.ProcessUntilAsync<SimpleTestAtomicReadModel>(
+                "Document_1",
+                readModel: null,
+                changesetConditionEvaluator: null,
+                readModelConditionEvaluator: null));
+
+            //Id can be null
+            Assert.ThrowsAsync<ArgumentNullException>(async () => await sut.ProcessUntilAsync<SimpleTestAtomicReadModel>(
+                null,
+                readModel: null,
+                changesetConditionEvaluator: (changeset, rm, ct) => Task.FromResult(true),
+                readModelConditionEvaluator: null));
+        }
+
+        [Test]
+        public async Task Project_new_up_to_condition_on_readmodel()
+        {
+            //Generate some changed events
+            var c1 = await GenerateSomeChangesetsAndReturnLatestsChangeset().ConfigureAwait(false);
+            await GenerateTouchedEvent().ConfigureAwait(false);
+
+            //ok we need to check that events are not mixed.
+            var sut = _container.Resolve<ILiveAtomicReadModelProcessorEnhanced>();
+            var aggregateId = ((DomainEvent)c1.Events[0]).AggregateId;
+            var processResult = await sut.ProcessUntilAsync< SimpleTestAtomicReadModel>(
+                aggregateId,
+                readModel: null,
+                changesetConditionEvaluator: null,
+                //Stop immediately when touch count is greater than 1
+                (rm, _) => Task.FromResult( rm.TouchCount > 1)).ConfigureAwait(false);
+
+            Assert.That(processResult.TouchCount, Is.EqualTo(2));
+        }
+
+        [Test]
+        public async Task Project_starting_from_specific_version()
+        {
+            //Generate some changed events
+            var c1 = await GenerateSomeChangesetsAndReturnLatestsChangeset().ConfigureAwait(false);
+            await GenerateTouchedEvent().ConfigureAwait(false);
+
+            //ok we need to check that events are not mixed.
+            var sut = _container.Resolve<ILiveAtomicReadModelProcessorEnhanced>();
+            var aggregateId = ((DomainEvent)c1.Events[0]).AggregateId;
+            var processResult = await sut.ProcessUntilAsync<SimpleTestAtomicReadModel>(
+                aggregateId,
+                readModel: null,
+                changesetConditionEvaluator: null,
+                //Stop immediately when touch count is greater than 1
+                (rm, _) => Task.FromResult(rm.TouchCount > 1)).ConfigureAwait(false);
+
+            //now that I have the readmodel I'll continue projecting
+            Assert.That(processResult.TouchCount, Is.EqualTo(2));
+
+            processResult.SetPropertyValue("TouchCount", 1213); //Set a really high value to check that we will start from this
+            var reProjected = await sut.ProcessUntilAsync<SimpleTestAtomicReadModel>(
+                aggregateId,
+                readModel: processResult,
+                changesetConditionEvaluator: (c, rm, _) => Task.FromResult( c.Events.FirstOrDefault() is SampleAggregateInvalidated),
+                //Stop immediately when touch count is greater than 1
+                null).ConfigureAwait(false);
+
+            Assert.That(object.ReferenceEquals(processResult, reProjected));
+            Assert.That(processResult.TouchCount, Is.EqualTo(1214));
+        }
+
+        [Test]
+        public async Task Stop_immediately_before_we_reach_touch_count()
+        {
+            //Generate some changed events
+            var c1 = await GenerateSomeChangesetsAndReturnLatestsChangeset().ConfigureAwait(false);
+            await GenerateTouchedEvent().ConfigureAwait(false);
+            //Now invalidate, then finally add another touched event
+            await GenerateInvalidatedEvent().ConfigureAwait(false);
+            await GenerateTouchedEvent().ConfigureAwait(false);
+
+            //ok we need to check that events are not mixed.
+            var sut = _container.Resolve<ILiveAtomicReadModelProcessorEnhanced>();
+            var aggregateId = ((DomainEvent)c1.Events[0]).AggregateId;
+            var processResult = await sut.ProcessUntilAsync<SimpleTestAtomicReadModel>(
+                aggregateId,
+                readModel: null,
+                changesetConditionEvaluator: (changeset, readmodel, _) =>
+                {
+                    if (changeset.Events.FirstOrDefault() is SampleAggregateTouched && readmodel.Invalidated)
+                    {
+                        //only if the readmodel is invalidated we stop the processing.
+                        return Task.FromResult(true);
+                    }
+
+                    return Task.FromResult(false);
+                },
+                //Stop immediately when touch count is greater than 1
+                null);
+
+            Assert.That(processResult.Invalidated, Is.True);
+            Assert.That(processResult.TouchCount, Is.EqualTo(3));
+        }
+
+        [Test]
+        public async Task First_condition_win()
+        {
+            //Generate some changed events
+            var c1 = await GenerateSomeChangesetsAndReturnLatestsChangeset().ConfigureAwait(false);
+            await GenerateTouchedEvent().ConfigureAwait(false);
+            //Now invalidate, then finally add another touched event
+            await GenerateInvalidatedEvent().ConfigureAwait(false);
+            await GenerateTouchedEvent().ConfigureAwait(false);
+
+            //ok we need to check that events are not mixed.
+            var sut = _container.Resolve<ILiveAtomicReadModelProcessorEnhanced>();
+            var aggregateId = ((DomainEvent)c1.Events[0]).AggregateId;
+            var processResult = await sut.ProcessUntilAsync<SimpleTestAtomicReadModel>(
+                aggregateId,
+                readModel: null,
+                changesetConditionEvaluator: (changeset, readmodel, _) => Task.FromResult(changeset.AggregateVersion > 2),
+                (rm, _) => Task.FromResult(rm.TouchCount == 1) //this will win
+                );
+
+            Assert.That(processResult.Invalidated, Is.False);
+            Assert.That(processResult.TouchCount, Is.EqualTo(1));
+
+            processResult = await sut.ProcessUntilAsync<SimpleTestAtomicReadModel>(
+              aggregateId,
+              readModel: null,
+              changesetConditionEvaluator: (changeset, readmodel, _) => Task.FromResult(changeset.AggregateVersion > 1),
+              (rm, _) => Task.FromResult(rm.TouchCount < 4) //this will win
+              );
+
+            Assert.That(processResult.Invalidated, Is.False);
+            Assert.That(processResult.TouchCount, Is.EqualTo(0));
+        }
+
+        [Test]
+        public async Task Condition_that_will_never_be_met_project_everything()
+        {
+            //Generate some changed events
+            var c1 = await GenerateSomeChangesetsAndReturnLatestsChangeset().ConfigureAwait(false);
+            await GenerateTouchedEvent().ConfigureAwait(false);
+
+            //ok we need to check that events are not mixed.
+            var sut = _container.Resolve<ILiveAtomicReadModelProcessorEnhanced>();
+            var aggregateId = ((DomainEvent)c1.Events[0]).AggregateId;
+            var processResult = await sut.ProcessUntilAsync<SimpleTestAtomicReadModel>(
+                aggregateId,
+                readModel: null,
+                changesetConditionEvaluator: null,
+                //this will never stop
+                (rm, _) => Task.FromResult(rm.TouchCount > 234234234)).ConfigureAwait(false);
+
+            //The condition was never met, we will process everything up to the end of the stream.
+            Assert.That(processResult.TouchCount, Is.EqualTo(3));
+        }
+ 
+        #endregion
+
+        #region Multi aggregate
 
         [Test]
         public async Task Project_more_than_one_readmodel()
@@ -372,7 +538,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             DomainEvent firstEvent = (DomainEvent)c1.Events[0];
 
             //Process until now, we should have everythign up to latest two events.
-            var processedResult = await sut.ProcessAsyncUntilUtcTimestamp<SimpleTestAtomicReadModel>(
+            var processedResult = await sut.ProcessUntilUtcTimestampAsync<SimpleTestAtomicReadModel>(
                 new Type[] { typeof(SimpleTestAtomicReadModel), typeof(SimpleAtomicReadmodelWithSingleEventHandled) },
                 firstEvent.AggregateId.AsString(),
                 DateTime.UtcNow).ConfigureAwait(false);
@@ -386,7 +552,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             Assert.That(processedSimple.AggregateVersion, Is.EqualTo(4));
 
             //project up to future 1
-            processedResult = await sut.ProcessAsyncUntilUtcTimestamp<SimpleTestAtomicReadModel>(
+            processedResult = await sut.ProcessUntilUtcTimestampAsync<SimpleTestAtomicReadModel>(
                   new Type[] { typeof(SimpleTestAtomicReadModel), typeof(SimpleAtomicReadmodelWithSingleEventHandled) },
                   firstEvent.AggregateId.AsString(),
                   future1).ConfigureAwait(false);
@@ -400,7 +566,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             Assert.That(processedSimple.AggregateVersion, Is.EqualTo(5));
 
             //project up to future 2
-            processedResult = await sut.ProcessAsyncUntilUtcTimestamp<SimpleTestAtomicReadModel>(
+            processedResult = await sut.ProcessUntilUtcTimestampAsync<SimpleTestAtomicReadModel>(
                   new Type[] { typeof(SimpleTestAtomicReadModel), typeof(SimpleAtomicReadmodelWithSingleEventHandled) },
                   firstEvent.AggregateId.AsString(),
                   future2).ConfigureAwait(false);
@@ -414,7 +580,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             Assert.That(processedSimple.AggregateVersion, Is.EqualTo(6));
 
             //project up to the max
-            processedResult = await sut.ProcessAsyncUntilUtcTimestamp<SimpleTestAtomicReadModel>(
+            processedResult = await sut.ProcessUntilUtcTimestampAsync<SimpleTestAtomicReadModel>(
                   new Type[] { typeof(SimpleTestAtomicReadModel), typeof(SimpleAtomicReadmodelWithSingleEventHandled) },
                   firstEvent.AggregateId.AsString(),
                   DateTime.UtcNow.AddYears(2000)).ConfigureAwait(false);
@@ -437,7 +603,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             //ok we need to check that events are not mixed.
             var sut = _container.Resolve<ILiveAtomicReadModelProcessorEnhanced>();
             DomainEvent firstEvent = (DomainEvent)c1.Events[0];
-            var processedResult = await sut.ProcessAsyncUntilChunkPosition(
+            var processedResult = await sut.ProcessUntilChunkPositionAsync(
                 new Type[] { typeof(SimpleTestAtomicReadModel), typeof(SimpleAtomicReadmodelWithSingleEventHandled) },
                 firstEvent.AggregateId.AsString(),
                 firstEvent.CheckpointToken).ConfigureAwait(false);
@@ -451,7 +617,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             Assert.That(processedSimple.AggregateVersion, Is.EqualTo(3));
 
             firstEvent = (DomainEvent)c2.Events[0];
-            processedResult = await sut.ProcessAsyncUntilChunkPosition(
+            processedResult = await sut.ProcessUntilChunkPositionAsync(
                 new Type[] { typeof(SimpleTestAtomicReadModel), typeof(SimpleAtomicReadmodelWithSingleEventHandled) },
                 firstEvent.AggregateId.AsString(),
                 firstEvent.CheckpointToken).ConfigureAwait(false);

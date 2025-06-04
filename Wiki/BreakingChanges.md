@@ -1,4 +1,9 @@
-# Version 6
+# Version 7
+
+## vNext
+
+- All methods from ILiveAtomicReadModelProcessorEnhanced and ILiveAtomicReadModelProcessor now ended with Async and does not contains async in the name ex: instead of ProcessAsyncUntilChunkPosition is ProcessUntilChunkPositionAsync
+
 
 ## 7.10.0
 
@@ -7,6 +12,10 @@
 ## 7.9.0
 
 - Small fixes
+
+## 7.8.5
+
+- All methods from ILiveAtomicReadModelProcessorEnhanced and ILiveAtomicReadModelProcessor now ended with Async and does not contains async in the name ex: instead of ProcessAsyncUntilChunkPosition is ProcessUntilChunkPositionAsync
 
 ## 7.8.2
 

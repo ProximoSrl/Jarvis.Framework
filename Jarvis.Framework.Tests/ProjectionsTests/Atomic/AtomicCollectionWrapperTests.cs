@@ -413,7 +413,7 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             rm.ProcessChangeset(commit1);
             var firstEvt = commit1.Events[0] as DomainEvent;
 
-            var commit2 = GenerateInvalidatedEvent(false);
+            var commit2 = GenerateSampleAggregateNotHandledEvent(false);
             rm.ProcessChangeset(commit2);
 
             Assert.That(rm.ExtraString, Is.EqualTo($"B-{firstEvt.MessageId}IN-{firstEvt.MessageId}A-{firstEvt.MessageId}"));

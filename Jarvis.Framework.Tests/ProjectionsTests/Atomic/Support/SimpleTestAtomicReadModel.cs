@@ -21,7 +21,9 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support
 
 		public String ExtraString { get; set; }
 
-		protected override void BeforeEventProcessing(DomainEvent domainEvent)
+        public bool Invalidated { get; set; }
+
+        protected override void BeforeEventProcessing(DomainEvent domainEvent)
 		{
 			ExtraString += $"B-{domainEvent.MessageId}";
 			base.BeforeEventProcessing(domainEvent);
@@ -58,6 +60,11 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic.Support
 
 			TouchCount += FakeSignature;
 		}
+
+        private void On(SampleAggregateInvalidated evt)
+        {
+            Invalidated = true;
+        }
 #pragma warning restore RCS1213 // Remove unused member declaration.
 #pragma warning restore IDE0051 // Remove unused private members
 

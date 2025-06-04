@@ -2,6 +2,7 @@
 using NStore.Core.Persistence;
 using NStore.Domain;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.ReadModel.Atomic
@@ -74,4 +75,76 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
 			return Task.CompletedTask;
 		}
 	}
+
+    public sealed class AsyncAtomicReadModelSubscription<TModel> : ISubscription
+        where TModel : IAtomicReadModel
+    {
+        private readonly ICommitEnhancer _commitEnhancer;
+        private readonly TModel _readModel;
+        private readonly Func<Changeset, TModel, CancellationToken, Task<bool>> _stopConditionOnChangeset;
+        private readonly Func<TModel, CancellationToken, Task<bool>> _stopConditionOnReadModel;
+
+        /// <summary>
+        /// Project an atomic readmodel.
+        /// </summary>
+        public AsyncAtomicReadModelSubscription(
+            ICommitEnhancer commitEnhancer,
+            TModel readModel,
+            Func<Changeset, TModel, CancellationToken, Task< Boolean>> stopConditionOnChangeset,
+            Func<TModel, CancellationToken, Task<Boolean>> stopConditionOnReadModel
+            )
+        {
+            _commitEnhancer = commitEnhancer;
+            _readModel = readModel;
+
+            //not both the condition can be null, at least one of them must be specified.
+            if (stopConditionOnChangeset == null && stopConditionOnReadModel == null)
+            {
+                throw new ArgumentNullException("At least one of the stop conditions must be specified.");
+            }
+
+            _stopConditionOnChangeset = stopConditionOnChangeset ?? ((_, _, _) => Task.FromResult(false));
+            _stopConditionOnReadModel = stopConditionOnReadModel ?? ((_, _) => Task.FromResult(false));
+        }
+
+        /// <inheritdoc/>
+        public Task CompletedAsync(long indexOrPosition)
+        {
+            return Task.CompletedTask;
+        }
+
+        /// <inheritdoc/>
+        public Task OnErrorAsync(long indexOrPosition, Exception ex)
+        {
+            throw ex;
+        }
+
+        /// <inheritdoc/>
+        public async Task<bool> OnNextAsync(IChunk chunk)
+        {
+            _commitEnhancer.Enhance(chunk);
+            if (chunk.Payload is Changeset cs)
+            {
+                var shouldStopOnChangeset = await _stopConditionOnChangeset(cs, _readModel, CancellationToken.None);
+                if (shouldStopOnChangeset) return false;
+
+                _readModel.ProcessChangeset(cs);
+                var shouldStopOnReadModel = await _stopConditionOnReadModel(_readModel, CancellationToken.None);
+                if (shouldStopOnReadModel) return false;
+            }
+            return true;
+        }
+
+        /// <inheritdoc/>
+        public Task OnStartAsync(long indexOrPosition)
+        {
+            return Task.CompletedTask;
+        }
+
+        /// <inheritdoc/>
+        public Task StoppedAsync(long indexOrPosition)
+        {
+            return Task.CompletedTask;
+        }
+    }
 }

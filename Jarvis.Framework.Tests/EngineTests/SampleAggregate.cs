@@ -163,7 +163,11 @@ namespace Jarvis.Framework.Tests.EngineTests
 		}
 	}
 
-	public class TouchSampleAggregate : Command<SampleAggregateId>
+    public class SampleAggregateNotHandled : DomainEvent
+    {
+    }
+
+    public class TouchSampleAggregate : Command<SampleAggregateId>
 	{
 		public TouchSampleAggregate(SampleAggregateId id)
 			: base(id)

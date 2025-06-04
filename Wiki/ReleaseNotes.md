@@ -2,6 +2,8 @@
 
 ## vNext
 
+- ILiveAtomicReadModelProcessorEnhanced now can project with custom conditions.
+
 ## 7.9.1
 
 - Fix release notes and CodeQL Build
