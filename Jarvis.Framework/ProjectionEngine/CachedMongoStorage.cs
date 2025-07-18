@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
@@ -140,9 +141,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         #endregion
 
-        public Task<bool> IndexExistsAsync(String name)
+        public Task<bool> IndexExistsAsync(String name, CancellationToken cancellationToken = default)
         {
-            return _storage.IndexExistsAsync(name);
+            return _storage.IndexExistsAsync(name, cancellationToken);
         }
 
         private void ThrowIfOperatingInMemory()
@@ -151,17 +152,17 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 throw new JarvisFrameworkEngineException("Unsupported operation while operating in memory");
         }
 
-        public Task CreateIndexAsync(String name, IndexKeysDefinition<TModel> keys, CreateIndexOptions options = null)
+        public Task CreateIndexAsync(String name, IndexKeysDefinition<TModel> keys, CreateIndexOptions options = null, CancellationToken cancellationToken = default)
         {
-            return _storage.CreateIndexAsync(name, keys, options);
+            return _storage.CreateIndexAsync(name, keys, options, cancellationToken);
         }
 
-        public Task DropIndexAsync(String name)
+        public Task DropIndexAsync(String name, CancellationToken cancellationToken = default)
         {
-            return _storage.DropIndexAsync(name);
+            return _storage.DropIndexAsync(name, cancellationToken);
         }
 
-        public async Task InsertBatchAsync(IEnumerable<TModel> values)
+        public async Task InsertBatchAsync(IEnumerable<TModel> values, CancellationToken cancellationToken = default)
         {
             if (_inmemoryCollection.IsActive)
             {
@@ -173,7 +174,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             }
             else
             {
-                await _storage.InsertBatchAsync(values).ConfigureAwait(false);
+                await _storage.InsertBatchAsync(values, cancellationToken).ConfigureAwait(false);
             }
         }
 
@@ -185,11 +186,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             }
         }
 
-        public async Task<TModel> FindOneByIdAsync(TKey id)
+        public async Task<TModel> FindOneByIdAsync(TKey id, CancellationToken cancellationToken = default)
         {
             return _inmemoryCollection.IsActive ?
                 _inmemoryCollection.GetById(id) :
-                await _storage.FindOneByIdAsync(id).ConfigureAwait(false);
+                await _storage.FindOneByIdAsync(id, cancellationToken).ConfigureAwait(false);
         }
 
         public TModel FindOneById(TKey id)
@@ -229,14 +230,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 _storage.Where(filter);
         }
 
-        public async Task<Boolean> ContainsAsync(Expression<Func<TModel, bool>> filter)
+        public async Task<Boolean> ContainsAsync(Expression<Func<TModel, bool>> filter, CancellationToken cancellationToken = default)
         {
             return _inmemoryCollection.IsActive ?
                 _inmemoryCollection.GetAll().Any(filter) :
-                await _storage.ContainsAsync(filter).ConfigureAwait(false);
+                await _storage.ContainsAsync(filter, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task<InsertResult> InsertAsync(TModel model)
+        public async Task<InsertResult> InsertAsync(TModel model, CancellationToken cancellationToken = default)
         {
             if (_inmemoryCollection.IsActive)
             {
@@ -258,10 +259,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                     };
                 }
             }
-            return await _storage.InsertAsync(model).ConfigureAwait(false);
+            return await _storage.InsertAsync(model, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task<SaveResult> SaveWithVersionAsync(TModel model, int orignalVersion)
+        public async Task<SaveResult> SaveWithVersionAsync(TModel model, int orignalVersion, CancellationToken cancellationToken = default)
         {
             if (model == null)
             {
@@ -270,16 +271,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
             if (_inmemoryCollection.IsActive)
             {
-                // non posso controllare le versioni perché l'istanza è la stessa
+                // non posso controllare le versioni perchï¿½ l'istanza ï¿½ la stessa
                 _inmemoryCollection.Save(model);
                 _indexes.Insert(model);
                 return new SaveResult { Ok = true };
             }
 
-            return await _storage.SaveWithVersionAsync(model, orignalVersion).ConfigureAwait(false);
+            return await _storage.SaveWithVersionAsync(model, orignalVersion, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task<DeleteResult> DeleteAsync(TKey id)
+        public async Task<DeleteResult> DeleteAsync(TKey id, CancellationToken cancellationToken = default)
         {
             if (_inmemoryCollection.IsActive)
             {
@@ -292,17 +293,17 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 };
             }
 
-            return await _storage.DeleteAsync(id).ConfigureAwait(false);
+            return await _storage.DeleteAsync(id, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task DropAsync()
+        public async Task DropAsync(CancellationToken cancellationToken = default)
         {
             if (_inmemoryCollection.IsActive)
             {
                 _inmemoryCollection.Clear();
                 _indexes.Clear();
             }
-            await _storage.DropAsync().ConfigureAwait(false);
+            await _storage.DropAsync(cancellationToken).ConfigureAwait(false);
         }
 
         public IMongoCollection<TModel> Collection
@@ -314,13 +315,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             }
         }
 
-        public async Task FlushAsync()
+        public async Task FlushAsync(CancellationToken cancellationToken = default)
         {
             if (_inmemoryCollection.IsActive)
             {
                 var allModels = _inmemoryCollection.GetAll().ToArray();
                 if (allModels.Length > 0)
-                    await _storage.InsertBatchAsync(allModels).ConfigureAwait(false);
+                    await _storage.InsertBatchAsync(allModels, cancellationToken).ConfigureAwait(false);
 
                 _inmemoryCollection.Deactivate();
             }

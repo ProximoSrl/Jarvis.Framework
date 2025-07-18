@@ -3,6 +3,10 @@
 ## vNext
 
 - All methods from ILiveAtomicReadModelProcessorEnhanced and ILiveAtomicReadModelProcessor now ended with Async and does not contains async in the name ex: instead of ProcessAsyncUntilChunkPosition is ProcessUntilChunkPositionAsync
+- All async methods in IAtomicCollectionWrapper and IAtomicReadmodelProjectorHelper now have CancellationToken parameters with default values
+- IAtomicReadmodelProjectorHelper.FullProject method renamed to FullProjectAsync for consistency
+- All async methods in IReader, IMongoStorage, and IReadOnlyCollectionWrapper now have CancellationToken parameters with default values
+- All async methods in ICollectionWrapper and its extension methods now have CancellationToken parameters with default values
 
 
 ## 7.10.0

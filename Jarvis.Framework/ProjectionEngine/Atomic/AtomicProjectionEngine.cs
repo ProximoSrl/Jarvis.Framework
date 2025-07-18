@@ -20,6 +20,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using System.Timers;
@@ -284,7 +285,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                             {
                                 foreach (var consumer in consumers)
                                 {
-                                    await consumer.Consumer.FullProject(identity).ConfigureAwait(false);
+                                    await consumer.Consumer.FullProjectAsync(identity).ConfigureAwait(false);
 
                                     //This is Sub Optimal, I'm telling that the position to poll is the one of the commit
                                     //but the real object was fully projected. We need to mark this position so the next time this specific
@@ -469,7 +470,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                                 var handleReturnValue = await atomicDispatchChunkConsumer.Consumer.Handle(
                                     dispatchObj.Chunk.Position,
                                     changeset,
-                                    aggregateId).ConfigureAwait(false);
+                                    aggregateId,
+                                    CancellationToken.None).ConfigureAwait(false);
 
                                 if (handleReturnValue != null)
                                 {

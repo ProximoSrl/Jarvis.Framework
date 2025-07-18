@@ -5,6 +5,7 @@ using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
@@ -33,7 +34,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         /// <param name="model"></param>
         /// <param name="notify"></param>
         /// <returns></returns>
-        Task InsertAsync(DomainEvent e, TModel model, bool notify = false);
+        Task InsertAsync(DomainEvent e, TModel model, bool notify = false, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Upsert a readmodel into the underling persistence storage.
@@ -44,7 +45,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         /// <param name="update"></param>
         /// <param name="notify"></param>
         /// <returns></returns>
-        Task<TModel> UpsertAsync(DomainEvent e, TKey id, Func<TModel> insert, Func<TModel, Task> update, bool notify = false);
+        Task<TModel> UpsertAsync(DomainEvent e, TKey id, Func<TModel> insert, Func<TModel, Task> update, bool notify = false, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Find a single readmodel and execute an action to modify.
@@ -54,7 +55,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         /// <param name="action"></param>
         /// <param name="notify"></param>
         /// <returns></returns>
-        Task FindAndModifyAsync(DomainEvent e, Expression<Func<TModel, bool>> filter, Func<TModel, Task> action, bool notify = false);
+        Task FindAndModifyAsync(DomainEvent e, Expression<Func<TModel, bool>> filter, Func<TModel, Task> action, bool notify = false, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Find a single readmodel and execute an action to modify.
@@ -64,7 +65,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         /// <param name="action"></param>
         /// <param name="notify"></param>
         /// <returns></returns>
-        Task FindAndModifyAsync(DomainEvent e, TKey id, Func<TModel, Task> action, bool notify = false);
+        Task FindAndModifyAsync(DomainEvent e, TKey id, Func<TModel, Task> action, bool notify = false, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Optimize the "in memory" collection allowing to search for a given object that has
@@ -78,7 +79,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         /// <param name="propertyValue">Value of the property.</param>
         /// <param name="action"></param>
         /// <param name="notify"></param>
-        Task FindAndModifyByPropertyAsync<TProperty>(DomainEvent e, Expression<Func<TModel, TProperty>> propertySelector, TProperty propertyValue, Func<TModel, Task> action, bool notify = false);
+        Task FindAndModifyByPropertyAsync<TProperty>(DomainEvent e, Expression<Func<TModel, TProperty>> propertySelector, TProperty propertyValue, Func<TModel, Task> action, bool notify = false, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Optimize the "in memory" collection allowing to search for a given object that has
@@ -91,19 +92,19 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         /// <param name="propertyValue"></param>
         /// <param name="subscription">Since we do not have async ienumerable, this is the action that will be called for each
         /// object that will be returned by the query</param>
-        Task FindByPropertyAsync<TProperty>(Expression<Func<TModel, TProperty>> propertySelector, TProperty propertyValue, Func<TModel, Task> subscription);
+        Task FindByPropertyAsync<TProperty>(Expression<Func<TModel, TProperty>> propertySelector, TProperty propertyValue, Func<TModel, Task> subscription, CancellationToken cancellationToken = default);
 
-        Task SaveAsync(DomainEvent e, TModel model, bool notify = false);
+        Task SaveAsync(DomainEvent e, TModel model, bool notify = false, CancellationToken cancellationToken = default);
 
-        Task DeleteAsync(DomainEvent e, TKey id, bool notify = false);
+        Task DeleteAsync(DomainEvent e, TKey id, bool notify = false, CancellationToken cancellationToken = default);
 
-        Task DropAsync();
+        Task DropAsync(CancellationToken cancellationToken = default);
 
-        Task CreateIndexAsync(String name, IndexKeysDefinition<TModel> keys, CreateIndexOptions options = null);
+        Task CreateIndexAsync(String name, IndexKeysDefinition<TModel> keys, CreateIndexOptions options = null, CancellationToken cancellationToken = default);
 
-        Task DropIndexAsync(string name);
+        Task DropIndexAsync(string name, CancellationToken cancellationToken = default);
 
-        Task<bool> IndexExistsAsync(String name);
+        Task<bool> IndexExistsAsync(String name, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Attach a projection to the collection wrapper.
@@ -123,7 +124,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         /// </summary>
         /// <param name="values"></param>
         /// <returns></returns>
-        Task InsertBatchAsync(IEnumerable<TModel> values);
+        Task InsertBatchAsync(IEnumerable<TModel> values, CancellationToken cancellationToken = default);
     }
 
     public enum CollectionWrapperOperationType

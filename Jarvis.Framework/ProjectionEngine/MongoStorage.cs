@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
@@ -25,22 +26,22 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             Logger = NullLogger.Instance;
         }
 
-        public async Task<Boolean> IndexExistsAsync(string name)
+        public async Task<Boolean> IndexExistsAsync(string name, CancellationToken cancellationToken = default)
         {
-            using (var cursor = await _collection.Indexes.ListAsync().ConfigureAwait(false))
+            using (var cursor = await _collection.Indexes.ListAsync(cancellationToken).ConfigureAwait(false))
             {
-                var list = await cursor.ToListAsync().ConfigureAwait(false);
+                var list = await cursor.ToListAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
                 return list.Any(i => i["name"].AsString == name);
             }
         }
 
-        public async Task DropIndexAsync(String name)
+        public async Task DropIndexAsync(String name, CancellationToken cancellationToken = default)
         {
             var allIndexes = await _collection.GetIndexNamesAsync();
             var existing = allIndexes.Any(d => d.Equals(name, StringComparison.OrdinalIgnoreCase));
             if (existing)
             {
-                await _collection.Indexes.DropOneAsync(name);
+                await _collection.Indexes.DropOneAsync(name, cancellationToken);
             }
         }
 
@@ -53,7 +54,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         /// <param name="keys"></param>
         /// <param name="options"></param>
         /// <returns></returns>
-        public async Task CreateIndexAsync(String name, IndexKeysDefinition<TModel> keys, CreateIndexOptions options = null)
+        public async Task CreateIndexAsync(String name, IndexKeysDefinition<TModel> keys, CreateIndexOptions options = null, CancellationToken cancellationToken = default)
         {
             options = options ?? new CreateIndexOptions();
             options.Name = name;
@@ -67,10 +68,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 try
                 {
                     //if we reach here, index was not created, probably it is existing and with different keys.
-                    var indexExists = await _collection.IndexExistsAsync(name).ConfigureAwait(false);
+                    var indexExists = await _collection.IndexExistsAsync(name, cancellationToken: cancellationToken).ConfigureAwait(false);
                     if (indexExists)
                     {
-                        await _collection.Indexes.DropOneAsync(name).ConfigureAwait(false);
+                        await _collection.Indexes.DropOneAsync(name, cancellationToken).ConfigureAwait(false);
                         await InnerCreateIndexAsync(name, keys, options).ConfigureAwait(false);
                     }
                 }
@@ -100,9 +101,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             return false;
         }
 
-        public async Task InsertBatchAsync(IEnumerable<TModel> values)
+        public async Task InsertBatchAsync(IEnumerable<TModel> values, CancellationToken cancellationToken = default)
         {
-            await _collection.InsertManyAsync(values).ConfigureAwait(false);
+            await _collection.InsertManyAsync(values, cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         public IQueryable<TModel> All
@@ -110,9 +111,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             get { return _collection.AsQueryable(); }
         }
 
-        public Task<TModel> FindOneByIdAsync(TKey id)
+        public Task<TModel> FindOneByIdAsync(TKey id, CancellationToken cancellationToken = default)
         {
-            return _collection.FindOneByIdAsync(id);
+            return _collection.FindOneByIdAsync(id, cancellationToken: cancellationToken);
         }
 
         public TModel FindOneById(TKey id)
@@ -141,14 +142,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             return _collection.AsQueryable().Where(filter).OrderBy(x => x.Id);
         }
 
-        public Task<bool> ContainsAsync(Expression<Func<TModel, bool>> filter)
+        public Task<bool> ContainsAsync(Expression<Func<TModel, bool>> filter, CancellationToken cancellationToken = default)
         {
-            return _collection.AsQueryable().AnyAsync(filter);
+            return _collection.AsQueryable().AnyAsync(filter, cancellationToken: cancellationToken);
         }
 
-        public async Task<InsertResult> InsertAsync(TModel model)
+        public async Task<InsertResult> InsertAsync(TModel model, CancellationToken cancellationToken = default)
         {
-            await _collection.InsertOneAsync(model).ConfigureAwait(false);
+            await _collection.InsertOneAsync(model, cancellationToken: cancellationToken).ConfigureAwait(false);
 
             return new InsertResult()
             {
@@ -157,29 +158,26 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             };
         }
 
-        public async Task<SaveResult> SaveWithVersionAsync(TModel model, int orignalVersion)
+        public async Task<SaveResult> SaveWithVersionAsync(TModel model, int orignalVersion, CancellationToken cancellationToken = default)
         {
             if (model == null)
             {
                 throw new ArgumentNullException(nameof(model));
             }
 
-            var result = await _collection.FindOneAndReplaceAsync(
-                Builders<TModel>.Filter.And(
+            var result = await _collection.FindOneAndReplaceAsync(Builders<TModel>.Filter.And(
                     Builders<TModel>.Filter.Eq(x => x.Id, model.Id),
                     Builders<TModel>.Filter.Eq(x => x.Version, orignalVersion)
-                    ),
-                model,
-                new FindOneAndReplaceOptions<TModel, TModel>()
+                    ), model, new FindOneAndReplaceOptions<TModel, TModel>()
                 {
                     Sort = Builders<TModel>.Sort.Ascending(s => s.Id)
-                }).ConfigureAwait(false);
+                }, cancellationToken).ConfigureAwait(false);
 
             if (result == null)
             {
                 //something bad happended, we believe that we have readmodel with that id and original version but it does not
                 //seems to be so
-                var reloaded = await _collection.FindOneByIdAsync(model.Id);
+                var reloaded = await _collection.FindOneByIdAsync(model.Id, cancellationToken: cancellationToken);
                 Logger.ErrorFormat("Unable to save model {0} with id {1} and original version {2} with new version {3}. In database we found a record with actual version {4} that is not equal to original version!",
                     model.GetType().FullName,
                     model.Id,
@@ -196,9 +194,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             };
         }
 
-        public async Task<DeleteResult> DeleteAsync(TKey id)
+        public async Task<DeleteResult> DeleteAsync(TKey id, CancellationToken cancellationToken = default)
         {
-            var result = await _collection.RemoveByIdAsync(id).ConfigureAwait(false);
+            var result = await _collection.RemoveByIdAsync(id, cancellationToken: cancellationToken).ConfigureAwait(false);
 
             return new DeleteResult()
             {
@@ -207,7 +205,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             };
         }
 
-        public async Task DropAsync()
+        public async Task DropAsync(CancellationToken cancellationToken = default)
         {
             await _collection.DropAsync().ConfigureAwait(false);
         }
@@ -217,7 +215,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             get { return _collection; }
         }
 
-        public Task FlushAsync()
+        public Task FlushAsync(CancellationToken cancellationToken = default)
         {
             return Task.CompletedTask;
         }

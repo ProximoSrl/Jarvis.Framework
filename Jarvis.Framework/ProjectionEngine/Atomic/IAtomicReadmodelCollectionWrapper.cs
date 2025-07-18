@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
@@ -49,7 +50,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        Task<TModel> FindOneByIdAsync(String id);
+        Task<TModel> FindOneByIdAsync(String id, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// This is similar to <see cref="FindOneByIdAsync(string)"/> but it will re-query event stream
@@ -57,7 +58,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        Task<TModel> FindOneByIdAndCatchupAsync(string id);
+        Task<TModel> FindOneByIdAndCatchupAsync(string id, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Find by query and allow for an optional parameter called <paramref name="fixVersion"/> that allows
@@ -66,7 +67,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// <param name="filter"></param>
         /// <param name="fixVersion"></param>
         /// <returns></returns>
-        Task<IReadOnlyCollection<TModel>> FindManyAsync(System.Linq.Expressions.Expression<Func<TModel, bool>> filter, bool fixVersion = false);
+        Task<IReadOnlyCollection<TModel>> FindManyAsync(System.Linq.Expressions.Expression<Func<TModel, bool>> filter, bool fixVersion = false, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Loads by id but project until a specific checkpoint passed as parameter. This checkpoint
@@ -78,7 +79,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// </param>
         /// <remarks>Actually this method is a simple wrapper to a call to <see cref="ILiveAtomicReadModelProcessor"/>
         /// that was used internally by the reader.</remarks>
-        Task<TModel> FindOneByIdAtCheckpointAsync(string id, long chunkPosition);
+        Task<TModel> FindOneByIdAtCheckpointAsync(string id, long chunkPosition, CancellationToken cancellationToken = default);
     }
 
     /// <summary>
@@ -107,7 +108,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// <param name="model"></param>
         /// <returns></returns>
         /// <remarks>Readmodel global signature check is always performed.</remarks>
-        Task UpsertForceAsync(TModel model);
+        Task UpsertForceAsync(TModel model, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Insert or update a readmodel instance, perform check for idempotency and
@@ -115,7 +116,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
-        Task UpsertAsync(TModel model);
+        Task UpsertAsync(TModel model, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// <para>
@@ -127,7 +128,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// <param name="model"></param>
         /// <remarks>If the readmodel is not present on database, nothing will be written.</remarks>
         /// <returns></returns>
-        Task UpdateAsync(TModel model);
+        Task UpdateAsync(TModel model, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// <para>
@@ -147,6 +148,6 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
-        Task UpdateVersionAsync(TModel model);
+        Task UpdateVersionAsync(TModel model, CancellationToken cancellationToken = default);
     }
 }
