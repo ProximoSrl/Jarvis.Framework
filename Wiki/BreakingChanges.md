@@ -1,9 +1,8 @@
 # Version 7
 
-## vNext
+## 7.10.11
 
-- All methods from ILiveAtomicReadModelProcessorEnhanced and ILiveAtomicReadModelProcessor now ended with Async and does not contains async in the name ex: instead of ProcessAsyncUntilChunkPosition is ProcessUntilChunkPositionAsync
-
+- Updated mongodb driver 
 
 ## 7.10.0
 
