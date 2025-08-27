@@ -1,4 +1,6 @@
-﻿namespace Jarvis.Framework.Shared.IdentitySupport
+﻿using System;
+
+namespace Jarvis.Framework.Shared.IdentitySupport
 {
     /// <summary>
     /// This interface is used to convert identity to string and viceversa.
@@ -36,5 +38,14 @@
         /// <param name="tag"></param>
         /// <returns></returns>
         bool TryGetTag(string id, out string tag);
+
+        /// <summary>
+        /// Retrieves the identity type based on the provided tag (case insensitive).
+        /// This method allows you to determine the actual Type of identity that would
+        /// be created for a given tag.
+        /// </summary>
+        /// <param name="tag">The tag to look up (case insensitive)</param>
+        /// <returns>The Type of the identity class associated with the tag, or null if not found</returns>
+        Type GetIdentityTypeByTag(string tag);
     }
 }

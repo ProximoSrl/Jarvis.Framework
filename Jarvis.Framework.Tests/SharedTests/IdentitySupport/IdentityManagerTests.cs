@@ -223,5 +223,26 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             Assert.That(result, Is.EqualTo(expected));
             Assert.That(tag, Is.EqualTo(expectedTag));
         }
+
+        [TestCase("Test", typeof(TestId))]
+        [TestCase("test", typeof(TestId))]
+        [TestCase("TEST", typeof(TestId))]
+        [TestCase("TestId", typeof(TestId))]
+        [TestCase("testid", typeof(TestId))]
+        [TestCase("TESTID", typeof(TestId))]
+        [TestCase("TestFlat", typeof(TestFlatId))]
+        [TestCase("testflat", typeof(TestFlatId))]
+        [TestCase("TESTFLAT", typeof(TestFlatId))]
+        [TestCase("TestFlatId", typeof(TestFlatId))]
+        [TestCase("testflatid", typeof(TestFlatId))]
+        [TestCase("TESTFLATID", typeof(TestFlatId))]
+        [TestCase("NonExistentTag", null)]
+        [TestCase(null, null)]
+        [TestCase("", null)]
+        public void Verify_get_identity_type_by_tag(string tag, Type expectedType)
+        {
+            var result = sut.GetIdentityTypeByTag(tag);
+            Assert.That(result, Is.EqualTo(expectedType));
+        }
     }
 }

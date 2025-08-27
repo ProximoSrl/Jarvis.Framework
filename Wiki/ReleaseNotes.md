@@ -4,11 +4,14 @@
 
 - ILiveAtomicReadModelProcessorEnhanced now can project with custom conditions.
 
-## 7.9.1
+## 7.10.2
+- Added `GetIdentityTypeByTag` method to `IIdentityConverter` interface to retrieve identity type based on tag (case insensitive).
+
+## 7.10.1
 
 - Fix release notes and CodeQL Build
 
-## 7.9.0
+## 7.10.0
 
 - Update to MongoDb driver 3.1.0
 
