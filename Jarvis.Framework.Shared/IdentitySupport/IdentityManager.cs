@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.IdentitySupport
@@ -93,7 +94,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
                     _longBasedFactories[tag] = (id) => (IIdentity)activator(new object[] { id });
                     _tagToTypeMapping[tag] = ic;
-                    
+
                     // Also register by the full class name for convenience
                     // This allows lookup by both "Document" (tag) and "DocumentId" (class name)
                     var fullClassName = ic.Name;
@@ -109,20 +110,42 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                 throw new JarvisFrameworkEngineException("Found identities with errors:\n" + errors);
         }
 
-        public TIdentity New<TIdentity>() where TIdentity : IIdentity
+        public IIdentity New(Type identityType)
         {
-            var tag = EventStoreIdentity.GetTagForIdentityClass(typeof(TIdentity));
+            if (identityType == null)
+                throw new ArgumentNullException(nameof(identityType));
+
+            if (!typeof(IIdentity).IsAssignableFrom(identityType))
+                throw new ArgumentException($"Type {identityType.FullName} does not implement IIdentity", nameof(identityType));
+
+            var tag = EventStoreIdentity.GetTagForIdentityClass(identityType);
             Func<long, IIdentity> factory = GetFactoryForTag(tag);
 
-            return (TIdentity)factory(_counterService.GetNext(tag));
+            return factory(_counterService.GetNext(tag));
         }
 
-        public async Task<TIdentity> NewAsync<TIdentity>() where TIdentity : IIdentity
+        public TIdentity New<TIdentity>() where TIdentity : IIdentity
         {
-            var tag = EventStoreIdentity.GetTagForIdentityClass(typeof(TIdentity));
+            return (TIdentity)New(typeof(TIdentity));
+        }
+
+        public async Task<IIdentity> NewAsync(Type identityType, CancellationToken cancellationToken = default)
+        {
+            if (identityType == null)
+                throw new ArgumentNullException(nameof(identityType));
+
+            if (!typeof(IIdentity).IsAssignableFrom(identityType))
+                throw new ArgumentException($"Type {identityType.FullName} does not implement IIdentity", nameof(identityType));
+
+            var tag = EventStoreIdentity.GetTagForIdentityClass(identityType);
             Func<long, IIdentity> factory = GetFactoryForTag(tag);
 
-            return (TIdentity)factory(await _counterService.GetNextAsync(tag));
+            return factory(await _counterService.GetNextAsync(tag, cancellationToken));
+        }
+
+        public async Task<TIdentity> NewAsync<TIdentity>(CancellationToken cancellationToken = default) where TIdentity : IIdentity
+        {
+            return (TIdentity)await NewAsync(typeof(TIdentity), cancellationToken);
         }
 
         private Func<long, IIdentity> GetFactoryForTag(string tag)
@@ -155,16 +178,16 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             return false;
         }
 
-        public Task ForceNextIdAsync<TIdentity>(long nextIdToReturn)
+        public Task ForceNextIdAsync<TIdentity>(long nextIdToReturn, CancellationToken cancellationToken = default)
         {
             var tag = EventStoreIdentity.GetTagForIdentityClass(typeof(TIdentity));
-            return _counterService.ForceNextIdAsync(tag, nextIdToReturn);
+            return _counterService.ForceNextIdAsync(tag, nextIdToReturn, cancellationToken);
         }
 
-        public Task<long> PeekNextIdAsync<TIdentity>()
+        public Task<long> PeekNextIdAsync<TIdentity>(CancellationToken cancellationToken = default)
         {
             var tag = EventStoreIdentity.GetTagForIdentityClass(typeof(TIdentity));
-            return _counterService.PeekNextAsync(tag);
+            return _counterService.PeekNextAsync(tag, cancellationToken);
         }
 
         public bool TryGetTag(string id, out string tag)

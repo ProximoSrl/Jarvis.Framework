@@ -3,6 +3,7 @@ using Jarvis.Framework.Shared.Helpers;
 using MongoDB.Driver;
 using System;
 using System.Threading.Tasks;
+using System.Threading;
 
 namespace Jarvis.Framework.Shared.IdentitySupport
 {
@@ -86,7 +87,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             }
         }
 
-        public async Task<long> GetNextAsync(string serie)
+        public async Task<long> GetNextAsync(string serie, CancellationToken cancellationToken = default)
         {
             Int32 count = 0;
             while (count++ < 5)
@@ -100,7 +101,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                         {
                             ReturnDocument = ReturnDocument.After,
                             IsUpsert = true,
-                        });
+                        }, cancellationToken);
                     return counter.Last;
                 }
                 catch (MongoCommandException ex)
@@ -114,13 +115,13 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             throw new JarvisFrameworkEngineException("Unable to generate next number for serie " + serie);
         }
 
-        public async Task ForceNextIdAsync(string serie, long nextIdToReturn)
+        public async Task ForceNextIdAsync(string serie, long nextIdToReturn, CancellationToken cancellationToken = default)
         {
             if (nextIdToReturn <= 0)
             {
                 throw new JarvisFrameworkEngineException($"Unable to force next id for serie {serie} to {nextIdToReturn} because it is not a valid value.");
             }
-            
+
             //we need to understand if we already have a record, to avoid concurrency issues
             var actualIndex = _counters.FindOneById(serie);
             if (actualIndex == null)
@@ -147,7 +148,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                         {
                             ReturnDocument = ReturnDocument.After,
                             IsUpsert = false,
-                        });
+                        }, cancellationToken);
 
                 if (result == null)
                 {
@@ -156,11 +157,12 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             }
         }
 
-        public async Task<long> PeekNextAsync(string serie)
+        public async Task<long> PeekNextAsync(string serie, CancellationToken cancellationToken = default)
         {
             var recordCursor = await _counters.FindAsync(
-                Builders<IdentityCounter>.Filter.Eq(x => x.Id, serie));
-            var record = await recordCursor.FirstOrDefaultAsync();
+                Builders<IdentityCounter>.Filter.Eq(x => x.Id, serie),
+                cancellationToken: cancellationToken);
+            var record = await recordCursor.FirstOrDefaultAsync(cancellationToken);
             return record == null ? 1 : record.Last + 1;
         }
     }
