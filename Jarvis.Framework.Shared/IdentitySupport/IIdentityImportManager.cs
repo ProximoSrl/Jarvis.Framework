@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Threading;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.IdentitySupport
 {
@@ -13,12 +14,12 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         /// Force next id to be the one specified, will throw if the id is already used.
         /// </summary>
         /// <returns></returns>
-        Task ForceNextIdAsync<TIdentity>(long nextIdToReturn);
+        Task ForceNextIdAsync<TIdentity>(long nextIdToReturn, CancellationToken cancellation = default);
 
         /// <summary>
         /// Return the next id that will be generated for the specified identity.
         /// </summary>
         /// <returns></returns>
-        Task<long> PeekNextIdAsync<TIdentity>();
+        Task<long> PeekNextIdAsync<TIdentity>(CancellationToken cancellation = default);
     }
 }

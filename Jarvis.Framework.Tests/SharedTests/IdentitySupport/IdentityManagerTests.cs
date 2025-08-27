@@ -244,5 +244,153 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             var result = sut.GetIdentityTypeByTag(tag);
             Assert.That(result, Is.EqualTo(expectedType));
         }
+
+        [Test]
+        public void New_with_type_should_create_identity()
+        {
+            // Act
+            var identity = sut.New(typeof(TestId));
+
+            // Assert
+            Assert.That(identity, Is.Not.Null);
+            Assert.That(identity, Is.TypeOf<TestId>());
+            Assert.That(identity.AsString(), Does.StartWith("Test_"));
+        }
+
+        [Test]
+        public void New_with_null_type_should_throw_ArgumentNullException()
+        {
+            // Act & Assert
+            var ex = Assert.Throws<ArgumentNullException>(() => sut.New(null));
+            Assert.That(ex.ParamName, Is.EqualTo("identityType"));
+        }
+
+        [Test]
+        public void New_with_non_identity_type_should_throw_ArgumentException()
+        {
+            // Act & Assert
+            var ex = Assert.Throws<ArgumentException>(() => sut.New(typeof(string)));
+            Assert.That(ex.ParamName, Is.EqualTo("identityType"));
+            Assert.That(ex.Message, Does.Contain("does not implement IIdentity"));
+        }
+
+        [Test]
+        public async Task NewAsync_with_type_should_create_identity()
+        {
+            // Act
+            var identity = await sut.NewAsync(typeof(TestId));
+
+            // Assert
+            Assert.That(identity, Is.Not.Null);
+            Assert.That(identity, Is.TypeOf<TestId>());
+            Assert.That(identity.AsString(), Does.StartWith("Test_"));
+        }
+
+        [Test]
+        public void NewAsync_with_null_type_should_throw_ArgumentNullException()
+        {
+            // Act & Assert
+            var ex = Assert.ThrowsAsync<ArgumentNullException>(async () => await sut.NewAsync((Type)null));
+            Assert.That(ex.ParamName, Is.EqualTo("identityType"));
+        }
+
+        [Test]
+        public void NewAsync_with_non_identity_type_should_throw_ArgumentException()
+        {
+            // Act & Assert
+            var ex = Assert.ThrowsAsync<ArgumentException>(async () => await sut.NewAsync(typeof(string)));
+            Assert.That(ex.ParamName, Is.EqualTo("identityType"));
+            Assert.That(ex.Message, Does.Contain("does not implement IIdentity"));
+        }
+
+        [Test]
+        public void Generic_New_should_use_non_generic_implementation()
+        {
+            // Act
+            var genericResult = sut.New<TestId>();
+            var nonGenericResult = sut.New(typeof(TestId));
+
+            // Assert
+            Assert.That(genericResult, Is.Not.Null);
+            Assert.That(nonGenericResult, Is.Not.Null);
+            Assert.That(genericResult.GetType(), Is.EqualTo(nonGenericResult.GetType()));
+            Assert.That(genericResult.AsString(), Does.StartWith("Test_"));
+            Assert.That(nonGenericResult.AsString(), Does.StartWith("Test_"));
+        }
+
+        [Test]
+        public async Task Generic_NewAsync_should_use_non_generic_implementation()
+        {
+            // Act
+            var genericResult = await sut.NewAsync<TestId>();
+            var nonGenericResult = await sut.NewAsync(typeof(TestId));
+
+            // Assert
+            Assert.That(genericResult, Is.Not.Null);
+            Assert.That(nonGenericResult, Is.Not.Null);
+            Assert.That(genericResult.GetType(), Is.EqualTo(nonGenericResult.GetType()));
+            Assert.That(genericResult.AsString(), Does.StartWith("Test_"));
+            Assert.That(nonGenericResult.AsString(), Does.StartWith("Test_"));
+        }
+
+        [Test]
+        public void New_with_type_should_generate_sequential_ids()
+        {
+            // Act
+            var first = sut.New(typeof(TestId));
+            var second = sut.New(typeof(TestId));
+
+            // Assert
+            Assert.That(first, Is.TypeOf<TestId>());
+            Assert.That(second, Is.TypeOf<TestId>());
+
+            var firstId = ((TestId)first).Id;
+            var secondId = ((TestId)second).Id;
+            Assert.That(secondId, Is.EqualTo(firstId + 1));
+        }
+
+        [Test]
+        public async Task NewAsync_with_type_should_generate_sequential_ids()
+        {
+            // Act
+            var first = await sut.NewAsync(typeof(TestId));
+            var second = await sut.NewAsync(typeof(TestId));
+
+            // Assert
+            Assert.That(first, Is.TypeOf<TestId>());
+            Assert.That(second, Is.TypeOf<TestId>());
+
+            var firstId = ((TestId)first).Id;
+            var secondId = ((TestId)second).Id;
+            Assert.That(secondId, Is.EqualTo(firstId + 1));
+        }
+
+        [Test]
+        public void New_with_type_should_work_with_different_identity_types()
+        {
+            // Act
+            var testId = sut.New(typeof(TestId));
+            var testFlatId = sut.New(typeof(TestFlatId));
+
+            // Assert
+            Assert.That(testId, Is.TypeOf<TestId>());
+            Assert.That(testFlatId, Is.TypeOf<TestFlatId>());
+            Assert.That(testId.AsString(), Does.StartWith("Test_"));
+            Assert.That(testFlatId.AsString(), Does.StartWith("TestFlat_"));
+        }
+
+        [Test]
+        public async Task NewAsync_with_type_should_work_with_different_identity_types()
+        {
+            // Act
+            var testId = await sut.NewAsync(typeof(TestId));
+            var testFlatId = await sut.NewAsync(typeof(TestFlatId));
+
+            // Assert
+            Assert.That(testId, Is.TypeOf<TestId>());
+            Assert.That(testFlatId, Is.TypeOf<TestFlatId>());
+            Assert.That(testId.AsString(), Does.StartWith("Test_"));
+            Assert.That(testFlatId.AsString(), Does.StartWith("TestFlat_"));
+        }
     }
 }

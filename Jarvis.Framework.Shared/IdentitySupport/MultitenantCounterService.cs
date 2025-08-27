@@ -1,4 +1,5 @@
 ﻿using Jarvis.Framework.Shared.MultitenantSupport;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.IdentitySupport
@@ -12,9 +13,9 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             _tenantAccessor = tenantAccessor;
         }
 
-        public Task ForceNextIdAsync(string serie, long nextIdToReturn)
+        public Task ForceNextIdAsync(string serie, long nextIdToReturn, CancellationToken cancellationToken = default)
         {
-            return _tenantAccessor.Current.CounterService.ForceNextIdAsync(serie, nextIdToReturn);
+            return _tenantAccessor.Current.CounterService.ForceNextIdAsync(serie, nextIdToReturn, cancellationToken);
         }
 
         public long GetNext(string serie)
@@ -22,14 +23,14 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             return _tenantAccessor.Current.CounterService.GetNext(serie);
         }
 
-        public Task<long> GetNextAsync(string serie)
+        public Task<long> GetNextAsync(string serie, CancellationToken cancellationToken = default)
         {
-            return _tenantAccessor.Current.CounterService.GetNextAsync(serie);
+            return _tenantAccessor.Current.CounterService.GetNextAsync(serie, cancellationToken);
         }
 
-        public Task<long> PeekNextAsync(string serie)
+        public Task<long> PeekNextAsync(string serie, CancellationToken cancellationToken = default)
         {
-            return _tenantAccessor.Current.CounterService.PeekNextAsync(serie);
+            return _tenantAccessor.Current.CounterService.PeekNextAsync(serie, cancellationToken);
         }
     }
 }
