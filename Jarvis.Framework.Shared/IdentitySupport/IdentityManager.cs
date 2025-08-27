@@ -18,6 +18,9 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         private readonly Dictionary<string, Func<long, IIdentity>> _longBasedFactories =
             new Dictionary<string, Func<long, IIdentity>>(StringComparer.OrdinalIgnoreCase);
 
+        private readonly Dictionary<string, Type> _tagToTypeMapping =
+            new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase);
+
         public ILogger Logger { get; set; }
 
         public IdentityManager(ICounterService counterService)
@@ -89,6 +92,15 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                     var activator = FastReflectionHelper.GetActivator(ctor);
 
                     _longBasedFactories[tag] = (id) => (IIdentity)activator(new object[] { id });
+                    _tagToTypeMapping[tag] = ic;
+                    
+                    // Also register by the full class name for convenience
+                    // This allows lookup by both "Document" (tag) and "DocumentId" (class name)
+                    var fullClassName = ic.Name;
+                    if (!_tagToTypeMapping.ContainsKey(fullClassName))
+                    {
+                        _tagToTypeMapping[fullClassName] = ic;
+                    }
                 }
             }
 
@@ -158,6 +170,17 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         public bool TryGetTag(string id, out string tag)
         {
             return TryGetTag(id, out tag, out var _, out var __);
+        }
+
+        public Type GetIdentityTypeByTag(string tag)
+        {
+            if (string.IsNullOrEmpty(tag))
+            {
+                return null;
+            }
+
+            _tagToTypeMapping.TryGetValue(tag, out Type type);
+            return type;
         }
 
         private bool TryGetTag(string id, out string tag, out long longId, out Func<long, IIdentity> factoryFunc)
