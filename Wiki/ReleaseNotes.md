@@ -4,7 +4,12 @@
 
 - ILiveAtomicReadModelProcessorEnhanced now can project with custom conditions.
 
+## 7.10.3
+
+- Async interface and non generic method for IdentityManager to create new identity based on type.
+
 ## 7.10.2
+
 - Added `GetIdentityTypeByTag` method to `IIdentityConverter` interface to retrieve identity type based on tag (case insensitive).
 
 ## 7.10.1

@@ -1,4 +1,5 @@
 ﻿using Jarvis.Framework.Shared.Exceptions;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.IdentitySupport
@@ -7,7 +8,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
     {
         long _last = 0;
 
-        public Task ForceNextIdAsync(string serie, long nextIdToReturn)
+        public Task ForceNextIdAsync(string serie, long nextIdToReturn, CancellationToken cancellationToken = default)
         {
             if (_last >= nextIdToReturn)
             {
@@ -22,12 +23,12 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             return ++_last;
         }
 
-        public Task<long> GetNextAsync(string serie)
+        public Task<long> GetNextAsync(string serie, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(++_last);
         }
 
-        public Task<long> PeekNextAsync(string serie)
+        public Task<long> PeekNextAsync(string serie, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(_last+ 1);
         }

@@ -4,6 +4,7 @@ using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.IdentitySupport
@@ -127,17 +128,17 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             }
         }
 
-        public Task<long> GetNextAsync(string serie)
+        public async Task<long> GetNextAsync(string serie, CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(this.GetNext(serie));
+            return await Task.FromResult(this.GetNext(serie));
         }
 
-        public Task ForceNextIdAsync(string serie, long nextIdToReturn)
+        public Task ForceNextIdAsync(string serie, long nextIdToReturn, CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException("Cannot force in offline.");
         }
 
-        public Task<long> PeekNextAsync(string serie)
+        public Task<long> PeekNextAsync(string serie, CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException("In offline service it is not safe to know next id, we have not root counter.");
         }

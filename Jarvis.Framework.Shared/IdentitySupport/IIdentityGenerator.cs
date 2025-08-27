@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Threading;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.IdentitySupport
 {
@@ -21,6 +22,6 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         /// </summary>
         /// <typeparam name="TIdentity">Type of the identity to generate.</typeparam>
         /// <returns>The newly generated identity</returns>
-        Task<TIdentity> NewAsync<TIdentity>() where TIdentity : IIdentity;
+        Task<TIdentity> NewAsync<TIdentity>(CancellationToken cancellation = default) where TIdentity : IIdentity;
     }
 }
