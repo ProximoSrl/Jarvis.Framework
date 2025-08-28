@@ -26,7 +26,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             set { _logger = value; }
         }
 
-        internal class MappedIdentity
+        protected internal class MappedIdentity
         {
             [BsonId]
             internal string ExternalKey { get; private set; }
@@ -173,11 +173,13 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             return mapped?.AggregateId;
         }
 
-        private MappedIdentity MapIdentity(string externalKey, TKey key)
+        protected MappedIdentity MapIdentity(string externalKey, TKey key)
         {
             try
             {
-                var mapped = new MappedIdentity(externalKey, key);
+                //we need to be sure that the externalkey is lowercase.
+                var lowercasedKey = externalKey.ToLowerInvariant();
+                var mapped = new MappedIdentity(lowercasedKey, key);
                 _collection.InsertOne(mapped);
                 return mapped;
             }

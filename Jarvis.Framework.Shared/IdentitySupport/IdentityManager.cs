@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.IdentitySupport
 {
-    public class IdentityManager : IIdentityManager, IIdentityImportManager
+    public class IdentityManager : IIdentityManager, IIdentityImportManager, IIdentityGenerator
     {
         private readonly ICounterService _counterService;
 
