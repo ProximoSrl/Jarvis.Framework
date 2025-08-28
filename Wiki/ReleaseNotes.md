@@ -4,6 +4,10 @@
 
 - ILiveAtomicReadModelProcessorEnhanced now can project with custom conditions.
 
+## 7.11.5
+
+- Vibe coding: interface file missed the methods, now fixed.
+
 ## 7.11.4
 
 - Fixed release notes.
@@ -39,12 +43,12 @@
 
 ## 7.8.3
 
-- Optimization for Atomic Readmodel Wrapper Update 
+- Optimization for Atomic Readmodel Wrapper Update
 
 ## 7.8.2
 
 - Linq driver for MongoDB now default to version 3.
-- Better support for cancellation token. 
+- Better support for cancellation token.
 
 ## 7.8.1
 
@@ -103,7 +107,7 @@
 
 - Checkpoint manager fix for missing readmodels
 - Added event on finish fix readmodel atomic
- 
+
 ## 7.7.3
 
 - Atomic projection checkpoint manager fix for minumum dispatched
@@ -133,7 +137,7 @@
 
 - Added new Abstract identity translator that saves all identities in a single collection.
 - Added CommandHandlerMonitor to have a log of currently executing commands.
- 
+
 ## 7.4.0
 
 - Atomic readmodel now are updated in version and position even if changeset contains events that does not change the readmodel.
@@ -175,7 +179,7 @@
 
 ## 7.2.0
 
-- Updated mongodb drivers. 
+- Updated mongodb drivers.
 - Added ability to query on secondary with reamodel classic/atomic
 
 ## 7.1.3
@@ -238,7 +242,7 @@
 # 6.5.2
 
 - Framework Metrics exposed to the external caller.
-  
+
 # 6.5.1
 
 - Avoid hammering readmodel for atomic readmodel stats.
@@ -255,7 +259,7 @@
 
 - GH Code QL action fix
 - Added ability to change polling intervale and hole detection on poller
- 
+
 ## 6.4.1
 
 - Rename IAtomicCollectionReader.FindOneByIdAtCheckpoint adding async suffix
@@ -269,7 +273,7 @@
 
 - Restored rebus test.
 - Fixed a bug in bug messages tracking.
- 
+
 ## 6.3.6
 
 - Updated NStore and Mongodb drivers
@@ -282,7 +286,7 @@
 
 - Fix build using a standard build.ps1 file
 - Rename of rebus project
-  
+
 ## 6.3.3
 
 - Fix healt check when loggin with no string format.
@@ -320,15 +324,15 @@
 ## 6.1.5
 
 - MSMQ Health check.
-  
+
 ## 6.1.4
 
 - DomainEvent context is now a readonly dictionary.
-  
+
 ## 6.1.3
 
 - DomainEvent CommitStamp is now a property in pure getter (not anymore set by commit enhancer).
-  
+
 ## 6.1.2
 
 - Added helpers to better serialization of command headers.
@@ -353,20 +357,20 @@
 - Better check on EventStore identity constructor
 - Fixed skewing slots in Projection engine on new projection
 - Fixed interrupting rebuild #11561
-- Fixed serialization error in command executor 
+- Fixed serialization error in command executor
 
 ### 6.0.9
 
 - Fix time unit for some internal metrics
-  
+
 ### 6.0.9
 
 - App.Metrics meters now uses seconds as standard time unit.
-  
+
 ### 6.0.8
 
 - Fixed Metrics wrapper.
-  
+
 ### 6.0.7
 
 - Fixed unit tests.
@@ -374,7 +378,7 @@
 ### 6.0.6
 
 - Better health check for commit polling client.
-  
+
 ### 6.0.3
 
 - Added ability to disable async on ConcurrentCheckpointTracker due to a mongodb driver anomaly.
@@ -448,7 +452,7 @@
 
 ## Version 4
 
-Main modification is: Moved framework to .NETStandard. 
+Main modification is: Moved framework to .NETStandard.
 
 ### Version 4.3.2
 
@@ -516,7 +520,7 @@ Main modification is: Moved framework to .NETStandard.
 ### 2.0.9
 
 - Health check on FATAL error in Projection Engine. [Issue 22](https://github.com/ProximoSrl/Jarvis.Framework/issues/21)
-- When a projection throws an error, only the corresponding slot is stopped. [Issue 21](https://github.com/ProximoSrl/Jarvis.Framework/issues/22) 
+- When a projection throws an error, only the corresponding slot is stopped. [Issue 21](https://github.com/ProximoSrl/Jarvis.Framework/issues/22)
 
 ### 2.0.8
 
