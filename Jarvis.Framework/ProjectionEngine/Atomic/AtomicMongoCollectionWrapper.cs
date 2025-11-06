@@ -173,7 +173,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 			//serialization on mongodb.
 			try
 			{
-				rm = await _collection.FindOneByIdAsync(id).ConfigureAwait(false);
+				rm = await _collection.FindOneByIdAsync(id, cancellationToken).ConfigureAwait(false);
 
 				//if readmodel is faulted we can retry up to MaxNumberOfRetryToReprojectFaultedReadmodels to reproject.
 				if (rm?.Faulted == true && rm.FaultRetryCount < MaxNumberOfRetryToReprojectFaultedReadmodels) fixableExceptions = true;
@@ -196,7 +196,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
 				try
 				{
-					fixedRm = await _liveAtomicReadModelProcessor.ProcessAsync<TModel>(id, Int32.MaxValue).ConfigureAwait(false);
+					fixedRm = await _liveAtomicReadModelProcessor.ProcessAsync<TModel>(id, Int32.MaxValue, cancellationToken).ConfigureAwait(false);
 					//Save if we have a newer readmodel
 					if (shouldSave && fixedRm != null)
 					{
@@ -212,7 +212,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 					if (rm?.Faulted == true)
 					{
 						//we were fixing a readmodel that was already faulted, we return the already faulted readmodel but increment failure
-						await IncrementFailureCount(rm);
+						await IncrementFailureCount(rm, cancellationToken);
 					}
 					else
 					{
@@ -224,14 +224,13 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 			return rm;
 		}
 
-		private Task IncrementFailureCount(TModel rm)
-		{
-			return _collection.FindOneAndUpdateAsync(
-				Builders<TModel>.Filter.Eq("_id", rm.Id),
-				Builders<TModel>.Update.Inc(d => d.FaultRetryCount, 1));
-		}
-
-		/// <inheritdoc />
+	private Task IncrementFailureCount(TModel rm, CancellationToken cancellationToken = default)
+	{
+		return _collection.FindOneAndUpdateAsync(
+			Builders<TModel>.Filter.Eq("_id", rm.Id),
+			Builders<TModel>.Update.Inc(d => d.FaultRetryCount, 1),
+			cancellationToken: cancellationToken);
+	}		/// <inheritdoc />
 		public async Task<TModel> FindOneByIdAndCatchupAsync(string id, CancellationToken cancellationToken = default)
 		{
 			var rm = await FindOneByIdAsync(id, cancellationToken).ConfigureAwait(false);
@@ -254,10 +253,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 		/// <inheritdoc />
 		public async Task<IReadOnlyCollection<TModel>> FindManyAsync(System.Linq.Expressions.Expression<Func<TModel, bool>> filter, bool fixVersion = false, CancellationToken cancellationToken = default)
 		{
-			JarvisFrameworkMetricsHelper.Counter.Increment(QueryCounter, 1, typeof(TModel).Name);
-			var rms = await _collection.FindAsync(filter).ConfigureAwait(false);
+		JarvisFrameworkMetricsHelper.Counter.Increment(QueryCounter, 1, typeof(TModel).Name);
+		var rms = await _collection.FindAsync(filter, cancellationToken: cancellationToken).ConfigureAwait(false);
 
-			if (!fixVersion)
+		if (!fixVersion)
 			{
 				return rms.ToList();
 			}
@@ -308,17 +307,15 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 				return; //nothing should be done, the readmodel is not in a peristable state
 			}
 
-			//we need to save the object, we first try to find and replace, if the operation 
-			//fails we have two distinct situation, the insert and the update
-			var existing = await _collection.Find(
-					Builders<TModel>.Filter.Eq(_ => _.Id, model.Id)
-				).Project(
-					Builders<TModel>.Projection
-						.Include(_ => _.AggregateVersion)
-						.Include(_ => _.ReadModelVersion)
-				).SingleOrDefaultAsync().ConfigureAwait(false);
-
-			if (performAggregateVersionCheck
+		//we need to save the object, we first try to find and replace, if the operation 
+		//fails we have two distinct situation, the insert and the update
+		var existing = await _collection.Find(
+				Builders<TModel>.Filter.Eq(_ => _.Id, model.Id)
+			).Project(
+				Builders<TModel>.Projection
+					.Include(_ => _.AggregateVersion)
+					.Include(_ => _.ReadModelVersion)
+			).SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false);			if (performAggregateVersionCheck
 				&& existing != null
 				&& (
 					existing["AggregateVersion"].AsInt64 > model.AggregateVersion
@@ -339,7 +336,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 //in the case we have a concurrent insert.
                 try
                 {
-                    await _collection.InsertOneAsync(model).ConfigureAwait(false);
+                    await _collection.InsertOneAsync(model, cancellationToken: cancellationToken).ConfigureAwait(false);
                     return;
                 }
                 catch (MongoException mex)
@@ -373,29 +370,28 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 					Builders<TModel>.Filter.Lte(_ => _.ReadModelVersion, model.ReadModelVersion)
 				);
 
-			if (performAggregateVersionCheck)
-			{
-				filter &= Builders<TModel>.Filter.Or(
-						Builders<TModel>.Filter.Lt(_ => _.AggregateVersion, model.AggregateVersion),
-						Builders<TModel>.Filter.Lt(_ => _.ReadModelVersion, model.ReadModelVersion)
-					);
-			}
-
-			return _collection.FindOneAndReplaceAsync(
-				filter,
-				model, new FindOneAndReplaceOptions<TModel>()
-				{
-					ReturnDocument = ReturnDocument.After
-				});
+		if (performAggregateVersionCheck)
+		{
+			filter &= Builders<TModel>.Filter.Or(
+					Builders<TModel>.Filter.Lt(_ => _.AggregateVersion, model.AggregateVersion),
+					Builders<TModel>.Filter.Lt(_ => _.ReadModelVersion, model.ReadModelVersion)
+				);
 		}
 
-		/// <inheritdoc />
+		return _collection.FindOneAndReplaceAsync(
+			filter,
+			model, new FindOneAndReplaceOptions<TModel>()
+			{
+				ReturnDocument = ReturnDocument.After
+			},
+			cancellationToken);
+	}		/// <inheritdoc />
 		public async Task<TModel> FindOneByIdAtCheckpointAsync(string id, long chunkPosition, CancellationToken cancellationToken = default)
 		{
-			JarvisFrameworkMetricsHelper.Counter.Increment(FindOneByIdAtCheckpointCachupCounter, 1, typeof(TModel).Name);
-			//TODO: cache somewhat readmodel in some cache database to avoid rebuilding always at version in memory.
-			var readmodel = await _liveAtomicReadModelProcessor.ProcessUntilChunkPositionAsync<TModel>(id, chunkPosition);
-			if (readmodel?.AggregateVersion == 0)
+		JarvisFrameworkMetricsHelper.Counter.Increment(FindOneByIdAtCheckpointCachupCounter, 1, typeof(TModel).Name);
+		//TODO: cache somewhat readmodel in some cache database to avoid rebuilding always at version in memory.
+		var readmodel = await _liveAtomicReadModelProcessor.ProcessUntilChunkPositionAsync<TModel>(id, chunkPosition, cancellationToken);
+		if (readmodel?.AggregateVersion == 0)
 			{
 				return null;
 			}
@@ -414,7 +410,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 .Set(m => m.AggregateVersion, model.AggregateVersion)
                 .Set(m => m.LastProcessedVersions, model.LastProcessedVersions);
 
-            var result = await _collection.UpdateOneAsync(filter, update);
+            var result = await _collection.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
             if (result.ModifiedCount == 0)
             {
                 //ok the readmodel is not present on disk, this is a rare situation when the
@@ -422,6 +418,18 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 //does not change the readmodel, we will persist.
                 await UpsertAsync(model, false, cancellationToken);
             }
+        }
+
+        /// <inheritdoc />
+        public async Task DeleteAsync(string id, CancellationToken cancellationToken = default)
+        {
+            if (String.IsNullOrEmpty(id))
+            {
+                throw new CollectionWrapperException("Cannot delete readmodel, Id is null or empty");
+            }
+
+            var filter = Builders<TModel>.Filter.Eq(_ => _.Id, id);
+            await _collection.DeleteOneAsync(filter, cancellationToken).ConfigureAwait(false);
         }
     }
 }
