@@ -3,6 +3,7 @@ using Jarvis.Framework.Shared.ReadModel;
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
@@ -35,7 +36,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             TKey id,
             Func<TModel> insert,
             Action<TModel> update,
-            bool notify = false)
+            bool notify = false,
+            CancellationToken cancellationToken = default)
             where TModel : IReadModelEx<TKey>
         {
             Func<TModel, Task> wrapper = m =>
@@ -43,7 +45,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 update(m);
                 return Task.CompletedTask;
             };
-            return collectionWrapper.UpsertAsync(e, id, insert, wrapper, notify);
+            return collectionWrapper.UpsertAsync(e, id, insert, wrapper, notify, cancellationToken);
         }
 
         public static Task FindAndModifyAsync<TModel, TKey>(
@@ -51,7 +53,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             DomainEvent e,
             Expression<Func<TModel, bool>> filter,
             Action<TModel> action,
-            bool notify = false)
+            bool notify = false,
+            CancellationToken cancellationToken = default)
             where TModel : IReadModelEx<TKey>
         {
             Func<TModel, Task> wrapper = m =>
@@ -59,7 +62,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 action(m);
                 return Task.CompletedTask;
             };
-            return collectionWrapper.FindAndModifyAsync(e, filter, wrapper, notify);
+            return collectionWrapper.FindAndModifyAsync(e, filter, wrapper, notify, cancellationToken);
         }
 
         public static Task FindAndModifyAsync<TModel, TKey>(
@@ -67,7 +70,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             DomainEvent e,
             TKey id,
             Action<TModel> action,
-            bool notify = false)
+            bool notify = false,
+            CancellationToken cancellationToken = default)
             where TModel : IReadModelEx<TKey>
         {
             Func<TModel, Task> wrapper = m =>
@@ -75,7 +79,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 action(m);
                 return Task.CompletedTask;
             };
-            return collectionWrapper.FindAndModifyAsync(e, id, wrapper, notify);
+            return collectionWrapper.FindAndModifyAsync(e, id, wrapper, notify, cancellationToken);
         }
 
 #pragma warning disable S2436 // Classes and methods should not have too many generic parameters
@@ -84,7 +88,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             this ICollectionWrapper<TModel, TKey> collectionWrapper,
             Expression<Func<TModel, TProperty>> propertySelector,
             TProperty propertyValue,
-            Action<TModel> subscription)
+            Action<TModel> subscription,
+            CancellationToken cancellationToken = default)
             where TModel : IReadModelEx<TKey>
         {
             Func<TModel, Task> wrapper = m =>
@@ -92,7 +97,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 subscription(m);
                 return Task.CompletedTask;
             };
-            return collectionWrapper.FindByPropertyAsync<TProperty>(propertySelector, propertyValue, wrapper);
+            return collectionWrapper.FindByPropertyAsync<TProperty>(propertySelector, propertyValue, wrapper, cancellationToken);
         }
 
 #pragma warning disable S2436 // Classes and methods should not have too many generic parameters
@@ -103,7 +108,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             Expression<Func<TModel, TProperty>> propertySelector,
             TProperty propertyValue,
             Action<TModel> action,
-            bool notify = false)
+            bool notify = false,
+            CancellationToken cancellationToken = default)
             where TModel : IReadModelEx<TKey>
         {
             Func<TModel, Task> wrapper = m =>
@@ -112,7 +118,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 return Task.CompletedTask;
             };
 
-            return collectionWrapper.FindAndModifyByPropertyAsync<TProperty>(e, propertySelector, propertyValue, wrapper, notify);
+            return collectionWrapper.FindAndModifyByPropertyAsync<TProperty>(e, propertySelector, propertyValue, wrapper, notify, cancellationToken);
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using Jarvis.Framework.Shared.ReadModel;
 using MongoDB.Driver;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
@@ -24,9 +25,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
             get { return _storage.All.OrderBy(x => x.Id); }
         }
 
-        public Task<TModel> FindOneByIdAsync(TKey id)
+        public Task<TModel> FindOneByIdAsync(TKey id, CancellationToken cancellationToken = default)
         {
-            return _storage.FindOneByIdAsync(id);
+            return _storage.FindOneByIdAsync(id, cancellationToken);
         }
 
         public TModel FindOneById(TKey id)

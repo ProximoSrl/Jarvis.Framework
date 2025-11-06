@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.ReadModel
@@ -35,7 +36,7 @@ namespace Jarvis.Framework.Shared.ReadModel
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-	    Task<TModel> FindOneByIdAsync(TKey id);
+	    Task<TModel> FindOneByIdAsync(TKey id, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// This is the sync version, needed to avoid having async/await for clients that 

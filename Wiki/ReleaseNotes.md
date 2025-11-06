@@ -2,6 +2,9 @@
 
 ## vNext
 
+## 7.12.0
+
+- Added the ability to Delete Atomic Readmodels from the wrapper.
 - ILiveAtomicReadModelProcessorEnhanced now can project with custom conditions.
 
 ## 7.11.5

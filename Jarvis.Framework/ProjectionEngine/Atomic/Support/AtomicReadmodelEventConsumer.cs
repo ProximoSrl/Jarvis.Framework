@@ -6,6 +6,7 @@ using Jarvis.Framework.Shared.ReadModel.Atomic;
 using NStore.Domain;
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support
@@ -48,14 +49,15 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support
         public async Task<AtomicReadmodelChangesetConsumerReturnValue> Handle(
             Int64 position,
             Changeset changeset,
-            IIdentity identity)
+            IIdentity identity,
+            CancellationToken cancellationToken = default)
         {
             if (identity.GetType() != _atomicReadmodelInfoAttribute.AggregateIdType)
             {
                 return null; //this is a changeset not directed to this readmodel, changeset of another aggregate.
             }
 
-            var rm = await _atomicCollectionWrapper.FindOneByIdAsync(identity.AsString()).ConfigureAwait(false);
+            var rm = await _atomicCollectionWrapper.FindOneByIdAsync(identity.AsString(), cancellationToken).ConfigureAwait(false);
             var readmodelCreated = false;
             if (rm == null)
             {
@@ -86,28 +88,28 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support
             {
                 if (readmodelCreated)
                 {
-                    await _atomicCollectionWrapper.UpsertAsync(rm).ConfigureAwait(false);
+                    await _atomicCollectionWrapper.UpsertAsync(rm, cancellationToken).ConfigureAwait(false);
                 }
                 else
                 {
-                    await _atomicCollectionWrapper.UpdateAsync(rm).ConfigureAwait(false);
+                    await _atomicCollectionWrapper.UpdateAsync(rm, cancellationToken).ConfigureAwait(false);
                 }
                 return new AtomicReadmodelChangesetConsumerReturnValue(rm, readmodelCreated);
             }
             else
             {
                 //readmodel was not modified, I want only to update some key information so position and aggregate version is update correctly
-                await _atomicCollectionWrapper.UpdateVersionAsync(rm).ConfigureAwait(false);
+                await _atomicCollectionWrapper.UpdateVersionAsync(rm, cancellationToken).ConfigureAwait(false);
             }
             return null;
         }
 
-        public async Task FullProject(IIdentity identity)
+        public async Task FullProjectAsync(IIdentity identity, CancellationToken cancellationToken = default)
         {
-            var rm = await _liveAtomicReadModelProcessor.ProcessAsync<TModel>(identity.AsString(), Int64.MaxValue).ConfigureAwait(false);
+            var rm = await _liveAtomicReadModelProcessor.ProcessAsync<TModel>(identity.AsString(), Int64.MaxValue, cancellationToken).ConfigureAwait(false);
             if (rm != null)
             {
-                await _atomicCollectionWrapper.UpsertAsync(rm).ConfigureAwait(false);
+                await _atomicCollectionWrapper.UpsertAsync(rm, cancellationToken).ConfigureAwait(false);
             }
         }
     }

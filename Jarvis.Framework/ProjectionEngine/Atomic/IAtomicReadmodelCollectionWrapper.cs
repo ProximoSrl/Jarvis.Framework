@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
@@ -47,26 +48,29 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// Find a readmodel by id and does some checking like automatic rebuild
         /// of superseded readmodel, etc.
         /// </summary>
-        /// <param name="id"></param>
-        /// <returns></returns>
-        Task<TModel> FindOneByIdAsync(String id);
+        /// <param name="id">The id of the readmodel to find</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>The readmodel instance or null if not found</returns>
+        Task<TModel> FindOneByIdAsync(String id, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// This is similar to <see cref="FindOneByIdAsync(string)"/> but it will re-query event stream
         /// to project extra events. This ensure that you got the must up-to-date readmodel.
         /// </summary>
-        /// <param name="id"></param>
-        /// <returns></returns>
-        Task<TModel> FindOneByIdAndCatchupAsync(string id);
+        /// <param name="id">The id of the readmodel to find</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>The readmodel instance with latest events projected or null if not found</returns>
+        Task<TModel> FindOneByIdAndCatchupAsync(string id, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Find by query and allow for an optional parameter called <paramref name="fixVersion"/> that allows
         /// to fix for version if you need to be 100% sure to read latest version (upgrade skew)
         /// </summary>
-        /// <param name="filter"></param>
-        /// <param name="fixVersion"></param>
-        /// <returns></returns>
-        Task<IReadOnlyCollection<TModel>> FindManyAsync(System.Linq.Expressions.Expression<Func<TModel, bool>> filter, bool fixVersion = false);
+        /// <param name="filter">Filter expression to match readmodels</param>
+        /// <param name="fixVersion">If true, ensures all returned readmodels are at the latest version</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>A collection of matching readmodels</returns>
+        Task<IReadOnlyCollection<TModel>> FindManyAsync(System.Linq.Expressions.Expression<Func<TModel, bool>> filter, bool fixVersion = false, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Loads by id but project until a specific checkpoint passed as parameter. This checkpoint
@@ -76,9 +80,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// <param name="chunkPosition">
         /// Position to project the aggregate to.
         /// </param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>The readmodel projected up to the specified checkpoint or null if not found</returns>
         /// <remarks>Actually this method is a simple wrapper to a call to <see cref="ILiveAtomicReadModelProcessor"/>
         /// that was used internally by the reader.</remarks>
-        Task<TModel> FindOneByIdAtCheckpointAsync(string id, long chunkPosition);
+        Task<TModel> FindOneByIdAtCheckpointAsync(string id, long chunkPosition, CancellationToken cancellationToken = default);
     }
 
     /// <summary>
@@ -104,18 +110,20 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// overwrite the value on the database even if the AggregateVersion of <paramref name="model"/> is
         /// lower than the version on disk
         /// </summary>
-        /// <param name="model"></param>
-        /// <returns></returns>
+        /// <param name="model">The readmodel instance to upsert</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>A task representing the asynchronous operation</returns>
         /// <remarks>Readmodel global signature check is always performed.</remarks>
-        Task UpsertForceAsync(TModel model);
+        Task UpsertForceAsync(TModel model, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Insert or update a readmodel instance, perform check for idempotency and
         /// readmodel versioning.
         /// </summary>
-        /// <param name="model"></param>
-        /// <returns></returns>
-        Task UpsertAsync(TModel model);
+        /// <param name="model">The readmodel instance to upsert</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>A task representing the asynchronous operation</returns>
+        Task UpsertAsync(TModel model, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// <para>
@@ -124,10 +132,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// and it is newer it will not save again. 
         /// </para>
         /// </summary>
-        /// <param name="model"></param>
+        /// <param name="model">The readmodel instance to update</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>A task representing the asynchronous operation</returns>
         /// <remarks>If the readmodel is not present on database, nothing will be written.</remarks>
-        /// <returns></returns>
-        Task UpdateAsync(TModel model);
+        Task UpdateAsync(TModel model, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// <para>
@@ -145,8 +154,17 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// the real list of <see cref="Changeset"/> applied.
         /// </para>
         /// </summary>
-        /// <param name="model"></param>
+        /// <param name="model">The readmodel instance with updated version information</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>A task representing the asynchronous operation</returns>
+        Task UpdateVersionAsync(TModel model, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Delete a readmodel instance from the underlying storage by its id.
+        /// </summary>
+        /// <param name="id">The id of the readmodel to delete</param>
+        /// <param name="cancellationToken">Cancellation token</param>
         /// <returns></returns>
-        Task UpdateVersionAsync(TModel model);
+        Task DeleteAsync(string id, CancellationToken cancellationToken = default);
     }
 }

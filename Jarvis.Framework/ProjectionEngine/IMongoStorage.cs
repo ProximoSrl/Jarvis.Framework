@@ -4,19 +4,20 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine
 {
     public interface IMongoStorage<TModel, TKey> where TModel : class, IReadModelEx<TKey>
     {
-        Task<Boolean> IndexExistsAsync(String name);
+        Task<Boolean> IndexExistsAsync(String name, CancellationToken cancellationToken = default);
 
-        Task CreateIndexAsync(String name, IndexKeysDefinition<TModel> keys, CreateIndexOptions options = null);
+        Task CreateIndexAsync(String name, IndexKeysDefinition<TModel> keys, CreateIndexOptions options = null, CancellationToken cancellationToken = default);
 
-        Task DropIndexAsync(String name);
+        Task DropIndexAsync(String name, CancellationToken cancellationToken = default);
 
-        Task InsertBatchAsync(IEnumerable<TModel> values);
+        Task InsertBatchAsync(IEnumerable<TModel> values, CancellationToken cancellationToken = default);
 
         IQueryable<TModel> All { get; }
 
@@ -25,7 +26,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        Task<TModel> FindOneByIdAsync(TKey id);
+        Task<TModel> FindOneByIdAsync(TKey id, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Sync version of <see cref="FindOneByIdAsync(TKey)"/>
@@ -48,9 +49,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
 
         IQueryable<TModel> Where(Expression<Func<TModel, bool>> filter);
 
-        Task<bool> ContainsAsync(Expression<Func<TModel, bool>> filter);
+        Task<bool> ContainsAsync(Expression<Func<TModel, bool>> filter, CancellationToken cancellationToken = default);
 
-        Task<InsertResult> InsertAsync(TModel model);
+        Task<InsertResult> InsertAsync(TModel model, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// This saves a readmodel only if the version on the database is equal to the original
@@ -59,14 +60,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
         /// <param name="model"></param>
         /// <param name="orignalVersion"></param>
         /// <returns></returns>
-        Task<SaveResult> SaveWithVersionAsync(TModel model, int orignalVersion);
+        Task<SaveResult> SaveWithVersionAsync(TModel model, int orignalVersion, CancellationToken cancellationToken = default);
 
-        Task<DeleteResult> DeleteAsync(TKey id);
+        Task<DeleteResult> DeleteAsync(TKey id, CancellationToken cancellationToken = default);
 
-        Task DropAsync();
+        Task DropAsync(CancellationToken cancellationToken = default);
 
         IMongoCollection<TModel> Collection { get; }
 
-        Task FlushAsync();
+        Task FlushAsync(CancellationToken cancellationToken = default);
     }
 }
