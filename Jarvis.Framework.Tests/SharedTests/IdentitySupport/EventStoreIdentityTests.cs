@@ -111,5 +111,28 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
         {
             Assert.Throws<ArgumentNullException>(() => new SampleAggregateId(data));
         }
+
+        [Test]
+        public void Verify_hashcode_is_case_insensitive()
+        {
+            var id1 = new SampleAggregateId("SampleAggregate_42");
+            var id2 = new SampleAggregateId("sampleaggregate_42");
+
+            Assert.That(id1.AsString(), Is.EqualTo(id2.AsString()));
+            Assert.That(id1.GetHashCode(), Is.EqualTo(id2.GetHashCode()));
+        }
+
+        [Test]
+        public void Verify_dictionary_usage_with_case_insensitive_ids()
+        {
+            var dict = new System.Collections.Generic.Dictionary<SampleAggregateId, string>();
+            var id1 = new SampleAggregateId("SampleAggregate_100");
+            var id2 = new SampleAggregateId("sampleaggregate_100");
+
+            dict[id1] = "test";
+
+            Assert.That(dict.ContainsKey(id2), Is.True, "Dictionary should contain key created with different casing");
+            Assert.That(dict[id2], Is.EqualTo("test"));
+        }
     }
 }

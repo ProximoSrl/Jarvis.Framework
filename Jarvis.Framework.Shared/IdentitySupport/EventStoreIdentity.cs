@@ -171,5 +171,10 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         {
             return FullyQualifiedId;
         }
+
+        public override int GetHashCode()
+        {
+            return Id.GetHashCode();
+        }
     }
 }
