@@ -134,5 +134,52 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             Assert.That(dict.ContainsKey(id2), Is.True, "Dictionary should contain key created with different casing");
             Assert.That(dict[id2], Is.EqualTo("test"));
         }
+
+        [Test]
+        public void Normalize_returns_same_string_when_casing_is_already_correct()
+        {
+            var normalizer = new SampleAggregateId(1);
+            const string input = "SampleAggregate_42";
+
+            var normalized = EventStoreIdentity.Normalize(normalizer, input);
+
+            Assert.That(normalized, Is.SameAs(input));
+            Assert.That(normalized, Is.EqualTo("SampleAggregate_42"));
+        }
+
+        [Test]
+        public void Normalize_fixes_prefix_casing_when_casing_is_wrong()
+        {
+            var normalizer = new SampleAggregateId(1);
+            const string input = "sampleaggregate_42";
+
+            var normalized = EventStoreIdentity.Normalize(normalizer, input);
+
+            Assert.That(normalized, Is.EqualTo("SampleAggregate_42"));
+        }
+
+        [Test]
+        public void Normalize_keeps_numeric_only_identity_unchanged()
+        {
+            var normalizer = new SampleAggregateId(1);
+            const string input = "12";
+
+            var normalized = EventStoreIdentity.Normalize(normalizer, input);
+
+            Assert.That(normalized, Is.SameAs(input));
+            Assert.That(normalized, Is.EqualTo("12"));
+        }
+
+        [Test]
+        public void Normalize_does_not_change_id_with_different_tag()
+        {
+            var normalizer = new SampleAggregateId(1);
+            const string input = "Document_3";
+
+            var normalized = EventStoreIdentity.Normalize(normalizer, input);
+
+            Assert.That(normalized, Is.SameAs(input));
+            Assert.That(normalized, Is.EqualTo("Document_3"));
+        }
     }
 }

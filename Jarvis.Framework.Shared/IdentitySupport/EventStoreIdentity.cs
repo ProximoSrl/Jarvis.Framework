@@ -176,5 +176,43 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         {
             return Id.GetHashCode();
         }
+
+        public static string Normalize<T>(string id) where T : EventStoreIdentity
+        {
+            return NormalizeInternal(typeof(T), id);
+        }
+
+        public static string Normalize(EventStoreIdentity identity, string id)
+        {
+            if (identity == null) throw new ArgumentNullException(nameof(identity));
+            return NormalizeInternal(identity.GetType(), id);
+        }
+
+        private static string NormalizeInternal(Type identityType, string id)
+        {
+            if (identityType == null) throw new ArgumentNullException(nameof(identityType));
+            if (id == null || id.Length == 0) return id;
+
+            var expectedTag = GetTagForIdentityClass(identityType);
+
+            var pos = id.IndexOf(Separator);
+            if (pos < 0)
+            {
+                // Special-case: numeric-only identity (no casing to normalize).
+                return id;
+            }
+
+            // Only normalize when the tag matches the expected one (ignoring case) and separator is in the expected position.
+            if (pos != expectedTag.Length) return id;
+
+            var tag = id.Substring(0, pos);
+            if (!tag.Equals(expectedTag, StringComparison.OrdinalIgnoreCase)) return id;
+
+            // If casing is already correct, return the same instance.
+            if (tag.Equals(expectedTag, StringComparison.Ordinal)) return id;
+
+            // Fix only the prefix casing, keep separator + numeric part unchanged.
+            return expectedTag + id.Substring(pos);
+        }
     }
 }
