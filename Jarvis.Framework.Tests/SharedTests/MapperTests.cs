@@ -163,7 +163,7 @@ namespace Jarvis.Framework.Tests.SharedTests
         [Test]
         public void verify_reverse_translation_not_existing()
         {
-            Assert.That(sut.GetAlias(new MapperTestsId(-42)), Is.EqualTo(null));
+            Assert.Throws<ArgumentOutOfRangeException>(() => sut.GetAlias(new MapperTestsId(-42)));
         }
 
         [Test]

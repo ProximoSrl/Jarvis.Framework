@@ -8,10 +8,12 @@ namespace Jarvis.Framework.Shared.IdentitySupport
     public abstract class EventStoreIdentity : AbstractIdentity<long>
     {
         private static readonly ConcurrentDictionary<Type, String> classTags;
+        private static readonly ConcurrentDictionary<string, string> tagToCorrectCaseMap;
 
         static EventStoreIdentity()
         {
             classTags = new ConcurrentDictionary<Type, string>();
+            tagToCorrectCaseMap = new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         }
 
         public static string GetTagForIdentityClass<T>() where T : EventStoreIdentity
@@ -25,23 +27,27 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                 return false;
 
             string idTag = GetTagForIdentityClass<T>();
+            var span = id.AsSpan();
 
             //at least I want the prefix to be followed by a dash and at least a digit
-            if (id.Length < idTag.Length + 2)
+            if (span.Length < idTag.Length + 2)
                 return false;
 
-            //it must start with id tag
-            if (!id.StartsWith(idTag, StringComparison.OrdinalIgnoreCase))
+            var tagSpan = span[..idTag.Length];
+
+            //it must start with id tag (case-insensitive)
+            if (!tagSpan.Equals(idTag.AsSpan(), StringComparison.OrdinalIgnoreCase))
                 return false;
 
             //Check for separator after the prefix
-            if (id[idTag.Length] != Separator)
+            if (span[idTag.Length] != Separator)
                 return false;
 
             //all subsequent chars should be digits.
-            for (int i = idTag.Length + 1; i < id.Length; i++)
+            var numberSpan = span[(idTag.Length + 1)..];
+            foreach (var ch in numberSpan)
             {
-                if (!char.IsDigit(id[i]))
+                if (!char.IsDigit(ch))
                     return false;
             }
 
@@ -50,14 +56,16 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
         public static string GetTagForIdentityClass(Type identityType)
         {
-            String tag;
-            if (!classTags.TryGetValue(identityType, out tag))
+            if (!classTags.TryGetValue(identityType, out string tag))
             {
                 var tn = identityType.Name;
                 if (!tn.EndsWith("Id"))
+                {
                     throw new JarvisFrameworkIdentityException(string.Format("Wrong Identity class name: {0} Class name should end with Id", tn));
-                tag = tn.Remove(tn.Length - 2);
+                }
+                tag = tn[..^2];
                 classTags.TryAdd(identityType, tag);
+                tagToCorrectCaseMap.TryAdd(tag, tag);
             }
             return tag;
         }
@@ -69,6 +77,10 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
         protected EventStoreIdentity(long id)
         {
+            if (id < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(id), "Id must be positive");
+            }
             this.Id = id;
         }
 
@@ -90,51 +102,60 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         /// <exception cref="JarvisFrameworkIdentityException"></exception>
         protected void Assign(string identityAsString)
         {
-            int pos = identityAsString.IndexOf(Separator);
+            var span = identityAsString.AsSpan();
+            var separatorIndex = span.IndexOf(Separator);
 
-            if (pos == 0)
+            if (separatorIndex == 0)
             {
                 //identity starts with underscore .... error
                 throw new JarvisFrameworkIdentityException(string.Format("Wrong Identity format: {0}", identityAsString));
             }
 
             // now proceed with standard parsing.
-            string tag = null;
-            string idString = null;
-            if (pos == -1)
-            {
-                //this is a special case, we can have a simple number as id, not pretty much sure if that should be supported
-                tag = GetTag();
-                idString = identityAsString;
-            }
-            else if (pos > 0)
-            {
-                //this is normal situation, we found the separator and a tag
-                tag = identityAsString.Substring(0, pos);
-                idString = identityAsString.Substring(pos + 1);
-            }
+            ReadOnlySpan<char> tagSpan;
+            ReadOnlySpan<char> idSpan;
 
-
-            //Need to parse numeric part, must be a valid long positive.
-            if (ulong.TryParse(idString, out var id))
+            if (separatorIndex == -1)
             {
-                //this is the standard happy path to create identity.
-                Assign(tag, id);
+                //this is a special case, we can have a simple number as id, it must be a supported scenario.
+                if (!long.TryParse(span, out var numericId))
+                {
+                    throw new JarvisFrameworkIdentityException(string.Format("invalid identity value {0}", identityAsString));
+                }
+                if (numericId < 0)
+                {
+                    throw new JarvisFrameworkIdentityException(string.Format("invalid identity value {0}, id must be positive", identityAsString));
+                }
+                Id = numericId;
                 return;
             }
 
-            //if we reach here the id starts with underscore or is not valid
-            throw new JarvisFrameworkIdentityException(string.Format("invalid identity value {0}", identityAsString));
-        }
+            //this is normal situation, we found the separator and a tag
+            tagSpan = span[..separatorIndex];
 
-        protected virtual void Assign(string tag, ulong value)
-        {
             var thisTag = GetTag();
-            if (!tag.Equals(thisTag, StringComparison.OrdinalIgnoreCase))
+            if (!tagSpan.Equals(thisTag, StringComparison.OrdinalIgnoreCase))
             {
-                throw new JarvisFrameworkIdentityException(string.Format("Invalid assigment. {0} tag is not valid for type {1} - Tag expected: {2}", tag, GetType().FullName, thisTag));
+                throw new JarvisFrameworkIdentityException(string.Format("Invalid assigment. {0} tag is not valid for type {1} - Tag expected: {2}", tagSpan.ToString(), GetType().FullName, thisTag));
             }
-            Id = (long) value;
+
+            //ok tag prefix is valid.
+            //Need to parse numeric part, must be a valid long positive.
+            idSpan = span[(separatorIndex + 1)..];
+            if (long.TryParse(idSpan, out var id))
+            {
+                if (id < 0)
+                {
+                    throw new JarvisFrameworkIdentityException(string.Format("invalid identity value {0}, id must be positive", identityAsString));
+                }
+                //this is the standard happy path to create identity.
+                // Need to convert span to string only for the tag comparison
+                Id = id;
+                return;
+            }
+
+            //if we reach here the id is not valid
+            throw new JarvisFrameworkIdentityException(string.Format("invalid identity value {0}", identityAsString));
         }
 
         public static string Format(Type type, long value)
@@ -177,42 +198,37 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             return Id.GetHashCode();
         }
 
-        public static string Normalize<T>(string id) where T : EventStoreIdentity
+        public static string Normalize(string id)
         {
-            return NormalizeInternal(typeof(T), id);
-        }
+            if (id == null || id.Length == 0) return null;
 
-        public static string Normalize(EventStoreIdentity identity, string id)
-        {
-            if (identity == null) throw new ArgumentNullException(nameof(identity));
-            return NormalizeInternal(identity.GetType(), id);
-        }
+            var span = id.AsSpan();
+            var separatorIndex = span.IndexOf(Separator);
 
-        private static string NormalizeInternal(Type identityType, string id)
-        {
-            if (identityType == null) throw new ArgumentNullException(nameof(identityType));
-            if (id == null || id.Length == 0) return id;
-
-            var expectedTag = GetTagForIdentityClass(identityType);
-
-            var pos = id.IndexOf(Separator);
-            if (pos < 0)
+            if (separatorIndex < 0)
             {
-                // Special-case: numeric-only identity (no casing to normalize).
-                return id;
+                // Numeric-only identity null is not a valid id
+                return null;
             }
 
-            // Only normalize when the tag matches the expected one (ignoring case) and separator is in the expected position.
-            if (pos != expectedTag.Length) return id;
+            var tagSpan = span[..separatorIndex];
+            var spanLookup = tagToCorrectCaseMap.GetAlternateLookup<ReadOnlySpan<char>>();
+            if (spanLookup.TryGetValue(tagSpan, out var correctCaseTag))
+            {
+                // If casing is already correct, return the same instance
+                if (tagSpan.Equals(correctCaseTag, StringComparison.Ordinal))
+                {
+                    // happy path, casing is correct
+                    return id;
+                }
 
-            var tag = id.Substring(0, pos);
-            if (!tag.Equals(expectedTag, StringComparison.OrdinalIgnoreCase)) return id;
-
-            // If casing is already correct, return the same instance.
-            if (tag.Equals(expectedTag, StringComparison.Ordinal)) return id;
-
-            // Fix only the prefix casing, keep separator + numeric part unchanged.
-            return expectedTag + id.Substring(pos);
+                // Fix only the prefix casing, keep separator + numeric part unchanged we need to allocate a new
+                // string but this is necessaery.
+                return correctCaseTag + id.Substring(separatorIndex);
+            }
+          
+            // No matching type found, return null to indicate unknown identity type
+            return null;
         }
     }
 }
