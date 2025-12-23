@@ -2,6 +2,10 @@
 
 ## vNext
 
+## 7.17.2
+
+- More tests and funciontalities to handle EventStore Identity casing.
+
 ## 7.12.0
 
 - Added the ability to Delete Atomic Readmodels from the wrapper.
