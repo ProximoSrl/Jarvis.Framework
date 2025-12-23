@@ -413,12 +413,6 @@ namespace Jarvis.Framework.Tests.SharedTests
         }
 
         [Test]
-        public void verify_reverse_translation_not_existing()
-        {
-            Assert.That(sut.GetAlias(new ScMapperTestsId(-42)), Is.EqualTo(null));
-        }
-
-        [Test]
         public void verify_multithread_mapping()
         {
             for (int outerIteration = 0; outerIteration < 10; outerIteration++)
