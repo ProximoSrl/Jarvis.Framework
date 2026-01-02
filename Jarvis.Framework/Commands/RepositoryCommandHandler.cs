@@ -172,13 +172,19 @@ namespace Jarvis.Framework.Kernel.Commands
     /// <summary>
     /// This is the return value of the callback used in FindAndModify
     /// </summary>
-    public class RepositoryCommandHandlerCallbackReturnValue
+    public struct RepositoryCommandHandlerCallbackReturnValue
     {
         public static RepositoryCommandHandlerCallbackReturnValue Default { get; private set; } = new RepositoryCommandHandlerCallbackReturnValue();
+
+        public static RepositoryCommandHandlerCallbackReturnValue DoNotPersistAggregate { get; private set; } = 
+            new RepositoryCommandHandlerCallbackReturnValue()
+            {
+                ShouldNotPersistAggregate = true
+            };
 
         /// <summary>
         /// If false command handler should not persist aggregate
         /// </summary>
-        public Boolean ShouldNotPersistAggregate { get; set; }
+        public Boolean ShouldNotPersistAggregate { get; private set; }
     }
 }
