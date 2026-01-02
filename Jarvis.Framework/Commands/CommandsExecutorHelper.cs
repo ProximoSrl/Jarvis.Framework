@@ -1,13 +1,9 @@
 ﻿using Castle.Core.Logging;
 using Jarvis.Framework.Kernel.Engine;
-using Jarvis.Framework.Kernel.Events;
-using Jarvis.Framework.Shared.Commands.Tracking;
 using Jarvis.Framework.Shared.Exceptions;
 using Jarvis.Framework.Shared.Logging;
 using Jarvis.Framework.Shared.Messages;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.Commands
@@ -22,21 +18,15 @@ namespace Jarvis.Framework.Kernel.Commands
     public class CommandsExecutorHelper
     {
         private readonly IInProcessCommandBus _commandBus;
-        private readonly IEventStoreQueryManager _eventStoreQueryManager;
-        private readonly IMessagesTrackerQueryManager _messagesTrackerQueryManager;
 
         public ILogger Logger { get; set; }
 
         public ILoggerThreadContextManager LoggerThreadContextManager { get; set; }
 
         public CommandsExecutorHelper(
-            IInProcessCommandBus commandBus,
-            IEventStoreQueryManager eventStoreQueryManager,
-            IMessagesTrackerQueryManager messagesTrackerQueryManager)
+            IInProcessCommandBus commandBus)
         {
             _commandBus = commandBus;
-            _eventStoreQueryManager = eventStoreQueryManager;
-            _messagesTrackerQueryManager = messagesTrackerQueryManager;
             Logger = NullLogger.Instance;
             LoggerThreadContextManager = NullLoggerThreadContextManager.Instance;
         }
