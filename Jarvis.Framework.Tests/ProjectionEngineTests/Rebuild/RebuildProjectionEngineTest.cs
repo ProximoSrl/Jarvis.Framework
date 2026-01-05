@@ -266,7 +266,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             Assert.That(_writer1.All.Count(), Is.EqualTo(2));
             Assert.That(_writer3.All.Count(), Is.EqualTo(1));
 
-            var allCheckpoints = _checkpointCollection.FindAll().ToList();
+            var allCheckpoints = _checkpointCollection.Find(_ => true).ToList();
             var projection1 = allCheckpoints.Single(c => c.Id == _projection1.Info.CommonName);
             Assert.That(projection1.Current, Is.EqualTo(2));
             Assert.That(projection1.Value, Is.EqualTo(2));

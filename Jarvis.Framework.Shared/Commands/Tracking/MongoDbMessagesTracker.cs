@@ -13,6 +13,8 @@ using NStore.Core.Streams;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.Commands.Tracking
 {
@@ -274,6 +276,75 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
             catch (Exception ex)
             {
                 Logger.ErrorFormat(ex, "Unable to track Completed event of Message {0} - {1}", command.MessageId, ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Track a batch of commands as executed instantaneously.
+        /// </summary>
+        /// <param name="commands"></param>
+        /// <param name="cancellationToken"></param>
+        public async Task TrackBatchAsync(IReadOnlyCollection<ICommand> commands, CancellationToken cancellationToken = default)
+        {
+            if (commands == null || commands.Count == 0) return;
+            try
+            {
+                var now = DateTime.UtcNow;
+                var updates = new List<WriteModel<TrackedMessageModel>>();
+                foreach (var command in commands)
+                {
+                    var id = command.MessageId.ToString();
+                    var issuedBy = command.GetContextData(MessagesConstants.UserId);
+                    var aggregateId = command.ExtractAggregateId();
+
+                    var update = Builders<TrackedMessageModel>.Update
+                        .Set(x => x.Message, command)
+                        .Set(x => x.MessageType, command.GetType().Name)
+                        .Set(x => x.Description, command.Describe())
+                        .Set(x => x.IssuedBy, issuedBy)
+                        .Set(x => x.AggregateId, aggregateId)
+                        .Set(x => x.CompletedAt, now)
+                        .Set(x => x.ErrorMessage, null)
+                        .Set(x => x.FullException, null)
+                        .Set(x => x.Completed, true)
+                        .Set(x => x.Success, true)
+                        .Set(x => x.ExpireDate, now.AddDays(30))
+                        .Set(x => x.LastExecutionStartTime, now)
+                        .Set(x => x.ExecutionStartTimeList, new[] { now })
+                        .Inc(x => x.ExecutionCount, 1);
+
+                    var filter = Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id);
+                    updates.Add(new UpdateOneModel<TrackedMessageModel>(filter, update) { IsUpsert = true });
+                }
+
+                await Commands.BulkWriteAsync(updates, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+                var ids = commands.Select(c => c.MessageId.ToString()).ToList();
+                var modifiedMessages = await Commands.Find(Builders<TrackedMessageModel>.Filter.In(m => m.MessageId, ids)).ToListAsync(cancellationToken).ConfigureAwait(false);
+
+                foreach (var trackMessage in modifiedMessages)
+                {
+                    if (trackMessage.StartedAt > DateTime.MinValue)
+                    {
+                        if (trackMessage.ExecutionStartTimeList?.Length > 0)
+                        {
+                            var firstExecutionValue = trackMessage.ExecutionStartTimeList[0];
+                            var queueTime = firstExecutionValue.Subtract(trackMessage.StartedAt).TotalMilliseconds;
+
+                            var messageType = trackMessage.Message.GetType().Name;
+                            JarvisFrameworkMetricsHelper.Timer.Time(QueueTimer, (long)queueTime);
+                            JarvisFrameworkMetricsHelper.Counter.Increment(QueueCounter, (Int64)queueTime, messageType);
+                        }
+                        else
+                        {
+                            Logger.WarnFormat("Command id {0} received completed event but ExecutionStartTimeList is empty", trackMessage.MessageId);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.ErrorFormat(ex, "Unable to track TrackBatchAsync - {0}", ex.Message);
             }
         }
 

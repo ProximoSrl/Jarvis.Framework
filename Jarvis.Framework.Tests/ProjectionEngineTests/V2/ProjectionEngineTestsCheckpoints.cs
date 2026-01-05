@@ -73,7 +73,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
 
              //need to wait for at least one checkpoint written to database.
              DateTime startTime = DateTime.Now;
-            while (!_checkpoints.FindAll().Any()
+            while (!_checkpoints.Find(_ => true).ToList().Any()
                 && DateTime.Now.Subtract(startTime).TotalMilliseconds < 2000) //2 seconds timeout is fine
             {
                 Thread.Sleep(100);

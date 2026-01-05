@@ -1,5 +1,8 @@
 ﻿using Jarvis.Framework.Shared.Messages;
 using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.Commands.Tracking
 {
@@ -37,6 +40,13 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
         /// <param name="command"></param>
         /// <param name="completedAt"></param>
         void Completed(ICommand command, DateTime completedAt);
+
+        /// <summary>
+        /// Track a batch of commands as executed instantaneously.
+        /// </summary>
+        /// <param name="commands"></param>
+        /// <param name="cancellationToken"></param>
+        Task TrackBatchAsync(IReadOnlyCollection<ICommand> commands, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Dispatched is the status when the event related to the command is 

@@ -3,6 +3,8 @@ using Jarvis.Framework.Shared.Commands.Tracking;
 using Jarvis.Framework.Shared.Messages;
 using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.ReadModel
 {
@@ -43,6 +45,11 @@ namespace Jarvis.Framework.Shared.ReadModel
         public void ElaborationStarted(ICommand command, DateTime startAt)
         {
             // Method intentionally left empty.
+        }
+
+        public Task TrackBatchAsync(IReadOnlyCollection<ICommand> commands, CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
         }
 
         public List<TrackedMessageModel> GetByIdList(IEnumerable<string> idList)

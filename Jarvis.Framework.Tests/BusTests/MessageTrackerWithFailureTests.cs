@@ -177,7 +177,7 @@ namespace Jarvis.Framework.Tests.BusTests
                 throw new AssertionException($"Message {sampleMessage.MessageId} did not generate tracking info");
             }
 
-            var allTracking = _messages.FindAll().ToList();
+            var allTracking = _messages.Find(_ => true).ToList();
             if (allTracking.Count != 1)
             {
                 Console.WriteLine($"Too many tracking elements: {allTracking.Count}");
@@ -250,7 +250,7 @@ namespace Jarvis.Framework.Tests.BusTests
         [TestCase(false)]
         public async Task Verify_retry_start_execution_tracking(Boolean wrapInAggregateException)
         {
-            var tracks = _messages.FindAll().ToList();
+            var tracks = _messages.Find(_ => true).ToList();
             Assert.That(tracks, Has.Count.EqualTo(0), "messages collection is not empty");
 
             var sampleMessage = new AnotherSampleTestCommand(2, "verify_retry_start_execution_tracking");
