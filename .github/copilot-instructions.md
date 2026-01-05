@@ -35,11 +35,9 @@ Jarvis.Framework is a CQRS/Event Sourcing framework built on NStore, MongoDB, an
 
 ## Build & Test Workflow
 
-**Build**: Run `.\build.ps1 -Configuration Release` (PowerShell). This restores packages, runs GitVersion, updates assembly versions, builds solution, and runs tests.
-
-**Test**: Uses NUnit (`*.Tests.csproj` projects). Tests output to `BuildOutput/` directory. Can skip tests with `-SkipTest $true`.
-
-**NuGet Packages**: Create with `-CreateNugetPackages $true`. Packages: `Jarvis.Framework.Shared`, `Jarvis.Framework`, `Jarvis.Framework.Rebus`.
+- If you need to run tests, please run with dotnet test specifying only the project that contains the tests
+- If possible when you need to run a test run test only the class that you are modifying using the filter --filter FullyQualifiedName~Namespace.ClassName 
+- If you previously build the solution and the project use the --no-build option to skip the build phase
 
 **Custom NuGet Feed**: Uses MyGet feed "jarvis" for internal packages (configured in `NuGet.Config`).
 

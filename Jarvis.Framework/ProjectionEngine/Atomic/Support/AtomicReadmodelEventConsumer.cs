@@ -5,6 +5,8 @@ using Jarvis.Framework.Shared.IdentitySupport;
 using Jarvis.Framework.Shared.ReadModel.Atomic;
 using NStore.Domain;
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -46,6 +48,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support
         /// <param name="position"></param>
         /// <param name="changeset"></param>
         /// <param name="identity"></param>
+        /// <param name="cancellationToken"></param>
         public async Task<AtomicReadmodelChangesetConsumerReturnValue> Handle(
             Int64 position,
             Changeset changeset,
@@ -102,6 +105,27 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support
                 await _atomicCollectionWrapper.UpdateVersionAsync(rm, cancellationToken).ConfigureAwait(false);
             }
             return null;
+        }
+
+        public async Task<IEnumerable<AtomicReadmodelChangesetConsumerReturnValue>> HandleManyAsync(
+            IEnumerable<AtomicReadmodelProjectionItem> items,
+            CancellationToken cancellationToken = default)
+        {
+            var results = new ConcurrentBag<AtomicReadmodelChangesetConsumerReturnValue>();
+
+            await Parallel.ForEachAsync(
+                items,
+                cancellationToken,
+                async (item, ct) =>
+                {
+                    var result = await Handle(item.Position, item.Changeset, item.Identity, ct).ConfigureAwait(false);
+                    if (result != null)
+                    {
+                        results.Add(result);
+                    }
+                }).ConfigureAwait(false);
+
+            return results;
         }
 
         public async Task FullProjectAsync(IIdentity identity, CancellationToken cancellationToken = default)
