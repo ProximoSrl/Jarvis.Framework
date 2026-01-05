@@ -3,6 +3,9 @@
 ## vNext
 
 - Added new Batch to IIDentity Manager to create identities in batch.
+- Added batch capability to IMessageTracker.
+- Added batch capabilities upsert to IAtomicCollectionWrapper.
+- Added batch capabilities to AtomicReadmodelProjectorHelper.
 
 ## 7.17.2
 

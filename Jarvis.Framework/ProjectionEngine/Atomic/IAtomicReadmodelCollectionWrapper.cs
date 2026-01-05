@@ -127,6 +127,35 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
         /// <summary>
         /// <para>
+        /// Insert or update multiple readmodel instances in a single batch operation.
+        /// This method leverages MongoDB's BulkWrite API for efficient batch processing.
+        /// </para>
+        /// <para>
+        /// For each model in the batch, the method performs idempotency checks based on
+        /// AggregateVersion and ReadModelVersion. Models with ModifiedWithExtraStreamEvents
+        /// flag are automatically skipped. If a model already exists with a higher version,
+        /// it will not be overwritten.
+        /// </para>
+        /// <para>
+        /// The operation attempts to use a ReplaceOne with upsert for each model. When
+        /// a model doesn't exist on disk, it will be inserted; when it exists, it will
+        /// be replaced only if the new version is higher.
+        /// </para>
+        /// </summary>
+        /// <param name="models">Collection of readmodel instances to upsert</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>A task representing the asynchronous batch operation</returns>
+        /// <exception cref="ArgumentNullException">Thrown when models collection is null</exception>
+        /// <exception cref="CollectionWrapperException">Thrown when any model has an empty Id</exception>
+        /// <exception cref="MongoException">Thrown when MongoDB operations fail</exception>
+        /// <remarks>
+        /// This method is significantly more efficient than calling UpsertAsync multiple times
+        /// when dealing with large batches of readmodels. Empty collections are handled gracefully.
+        /// </remarks>
+        Task UpsertBatchAsync(IEnumerable<TModel> models, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// <para>
         /// Update a readmodel instance into underling storage, it perform
         /// it will check for idempotency, if the object was already saved
         /// and it is newer it will not save again. 

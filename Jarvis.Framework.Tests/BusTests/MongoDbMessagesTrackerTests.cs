@@ -6,6 +6,10 @@ using NUnit.Framework;
 using System;
 using System.Configuration;
 using System.Linq;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using Jarvis.Framework.Shared.Commands;
 
 namespace Jarvis.Framework.Tests.BusTests
 {
@@ -62,6 +66,73 @@ namespace Jarvis.Framework.Tests.BusTests
             Assert.That(handledTrack.ExecutionStartTimeList.Length, Is.EqualTo(10));
             var last = handledTrack.ExecutionStartTimeList.Last();
             Assert.That(last, Is.EqualTo(startDate1.AddMinutes(99)));
+        }
+
+        [Test]
+        public async Task TrackBatchAsync_inserts_records_with_instant_timestamps()
+        {
+            SampleTestCommand cmd1 = new SampleTestCommand(1);
+            SampleTestCommand cmd2 = new SampleTestCommand(2);
+            await sut.TrackBatchAsync(new List<ICommand> { cmd1, cmd2 }, cancellationToken: CancellationToken.None);
+
+            var tracks = _messages.Find(_ => true).ToList();
+            Assert.That(tracks.Count, Is.EqualTo(2));
+
+            var t1 = tracks.Single(t => t.MessageId == cmd1.MessageId.ToString());
+            Assert.That(t1.Completed, Is.True);
+            Assert.That(t1.Success, Is.True);
+            Assert.That(t1.ExecutionStartTimeList.Length, Is.EqualTo(1));
+            Assert.That(t1.LastExecutionStartTime, Is.EqualTo(t1.ExecutionStartTimeList[0]));
+            Assert.That(t1.CompletedAt, Is.EqualTo(t1.ExecutionStartTimeList[0]));
+            Assert.That(t1.ExecutionCount, Is.EqualTo(1));
+            Assert.That((t1.ExpireDate.Value - t1.CompletedAt.Value).TotalDays, Is.GreaterThan(29));
+        }
+
+        [Test]
+        public async Task TrackBatchAsync_updates_existing_started_record_to_completed()
+        {
+            SampleTestCommand cmd = new SampleTestCommand(1);
+            sut.Started(cmd);
+            var started = _messages.AsQueryable().Single(t => t.MessageId == cmd.MessageId.ToString());
+            var startedAt = started.StartedAt;
+
+            await sut.TrackBatchAsync(new List<ICommand> { cmd }, cancellationToken: CancellationToken.None);
+
+            var updated = _messages.AsQueryable().Single(t => t.MessageId == cmd.MessageId.ToString());
+            Assert.That(updated.StartedAt, Is.EqualTo(startedAt));
+            Assert.That(updated.Completed, Is.True);
+            Assert.That(updated.ExecutionStartTimeList.Length, Is.EqualTo(1));
+            Assert.That(updated.ExecutionCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public async Task TrackBatchAsync_empty_list_is_noop()
+        {
+            await sut.TrackBatchAsync(new List<ICommand>(), cancellationToken: CancellationToken.None);
+            var tracks = _messages.Find(_ => true).ToList();
+            Assert.That(tracks.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public async Task TrackBatchAsync_records_failed_commands()
+        {
+            SampleTestCommand cmdOk = new SampleTestCommand(1);
+            SampleTestCommand cmdFail = new SampleTestCommand(2);
+
+            var failure = new FailedCommandInfo(cmdFail, "boom", new InvalidOperationException("boom"));
+
+            await sut.TrackBatchAsync(new List<ICommand> { cmdOk, cmdFail }, new List<FailedCommandInfo> { failure }, cancellationToken: CancellationToken.None);
+
+            var tOk = _messages.AsQueryable().Single(t => t.MessageId == cmdOk.MessageId.ToString());
+            Assert.That(tOk.Success, Is.True);
+            Assert.That(tOk.Completed, Is.True);
+
+            var tFail = _messages.AsQueryable().Single(t => t.MessageId == cmdFail.MessageId.ToString());
+            Assert.That(tFail.Success, Is.False);
+            Assert.That(tFail.Completed, Is.True);
+            Assert.That(tFail.ErrorMessage, Is.EqualTo("boom"));
+            Assert.That(tFail.FullException, Does.Contain("InvalidOperationException"));
+            Assert.That((tFail.ExpireDate.Value - tFail.CompletedAt.Value).TotalDays, Is.GreaterThan(365 * 6));
         }
     }
 }
