@@ -282,20 +282,27 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
         /// <summary>
         /// Track a batch of commands as executed instantaneously.
         /// </summary>
-        /// <param name="commands"></param>
-        /// <param name="cancellationToken"></param>
-        public async Task TrackBatchAsync(IReadOnlyCollection<ICommand> commands, CancellationToken cancellationToken = default)
+        /// <param name="commands">Commands to mark as executed.</param>
+        /// <param name="failedCommands">Optional list of failed commands with error details.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        public async Task TrackBatchAsync(IReadOnlyCollection<ICommand> commands, IReadOnlyCollection<FailedCommandInfo> failedCommands = null, CancellationToken cancellationToken = default)
         {
             if (commands == null || commands.Count == 0) return;
             try
             {
                 var now = DateTime.UtcNow;
+                var failedMap = (failedCommands ?? Array.Empty<FailedCommandInfo>())
+                    .Where(f => f?.Command != null)
+                    .ToDictionary(f => f.Command.MessageId.ToString(), f => f);
+
                 var updates = new List<WriteModel<TrackedMessageModel>>();
                 foreach (var command in commands)
                 {
                     var id = command.MessageId.ToString();
                     var issuedBy = command.GetContextData(MessagesConstants.UserId);
                     var aggregateId = command.ExtractAggregateId();
+
+                    var isFailed = failedMap.TryGetValue(id, out var failedInfo);
 
                     var update = Builders<TrackedMessageModel>.Update
                         .Set(x => x.Message, command)
@@ -304,23 +311,40 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
                         .Set(x => x.IssuedBy, issuedBy)
                         .Set(x => x.AggregateId, aggregateId)
                         .Set(x => x.CompletedAt, now)
-                        .Set(x => x.ErrorMessage, null)
-                        .Set(x => x.FullException, null)
-                        .Set(x => x.Completed, true)
-                        .Set(x => x.Success, true)
-                        .Set(x => x.ExpireDate, now.AddDays(30))
                         .Set(x => x.LastExecutionStartTime, now)
                         .Set(x => x.ExecutionStartTimeList, new[] { now })
-                        .Inc(x => x.ExecutionCount, 1);
+                        .Inc(x => x.ExecutionCount, 1)
+                        .Set(x => x.Completed, true);
+
+                    if (isFailed)
+                    {
+                        update = update
+                            .Set(x => x.ErrorMessage, failedInfo.ErrorMessage)
+                            .Set(x => x.FullException, failedInfo.Exception?.ToString())
+                            .Set(x => x.Success, false)
+                            .Set(x => x.ExpireDate, now.AddYears(7));
+                    }
+                    else
+                    {
+                        update = update
+                            .Set(x => x.ErrorMessage, null)
+                            .Set(x => x.FullException, null)
+                            .Set(x => x.Success, true)
+                            .Set(x => x.ExpireDate, now.AddDays(30));
+                    }
 
                     var filter = Builders<TrackedMessageModel>.Filter.Eq(x => x.MessageId, id);
                     updates.Add(new UpdateOneModel<TrackedMessageModel>(filter, update) { IsUpsert = true });
                 }
 
-                await Commands.BulkWriteAsync(updates, cancellationToken: cancellationToken).ConfigureAwait(false);
+                await Commands.BulkWriteAsync(
+                    updates,
+                    new BulkWriteOptions { IsOrdered = false },
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
 
                 var ids = commands.Select(c => c.MessageId.ToString()).ToList();
                 var modifiedMessages = await Commands.Find(Builders<TrackedMessageModel>.Filter.In(m => m.MessageId, ids)).ToListAsync(cancellationToken).ConfigureAwait(false);
+
 
                 foreach (var trackMessage in modifiedMessages)
                 {

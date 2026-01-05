@@ -73,7 +73,7 @@ namespace Jarvis.Framework.Tests.BusTests
         {
             SampleTestCommand cmd1 = new SampleTestCommand(1);
             SampleTestCommand cmd2 = new SampleTestCommand(2);
-            await sut.TrackBatchAsync(new List<ICommand> { cmd1, cmd2 }, CancellationToken.None);
+            await sut.TrackBatchAsync(new List<ICommand> { cmd1, cmd2 }, cancellationToken: CancellationToken.None);
 
             var tracks = _messages.Find(_ => true).ToList();
             Assert.That(tracks.Count, Is.EqualTo(2));
@@ -96,7 +96,7 @@ namespace Jarvis.Framework.Tests.BusTests
             var started = _messages.AsQueryable().Single(t => t.MessageId == cmd.MessageId.ToString());
             var startedAt = started.StartedAt;
 
-            await sut.TrackBatchAsync(new List<ICommand> { cmd }, CancellationToken.None);
+            await sut.TrackBatchAsync(new List<ICommand> { cmd }, cancellationToken: CancellationToken.None);
 
             var updated = _messages.AsQueryable().Single(t => t.MessageId == cmd.MessageId.ToString());
             Assert.That(updated.StartedAt, Is.EqualTo(startedAt));
@@ -108,9 +108,31 @@ namespace Jarvis.Framework.Tests.BusTests
         [Test]
         public async Task TrackBatchAsync_empty_list_is_noop()
         {
-            await sut.TrackBatchAsync(new List<ICommand>(), CancellationToken.None);
+            await sut.TrackBatchAsync(new List<ICommand>(), cancellationToken: CancellationToken.None);
             var tracks = _messages.Find(_ => true).ToList();
             Assert.That(tracks.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public async Task TrackBatchAsync_records_failed_commands()
+        {
+            SampleTestCommand cmdOk = new SampleTestCommand(1);
+            SampleTestCommand cmdFail = new SampleTestCommand(2);
+
+            var failure = new FailedCommandInfo(cmdFail, "boom", new InvalidOperationException("boom"));
+
+            await sut.TrackBatchAsync(new List<ICommand> { cmdOk, cmdFail }, new List<FailedCommandInfo> { failure }, cancellationToken: CancellationToken.None);
+
+            var tOk = _messages.AsQueryable().Single(t => t.MessageId == cmdOk.MessageId.ToString());
+            Assert.That(tOk.Success, Is.True);
+            Assert.That(tOk.Completed, Is.True);
+
+            var tFail = _messages.AsQueryable().Single(t => t.MessageId == cmdFail.MessageId.ToString());
+            Assert.That(tFail.Success, Is.False);
+            Assert.That(tFail.Completed, Is.True);
+            Assert.That(tFail.ErrorMessage, Is.EqualTo("boom"));
+            Assert.That(tFail.FullException, Does.Contain("InvalidOperationException"));
+            Assert.That((tFail.ExpireDate.Value - tFail.CompletedAt.Value).TotalDays, Is.GreaterThan(365 * 6));
         }
     }
 }

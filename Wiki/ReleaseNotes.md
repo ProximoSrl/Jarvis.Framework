@@ -3,6 +3,7 @@
 ## vNext
 
 - Added new Batch to IIDentity Manager to create identities in batch.
+- Added batch capability to IMessageTracker.
 
 ## 7.17.2
 

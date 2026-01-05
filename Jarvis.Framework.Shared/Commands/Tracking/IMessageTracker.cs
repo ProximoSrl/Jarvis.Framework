@@ -44,9 +44,10 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
         /// <summary>
         /// Track a batch of commands as executed instantaneously.
         /// </summary>
-        /// <param name="commands"></param>
-        /// <param name="cancellationToken"></param>
-        Task TrackBatchAsync(IReadOnlyCollection<ICommand> commands, CancellationToken cancellationToken = default);
+        /// <param name="commands">Commands to mark as executed.</param>
+        /// <param name="failedCommands">Optional list of failed commands with error details.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        Task TrackBatchAsync(IReadOnlyCollection<ICommand> commands, IReadOnlyCollection<FailedCommandInfo> failedCommands = null, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Dispatched is the status when the event related to the command is 

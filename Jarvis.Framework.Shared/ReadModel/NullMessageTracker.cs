@@ -47,7 +47,7 @@ namespace Jarvis.Framework.Shared.ReadModel
             // Method intentionally left empty.
         }
 
-        public Task TrackBatchAsync(IReadOnlyCollection<ICommand> commands, CancellationToken cancellationToken = default)
+        public Task TrackBatchAsync(IReadOnlyCollection<ICommand> commands, IReadOnlyCollection<FailedCommandInfo> failedCommands = null, CancellationToken cancellationToken = default)
         {
             return Task.CompletedTask;
         }
