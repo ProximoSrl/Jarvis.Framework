@@ -348,8 +348,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 }
             }
 
-            //ok if we reach here, we incurr in concurrent exception, a record is alreay
-            //present and inserted between the two call, we need to update and let the idempotency avoid corruption
+            //ok if we reach here, a record is already present
+            //or we have a concurrent exception because two threads entered so we need to perform a standard update
+            //and let idempotency rules work.
             await UpdateAsync(model, performAggregateVersionCheck, cancellationToken).ConfigureAwait(false);
         }
 
@@ -430,6 +431,102 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
             var filter = Builders<TModel>.Filter.Eq(_ => _.Id, id);
             await _collection.DeleteOneAsync(filter, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc />
+        public async Task UpsertBatchAsync(IEnumerable<TModel> models, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(models);
+
+            // Convert to list to avoid multiple enumerations and to allow checking count
+            var modelsList = models.ToList();
+            
+            if (modelsList.Count == 0)
+            {
+                return; // Nothing to process
+            }
+
+            // Validate all models have Ids and filter out models that should not be persisted
+            var validModels = new List<TModel>();
+            foreach (var model in modelsList)
+            {
+                if (String.IsNullOrEmpty(model.Id))
+                {
+                    throw new CollectionWrapperException($"Cannot save readmodel of type {typeof(TModel).Name}, Id property not initialized");
+                }
+
+                if (model.ModifiedWithExtraStreamEvents)
+                {
+                    continue; // Skip models not in a persistable state
+                }
+
+                validModels.Add(model);
+            }
+
+            if (validModels.Count == 0)
+            {
+                return; // All models were filtered out
+            }
+
+            // For efficiency, we'll build a dictionary of existing models to check versions
+            var ids = validModels.Select(m => m.Id).ToList();
+            var existingFilter = Builders<TModel>.Filter.In(_ => _.Id, ids);
+            var existingModels = await _collection.Find(existingFilter)
+                .Project(Builders<TModel>.Projection
+                    .Include(_ => _.Id)
+                    .Include(_ => _.AggregateVersion)
+                    .Include(_ => _.ReadModelVersion))
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            // Build a dictionary for quick lookup
+            var existingVersions = existingModels.ToDictionary(
+                doc => doc["_id"].AsString,
+                doc => new { AggregateVersion = doc["AggregateVersion"].AsInt64, ReadModelVersion = doc["ReadModelVersion"].AsInt32 }
+            );
+
+            // Build the bulk write operations
+            var bulkOps = new List<WriteModel<TModel>>();
+
+            foreach (var model in validModels)
+            {
+                // Check if we should skip this model due to version conflicts
+                if (existingVersions.TryGetValue(model.Id, out var existing))
+                {
+                    // Skip if existing version is higher or equal
+                    if (existing.AggregateVersion > model.AggregateVersion
+                        || (existing.AggregateVersion == model.AggregateVersion && existing.ReadModelVersion >= model.ReadModelVersion))
+                    {
+                        continue; // Skip this model, already have newer version
+                    }
+
+                    // Build filter for replace: must match id and have lower version
+                    var replaceFilter = Builders<TModel>.Filter.And(
+                        Builders<TModel>.Filter.Eq(_ => _.Id, model.Id),
+                        Builders<TModel>.Filter.Lte(_ => _.ReadModelVersion, model.ReadModelVersion),
+                        Builders<TModel>.Filter.Or(
+                            Builders<TModel>.Filter.Lt(_ => _.AggregateVersion, model.AggregateVersion),
+                            Builders<TModel>.Filter.Lt(_ => _.ReadModelVersion, model.ReadModelVersion)
+                        )
+                    );
+
+                    bulkOps.Add(new ReplaceOneModel<TModel>(replaceFilter, model));
+                }
+                else
+                {
+                    // Model doesn't exist, use upsert to insert it
+                    var upsertFilter = Builders<TModel>.Filter.Eq(_ => _.Id, model.Id);
+                    bulkOps.Add(new ReplaceOneModel<TModel>(upsertFilter, model) { IsUpsert = true });
+                }
+            }
+
+            if (bulkOps.Count == 0)
+            {
+                return; // All models were skipped due to version checks
+            }
+
+            // Execute the bulk write operation
+            await _collection.BulkWriteAsync(bulkOps, new BulkWriteOptions { IsOrdered = false }, cancellationToken).ConfigureAwait(false);
         }
     }
 }
