@@ -111,10 +111,25 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support
             IEnumerable<AtomicReadmodelProjectionItem> items,
             CancellationToken cancellationToken = default)
         {
+            // Validate that each identity appears only once in the batch
+            var itemsList = items.ToList();
+            var identityGroups = itemsList
+                .GroupBy(i => i.Identity.AsString())
+                .Where(g => g.Count() > 1)
+                .ToList();
+
+            if (identityGroups.Count > 0)
+            {
+                var duplicateIdentities = string.Join(", ", identityGroups.Select(g => $"{g.Key} (count: {g.Count()})"));
+                throw new InvalidOperationException(
+                    $"HandleManyAsync does not support multiple changesets for the same identity in a single batch. " +
+                    $"Each identity must appear only once. Duplicate identities found: {duplicateIdentities}");
+            }
+
             var results = new ConcurrentBag<AtomicReadmodelChangesetConsumerReturnValue>();
 
             await Parallel.ForEachAsync(
-                items,
+                itemsList,
                 cancellationToken,
                 async (item, ct) =>
                 {
