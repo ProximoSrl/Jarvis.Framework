@@ -6,7 +6,10 @@ using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.IdentitySupport
 {
@@ -131,15 +134,125 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         /// </summary>
         /// <param name="externalKeys"></param>
         /// <returns>Dictionary with mappings.</returns>
-        protected IDictionary<String, TKey> GetMultipleMapWithoutAutoCreation(IEnumerable<String> externalKeys)
+        protected IReadOnlyDictionary<String, TKey> GetMultipleMapWithoutAutoCreation(IEnumerable<String> externalKeys)
         {
             if (externalKeys?.Any() != true)
-                return new Dictionary<String, TKey>();
+            {
+                return ReadOnlyDictionary<String, TKey>.Empty;
+            }
 
+            var lowercaseInvariantKeys = externalKeys.Select(_ => _.ToLowerInvariant()).ToList();
             return _collection
-                .Find(Builders<MappedIdentity>.Filter.In("ExternalKey", externalKeys.Select(_ => _.ToLowerInvariant())))
+                .Find(Builders<MappedIdentity>.Filter.In("ExternalKey", lowercaseInvariantKeys))
                 .ToEnumerable()
                 .ToDictionary(_ => _.ExternalKey, _ => _.AggregateId, StringComparer.InvariantCultureIgnoreCase);
+        }
+
+        /// <summary>
+        /// Translate multiple external keys to identities with optional auto-creation.
+        /// Uses a single database call to fetch existing mappings, then creates missing ones if requested.
+        /// </summary>
+        /// <param name="externalKeys">The external keys to translate.</param>
+        /// <param name="createOnMissing">If true, creates mappings for keys that don't exist.</param>
+        /// <param name="cancellationToken"></param>
+        /// <returns>Dictionary mapping external keys to identities.</returns>
+        protected async Task<IReadOnlyDictionary<String, TKey>> TranslateBatchAsync(
+            IEnumerable<String> externalKeys, 
+            bool createOnMissing,
+            CancellationToken cancellationToken = default)
+        {
+            if (externalKeys?.Any() != true)
+            {
+                return ReadOnlyDictionary<String, TKey>.Empty;
+            }
+
+            // Normalize all keys to lowercase
+            var normalizedKeys = externalKeys
+                .Select(k => k.ToLowerInvariant())
+                .ToList();
+                
+            // Fetch existing mappings in a single query
+            var returnMapping = _collection
+                .Find(Builders<MappedIdentity>.Filter.In("ExternalKey", normalizedKeys))
+                .ToEnumerable()
+                .ToDictionary(_ => _.ExternalKey, _ => _.AggregateId, StringComparer.InvariantCultureIgnoreCase);
+
+            // If we don't need to create missing keys, return what we found
+            if (!createOnMissing) 
+            {
+                return returnMapping;
+            }
+
+            // Find missing keys
+            var missingKeys = normalizedKeys
+                .Where(k => !returnMapping.ContainsKey(k))
+                .ToList();
+
+            if (missingKeys.Count == 0)
+                return returnMapping;
+
+            // Create new mappings for missing keys but first of all generate all new identities
+            var identities = await IdentityGenerator.NewManyAsync<TKey>(missingKeys.Count, cancellationToken);
+
+            var newMappings = new MappedIdentity[missingKeys.Count];
+            for (int i = 0; i < missingKeys.Count; i++)
+            {
+                newMappings[i] = new MappedIdentity(missingKeys[i], identities[i]);
+            }
+
+            try
+            {
+                // Attempt bulk insert (unordered to continue on duplicates)
+                if (newMappings.Length > 0)
+                {
+                    await _collection.InsertManyAsync(newMappings, new InsertManyOptions { IsOrdered = false }, cancellationToken);
+
+                    // Add newly created mappings to result
+                    foreach (var mapping in newMappings)
+                    {
+                        returnMapping[mapping.ExternalKey] = mapping.AggregateId;
+                    }
+                }
+            }
+            catch (MongoBulkWriteException ex)
+            {
+                // Some keys might have been inserted concurrently by another process
+                // Re-fetch the missing keys to get the final mappings
+                var stillMissingKeys = missingKeys
+                    .Where(k => !returnMapping.ContainsKey(k))
+                    .ToList();
+
+                if (stillMissingKeys.Count > 0)
+                {
+                    var refetchedMappings = _collection
+                        .Find(Builders<MappedIdentity>.Filter.In("ExternalKey", stillMissingKeys))
+                        .ToEnumerable()
+                        .ToDictionary(_ => _.ExternalKey, _ => _.AggregateId, StringComparer.InvariantCultureIgnoreCase);
+
+                    foreach (var kvp in refetchedMappings)
+                    {
+                        returnMapping[kvp.Key] = kvp.Value;
+                    }
+                }
+
+                // Log the concurrent insertion for diagnostics
+                Logger.DebugFormat("Concurrent insertions detected during batch translation. {0} duplicates handled.",
+                    ex.WriteErrors.Count);
+            }
+
+            return returnMapping;
+        }
+
+        /// <summary>
+        /// Try to translate multiple external keys to identities without creating missing mappings.
+        /// Uses a single database call.
+        /// </summary>
+        /// <param name="externalKeys">The external keys to translate.</param>
+        /// <param name="cancellationToken"></param>
+        /// <returns>Dictionary mapping external keys to identities. Missing keys are not included.</returns>
+        protected Task<IReadOnlyDictionary<String, TKey>> TryTranslateBatchAsync(IEnumerable<String> externalKeys, CancellationToken cancellationToken = default)
+        {
+            return TranslateBatchAsync(externalKeys, createOnMissing: false, cancellationToken: cancellationToken);
         }
 
         protected TKey Translate(string externalKey, bool createOnMissing = true)

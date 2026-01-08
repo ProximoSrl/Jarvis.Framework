@@ -41,5 +41,14 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>The newly generated identity</returns>
         Task<IIdentity> NewAsync(Type identityType, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Generate a batch of new identities for a given type.
+        /// </summary>
+        /// <typeparam name="TIdentity">Type of the identity to generate.</typeparam>
+        /// <param name="count">Number of identities to generate.</param>
+        /// <param name="cancellation"></param>
+        /// <returns>The newly generated identities</returns>
+        Task<TIdentity[]> NewManyAsync<TIdentity>(int count, CancellationToken cancellation = default) where TIdentity : IIdentity;
     }
 }

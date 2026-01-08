@@ -72,7 +72,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         ReservationSlot Reserve(string serie, Int32 amount);
     }
 
-    public interface IOfflineCounterService : ICounterService
+    public interface IOfflineCounterService : IReservableCounterService
     {
         /// <summary>
         /// An offline counter service can generate only counters that

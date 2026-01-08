@@ -13,5 +13,10 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         public Int64 StartIndex { get; private set; }
 
         public Int64 EndIndex { get; private set; }
+
+        public Int64 Size
+        {
+            get { return EndIndex - StartIndex + 1; }
+        }
     }
 }

@@ -2,6 +2,7 @@
 using Fasterflect;
 using Jarvis.Framework.Shared.Exceptions;
 using Jarvis.Framework.Shared.Helpers;
+using NStore.Core.Processing;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,7 +15,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 {
     public class IdentityManager : IIdentityManager, IIdentityImportManager, IIdentityGenerator
     {
-        private readonly ICounterService _counterService;
+        private readonly IReservableCounterService _reservableCounterService;
 
         private readonly Dictionary<string, Func<long, IIdentity>> _longBasedFactories =
             new Dictionary<string, Func<long, IIdentity>>(StringComparer.OrdinalIgnoreCase);
@@ -24,9 +25,9 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
         public ILogger Logger { get; set; }
 
-        public IdentityManager(ICounterService counterService)
+        public IdentityManager(IReservableCounterService reservableCounterService)
         {
-            _counterService = counterService;
+            _reservableCounterService = reservableCounterService;
             Logger = NullLogger.Instance;
         }
 
@@ -121,7 +122,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             var tag = EventStoreIdentity.GetTagForIdentityClass(identityType);
             Func<long, IIdentity> factory = GetFactoryForTag(tag);
 
-            return factory(_counterService.GetNext(tag));
+            return factory(_reservableCounterService.GetNext(tag));
         }
 
         public TIdentity New<TIdentity>() where TIdentity : IIdentity
@@ -131,8 +132,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
         public async Task<IIdentity> NewAsync(Type identityType, CancellationToken cancellationToken = default)
         {
-            if (identityType == null)
-                throw new ArgumentNullException(nameof(identityType));
+            ArgumentNullException.ThrowIfNull(identityType);
 
             if (!typeof(IIdentity).IsAssignableFrom(identityType))
                 throw new ArgumentException($"Type {identityType.FullName} does not implement IIdentity", nameof(identityType));
@@ -140,7 +140,30 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             var tag = EventStoreIdentity.GetTagForIdentityClass(identityType);
             Func<long, IIdentity> factory = GetFactoryForTag(tag);
 
-            return factory(await _counterService.GetNextAsync(tag, cancellationToken));
+            return factory(await _reservableCounterService.GetNextAsync(tag, cancellationToken));
+        }
+
+        public Task<TIdentity[]> NewManyAsync<TIdentity>(int count, CancellationToken cancellation = default) where TIdentity : IIdentity
+        {
+            var identityType = typeof(TIdentity);
+            var tag = EventStoreIdentity.GetTagForIdentityClass(identityType);
+
+            var reserveResult = _reservableCounterService.Reserve(tag, count);
+
+            var result = new TIdentity[count];
+            
+            if (!_longBasedFactories.TryGetValue(tag, out Func<long, IIdentity> factory))
+            {
+                throw new JarvisFrameworkEngineException(string.Format("{0} not registered in IdentityManager", tag));
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                //resort to the create instance because this is an evensttore identity we know that we have the construcotr.
+                result[i] = (TIdentity) factory(reserveResult.StartIndex + i);
+            }
+
+            return Task.FromResult(result);
         }
 
         public async Task<TIdentity> NewAsync<TIdentity>(CancellationToken cancellationToken = default) where TIdentity : IIdentity
@@ -181,13 +204,13 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         public Task ForceNextIdAsync<TIdentity>(long nextIdToReturn, CancellationToken cancellationToken = default)
         {
             var tag = EventStoreIdentity.GetTagForIdentityClass(typeof(TIdentity));
-            return _counterService.ForceNextIdAsync(tag, nextIdToReturn, cancellationToken);
+            return _reservableCounterService.ForceNextIdAsync(tag, nextIdToReturn, cancellationToken);
         }
 
         public Task<long> PeekNextIdAsync<TIdentity>(CancellationToken cancellationToken = default)
         {
             var tag = EventStoreIdentity.GetTagForIdentityClass(typeof(TIdentity));
-            return _counterService.PeekNextAsync(tag, cancellationToken);
+            return _reservableCounterService.PeekNextAsync(tag, cancellationToken);
         }
 
         public bool TryGetTag(string id, out string tag)

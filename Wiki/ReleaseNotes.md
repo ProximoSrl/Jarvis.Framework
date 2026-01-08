@@ -2,6 +2,8 @@
 
 ## vNext
 
+- Added new Batch to IIDentity Manager to create identities in batch.
+
 ## 7.17.2
 
 - More tests and funciontalities to handle EventStore Identity casing.

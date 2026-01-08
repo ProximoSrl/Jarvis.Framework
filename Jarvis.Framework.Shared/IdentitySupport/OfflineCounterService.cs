@@ -142,5 +142,10 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         {
             throw new NotImplementedException("In offline service it is not safe to know next id, we have not root counter.");
         }
+
+        public ReservationSlot Reserve(string serie, int amount)
+        {
+            throw new NotImplementedException("In offline service we do not reserve.");
+        }
     }
 }
