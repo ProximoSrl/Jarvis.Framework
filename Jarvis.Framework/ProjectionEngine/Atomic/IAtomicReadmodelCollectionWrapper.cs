@@ -142,15 +142,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// be replaced only if the new version is higher.
         /// </para>
         /// </summary>
-        /// <param name="models">Collection of readmodel instances to upsert</param>
+        /// <param name="models">Collection of readmodel instances to upsert. Must not contain duplicate Ids.</param>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>A task representing the asynchronous batch operation</returns>
         /// <exception cref="ArgumentNullException">Thrown when models collection is null</exception>
-        /// <exception cref="CollectionWrapperException">Thrown when any model has an empty Id</exception>
+        /// <exception cref="CollectionWrapperException">Thrown when any model has an empty Id or when duplicate Ids are present in the batch</exception>
         /// <exception cref="MongoException">Thrown when MongoDB operations fail</exception>
         /// <remarks>
         /// This method is significantly more efficient than calling UpsertAsync multiple times
         /// when dealing with large batches of readmodels. Empty collections are handled gracefully.
+        /// The batch must not contain duplicate readmodel Ids.
         /// </remarks>
         Task UpsertBatchAsync(IEnumerable<TModel> models, CancellationToken cancellationToken = default);
 
@@ -187,6 +188,39 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>A task representing the asynchronous operation</returns>
         Task UpdateVersionAsync(TModel model, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// <para>
+        /// Batch version of <see cref="UpdateVersionAsync"/>. Updates only version-related properties
+        /// (ProjectedPosition, AggregateVersion, LastProcessedVersions) for multiple readmodel instances
+        /// in a single efficient operation using MongoDB's BulkWrite API.
+        /// </para>
+        /// <para>
+        /// This method is designed for scenarios where readmodels were not modified by events in a changeset
+        /// but still need their version tracking updated to reflect processed stream positions. It performs
+        /// partial updates instead of full document replacement, making it safer and more efficient than
+        /// using UpsertBatchAsync for unmodified readmodels.
+        /// </para>
+        /// <para>
+        /// For each model in the batch:
+        /// - If the readmodel exists on disk, performs a partial update of version fields only
+        /// - If the readmodel doesn't exist, inserts the full model (same fallback behavior as UpdateVersionAsync)
+        /// - Models with ModifiedWithExtraStreamEvents flag are automatically skipped
+        /// </para>
+        /// </summary>
+        /// <param name="models">Collection of readmodel instances with updated version information. Must not contain duplicate Ids.</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>A task representing the asynchronous batch operation</returns>
+        /// <exception cref="ArgumentNullException">Thrown when models collection is null</exception>
+        /// <exception cref="CollectionWrapperException">Thrown when any model has an empty Id or when duplicate Ids are present in the batch</exception>
+        /// <exception cref="MongoException">Thrown when MongoDB operations fail</exception>
+        /// <remarks>
+        /// This method is significantly more efficient than calling UpdateVersionAsync multiple times
+        /// and is safer than UpsertBatchAsync for readmodels that haven't changed, as it only touches
+        /// version-tracking fields. Empty collections are handled gracefully.
+        /// The batch must not contain duplicate readmodel Ids.
+        /// </remarks>
+        Task UpdateVersionBatchAsync(IEnumerable<TModel> models, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Delete a readmodel instance from the underlying storage by its id.

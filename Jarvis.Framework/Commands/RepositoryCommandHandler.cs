@@ -5,6 +5,7 @@ using Jarvis.Framework.Shared.IdentitySupport;
 using Jarvis.Framework.Shared.Messages;
 using NStore.Domain;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.Commands
@@ -46,13 +47,13 @@ namespace Jarvis.Framework.Kernel.Commands
         /// </summary>
         public IEventStoreQueryManager EventStoreQueryManager { get; set; }
 
-        public override Task ClearAsync()
+        public override Task ClearAsync(CancellationToken cancellationToken = default)
         {
             Repository.Clear();
             return Task.CompletedTask;
         }
 
-        public override async Task HandleAsync(TCommand cmd)
+        public override async Task HandleAsync(TCommand cmd, CancellationToken cancellationToken = default)
         {
             //Before handling any message, we want to be sure that the repository is clear.
             Repository.Clear();
@@ -70,7 +71,7 @@ namespace Jarvis.Framework.Kernel.Commands
                 _ifVersionEqualTo = -1; //no version info required.
             }
 
-            await base.HandleAsync(cmd).ConfigureAwait(false);
+            await base.HandleAsync(cmd, cancellationToken).ConfigureAwait(false);
             if (Logger.IsDebugEnabled)
             {
                 Logger.DebugFormat("Handled command type {0} id {1} with handler {2}", cmd.GetType().Name, cmd.MessageId, this.GetType().Name);
@@ -83,18 +84,21 @@ namespace Jarvis.Framework.Kernel.Commands
         /// <param name="id"></param>
         /// <param name="callback"></param>
         /// <param name="createIfNotExists"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
         protected virtual Task FindAndModifyAsync(
             EventStoreIdentity id,
             Action<TAggregate> callback,
-            bool createIfNotExists = false)
+            bool createIfNotExists = false,
+            CancellationToken cancellationToken = default)
         {
             return FindAndModifyAsync(id, a =>
             {
                 callback(a);
                 return Task.FromResult(RepositoryCommandHandlerCallbackReturnValue.Default);
             },
-            createIfNotExists);
+            createIfNotExists,
+            cancellationToken);
         }
 
         /// <summary>
@@ -103,18 +107,21 @@ namespace Jarvis.Framework.Kernel.Commands
         /// <param name="id"></param>
         /// <param name="callback"></param>
         /// <param name="createIfNotExists"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
         protected virtual Task FindAndModifyAsync(
             EventStoreIdentity id,
             Func<TAggregate, Task> callback,
-            bool createIfNotExists = false)
+            bool createIfNotExists = false,
+            CancellationToken cancellationToken = default)
         {
             return FindAndModifyAsync(id, async a =>
             {
                 await callback(a);
                 return RepositoryCommandHandlerCallbackReturnValue.Default;
             },
-            createIfNotExists);
+            createIfNotExists,
+            cancellationToken);
         }
 
         /// <summary>
@@ -124,13 +131,15 @@ namespace Jarvis.Framework.Kernel.Commands
         /// <param name="id"></param>
         /// <param name="callback"></param>
         /// <param name="createIfNotExists"></param>
+        /// <param name="cancellationToken"></param>
         protected virtual async Task FindAndModifyAsync(
             EventStoreIdentity id,
             Func<TAggregate, Task<RepositoryCommandHandlerCallbackReturnValue>> callback,
-            bool createIfNotExists = false)
+            bool createIfNotExists = false,
+            CancellationToken cancellationToken = default)
         {
             //This is the classic command execution, each execution reload the entity and stream.
-            var aggregate = await Repository.GetByIdAsync<TAggregate>(id).ConfigureAwait(false);
+            var aggregate = await Repository.GetByIdAsync<TAggregate>(id, cancellationToken).ConfigureAwait(false);
             if (!createIfNotExists && aggregate.Version == 0)
             {
                 throw new UninitializedAggregateException();
@@ -142,7 +151,7 @@ namespace Jarvis.Framework.Kernel.Commands
 
             if (!callbackResult.ShouldNotPersistAggregate)
             {
-                await Repository.SaveAsync(aggregate, _commitId.ToString(), h => StoreCommandHeaders(h, CurrentCommand)).ConfigureAwait(false);
+                await Repository.SaveAsync(aggregate, _commitId.ToString(), h => StoreCommandHeaders(h, CurrentCommand), cancellationToken).ConfigureAwait(false);
             }
         }
 
@@ -158,14 +167,14 @@ namespace Jarvis.Framework.Kernel.Commands
             }
         }
 
-        protected Task SaveAsync(TAggregate aggregate)
+        protected Task SaveAsync(TAggregate aggregate, CancellationToken cancellationToken = default)
         {
-            return Repository.SaveAsync(aggregate, _commitId.ToString(), h => StoreCommandHeaders(h, CurrentCommand));
+            return Repository.SaveAsync(aggregate, _commitId.ToString(), h => StoreCommandHeaders(h, CurrentCommand), cancellationToken);
         }
 
-        protected Task<TAggregate> CreateNewAggregateAsync(IIdentity identity)
+        protected Task<TAggregate> CreateNewAggregateAsync(IIdentity identity, CancellationToken cancellationToken = default)
         {
-            return Repository.GetByIdAsync<TAggregate>(identity.AsString());
+            return Repository.GetByIdAsync<TAggregate>(identity.AsString(), cancellationToken);
         }
     }
 
