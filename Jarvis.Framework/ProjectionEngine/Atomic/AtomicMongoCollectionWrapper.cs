@@ -422,6 +422,103 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         }
 
         /// <inheritdoc />
+        public async Task UpdateVersionBatchAsync(IEnumerable<TModel> models, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(models);
+
+            // Convert to list to avoid multiple enumerations
+            var modelsList = models.ToList();
+
+            if (modelsList.Count == 0)
+            {
+                return; // Nothing to process
+            }
+
+            // Validate all models have Ids and check for duplicates
+            var seenIds = new HashSet<string>();
+            var duplicateIds = new List<string>();
+
+            foreach (var model in modelsList)
+            {
+                if (String.IsNullOrEmpty(model.Id))
+                {
+                    throw new CollectionWrapperException($"Cannot update readmodel of type {typeof(TModel).Name}, Id property not initialized");
+                }
+
+                if (!seenIds.Add(model.Id))
+                {
+                    duplicateIds.Add(model.Id);
+                }
+            }
+
+            if (duplicateIds.Count > 0)
+            {
+                var duplicatesStr = string.Join(", ", duplicateIds.Distinct());
+                throw new CollectionWrapperException($"Duplicate readmodel Ids found in batch: {duplicatesStr}");
+            }
+
+            // Filter out models that should not be persisted
+            var validModels = modelsList.Where(m => !m.ModifiedWithExtraStreamEvents).ToList();
+
+            if (validModels.Count == 0)
+            {
+                return; // All models were filtered out
+            }
+
+            // Query which models already exist
+            var ids = validModels.Select(m => m.Id).ToList();
+            var existingFilter = Builders<TModel>.Filter.In(_ => _.Id, ids);
+            var existingIds = await _collection.Find(existingFilter)
+                .Project(Builders<TModel>.Projection.Include(_ => _.Id))
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            var existingIdSet = new HashSet<string>(existingIds.Select(doc => doc["_id"].AsString));
+
+            // Separate models into existing (for update) and missing (for insert)
+            var modelsToUpdate = validModels.Where(m => existingIdSet.Contains(m.Id)).ToList();
+            var modelsToInsert = validModels.Where(m => !existingIdSet.Contains(m.Id)).ToList();
+
+            // Build bulk update operations for existing models
+            if (modelsToUpdate.Count > 0)
+            {
+                var bulkOps = new List<WriteModel<TModel>>();
+
+                foreach (var model in modelsToUpdate)
+                {
+                    var filter = Builders<TModel>.Filter.Eq(_ => _.Id, model.Id);
+                    var update = Builders<TModel>.Update
+                        .Set(m => m.ProjectedPosition, model.ProjectedPosition)
+                        .Set(m => m.AggregateVersion, model.AggregateVersion)
+                        .Set(m => m.LastProcessedVersions, model.LastProcessedVersions);
+
+                    bulkOps.Add(new UpdateOneModel<TModel>(filter, update));
+                }
+
+                await _collection.BulkWriteAsync(bulkOps, new BulkWriteOptions { IsOrdered = false }, cancellationToken).ConfigureAwait(false);
+            }
+
+            // Insert missing models (fallback behavior from UpdateVersionAsync)
+            if (modelsToInsert.Count > 0)
+            {
+                try
+                {
+                    await _collection.InsertManyAsync(modelsToInsert, new InsertManyOptions { IsOrdered = false }, cancellationToken).ConfigureAwait(false);
+                }
+                catch (MongoException mex)
+                {
+                    // Handle concurrent inserts - if another thread inserted between our check and insert,
+                    // we can safely ignore duplicate key errors
+                    if (!mex.Message.Contains(ConcurrencyException))
+                    {
+                        throw;
+                    }
+                    // Duplicate key errors are expected in concurrent scenarios and can be ignored
+                }
+            }
+        }
+
+        /// <inheritdoc />
         public async Task DeleteAsync(string id, CancellationToken cancellationToken = default)
         {
             if (String.IsNullOrEmpty(id))
@@ -446,8 +543,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 return; // Nothing to process
             }
 
-            // Validate all models have Ids and filter out models that should not be persisted
-            var validModels = new List<TModel>();
+            // Validate all models have Ids and check for duplicates
+            var seenIds = new HashSet<string>();
+            var duplicateIds = new List<string>();
+            
             foreach (var model in modelsList)
             {
                 if (String.IsNullOrEmpty(model.Id))
@@ -455,13 +554,20 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                     throw new CollectionWrapperException($"Cannot save readmodel of type {typeof(TModel).Name}, Id property not initialized");
                 }
 
-                if (model.ModifiedWithExtraStreamEvents)
+                if (!seenIds.Add(model.Id))
                 {
-                    continue; // Skip models not in a persistable state
+                    duplicateIds.Add(model.Id);
                 }
-
-                validModels.Add(model);
             }
+
+            if (duplicateIds.Count > 0)
+            {
+                var duplicatesStr = string.Join(", ", duplicateIds.Distinct());
+                throw new CollectionWrapperException($"Duplicate readmodel Ids found in batch: {duplicatesStr}");
+            }
+
+            // Filter out models that should not be persisted
+            var validModels = modelsList.Where(m => !m.ModifiedWithExtraStreamEvents).ToList();
 
             if (validModels.Count == 0)
             {

@@ -511,9 +511,9 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         }
 
         [Test]
-        public async Task UpsertBatch_should_handle_duplicate_ids_in_batch()
+        public void UpsertBatch_should_throw_on_duplicate_ids_in_batch()
         {
-            // Arrange: Create batch with duplicate IDs (last one should win)
+            // Arrange: Create batch with duplicate IDs
             _aggregateIdSeed = 1300;
             _aggregateVersion = 1;
             
@@ -529,14 +529,10 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
 
             var batch = new List<SimpleTestAtomicReadModel> { rm1, rm2 };
 
-            // Act
-            await _sut.UpsertBatchAsync(batch).ConfigureAwait(false);
-
-            // Assert: Should have the version from rm2
-            var reloaded = await _sut.FindOneByIdAsync(rm1.Id).ConfigureAwait(false);
-            Assert.That(reloaded, Is.Not.Null);
-            Assert.That(reloaded.TouchCount, Is.EqualTo(1)); // rm2 has TouchCount = 1
-            Assert.That(reloaded.AggregateVersion, Is.EqualTo(2));
+            // Act & Assert: Should throw exception for duplicate IDs
+            var ex = Assert.ThrowsAsync<CollectionWrapperException>(() => _sut.UpsertBatchAsync(batch));
+            Assert.That(ex.Message, Does.Contain("Duplicate readmodel Ids found in batch"));
+            Assert.That(ex.Message, Does.Contain(rm1.Id));
         }
 
         #endregion

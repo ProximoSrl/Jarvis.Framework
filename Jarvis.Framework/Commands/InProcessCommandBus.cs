@@ -11,6 +11,7 @@ using Newtonsoft.Json;
 using System;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Kernel.Commands
@@ -42,9 +43,9 @@ namespace Jarvis.Framework.Kernel.Commands
             _commandExecutionExceptionHelper = commandExecutionExceptionHelper;
         }
 
-        public Task<ICommand> SendAsync(ICommand command, string impersonatingUser = null)
+        public Task<ICommand> SendAsync(ICommand command, string impersonatingUser = null, CancellationToken cancellationToken = default)
         {
-            return SendLocalAsync(command, impersonatingUser);
+            return SendLocalAsync(command, impersonatingUser, cancellationToken);
         }
 
         /// <summary>
@@ -53,14 +54,15 @@ namespace Jarvis.Framework.Kernel.Commands
         /// <param name="delay"></param>
         /// <param name="command"></param>
         /// <param name="impersonatingUser"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public Task<ICommand> DeferAsync(TimeSpan delay, ICommand command, string impersonatingUser = null)
+        public Task<ICommand> DeferAsync(TimeSpan delay, ICommand command, string impersonatingUser = null, CancellationToken cancellationToken = default)
         {
             Logger.WarnFormat("Sending command {0} without delay", command.MessageId);
-            return SendLocalAsync(command, impersonatingUser);
+            return SendLocalAsync(command, impersonatingUser, cancellationToken);
         }
 
-        public async Task<ICommand> SendLocalAsync(ICommand command, string impersonatingUser = null)
+        public async Task<ICommand> SendLocalAsync(ICommand command, string impersonatingUser = null, CancellationToken cancellationToken = default)
         {
             LoggerThreadContextManager.MarkCommandExecution(command);
             try
@@ -101,7 +103,7 @@ namespace Jarvis.Framework.Kernel.Commands
                     throw new JarvisFrameworkEngineException(b.ToString());
                 }
 
-                await HandleAsync(handlers[0], command).ConfigureAwait(false);
+                await HandleAsync(handlers[0], command, cancellationToken).ConfigureAwait(false);
 
                 ReleaseHandlers(handlers);
 
@@ -143,7 +145,7 @@ namespace Jarvis.Framework.Kernel.Commands
 
         protected abstract bool UserIsAllowedToSendCommand(ICommand command, string userName);
 
-        protected virtual async Task HandleAsync(ICommandHandler handler, ICommand command)
+        protected virtual async Task HandleAsync(ICommandHandler handler, ICommand command, CancellationToken cancellationToken = default)
         {
             int i = 0;
             Boolean success = false;
@@ -154,7 +156,7 @@ namespace Jarvis.Framework.Kernel.Commands
                 try
                 {
                     _messagesTracker.ElaborationStarted(command, DateTime.UtcNow);
-                    await handler.HandleAsync(command).ConfigureAwait(false);
+                    await handler.HandleAsync(command, cancellationToken).ConfigureAwait(false);
                     _messagesTracker.Completed(command, DateTime.UtcNow);
                     success = true;
                     retry = false;
@@ -173,7 +175,7 @@ namespace Jarvis.Framework.Kernel.Commands
                 if (retry)
                 {
                     //Since we need to retry the command we need to issue a clear.
-                    await handler.ClearAsync();
+                    await handler.ClearAsync(cancellationToken);
                 }
                 i++; //if we reach here we need to increment the counter.
             } while (retry);

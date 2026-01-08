@@ -6,6 +6,7 @@ using Jarvis.Framework.Kernel.Store;
 using Jarvis.Framework.Shared.Commands;
 using Jarvis.Framework.Shared.Events;
 using Jarvis.Framework.Shared.IdentitySupport;
+using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using NStore.Domain;
@@ -177,7 +178,7 @@ namespace Jarvis.Framework.Tests.EngineTests
 
 	public class TouchSampleAggregateHandler : RepositoryCommandHandler<SampleAggregate, TouchSampleAggregate>
 	{
-		protected override Task Execute(TouchSampleAggregate cmd)
+		protected override Task Execute(TouchSampleAggregate cmd, CancellationToken cancellationToken = default)
 		{
 			return FindAndModifyAsync(cmd.AggregateId,
 				a =>
@@ -188,7 +189,7 @@ namespace Jarvis.Framework.Tests.EngineTests
 
 					Aggregate = a;
 				}
-				, true);
+				, true, cancellationToken);
 		}
 
 		public SampleAggregate Aggregate { get; private set; }

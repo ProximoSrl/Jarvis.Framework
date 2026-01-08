@@ -59,19 +59,19 @@ namespace Jarvis.Framework.Kernel.Commands
             SecurityContextManager = NullSecurityContextManager.Instance;
         }
 
-        public virtual async Task HandleAsync(TCommand cmd)
+        public virtual async Task HandleAsync(TCommand cmd, CancellationToken cancellationToken = default)
         {
             CommandHandlerMonitor.AddCommand(cmd);
             try
             {
-                var claims = await GetCurrentClaimsAsync(cmd).ConfigureAwait(false);
+                var claims = await GetCurrentClaimsAsync(cmd, cancellationToken).ConfigureAwait(false);
                 using (var x = SecurityContextManager.SetCurrentClaims(claims))
                 {
-                    await OnCheckSecurityAsync(cmd).ConfigureAwait(false);
+                    await OnCheckSecurityAsync(cmd, cancellationToken).ConfigureAwait(false);
 
                     using (var context = JarvisFrameworkSharedMetricsHelper.StartCommandTimer(cmd))
                     {
-                        await Execute(cmd).ConfigureAwait(false);
+                        await Execute(cmd, cancellationToken).ConfigureAwait(false);
                         JarvisFrameworkSharedMetricsHelper.MarkCommandExecuted(cmd);
                     }
                 }
@@ -84,11 +84,12 @@ namespace Jarvis.Framework.Kernel.Commands
         }
 
         /// <summary>
-        /// This should be overridden by concrete AbstractCommandHandler 
+        /// This should be overridden by concrete AbstractCommandHandler
         /// </summary>
         /// <param name="cmd"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        protected virtual Task<IEnumerable<Claim>> GetCurrentClaimsAsync(TCommand cmd)
+        protected virtual Task<IEnumerable<Claim>> GetCurrentClaimsAsync(TCommand cmd, CancellationToken cancellationToken = default)
         {
             return Task.FromResult<IEnumerable<Claim>>(Array.Empty<Claim>());
         }
@@ -98,8 +99,9 @@ namespace Jarvis.Framework.Kernel.Commands
         /// can add custom security not based on claims model.
         /// </summary>
         /// <param name="cmd"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        protected Task OnCheckSecurityAsync(TCommand cmd)
+        protected Task OnCheckSecurityAsync(TCommand cmd, CancellationToken cancellationToken = default)
         {
             var allCustomAttributes = cmd.GetType().GetCustomAttributes(true);
             var claims = SecurityContextManager.GetCurrentClaims();
@@ -112,14 +114,14 @@ namespace Jarvis.Framework.Kernel.Commands
             return Task.CompletedTask;
         }
 
-        protected abstract Task Execute(TCommand cmd);
+        protected abstract Task Execute(TCommand cmd, CancellationToken cancellationToken = default);
 
-        public async Task HandleAsync(ICommand command)
+        public async Task HandleAsync(ICommand command, CancellationToken cancellationToken = default)
         {
             try
             {
                 LoggerThreadContextManager.MarkCommandExecution(command);
-                await HandleAsync((TCommand)command).ConfigureAwait(false);
+                await HandleAsync((TCommand)command, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -162,6 +164,6 @@ namespace Jarvis.Framework.Kernel.Commands
             //Do nothing, give the ability to the concrete handler to add headers to this changeset.
         }
 
-        public abstract Task ClearAsync();
+        public abstract Task ClearAsync(CancellationToken cancellationToken = default);
     }
 }

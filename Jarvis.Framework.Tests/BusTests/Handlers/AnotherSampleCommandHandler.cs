@@ -32,7 +32,7 @@ namespace Jarvis.Framework.Tests.BusTests.Handlers
 
         public readonly ManualResetEvent Reset = new ManualResetEvent(false);
 
-        public Task HandleAsync(AnotherSampleTestCommand cmd)
+        public Task HandleAsync(AnotherSampleTestCommand cmd, CancellationToken cancellationToken = default)
         {
             RunData runData;
             if (!commandRunDatas.TryGetValue(cmd.MessageId, out runData))
@@ -49,12 +49,12 @@ namespace Jarvis.Framework.Tests.BusTests.Handlers
             return Task.CompletedTask;
         }
 
-        public Task HandleAsync(ICommand command)
+        public Task HandleAsync(ICommand command, CancellationToken cancellationToken = default)
         {
-            return HandleAsync(command as AnotherSampleTestCommand);
+            return HandleAsync(command as AnotherSampleTestCommand, cancellationToken);
         }
 
-        public Task ClearAsync()
+        public Task ClearAsync(CancellationToken cancellationToken = default)
         {
             return Task.CompletedTask;
         }
