@@ -2,7 +2,6 @@
 using Fasterflect;
 using Jarvis.Framework.Shared.Exceptions;
 using Jarvis.Framework.Shared.Helpers;
-using NStore.Core.Processing;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -151,7 +150,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             var reserveResult = _reservableCounterService.Reserve(tag, count);
 
             var result = new TIdentity[count];
-            
+
             if (!_longBasedFactories.TryGetValue(tag, out Func<long, IIdentity> factory))
             {
                 throw new JarvisFrameworkEngineException(string.Format("{0} not registered in IdentityManager", tag));
@@ -160,7 +159,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             for (int i = 0; i < count; i++)
             {
                 //resort to the create instance because this is an evensttore identity we know that we have the construcotr.
-                result[i] = (TIdentity) factory(reserveResult.StartIndex + i);
+                result[i] = (TIdentity)factory(reserveResult.StartIndex + i);
             }
 
             return Task.FromResult(result);

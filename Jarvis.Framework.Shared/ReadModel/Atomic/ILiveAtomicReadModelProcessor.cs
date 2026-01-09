@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -71,6 +72,30 @@ namespace Jarvis.Framework.Shared.ReadModel.Atomic
         /// <returns></returns>
         Task CatchupAsync<TModel>(
             TModel readModel,
+            CancellationToken cancellationToken = default)
+            where TModel : IAtomicReadModel;
+
+        /// <summary>
+        /// <para>
+        /// Batch catchup for multiple readmodels of the same type. Each readmodel may be at a different
+        /// aggregate version, and this method will efficiently read all required events from NStore
+        /// using <c>ReadForwardMultiplePartitionsWithRangesAsync</c>, which allows reading multiple
+        /// partitions each starting from a different position.
+        /// </para>
+        /// <para>
+        /// At the end of the call, all readmodels in the collection are up-to-date with the latest
+        /// commits in their respective aggregate streams. The readmodels are modified in-place.
+        /// </para>
+        /// </summary>
+        /// <typeparam name="TModel">Type of atomic readmodel to catchup</typeparam>
+        /// <param name="readModels">Collection of readmodels to catchup. Each readmodel will have
+        /// events read starting from its <c>AggregateVersion + 1</c>. The collection must not contain
+        /// duplicate aggregate ids.</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>Task that completes when all readmodels have been caught up</returns>
+        /// <exception cref="ArgumentNullException">Thrown when readModels is null</exception>
+        Task CatchupBatchAsync<TModel>(
+            IReadOnlyCollection<TModel> readModels,
             CancellationToken cancellationToken = default)
             where TModel : IAtomicReadModel;
     }

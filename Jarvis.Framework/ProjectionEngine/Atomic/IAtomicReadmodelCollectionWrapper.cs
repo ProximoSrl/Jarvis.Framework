@@ -85,6 +85,75 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// <remarks>Actually this method is a simple wrapper to a call to <see cref="ILiveAtomicReadModelProcessor"/>
         /// that was used internally by the reader.</remarks>
         Task<TModel> FindOneByIdAtCheckpointAsync(string id, long chunkPosition, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// <para>
+        /// Find multiple readmodels by filter and perform batch catchup to ensure they are all
+        /// up-to-date with the latest events from their respective aggregate streams.
+        /// </para>
+        /// <para>
+        /// This method uses <see cref="ILiveAtomicReadModelProcessor.CatchupBatchAsync{TModel}"/>
+        /// internally to efficiently read events for multiple aggregates in a single batch operation.
+        /// </para>
+        /// </summary>
+        /// <param name="filter">Filter expression to match readmodels</param>
+        /// <param name="maxBatchSize">Maximum number of readmodels to process in a single batch.
+        /// Larger batches are more efficient but use more memory. Defaults to 100.</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>Collection of readmodels with latest events projected. The readmodels are
+        /// modified in-place and returned.</returns>
+        /// <remarks>
+        /// <para>
+        /// This method:
+        /// 1. Loads readmodels matching the filter from storage
+        /// 2. For each readmodel, reads events from NStore starting from AggregateVersion + 1
+        /// 3. Returns all readmodels with the latest events applied in-memory
+        /// </para>
+        /// <para>
+        /// Note: This does NOT persist the updated readmodels back to storage. The caller is
+        /// responsible for persisting if needed.
+        /// </para>
+        /// </remarks>
+        Task<IReadOnlyCollection<TModel>> FindManyAndCatchupAsync(
+            System.Linq.Expressions.Expression<Func<TModel, bool>> filter,
+            int maxBatchSize = 100,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// <para>
+        /// Find or create readmodels for a list of aggregate IDs and perform batch catchup to ensure
+        /// they are all up-to-date with the latest events from their respective aggregate streams.
+        /// </para>
+        /// <para>
+        /// Unlike <see cref="FindManyAndCatchupAsync"/>, this method will create new readmodels
+        /// for IDs that don't exist in storage but have events in NStore. This is useful when you
+        /// have a list of aggregate IDs and want to ensure all readmodels are projected, even if
+        /// they haven't been persisted yet.
+        /// </para>
+        /// </summary>
+        /// <param name="idList">List of aggregate IDs to find or create readmodels for</param>
+        /// <param name="maxBatchSize">Maximum number of readmodels to process in a single batch.
+        /// Larger batches are more efficient but use more memory. Defaults to 100.</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>Collection of readmodels with latest events projected. Returns only readmodels
+        /// that have at least one event (AggregateVersion > 0). IDs with no events are excluded.</returns>
+        /// <remarks>
+        /// <para>
+        /// This method:
+        /// 1. Loads existing readmodels from storage for the given IDs
+        /// 2. Creates new readmodel instances for IDs not found in storage
+        /// 3. Performs batch catchup for all readmodels (existing and new)
+        /// 4. Returns only readmodels with AggregateVersion > 0 (excludes IDs with no events)
+        /// </para>
+        /// <para>
+        /// Note: This does NOT persist the updated or newly created readmodels back to storage.
+        /// The caller is responsible for persisting if needed.
+        /// </para>
+        /// </remarks>
+        Task<IReadOnlyCollection<TModel>> FindManyByIdListAndCatchupAsync(
+            IEnumerable<string> idList,
+            int maxBatchSize = 100,
+            CancellationToken cancellationToken = default);
     }
 
     /// <summary>
