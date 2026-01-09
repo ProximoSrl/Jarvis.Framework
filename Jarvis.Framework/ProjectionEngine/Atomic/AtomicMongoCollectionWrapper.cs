@@ -26,6 +26,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
         private readonly Int32 _actualVersion;
         private readonly ILiveAtomicReadModelProcessor _liveAtomicReadModelProcessor;
+        private readonly IAtomicReadModelFactory _atomicReadModelFactory;
 
         internal const int MaxNumberOfRetryToReprojectFaultedReadmodels = 3;
 
@@ -71,6 +72,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         {
             _logger = logger;
             _liveAtomicReadModelProcessor = liveAtomicReadModelProcessor;
+            _atomicReadModelFactory = atomicReadModelFactory;
 
             var collectionName = CollectionNames.GetCollectionName<TModel>();
             _collection = readmodelDb.GetCollection<TModel>(collectionName);
@@ -238,7 +240,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             if (rm == null)
             {
                 //Try to project a new readmodel
-                rm = await _liveAtomicReadModelProcessor.ProcessAsync<TModel>(id, Int64.MaxValue).ConfigureAwait(false);
+                rm = await _liveAtomicReadModelProcessor.ProcessAsync<TModel>(id, Int64.MaxValue, cancellationToken).ConfigureAwait(false);
                 if (rm?.AggregateVersion == 0)
                 {
                     //we have an aggregate with no commit, just return null.
@@ -246,7 +248,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 }
                 return rm; //Return new projected readmodel
             }
-            await _liveAtomicReadModelProcessor.CatchupAsync(rm).ConfigureAwait(false);
+            await _liveAtomicReadModelProcessor.CatchupAsync(rm, cancellationToken).ConfigureAwait(false);
             return rm;
         }
 
@@ -274,6 +276,107 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 }
             }
             return rmsResult;
+        }
+
+        private static readonly CounterOptions FindManyAndCatchupCounter = new CounterOptions()
+        {
+            Name = "AtomicRmFindManyAndCatchup",
+            MeasurementUnit = Unit.Calls
+        };
+
+        /// <inheritdoc />
+        public async Task<IReadOnlyCollection<TModel>> FindManyAndCatchupAsync(
+            System.Linq.Expressions.Expression<Func<TModel, bool>> filter,
+            int maxBatchSize = 100,
+            CancellationToken cancellationToken = default)
+        {
+            JarvisFrameworkMetricsHelper.Counter.Increment(FindManyAndCatchupCounter, 1, typeof(TModel).Name);
+
+            // Step 1: Find all matching readmodels from storage
+            var cursor = await _collection.FindAsync(filter, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            // we should avoid a single huge list in memory and we should honor batching.
+            List<TModel> returnValue = new List<TModel>(10);
+            List<TModel> batch = new (10);
+
+            //we need to start processing the readmodels in batch to avoid overwhelming enumerating the cursor accumulating into the
+            //batch and catchup when reac the matchbatchsize
+            await foreach (var readmodel in cursor.ToAsyncEnumerable())
+            {
+                batch.Add(readmodel);
+                if (batch.Count >= maxBatchSize)
+                {
+                    await FlushBatch(returnValue, batch, cancellationToken).ConfigureAwait(false);
+                }
+            }
+            //flush remaining batch
+            await FlushBatch(returnValue, batch, cancellationToken).ConfigureAwait(false);
+            return returnValue;
+        }
+
+        private async Task FlushBatch(List<TModel> returnValue, List<TModel> batch, CancellationToken cancellationToken)
+        {
+            if (batch.Count == 0)
+            {
+                return;
+            }
+            await _liveAtomicReadModelProcessor.CatchupBatchAsync(
+                batch,
+                cancellationToken).ConfigureAwait(false);
+            returnValue.AddRange(batch);
+            batch.Clear();
+        }
+
+        private static readonly CounterOptions FindManyByIdListAndCatchupCounter = new CounterOptions()
+        {
+            Name = "AtomicRmFindManyByIdListAndCatchup",
+            MeasurementUnit = Unit.Calls
+        };
+
+        /// <inheritdoc />
+        public async Task<IReadOnlyCollection<TModel>> FindManyByIdListAndCatchupAsync(
+            IEnumerable<string> idList,
+            int maxBatchSize = 100,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(idList);
+
+            // Dedupe IDs to avoid issues with duplicate entries in CatchupBatchAsync
+            var idArray = idList.Distinct().ToArray();
+            if (idArray.Length == 0)
+            {
+                return Array.Empty<TModel>();
+            }
+
+            JarvisFrameworkMetricsHelper.Counter.Increment(FindManyByIdListAndCatchupCounter, 1, typeof(TModel).Name);
+
+            // Step 1: Find existing readmodels from storage for the given IDs
+            var filter = Builders<TModel>.Filter.In(rm => rm.Id, idArray);
+            var cursor = await _collection.FindAsync(filter, cancellationToken: cancellationToken).ConfigureAwait(false);
+            var existingReadmodels = await cursor.ToListAsync(cancellationToken).ConfigureAwait(false);
+
+            // Step 2: Determine which IDs don't have readmodels in storage
+            var existingIds = new HashSet<string>(existingReadmodels.Select(rm => rm.Id));
+            var missingIds = idArray.Where(id => !existingIds.Contains(id)).ToList();
+
+            // Step 3: Create new readmodel instances for missing IDs
+            var newReadmodels = missingIds
+                .Select(id => _atomicReadModelFactory.Create<TModel>(id))
+                .ToList();
+
+            // Step 4: Combine existing and new readmodels
+            var allReadmodels = existingReadmodels.Concat(newReadmodels).ToList();
+
+            // Step 5: Process in batches to avoid overwhelming NStore
+            foreach (var batch in allReadmodels.Chunk(maxBatchSize))
+            {
+                await _liveAtomicReadModelProcessor.CatchupBatchAsync(
+                    batch.ToList(),
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            // Step 6: Return only readmodels that have events (AggregateVersion > 0)
+            return allReadmodels.Where(rm => rm.AggregateVersion > 0).ToList();
         }
 
         /// <inheritdoc />
