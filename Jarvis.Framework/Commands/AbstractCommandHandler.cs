@@ -114,7 +114,33 @@ namespace Jarvis.Framework.Kernel.Commands
             return Task.CompletedTask;
         }
 
-        protected abstract Task Execute(TCommand cmd, CancellationToken cancellationToken = default);
+        /// <summary>
+        /// This is the old method without the cancellation token, kept for backward compatibility.
+        /// </summary>
+        /// <param name="cmd"></param>
+        /// <returns></returns>
+        protected virtual Task Execute(TCommand cmd)
+        {
+            // this throws exception for a reason, this is the old method without cancellation token, that is usually ovverriden
+            // in old code. If you want to implement the version with cancellation token you can override the other Execute method,
+            // but this must never be called because I'm expecting to override one or the other.
+            throw new NotImplementedException(
+                $"Command handler {GetType().Name} must override either Execute(TCommand) or Execute(TCommand, CancellationToken)");
+        }
+
+
+        /// <summary>
+        /// If the concrete command handler does not override this method, with the new CancellationToken we will
+        /// simply call the original Execute method without the token, this because the handler does not need to
+        /// use the cancellation token.
+        /// </summary>
+        /// <param name="cmd"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        protected virtual Task Execute(TCommand cmd, CancellationToken cancellationToken = default)
+        {
+            return Execute(cmd);
+        }
 
         public async Task HandleAsync(ICommand command, CancellationToken cancellationToken = default)
         {
