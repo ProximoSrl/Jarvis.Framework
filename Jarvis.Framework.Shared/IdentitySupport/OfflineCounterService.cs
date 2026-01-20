@@ -147,5 +147,10 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         {
             throw new NotImplementedException("In offline service we do not reserve.");
         }
+
+        public Task<bool> CheckValidityAsync(string serie, long value, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException("In offline service we cannot check validity, we have not root counter.");
+        }
     }
 }

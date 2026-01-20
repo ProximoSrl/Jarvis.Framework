@@ -40,5 +40,10 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             _last = high + 1;
             return new ReservationSlot(low, high);
         }
+
+        public Task<bool> CheckValidityAsync(string serie, long value, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(value <= _last);
+        }
     }
 }

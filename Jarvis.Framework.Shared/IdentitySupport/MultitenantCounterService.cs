@@ -32,5 +32,10 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         {
             return _tenantAccessor.Current.CounterService.PeekNextAsync(serie, cancellationToken);
         }
+
+        public Task<bool> CheckValidityAsync(string serie, long value, CancellationToken cancellationToken = default)
+        {
+            return _tenantAccessor.Current.CounterService.CheckValidityAsync(serie, value, cancellationToken);
+        }
     }
 }

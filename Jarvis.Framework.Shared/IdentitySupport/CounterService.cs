@@ -2,14 +2,20 @@
 using Jarvis.Framework.Shared.Helpers;
 using MongoDB.Driver;
 using System;
+using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using System.Threading;
 
 namespace Jarvis.Framework.Shared.IdentitySupport
 {
+    /// <summary>
+    /// This is the counter service class based on mongodb. It is capable of generating
+    /// counters in a thread safe way.
+    /// </summary>
     public class CounterService : IReservableCounterService, ICounterServiceWithOffset
     {
         protected readonly IMongoCollection<IdentityCounter> _counters;
+        private readonly ConcurrentDictionary<string, long> _lastKnownValues = new ConcurrentDictionary<string, long>();
 
         public class IdentityCounter
         {
@@ -21,6 +27,18 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         {
             if (db == null) throw new ArgumentNullException("db");
             _counters = db.GetCollection<IdentityCounter>("sysCounters");
+        }
+
+        /// <summary>
+        /// Updates the cache only if the new value is greater than the existing cached value.
+        /// This ensures thread-safety when multiple operations complete out of order.
+        /// </summary>
+        private void UpdateCacheIfGreater(string serie, long newValue)
+        {
+            _lastKnownValues.AddOrUpdate(
+                serie,
+                newValue,
+                (key, existingValue) => Math.Max(existingValue, newValue));
         }
 
         public long GetNext(string serie)
@@ -68,23 +86,16 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         {
             if (minValue <= 0) return; //Nothing to be done.
 
-            var actualIndex = _counters.FindOneById(serie);
-            if (actualIndex == null)
-            {
-                _counters.InsertOne(new IdentityCounter()
+            // Use $max operator to atomically ensure the value is at least minValue - 1.
+            // This fixes a race condition in the previous implementation which read, checked, and then saved the document.
+            _counters.FindOneAndUpdate(
+                Builders<IdentityCounter>.Filter.Eq(x => x.Id, serie),
+                Builders<IdentityCounter>.Update.Max(x => x.Last, minValue - 1),
+                new FindOneAndUpdateOptions<IdentityCounter, IdentityCounter>()
                 {
-                    Id = serie,
-                    Last = minValue - 1
+                    IsUpsert = true,
+                    ReturnDocument = ReturnDocument.After
                 });
-            }
-            else
-            {
-                if (actualIndex.Last < minValue)
-                {
-                    actualIndex.Last = minValue - 1;
-                    _counters.Save(actualIndex, actualIndex.Id);
-                }
-            }
         }
 
         public async Task<long> GetNextAsync(string serie, CancellationToken cancellationToken = default)
@@ -122,48 +133,70 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                 throw new JarvisFrameworkEngineException($"Unable to force next id for serie {serie} to {nextIdToReturn} because it is not a valid value.");
             }
 
-            //we need to understand if we already have a record, to avoid concurrency issues
-            var actualIndex = _counters.FindOneById(serie);
-            if (actualIndex == null)
-            {
-                //this can fail if for high concurrency we have another thread that insert record
-                //here, it is a really strange situation, but it can happen.
-                _counters.InsertOne(new IdentityCounter()
-                {
-                    Id = serie,
-                    Last = nextIdToReturn - 1
-                });
-            }
-            else
-            {
-                //we need to update the counter only if the new value is greater than the current one.
-                var last = nextIdToReturn - 1;
-                var result = await _counters.FindOneAndUpdateAsync(
-                       Builders<IdentityCounter>.Filter.And(
-                            Builders<IdentityCounter>.Filter.Eq(x => x.Id, serie),
-                            Builders<IdentityCounter>.Filter.Lt(x => x.Last, last)
-                        ),
-                        Builders<IdentityCounter>.Update.Set(x => x.Last, last),
-                        new FindOneAndUpdateOptions<IdentityCounter, IdentityCounter>()
-                        {
-                            ReturnDocument = ReturnDocument.After,
-                            IsUpsert = false,
-                        }, cancellationToken);
+            long targetValue = nextIdToReturn - 1;
 
-                if (result == null)
-                {
-                    throw new JarvisFrameworkEngineException($"Unable to force next id for serie {serie} to {nextIdToReturn} because it is already greater than current value.");
-                }
+            // Use $max to ensure atomicity and correct upsert behavior without race conditions
+            var result = await _counters.FindOneAndUpdateAsync(
+                     Builders<IdentityCounter>.Filter.Eq(x => x.Id, serie),
+                     Builders<IdentityCounter>.Update.Max(x => x.Last, targetValue),
+                     new FindOneAndUpdateOptions<IdentityCounter, IdentityCounter>()
+                     {
+                         ReturnDocument = ReturnDocument.After,
+                         IsUpsert = true,
+                     }, cancellationToken);
+
+            // If the database value is greater than our target, it means we couldn't force it backwards.
+            if (result.Last > targetValue)
+            {
+                throw new JarvisFrameworkEngineException($"Unable to force next id for serie {serie} to {nextIdToReturn} because it is already greater than current value.");
             }
         }
 
         public async Task<long> PeekNextAsync(string serie, CancellationToken cancellationToken = default)
         {
+            // Always query the database to guarantee correctness in distributed environments.
+            // The cache is only used for CheckValidityAsync optimization.
+
             var recordCursor = await _counters.FindAsync(
                 Builders<IdentityCounter>.Filter.Eq(x => x.Id, serie),
                 cancellationToken: cancellationToken);
             var record = await recordCursor.FirstOrDefaultAsync(cancellationToken);
-            return record == null ? 1 : record.Last + 1;
+
+            if (record != null)
+            {
+                return record.Last + 1;
+            }
+
+            return 1;
+        }
+
+        public async Task<bool> CheckValidityAsync(string serie, long value, CancellationToken cancellationToken = default)
+        {
+            // Quick path: if we have a cached value and the value to check is <= cached value,
+            // we know for certain it's valid (already generated) without hitting the database.
+            // The cache can only be stale in one direction: the real DB value can be higher,
+            // never lower. So if value <= cachedLast, it's definitely valid.
+            if (_lastKnownValues.TryGetValue(serie, out var cachedLast) && value <= cachedLast)
+            {
+                return true;
+            }
+
+            // Cache miss or value > cachedLast: we need to query the database
+            // to get the authoritative current value
+            var recordCursor = await _counters.FindAsync(
+                Builders<IdentityCounter>.Filter.Eq(x => x.Id, serie),
+                cancellationToken: cancellationToken);
+            var record = await recordCursor.FirstOrDefaultAsync(cancellationToken);
+
+            if (record != null)
+            {
+                // Update cache with the fresh value from database
+                UpdateCacheIfGreater(serie, record.Last);
+                return value <= record.Last;
+            }
+
+            // No record exists, so no values have been generated yet
+            return false;
         }
     }
 }
