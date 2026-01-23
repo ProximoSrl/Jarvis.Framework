@@ -1,6 +1,6 @@
 # J.A.R.V.I.S. Framework - Proximo srl (c)
 
-## vNext
+## 7.13.0
 
 - Added new Batch to IIDentity Manager to create identities in batch.
 - Added batch capability to IMessageTracker.
@@ -8,7 +8,7 @@
 - Added batch capabilities to AtomicReadmodelProjectorHelper.
 - Added FindManyAndProjectAsync in atomic collection reader.
 
-## 7.17.2
+## 7.12.2
 
 - More tests and funciontalities to handle EventStore Identity casing.
 
