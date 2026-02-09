@@ -1,4 +1,6 @@
-﻿using Jarvis.Framework.Shared.Commands.Tracking;
+﻿using Jarvis.Framework.Shared;
+using Jarvis.Framework.Shared.Commands;
+using Jarvis.Framework.Shared.Commands.Tracking;
 using Jarvis.Framework.Shared.Support;
 using Jarvis.Framework.Tests.BusTests.MessageFolder;
 using MongoDB.Driver;
@@ -9,7 +11,6 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Jarvis.Framework.Shared.Commands;
 
 namespace Jarvis.Framework.Tests.BusTests
 {
@@ -133,6 +134,34 @@ namespace Jarvis.Framework.Tests.BusTests
             Assert.That(tFail.ErrorMessage, Is.EqualTo("boom"));
             Assert.That(tFail.FullException, Does.Contain("InvalidOperationException"));
             Assert.That((tFail.ExpireDate.Value - tFail.CompletedAt.Value).TotalDays, Is.GreaterThan(365 * 6));
+        }
+
+        [Test]
+        public async Task TrackBatchAsync_with_parallel_options_inserts_all_records()
+        {
+            // Arrange: Create 10 commands
+            var commands = new List<ICommand>();
+            for (int i = 1; i <= 10; i++)
+            {
+                commands.Add(new SampleTestCommand(i));
+            }
+
+            var options = new BatchWriteOptions { DegreeOfParallelism = 3 };
+
+            // Act
+            await sut.TrackBatchAsync(commands, batchWriteOptions: options, cancellationToken: CancellationToken.None);
+
+            // Assert: All commands were tracked
+            var tracks = _messages.Find(_ => true).ToList();
+            Assert.That(tracks.Count, Is.EqualTo(10));
+
+            foreach (var cmd in commands)
+            {
+                var track = tracks.Single(t => t.MessageId == cmd.MessageId.ToString());
+                Assert.That(track.Completed, Is.True);
+                Assert.That(track.Success, Is.True);
+                Assert.That(track.ExecutionCount, Is.EqualTo(1));
+            }
         }
     }
 }

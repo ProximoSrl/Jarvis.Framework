@@ -284,8 +284,9 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
         /// </summary>
         /// <param name="commands">Commands to mark as executed.</param>
         /// <param name="failedCommands">Optional list of failed commands with error details.</param>
+        /// <param name="batchWriteOptions">Options to control parallel chunked writes. When null, uses default single-batch behavior.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
-        public async Task TrackBatchAsync(IReadOnlyCollection<ICommand> commands, IReadOnlyCollection<FailedCommandInfo> failedCommands = null, CancellationToken cancellationToken = default)
+        public async Task TrackBatchAsync(IReadOnlyCollection<ICommand> commands, IReadOnlyCollection<FailedCommandInfo> failedCommands = null, BatchWriteOptions batchWriteOptions = null, CancellationToken cancellationToken = default)
         {
             if (commands == null || commands.Count == 0) return;
             try
@@ -337,10 +338,11 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
                     updates.Add(new UpdateOneModel<TrackedMessageModel>(filter, update) { IsUpsert = true });
                 }
 
-                await Commands.BulkWriteAsync(
+                await BatchWriteHelper.ExecuteInChunksAsync(
                     updates,
-                    new BulkWriteOptions { IsOrdered = false },
-                    cancellationToken: cancellationToken).ConfigureAwait(false);
+                    batchWriteOptions,
+                    (chunk, ct) => Commands.BulkWriteAsync(chunk, new BulkWriteOptions { IsOrdered = false }, cancellationToken: ct),
+                    cancellationToken).ConfigureAwait(false);
 
                 var ids = commands.Select(c => c.MessageId.ToString()).ToList();
                 var modifiedMessages = await Commands.Find(Builders<TrackedMessageModel>.Filter.In(m => m.MessageId, ids)).ToListAsync(cancellationToken).ConfigureAwait(false);

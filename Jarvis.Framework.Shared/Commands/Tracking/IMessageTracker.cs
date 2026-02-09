@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Shared.Commands.Tracking
 {
+
     /// <summary>
     /// Interface used to track message traveling during
     /// queue, execution, etc, concrete instance of this interface
@@ -46,8 +47,9 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
         /// </summary>
         /// <param name="commands">Commands to mark as executed.</param>
         /// <param name="failedCommands">Optional list of failed commands with error details.</param>
+        /// <param name="batchWriteOptions">Options to control parallel chunked writes. When null, uses default single-batch behavior.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
-        Task TrackBatchAsync(IReadOnlyCollection<ICommand> commands, IReadOnlyCollection<FailedCommandInfo> failedCommands = null, CancellationToken cancellationToken = default);
+        Task TrackBatchAsync(IReadOnlyCollection<ICommand> commands, IReadOnlyCollection<FailedCommandInfo> failedCommands = null, BatchWriteOptions batchWriteOptions = null, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Dispatched is the status when the event related to the command is 

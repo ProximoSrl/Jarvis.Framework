@@ -205,7 +205,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic.Support
 
             //now we will persist all readmodels
             var allReadmodels = rmDictionary.Values.Select(v => v.ReadModel).ToList();
-            await _atomicCollectionWrapper.UpsertBatchAsync(allReadmodels, cancellationToken).ConfigureAwait(false);
+            await _atomicCollectionWrapper.UpsertBatchAsync(allReadmodels, cancellationToken: cancellationToken).ConfigureAwait(false);
            
             return results;
         }

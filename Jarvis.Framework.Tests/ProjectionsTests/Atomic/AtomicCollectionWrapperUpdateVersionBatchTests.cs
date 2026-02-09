@@ -1,6 +1,7 @@
 using Castle.Core.Logging;
 using Jarvis.Framework.Kernel.ProjectionEngine.Atomic;
 using Jarvis.Framework.Kernel.ProjectionEngine;
+using Jarvis.Framework.Shared;
 using Jarvis.Framework.Shared.Helpers;
 using Jarvis.Framework.Shared.ReadModel;
 using Jarvis.Framework.Tests.EngineTests;
@@ -466,6 +467,109 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             {
                 var reloaded = await _sut.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
                 Assert.That(reloaded, Is.Not.Null, "New readmodel should be inserted");
+                Assert.That(reloaded.Id, Is.EqualTo(rm.Id));
+            }
+        }
+
+        #endregion
+
+        #region Parallel Batch Write Tests
+
+        [Test]
+        public async Task UpdateVersionBatch_with_parallel_options_should_update_all_existing()
+        {
+            // Arrange: Create and insert 50 readmodels
+            var readmodels = new List<SimpleTestAtomicReadModel>();
+            for (int i = 0; i < 50; i++)
+            {
+                _aggregateIdSeed = 2000 + i;
+                _aggregateVersion = 1;
+                var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
+                var changeset = GenerateCreatedEvent(false);
+                rm.ProcessChangeset(changeset);
+                await _sut.UpsertAsync(rm).ConfigureAwait(false);
+                readmodels.Add(rm);
+            }
+
+            // Update version info
+            for (int i = 0; i < readmodels.Count; i++)
+            {
+                _aggregateIdSeed = 2000 + i;
+                _aggregateVersion = 2;
+                var notHandledEvent = GenerateSampleAggregateNotHandledEvent(false);
+                readmodels[i].ProcessChangeset(notHandledEvent);
+            }
+
+            var options = new BatchWriteOptions { DegreeOfParallelism = 4 };
+
+            // Act
+            await _sut.UpdateVersionBatchAsync(readmodels, options).ConfigureAwait(false);
+
+            // Assert
+            var sampleIndices = new[] { 0, 10, 25, 40, 49 };
+            foreach (var idx in sampleIndices)
+            {
+                var reloaded = await _sut.FindOneByIdAsync(readmodels[idx].Id).ConfigureAwait(false);
+                Assert.That(reloaded, Is.Not.Null);
+                Assert.That(reloaded.AggregateVersion, Is.EqualTo(2));
+            }
+        }
+
+        [Test]
+        public async Task UpdateVersionBatch_with_parallel_options_mixed_insert_update()
+        {
+            // Arrange: 2 existing + 3 new
+            var existingReadmodels = new List<SimpleTestAtomicReadModel>();
+            for (int i = 0; i < 2; i++)
+            {
+                _aggregateIdSeed = 2100 + i;
+                _aggregateVersion = 1;
+                var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
+                var changeset = GenerateCreatedEvent(false);
+                rm.ProcessChangeset(changeset);
+                await _sut.UpsertAsync(rm).ConfigureAwait(false);
+                existingReadmodels.Add(rm);
+            }
+
+            var newReadmodels = new List<SimpleTestAtomicReadModel>();
+            for (int i = 0; i < 3; i++)
+            {
+                _aggregateIdSeed = 2200 + i;
+                _aggregateVersion = 1;
+                var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
+                var changeset = GenerateCreatedEvent(false);
+                rm.ProcessChangeset(changeset);
+                newReadmodels.Add(rm);
+            }
+
+            // Update versions for existing
+            for (int i = 0; i < existingReadmodels.Count; i++)
+            {
+                _aggregateIdSeed = 2100 + i;
+                _aggregateVersion = 2;
+                var notHandledEvent = GenerateSampleAggregateNotHandledEvent(false);
+                existingReadmodels[i].ProcessChangeset(notHandledEvent);
+            }
+
+            var allReadmodels = existingReadmodels.Concat(newReadmodels).ToList();
+            var options = new BatchWriteOptions { DegreeOfParallelism = 3 };
+
+            // Act
+            await _sut.UpdateVersionBatchAsync(allReadmodels, options).ConfigureAwait(false);
+
+            // Assert: existing updated
+            foreach (var rm in existingReadmodels)
+            {
+                var reloaded = await _sut.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
+                Assert.That(reloaded, Is.Not.Null);
+                Assert.That(reloaded.AggregateVersion, Is.EqualTo(2));
+            }
+
+            // Assert: new inserted
+            foreach (var rm in newReadmodels)
+            {
+                var reloaded = await _sut.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
+                Assert.That(reloaded, Is.Not.Null);
                 Assert.That(reloaded.Id, Is.EqualTo(rm.Id));
             }
         }

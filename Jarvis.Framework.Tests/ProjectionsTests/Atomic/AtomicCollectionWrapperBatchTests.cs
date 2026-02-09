@@ -1,6 +1,7 @@
 using Castle.Core.Logging;
 using Jarvis.Framework.Kernel.ProjectionEngine.Atomic;
 using Jarvis.Framework.Kernel.ProjectionEngine;
+using Jarvis.Framework.Shared;
 using Jarvis.Framework.Shared.Helpers;
 using Jarvis.Framework.Shared.ReadModel;
 using Jarvis.Framework.Tests.EngineTests;
@@ -533,6 +534,94 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             var ex = Assert.ThrowsAsync<CollectionWrapperException>(() => _sut.UpsertBatchAsync(batch));
             Assert.That(ex.Message, Does.Contain("Duplicate readmodel Ids found in batch"));
             Assert.That(ex.Message, Does.Contain(rm1.Id));
+        }
+
+        #endregion
+
+        #region Parallel Batch Write Tests
+
+        [Test]
+        public async Task UpsertBatch_with_parallel_options_should_insert_all_readmodels()
+        {
+            // Arrange: Create 100 readmodels
+            var readmodels = new List<SimpleTestAtomicReadModel>();
+            for (int i = 0; i < 100; i++)
+            {
+                _aggregateIdSeed = 2000 + i;
+                _aggregateVersion = 1;
+                var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
+                var changeset = GenerateCreatedEvent(false);
+                rm.ProcessChangeset(changeset);
+                readmodels.Add(rm);
+            }
+
+            var options = new BatchWriteOptions { DegreeOfParallelism = 4 };
+
+            // Act
+            await _sut.UpsertBatchAsync(readmodels, options).ConfigureAwait(false);
+
+            // Assert: Verify all were inserted
+            var totalCount = await _collection.CountDocumentsAsync(Builders<SimpleTestAtomicReadModel>.Filter.Empty).ConfigureAwait(false);
+            Assert.That(totalCount, Is.GreaterThanOrEqualTo(100));
+
+            // Spot check
+            var sampleIndices = new[] { 0, 25, 50, 75, 99 };
+            foreach (var idx in sampleIndices)
+            {
+                var reloaded = await _sut.FindOneByIdAsync(readmodels[idx].Id).ConfigureAwait(false);
+                Assert.That(reloaded, Is.Not.Null, $"Readmodel at index {idx} should be saved");
+                Assert.That(reloaded.Id, Is.EqualTo(readmodels[idx].Id));
+                Assert.That(reloaded.AggregateVersion, Is.EqualTo(1));
+            }
+        }
+
+        [Test]
+        public async Task UpsertBatch_with_parallel_options_and_single_item_should_work()
+        {
+            // Arrange
+            _aggregateIdSeed = 2100;
+            _aggregateVersion = 1;
+            var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
+            var changeset = GenerateCreatedEvent(false);
+            rm.ProcessChangeset(changeset);
+
+            var options = new BatchWriteOptions { DegreeOfParallelism = 4 };
+
+            // Act
+            await _sut.UpsertBatchAsync(new List<SimpleTestAtomicReadModel> { rm }, options).ConfigureAwait(false);
+
+            // Assert
+            var reloaded = await _sut.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
+            Assert.That(reloaded, Is.Not.Null);
+            Assert.That(reloaded.Id, Is.EqualTo(rm.Id));
+        }
+
+        [Test]
+        public async Task UpsertBatch_with_more_parallelism_than_items_should_work()
+        {
+            // Arrange: 3 items with DegreeOfParallelism = 10
+            var readmodels = new List<SimpleTestAtomicReadModel>();
+            for (int i = 0; i < 3; i++)
+            {
+                _aggregateIdSeed = 2200 + i;
+                _aggregateVersion = 1;
+                var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
+                var changeset = GenerateCreatedEvent(false);
+                rm.ProcessChangeset(changeset);
+                readmodels.Add(rm);
+            }
+
+            var options = new BatchWriteOptions { DegreeOfParallelism = 10 };
+
+            // Act
+            await _sut.UpsertBatchAsync(readmodels, options).ConfigureAwait(false);
+
+            // Assert
+            foreach (var rm in readmodels)
+            {
+                var reloaded = await _sut.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
+                Assert.That(reloaded, Is.Not.Null);
+            }
         }
 
         #endregion
