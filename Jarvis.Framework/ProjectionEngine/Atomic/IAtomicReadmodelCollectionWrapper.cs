@@ -1,4 +1,5 @@
-﻿using Jarvis.Framework.Shared.ReadModel.Atomic;
+﻿using Jarvis.Framework.Shared;
+using Jarvis.Framework.Shared.ReadModel.Atomic;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -212,6 +213,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// </para>
         /// </summary>
         /// <param name="models">Collection of readmodel instances to upsert. Must not contain duplicate Ids.</param>
+        /// <param name="batchWriteOptions">Options to control parallel chunked writes. When null, uses default single-batch behavior.</param>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>A task representing the asynchronous batch operation</returns>
         /// <exception cref="ArgumentNullException">Thrown when models collection is null</exception>
@@ -222,7 +224,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// when dealing with large batches of readmodels. Empty collections are handled gracefully.
         /// The batch must not contain duplicate readmodel Ids.
         /// </remarks>
-        Task UpsertBatchAsync(IEnumerable<TModel> models, CancellationToken cancellationToken = default);
+        Task UpsertBatchAsync(IEnumerable<TModel> models, BatchWriteOptions batchWriteOptions = null, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// <para>
@@ -278,6 +280,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// </para>
         /// </summary>
         /// <param name="models">Collection of readmodel instances with updated version information. Must not contain duplicate Ids.</param>
+        /// <param name="batchWriteOptions">Options to control parallel chunked writes. When null, uses default single-batch behavior.</param>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>A task representing the asynchronous batch operation</returns>
         /// <exception cref="ArgumentNullException">Thrown when models collection is null</exception>
@@ -289,7 +292,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// version-tracking fields. Empty collections are handled gracefully.
         /// The batch must not contain duplicate readmodel Ids.
         /// </remarks>
-        Task UpdateVersionBatchAsync(IEnumerable<TModel> models, CancellationToken cancellationToken = default);
+        Task UpdateVersionBatchAsync(IEnumerable<TModel> models, BatchWriteOptions batchWriteOptions = null, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Delete a readmodel instance from the underlying storage by its id.

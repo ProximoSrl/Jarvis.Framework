@@ -1,6 +1,7 @@
 ﻿using App.Metrics;
 using App.Metrics.Counter;
 using Castle.Core.Logging;
+using Jarvis.Framework.Shared;
 using Jarvis.Framework.Shared.Helpers;
 using Jarvis.Framework.Shared.ReadModel;
 using Jarvis.Framework.Shared.ReadModel.Atomic;
@@ -525,7 +526,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         }
 
         /// <inheritdoc />
-        public async Task UpdateVersionBatchAsync(IEnumerable<TModel> models, CancellationToken cancellationToken = default)
+        public async Task UpdateVersionBatchAsync(IEnumerable<TModel> models, BatchWriteOptions batchWriteOptions = null, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(models);
 
@@ -598,26 +599,37 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                     bulkOps.Add(new UpdateOneModel<TModel>(filter, update));
                 }
 
-                await _collection.BulkWriteAsync(bulkOps, new BulkWriteOptions { IsOrdered = false }, cancellationToken).ConfigureAwait(false);
+                await BatchWriteHelper.ExecuteInChunksAsync(
+                    bulkOps,
+                    batchWriteOptions,
+                    (chunk, ct) => _collection.BulkWriteAsync(chunk, new BulkWriteOptions { IsOrdered = false }, ct),
+                    cancellationToken).ConfigureAwait(false);
             }
 
             // Insert missing models (fallback behavior from UpdateVersionAsync)
             if (modelsToInsert.Count > 0)
             {
-                try
-                {
-                    await _collection.InsertManyAsync(modelsToInsert, new InsertManyOptions { IsOrdered = false }, cancellationToken).ConfigureAwait(false);
-                }
-                catch (MongoException mex)
-                {
-                    // Handle concurrent inserts - if another thread inserted between our check and insert,
-                    // we can safely ignore duplicate key errors
-                    if (!mex.Message.Contains(ConcurrencyException))
+                await BatchWriteHelper.ExecuteInChunksAsync(
+                    modelsToInsert,
+                    batchWriteOptions,
+                    async (chunk, ct) =>
                     {
-                        throw;
-                    }
-                    // Duplicate key errors are expected in concurrent scenarios and can be ignored
-                }
+                        try
+                        {
+                            await _collection.InsertManyAsync(chunk, new InsertManyOptions { IsOrdered = false }, ct).ConfigureAwait(false);
+                        }
+                        catch (MongoException mex)
+                        {
+                            // Handle concurrent inserts - if another thread inserted between our check and insert,
+                            // we can safely ignore duplicate key errors
+                            if (!mex.Message.Contains(ConcurrencyException))
+                            {
+                                throw;
+                            }
+                            // Duplicate key errors are expected in concurrent scenarios and can be ignored
+                        }
+                    },
+                    cancellationToken).ConfigureAwait(false);
             }
         }
 
@@ -634,7 +646,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         }
 
         /// <inheritdoc />
-        public async Task UpsertBatchAsync(IEnumerable<TModel> models, CancellationToken cancellationToken = default)
+        public async Task UpsertBatchAsync(IEnumerable<TModel> models, BatchWriteOptions batchWriteOptions = null, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(models);
 
@@ -735,7 +747,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             }
 
             // Execute the bulk write operation
-            await _collection.BulkWriteAsync(bulkOps, new BulkWriteOptions { IsOrdered = false }, cancellationToken).ConfigureAwait(false);
+            await BatchWriteHelper.ExecuteInChunksAsync(
+                bulkOps,
+                batchWriteOptions,
+                (chunk, ct) => _collection.BulkWriteAsync(chunk, new BulkWriteOptions { IsOrdered = false }, ct),
+                cancellationToken).ConfigureAwait(false);
         }
     }
 }
