@@ -153,7 +153,7 @@ namespace Jarvis.Framework.Tests.BusTests
             do
             {
                 Thread.Sleep(50);
-                var tracks = _messages.FindAll().ToList();
+                var tracks = _messages.Find(_ => true).ToList();
                 Assert.That(tracks, Has.Count.EqualTo(1));
                 track = tracks.Single();
             }
@@ -202,7 +202,7 @@ namespace Jarvis.Framework.Tests.BusTests
             do
             {
                 Thread.Sleep(50);
-                tracks = _messages.FindAll().ToList();
+                tracks = _messages.Find(_ => true).ToList();
             }
             while (
                     tracks.Count < 2 && //command tracking and commandhandled tracking
@@ -239,7 +239,7 @@ namespace Jarvis.Framework.Tests.BusTests
             do
             {
                 Thread.Sleep(50);
-                var tracks = _messages.FindAll().ToList();
+                var tracks = _messages.Find(_ => true).ToList();
                 track = tracks.Single();
             }
             while (

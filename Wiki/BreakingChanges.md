@@ -1,6 +1,10 @@
 # Version 7
 
-## vNext
+## 7.13.0
+
+- IDentityManager now require an IReservableCounter service.
+
+## 7.12.0
 
 - All methods from ILiveAtomicReadModelProcessorEnhanced and ILiveAtomicReadModelProcessor now ended with Async and does not contains async in the name ex: instead of ProcessAsyncUntilChunkPosition is ProcessUntilChunkPositionAsync
 - All async methods in IAtomicCollectionWrapper and IAtomicReadmodelProjectorHelper now have CancellationToken parameters with default values

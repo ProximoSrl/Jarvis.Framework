@@ -10,10 +10,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using static Jarvis.Framework.Shared.ReadModel.Atomic.AtomicReadmodelMultiAggregateSubscription;
 
-namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
-{
-    /// <inheritdoc/>
-    public class LiveAtomicReadModelProcessor : ILiveAtomicReadModelProcessor, ILiveAtomicMultistreamReadModelProcessor, ILiveAtomicReadModelProcessorEnhanced
+namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic;
+
+/// <inheritdoc/>
+public class LiveAtomicReadModelProcessor : ILiveAtomicReadModelProcessor, ILiveAtomicMultistreamReadModelProcessor, ILiveAtomicReadModelProcessorEnhanced
 	{
 		private readonly ICommitEnhancer _commitEnhancer;
 		private readonly IPersistence _persistence;
@@ -63,6 +63,42 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 		}
 
 		/// <inheritdoc/>
+		public async Task CatchupBatchAsync<TModel>(
+			IReadOnlyCollection<TModel> readModels,
+			CancellationToken cancellationToken = default)
+			where TModel : IAtomicReadModel
+		{
+        ArgumentNullException.ThrowIfNull(readModels);
+
+        if (readModels.Count == 0)
+			{
+				return;
+			}
+
+			// Build dictionary for quick lookup during subscription processing
+			var rmDictionary = readModels.ToDictionary(rm => rm.Id);
+
+			// Build partition read requests - each readmodel starts from its current version + 1
+			var partitionRequests = readModels
+				.Select(rm => new PartitionReadRequest(
+					rm.Id,
+					rm.AggregateVersion + 1,
+					Int64.MaxValue))
+				.ToList();
+
+			// Create subscription to process incoming chunks
+			var subscription = new AtomicReadmodelBatchCatchupSubscription<TModel>(
+				_commitEnhancer,
+				rmDictionary);
+
+			// Use NStore's batch read API to read multiple partitions with different starting positions
+			await _persistence.ReadForwardMultiplePartitionsWithRangesAsync(
+				partitionRequests,
+				subscription,
+				cancellationToken).ConfigureAwait(false);
+		}
+
+		/// <inheritdoc/>
 		public async Task<TModel> ProcessUntilUtcTimestampAsync<TModel>(string id, DateTime dateTimeUpTo, CancellationToken cancellationToken = default) where TModel : IAtomicReadModel
 		{
 			var readmodel = _atomicReadModelFactory.Create<TModel>(id);
@@ -72,9 +108,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 		}
 
 		public async Task<MultiStreamProcessorResult> ProcessAsync(
-            IReadOnlyCollection<MultiStreamProcessRequest> request,
-            long checkpointUpToIncluded,
-            CancellationToken cancellation = default)
+        IReadOnlyCollection<MultiStreamProcessRequest> request,
+        long checkpointUpToIncluded,
+        CancellationToken cancellation = default)
 		{
 			if (request is null)
 			{
@@ -93,19 +129,19 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 		}
 
 		public async Task<MultiStreamProcessorResult> ProcessAsync(
-            IReadOnlyCollection<MultiStreamProcessRequest> request, DateTime dateTimeUpTo, CancellationToken cancellation = default)
+        IReadOnlyCollection<MultiStreamProcessRequest> request, DateTime dateTimeUpTo, CancellationToken cancellation = default)
 		{
 			if (request is null)
 			{
 				throw new ArgumentNullException(nameof(request));
 			}
 
-            //Need to prepare readmodel
-            var rmDictionary = request.ToDictionary(
-                r => r.AggregateId,
-                r => ReadModelProjectionInstruction.SimpleProjection(r.ReadmodelTypes.Select(t => _atomicReadModelFactory.Create(t, r.AggregateId)).ToList()));
+        //Need to prepare readmodel
+        var rmDictionary = request.ToDictionary(
+            r => r.AggregateId,
+            r => ReadModelProjectionInstruction.SimpleProjection(r.ReadmodelTypes.Select(t => _atomicReadModelFactory.Create(t, r.AggregateId)).ToList()));
 
-            var subscription = new AtomicReadmodelMultiAggregateSubscription(_commitEnhancer, rmDictionary, cs => cs.GetTimestamp() > dateTimeUpTo);
+        var subscription = new AtomicReadmodelMultiAggregateSubscription(_commitEnhancer, rmDictionary, cs => cs.GetTimestamp() > dateTimeUpTo);
 			var idList = request.Select(r => r.AggregateId).ToList();
 			await _persistence.ReadForwardMultiplePartitionsAsync(idList, 0, subscription, Int32.MaxValue, cancellation).ConfigureAwait(false);
 			return new MultiStreamProcessorResult(rmDictionary.Values.Select(v => v.Readmodels));
@@ -121,31 +157,31 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 			return new MultipleReadmodelProjectionResult(readModels);
 		}
 
-        /// <inheritdoc/>
-        public async Task<MultiStreamProcessorResult> ProcessAsync(IReadOnlyCollection<CheckpointMultiStreamProcessRequest> request, CancellationToken cancellation = default)
+    /// <inheritdoc/>
+    public async Task<MultiStreamProcessorResult> ProcessAsync(IReadOnlyCollection<CheckpointMultiStreamProcessRequest> request, CancellationToken cancellation = default)
+    {
+        if (request is null)
         {
-            if (request is null)
-            {
-                throw new ArgumentNullException(nameof(request));
-            }
-
-            //Need to prepare readmodels
-            var rmDictionary = request.ToDictionary(
-                r => r.AggregateId,
-                r => ReadModelProjectionInstruction.CheckpointProjection(r.ReadmodelTypes.Select(t => _atomicReadModelFactory.Create(t, r.AggregateId)).ToList(), r.CheckpointLimit));
-
-            //Stop reading at max checkpoint
-            var maxCheckpoint = request.Max(r => r.CheckpointLimit);
-
-            var subscription = new AtomicReadmodelMultiAggregateSubscription(_commitEnhancer, rmDictionary, cs => cs.GetChunkPosition() > maxCheckpoint);
-
-            var idList = request.Select(r => r.AggregateId).ToList();
-            await _persistence.ReadForwardMultiplePartitionsAsync(idList, 0, subscription, Int32.MaxValue, cancellation).ConfigureAwait(false);
-            return new MultiStreamProcessorResult(rmDictionary.Values.Select(v => v.Readmodels));
+            throw new ArgumentNullException(nameof(request));
         }
 
-        /// <inheritdoc/>
-        public async Task<MultipleReadmodelProjectionResult> ProcessUntilChunkPositionAsync(IEnumerable<Type> types, string id, long positionUpTo, CancellationToken cancellationToken = default)
+        //Need to prepare readmodels
+        var rmDictionary = request.ToDictionary(
+            r => r.AggregateId,
+            r => ReadModelProjectionInstruction.CheckpointProjection(r.ReadmodelTypes.Select(t => _atomicReadModelFactory.Create(t, r.AggregateId)).ToList(), r.CheckpointLimit));
+
+        //Stop reading at max checkpoint
+        var maxCheckpoint = request.Max(r => r.CheckpointLimit);
+
+        var subscription = new AtomicReadmodelMultiAggregateSubscription(_commitEnhancer, rmDictionary, cs => cs.GetChunkPosition() > maxCheckpoint);
+
+        var idList = request.Select(r => r.AggregateId).ToList();
+        await _persistence.ReadForwardMultiplePartitionsAsync(idList, 0, subscription, Int32.MaxValue, cancellation).ConfigureAwait(false);
+        return new MultiStreamProcessorResult(rmDictionary.Values.Select(v => v.Readmodels));
+    }
+
+    /// <inheritdoc/>
+    public async Task<MultipleReadmodelProjectionResult> ProcessUntilChunkPositionAsync(IEnumerable<Type> types, string id, long positionUpTo, CancellationToken cancellationToken = default)
 		{
 			List<IAtomicReadModel> readModels = types.Select(rmt => _atomicReadModelFactory.Create(rmt, id)).ToList();
 			var subscription = new MultipleAtomicReadModelSubscription(_commitEnhancer, readModels, cs => cs.GetChunkPosition() > positionUpTo);
@@ -162,31 +198,30 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 			return new MultipleReadmodelProjectionResult(readModels);
 		}
 
-        /// <inheritdoc/>
-        public async Task<TModel> ProcessUntilAsync<TModel>(
-            string id,
-            TModel readModel,
-            Func<Changeset, TModel, CancellationToken, Task<bool>> changesetConditionEvaluator,
-            Func<TModel, CancellationToken, Task<bool>> conditionEvaluator,
-            CancellationToken cancellationToken = default) where TModel : IAtomicReadModel
+    /// <inheritdoc/>
+    public async Task<TModel> ProcessUntilAsync<TModel>(
+        string id,
+        TModel readModel,
+        Func<Changeset, TModel, CancellationToken, Task<bool>> changesetConditionEvaluator,
+        Func<TModel, CancellationToken, Task<bool>> conditionEvaluator,
+        CancellationToken cancellationToken = default) where TModel : IAtomicReadModel
+    {
+        if (id is null)
         {
-            if (id is null)
-            {
-                throw new ArgumentNullException(nameof(id));
-            }
-
-            if (changesetConditionEvaluator == null && conditionEvaluator == null)
-            {
-                throw new ArgumentException(nameof(changesetConditionEvaluator), "At least one condition evaluator must be specified.");
-            }
-
-            var startReading = readModel?.AggregateVersion + 1 ?? 0;
-            readModel ??= _atomicReadModelFactory.Create<TModel>(id);
-
-            var subscription = new AsyncAtomicReadModelSubscription<TModel>(_commitEnhancer, readModel, changesetConditionEvaluator, conditionEvaluator);
-
-            await _persistence.ReadForwardAsync(id, startReading, subscription, Int64.MaxValue, Int32.MaxValue, cancellationToken).ConfigureAwait(false);
-            return readModel.AggregateVersion == 0 ? default : readModel;
+            throw new ArgumentNullException(nameof(id));
         }
+
+        if (changesetConditionEvaluator == null && conditionEvaluator == null)
+        {
+            throw new ArgumentException(nameof(changesetConditionEvaluator), "At least one condition evaluator must be specified.");
+        }
+
+        var startReading = readModel?.AggregateVersion + 1 ?? 0;
+        readModel ??= _atomicReadModelFactory.Create<TModel>(id);
+
+        var subscription = new AsyncAtomicReadModelSubscription<TModel>(_commitEnhancer, readModel, changesetConditionEvaluator, conditionEvaluator);
+
+        await _persistence.ReadForwardAsync(id, startReading, subscription, Int64.MaxValue, Int32.MaxValue, cancellationToken).ConfigureAwait(false);
+        return readModel.AggregateVersion == 0 ? default : readModel;
     }
 }

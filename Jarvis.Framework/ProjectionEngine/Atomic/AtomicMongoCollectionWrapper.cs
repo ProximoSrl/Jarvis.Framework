@@ -1,6 +1,7 @@
 ﻿using App.Metrics;
 using App.Metrics.Counter;
 using Castle.Core.Logging;
+using Jarvis.Framework.Shared;
 using Jarvis.Framework.Shared.Helpers;
 using Jarvis.Framework.Shared.ReadModel;
 using Jarvis.Framework.Shared.ReadModel.Atomic;
@@ -17,31 +18,32 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 {
     /// <inheritdoc />
     public class AtomicMongoCollectionWrapper<TModel> : IAtomicCollectionWrapper<TModel>
-		where TModel : class, IAtomicReadModel
-	{
-		private const string ConcurrencyException = "E1100";
+        where TModel : class, IAtomicReadModel
+    {
+        private const string ConcurrencyException = "E1100";
 
-		private readonly IMongoCollection<TModel> _collection;
+        private readonly IMongoCollection<TModel> _collection;
         private readonly IMongoCollection<TModel> _collectionOnSecondary;
 
         private readonly Int32 _actualVersion;
-		private readonly ILiveAtomicReadModelProcessor _liveAtomicReadModelProcessor;
+        private readonly ILiveAtomicReadModelProcessor _liveAtomicReadModelProcessor;
+        private readonly IAtomicReadModelFactory _atomicReadModelFactory;
 
-		internal const int MaxNumberOfRetryToReprojectFaultedReadmodels = 3;
+        internal const int MaxNumberOfRetryToReprojectFaultedReadmodels = 3;
 
-		protected readonly ILogger _logger;
+        protected readonly ILogger _logger;
 
-		private static readonly CounterOptions FindOneByIdCounter = new CounterOptions()
-		{
-			Name = "AtomicRmFindOneByIdr",
-			MeasurementUnit = Unit.Calls
-		};
+        private static readonly CounterOptions FindOneByIdCounter = new CounterOptions()
+        {
+            Name = "AtomicRmFindOneByIdr",
+            MeasurementUnit = Unit.Calls
+        };
 
-		private static readonly CounterOptions QueryCounter = new CounterOptions()
-		{
-			Name = "AtomicRmQuery",
-			MeasurementUnit = Unit.Calls
-		};
+        private static readonly CounterOptions QueryCounter = new CounterOptions()
+        {
+            Name = "AtomicRmQuery",
+            MeasurementUnit = Unit.Calls
+        };
 
         private static readonly CounterOptions QueryCounterSecondary = new CounterOptions()
         {
@@ -50,75 +52,76 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         };
 
         private static readonly CounterOptions FindOneByIdAndCachupCounter = new CounterOptions()
-		{
-			Name = "AtomicRmFindOneByIdAndCachup",
-			MeasurementUnit = Unit.Calls
-		};
+        {
+            Name = "AtomicRmFindOneByIdAndCachup",
+            MeasurementUnit = Unit.Calls
+        };
 
-		private static readonly CounterOptions FindOneByIdAtCheckpointCachupCounter = new CounterOptions()
-		{
-			Name = "AtomicRmFindOneByIdAtCheckpointCachup",
-			MeasurementUnit = Unit.Calls
-		};
+        private static readonly CounterOptions FindOneByIdAtCheckpointCachupCounter = new CounterOptions()
+        {
+            Name = "AtomicRmFindOneByIdAtCheckpointCachup",
+            MeasurementUnit = Unit.Calls
+        };
 
         private static ReadPreference secondaryReadPreference = new ReadPreference(ReadPreferenceMode.SecondaryPreferred);
 
         public AtomicMongoCollectionWrapper(
-			IMongoDatabase readmodelDb,
-			IAtomicReadModelFactory atomicReadModelFactory,
-			ILiveAtomicReadModelProcessor liveAtomicReadModelProcessor,
-			ILogger logger)
-		{
-			_logger = logger;
-			_liveAtomicReadModelProcessor = liveAtomicReadModelProcessor;
+            IMongoDatabase readmodelDb,
+            IAtomicReadModelFactory atomicReadModelFactory,
+            ILiveAtomicReadModelProcessor liveAtomicReadModelProcessor,
+            ILogger logger)
+        {
+            _logger = logger;
+            _liveAtomicReadModelProcessor = liveAtomicReadModelProcessor;
+            _atomicReadModelFactory = atomicReadModelFactory;
 
-			var collectionName = CollectionNames.GetCollectionName<TModel>();
-			_collection = readmodelDb.GetCollection<TModel>(collectionName);
+            var collectionName = CollectionNames.GetCollectionName<TModel>();
+            _collection = readmodelDb.GetCollection<TModel>(collectionName);
             _collectionOnSecondary = readmodelDb.GetCollection<TModel>(collectionName).WithReadPreference(secondaryReadPreference);
 
-			var allIndex = _collection.GetIndexNames();
+            var allIndex = _collection.GetIndexNames();
 
-			DropOldIndexes(allIndex);
+            DropOldIndexes(allIndex);
 
             if (!allIndex.Contains("ReadModelVersionForFixer2"))
-			{
-				//This is the base index that will be used from the fixer to find 
-				//readmodel that are old and needs to be fixed.
-				_logger.InfoFormat($"About to create index ReadModelVersionForFixer2 for Readmodel collection {0}", _collection.CollectionNamespace.CollectionName);
-				_collection.Indexes.CreateOne(
-				   new CreateIndexModel<TModel>(
-					   Builders<TModel>.IndexKeys
-						   .Ascending(_ => _.ProjectedPosition)
-						   .Ascending(_ => _.ReadModelVersion)
-						   .Ascending(_ => _.Id),
-					   new CreateIndexOptions()
-					   {
-						   Name = "ReadModelVersionForFixer2",
-						   Background = false
-					   }
-				   )
-				);
-			}
+            {
+                //This is the base index that will be used from the fixer to find 
+                //readmodel that are old and needs to be fixed.
+                _logger.InfoFormat($"About to create index ReadModelVersionForFixer2 for Readmodel collection {0}", _collection.CollectionNamespace.CollectionName);
+                _collection.Indexes.CreateOne(
+                   new CreateIndexModel<TModel>(
+                       Builders<TModel>.IndexKeys
+                           .Ascending(_ => _.ProjectedPosition)
+                           .Ascending(_ => _.ReadModelVersion)
+                           .Ascending(_ => _.Id),
+                       new CreateIndexOptions()
+                       {
+                           Name = "ReadModelVersionForFixer2",
+                           Background = false
+                       }
+                   )
+                );
+            }
 
-			_actualVersion = atomicReadModelFactory.GetReamdodelVersion(typeof(TModel));
-		}
+            _actualVersion = atomicReadModelFactory.GetReamdodelVersion(typeof(TModel));
+        }
 
-		private void DropOldIndexes(IReadOnlyCollection<string> allIndex)
-		{
-			if (allIndex.Contains("ReadModelVersion"))
-			{
-				try
-				{
-					//Drop the old readmodel version index.
-					_logger.InfoFormat("Dropping old index ReadModelVersion from readmodel collection {0}", _collection.CollectionNamespace.CollectionName);
-					_collection.Indexes.DropOne("ReadModelVersion");
-				}
-				catch (Exception ex)
-				{
-					_logger.ErrorFormat(ex, "Error dropping ReadModelVersion index from readmodel collection {0}", _collection.CollectionNamespace.CollectionName);
-					//Ignore all exceptions, if we cannot drop the index we can proceed
-				}
-			}
+        private void DropOldIndexes(IReadOnlyCollection<string> allIndex)
+        {
+            if (allIndex.Contains("ReadModelVersion"))
+            {
+                try
+                {
+                    //Drop the old readmodel version index.
+                    _logger.InfoFormat("Dropping old index ReadModelVersion from readmodel collection {0}", _collection.CollectionNamespace.CollectionName);
+                    _collection.Indexes.DropOne("ReadModelVersion");
+                }
+                catch (Exception ex)
+                {
+                    _logger.ErrorFormat(ex, "Error dropping ReadModelVersion index from readmodel collection {0}", _collection.CollectionNamespace.CollectionName);
+                    //Ignore all exceptions, if we cannot drop the index we can proceed
+                }
+            }
             if (allIndex.Contains("ProjectedPosition"))
             {
                 try
@@ -134,27 +137,27 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 }
             }
             if (allIndex.Contains("ReadModelVersionForFixer"))
-			{
-				try
-				{
-					//Drop the old readmodel version index.
-					_logger.InfoFormat("Dropping old index ReadModelVersionForFixer from readmodel collection {0}", _collection.CollectionNamespace.CollectionName);
-					_collection.Indexes.DropOne("ReadModelVersionForFixer");
-				}
-				catch (Exception ex)
-				{
-					_logger.ErrorFormat(ex, "Error dropping ReadModelVersionForFixer index from readmodel collection {0}", _collection.CollectionNamespace.CollectionName);
-					//Ignore all exceptions, if we cannot drop the index we can proceed
-				}
-			}
-		}
+            {
+                try
+                {
+                    //Drop the old readmodel version index.
+                    _logger.InfoFormat("Dropping old index ReadModelVersionForFixer from readmodel collection {0}", _collection.CollectionNamespace.CollectionName);
+                    _collection.Indexes.DropOne("ReadModelVersionForFixer");
+                }
+                catch (Exception ex)
+                {
+                    _logger.ErrorFormat(ex, "Error dropping ReadModelVersionForFixer index from readmodel collection {0}", _collection.CollectionNamespace.CollectionName);
+                    //Ignore all exceptions, if we cannot drop the index we can proceed
+                }
+            }
+        }
 
-		/// <inheritdoc />
-		public IQueryable<TModel> AsQueryable()
-		{
-			JarvisFrameworkMetricsHelper.Counter.Increment(QueryCounter, 1, typeof(TModel).Name);
-			return _collection.AsQueryable();
-		}
+        /// <inheritdoc />
+        public IQueryable<TModel> AsQueryable()
+        {
+            JarvisFrameworkMetricsHelper.Counter.Increment(QueryCounter, 1, typeof(TModel).Name);
+            return _collection.AsQueryable();
+        }
 
         public IQueryable<TModel> AsQueryableSecondaryPreferred()
         {
@@ -164,169 +167,270 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
         /// <inheritdoc />
         public async Task<TModel> FindOneByIdAsync(String id, CancellationToken cancellationToken = default)
-		{
-			TModel rm = null;
-			Boolean fixableExceptions = false;
-			JarvisFrameworkMetricsHelper.Counter.Increment(FindOneByIdCounter, 1, typeof(TModel).Name);
+        {
+            TModel rm = null;
+            Boolean fixableExceptions = false;
+            JarvisFrameworkMetricsHelper.Counter.Increment(FindOneByIdCounter, 1, typeof(TModel).Name);
 
-			//try to read, but intercept a format exception if someone changed binary
-			//serialization on mongodb.
-			try
-			{
-				rm = await _collection.FindOneByIdAsync(id, cancellationToken).ConfigureAwait(false);
+            //try to read, but intercept a format exception if someone changed binary
+            //serialization on mongodb.
+            try
+            {
+                rm = await _collection.FindOneByIdAsync(id, cancellationToken).ConfigureAwait(false);
 
-				//if readmodel is faulted we can retry up to MaxNumberOfRetryToReprojectFaultedReadmodels to reproject.
-				if (rm?.Faulted == true && rm.FaultRetryCount < MaxNumberOfRetryToReprojectFaultedReadmodels) fixableExceptions = true;
-			}
-			catch (FormatException)
-			{
-				fixableExceptions = true;
-			}
+                //if readmodel is faulted we can retry up to MaxNumberOfRetryToReprojectFaultedReadmodels to reproject.
+                if (rm?.Faulted == true && rm.FaultRetryCount < MaxNumberOfRetryToReprojectFaultedReadmodels) fixableExceptions = true;
+            }
+            catch (FormatException)
+            {
+                fixableExceptions = true;
+            }
 
-			//ok check if we need rebuild in memory, it happens when the RM changed version
-			//or if we have a fixable exception.
-			if (fixableExceptions || (rm != null && rm.ReadModelVersion != _actualVersion))
-			{
-				//We need to update mongo only if the actual signature is greater
-				//than the old signature that we found on the database.
-				Boolean shouldSave = fixableExceptions || rm.ReadModelVersion < _actualVersion;
+            //ok check if we need rebuild in memory, it happens when the RM changed version
+            //or if we have a fixable exception.
+            if (fixableExceptions || (rm != null && rm.ReadModelVersion != _actualVersion))
+            {
+                //We need to update mongo only if the actual signature is greater
+                //than the old signature that we found on the database.
+                Boolean shouldSave = fixableExceptions || rm.ReadModelVersion < _actualVersion;
 
-				//houston, we have a problem, database readmodel is out of sync.
-				TModel fixedRm = null;
+                //houston, we have a problem, database readmodel is out of sync.
+                TModel fixedRm = null;
 
-				try
-				{
-					fixedRm = await _liveAtomicReadModelProcessor.ProcessAsync<TModel>(id, Int32.MaxValue, cancellationToken).ConfigureAwait(false);
-					//Save if we have a newer readmodel
-					if (shouldSave && fixedRm != null)
-					{
-						await UpdateAsync(fixedRm, cancellationToken).ConfigureAwait(false);
-					}
-					rm = fixedRm;
-				}
-				catch (Exception)
-				{
-					//ok we cannot fix the record, we have some nasty problem, we mark the readmodel as faulted an return the original
-					//readmodel, if reamdodel is null, we need to throw, because we cannot read anything, but if the readmodel
-					//was correctly read and was already fault, we need to tolerate the error and move on
-					if (rm?.Faulted == true)
-					{
-						//we were fixing a readmodel that was already faulted, we return the already faulted readmodel but increment failure
-						await IncrementFailureCount(rm, cancellationToken);
-					}
-					else
-					{
-						throw;
-					}
-				}
-			}
+                try
+                {
+                    fixedRm = await _liveAtomicReadModelProcessor.ProcessAsync<TModel>(id, Int32.MaxValue, cancellationToken).ConfigureAwait(false);
+                    //Save if we have a newer readmodel
+                    if (shouldSave && fixedRm != null)
+                    {
+                        await UpdateAsync(fixedRm, cancellationToken).ConfigureAwait(false);
+                    }
+                    rm = fixedRm;
+                }
+                catch (Exception)
+                {
+                    //ok we cannot fix the record, we have some nasty problem, we mark the readmodel as faulted an return the original
+                    //readmodel, if reamdodel is null, we need to throw, because we cannot read anything, but if the readmodel
+                    //was correctly read and was already fault, we need to tolerate the error and move on
+                    if (rm?.Faulted == true)
+                    {
+                        //we were fixing a readmodel that was already faulted, we return the already faulted readmodel but increment failure
+                        await IncrementFailureCount(rm, cancellationToken);
+                    }
+                    else
+                    {
+                        throw;
+                    }
+                }
+            }
 
-			return rm;
-		}
+            return rm;
+        }
 
-	private Task IncrementFailureCount(TModel rm, CancellationToken cancellationToken = default)
-	{
-		return _collection.FindOneAndUpdateAsync(
-			Builders<TModel>.Filter.Eq("_id", rm.Id),
-			Builders<TModel>.Update.Inc(d => d.FaultRetryCount, 1),
-			cancellationToken: cancellationToken);
-	}		/// <inheritdoc />
+        private Task IncrementFailureCount(TModel rm, CancellationToken cancellationToken = default)
+        {
+            return _collection.FindOneAndUpdateAsync(
+                Builders<TModel>.Filter.Eq("_id", rm.Id),
+                Builders<TModel>.Update.Inc(d => d.FaultRetryCount, 1),
+                cancellationToken: cancellationToken);
+        }		/// <inheritdoc />
 		public async Task<TModel> FindOneByIdAndCatchupAsync(string id, CancellationToken cancellationToken = default)
-		{
-			var rm = await FindOneByIdAsync(id, cancellationToken).ConfigureAwait(false);
-			JarvisFrameworkMetricsHelper.Counter.Increment(FindOneByIdAndCachupCounter, 1, typeof(TModel).Name);
-			if (rm == null)
-			{
-				//Try to project a new readmodel
-				rm = await _liveAtomicReadModelProcessor.ProcessAsync<TModel>(id, Int64.MaxValue).ConfigureAwait(false);
-				if (rm?.AggregateVersion == 0)
-				{
-					//we have an aggregate with no commit, just return null.
-					return null;
-				}
-				return rm; //Return new projected readmodel
-			}
-			await _liveAtomicReadModelProcessor.CatchupAsync(rm).ConfigureAwait(false);
-			return rm;
-		}
+        {
+            var rm = await FindOneByIdAsync(id, cancellationToken).ConfigureAwait(false);
+            JarvisFrameworkMetricsHelper.Counter.Increment(FindOneByIdAndCachupCounter, 1, typeof(TModel).Name);
+            if (rm == null)
+            {
+                //Try to project a new readmodel
+                rm = await _liveAtomicReadModelProcessor.ProcessAsync<TModel>(id, Int64.MaxValue, cancellationToken).ConfigureAwait(false);
+                if (rm?.AggregateVersion == 0)
+                {
+                    //we have an aggregate with no commit, just return null.
+                    return null;
+                }
+                return rm; //Return new projected readmodel
+            }
+            await _liveAtomicReadModelProcessor.CatchupAsync(rm, cancellationToken).ConfigureAwait(false);
+            return rm;
+        }
 
-		/// <inheritdoc />
-		public async Task<IReadOnlyCollection<TModel>> FindManyAsync(System.Linq.Expressions.Expression<Func<TModel, bool>> filter, bool fixVersion = false, CancellationToken cancellationToken = default)
-		{
-		JarvisFrameworkMetricsHelper.Counter.Increment(QueryCounter, 1, typeof(TModel).Name);
-		var rms = await _collection.FindAsync(filter, cancellationToken: cancellationToken).ConfigureAwait(false);
+        /// <inheritdoc />
+        public async Task<IReadOnlyCollection<TModel>> FindManyAsync(System.Linq.Expressions.Expression<Func<TModel, bool>> filter, bool fixVersion = false, CancellationToken cancellationToken = default)
+        {
+            JarvisFrameworkMetricsHelper.Counter.Increment(QueryCounter, 1, typeof(TModel).Name);
+            var rms = await _collection.FindAsync(filter, cancellationToken: cancellationToken).ConfigureAwait(false);
 
-		if (!fixVersion)
-			{
-				return rms.ToList();
-			}
+            if (!fixVersion)
+            {
+                return rms.ToList();
+            }
 
-			var rmsResult = new List<TModel>();
-			foreach (var rm in rms.ToEnumerable())
-			{
-				if (rm.ReadModelVersion != _actualVersion)
-				{
-					rmsResult.Add(await FindOneByIdAsync(rm.Id, cancellationToken).ConfigureAwait(false));
-				}
-				else
-				{
-					rmsResult.Add(rm);
-				}
-			}
-			return rmsResult;
-		}
+            var rmsResult = new List<TModel>();
+            foreach (var rm in rms.ToEnumerable())
+            {
+                if (rm.ReadModelVersion != _actualVersion)
+                {
+                    rmsResult.Add(await FindOneByIdAsync(rm.Id, cancellationToken).ConfigureAwait(false));
+                }
+                else
+                {
+                    rmsResult.Add(rm);
+                }
+            }
+            return rmsResult;
+        }
 
-		/// <inheritdoc />
-		public Task UpsertForceAsync(TModel model, CancellationToken cancellationToken = default)
-		{
-			return UpsertAsync(model, false, cancellationToken);
-		}
+        private static readonly CounterOptions FindManyAndCatchupCounter = new CounterOptions()
+        {
+            Name = "AtomicRmFindManyAndCatchup",
+            MeasurementUnit = Unit.Calls
+        };
 
-		/// <inheritdoc />
-		public Task UpsertAsync(TModel model, CancellationToken cancellationToken = default)
-		{
-			return UpsertAsync(model, true, cancellationToken);
-		}
+        /// <inheritdoc />
+        public async Task<IReadOnlyCollection<TModel>> FindManyAndCatchupAsync(
+            System.Linq.Expressions.Expression<Func<TModel, bool>> filter,
+            int maxBatchSize = 100,
+            CancellationToken cancellationToken = default)
+        {
+            JarvisFrameworkMetricsHelper.Counter.Increment(FindManyAndCatchupCounter, 1, typeof(TModel).Name);
 
-		/// <summary>
-		/// This can be tricky, we need to save and honor idempotency in the more efficient
-		/// way possible
-		/// </summary>
-		/// <param name="model"></param>
-		/// <param name="performAggregateVersionCheck"></param>
-		/// <returns></returns>
-		private async Task UpsertAsync(TModel model, Boolean performAggregateVersionCheck, CancellationToken cancellationToken = default)
-		{
-			if (String.IsNullOrEmpty(model.Id))
-			{
-				throw new CollectionWrapperException("Cannot save readmodel, Id property not initialized");
-			}
+            // Step 1: Find all matching readmodels from storage
+            var cursor = await _collection.FindAsync(filter, cancellationToken: cancellationToken).ConfigureAwait(false);
 
-			if (model.ModifiedWithExtraStreamEvents)
-			{
-				return; //nothing should be done, the readmodel is not in a peristable state
-			}
+            // we should avoid a single huge list in memory and we should honor batching.
+            List<TModel> returnValue = new List<TModel>(10);
+            List<TModel> batch = new (10);
 
-		//we need to save the object, we first try to find and replace, if the operation 
-		//fails we have two distinct situation, the insert and the update
-		var existing = await _collection.Find(
-				Builders<TModel>.Filter.Eq(_ => _.Id, model.Id)
-			).Project(
-				Builders<TModel>.Projection
-					.Include(_ => _.AggregateVersion)
-					.Include(_ => _.ReadModelVersion)
-			).SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false);			if (performAggregateVersionCheck
-				&& existing != null
-				&& (
-					existing["AggregateVersion"].AsInt64 > model.AggregateVersion
-				|| (
-						existing["AggregateVersion"].AsInt64 == model.AggregateVersion
-						&& existing["ReadModelVersion"].AsInt32 >= model.ReadModelVersion)
-				)
-			)
-			{
-				return; //nothing to do, we already have a model with higer version
-			}
+            //we need to start processing the readmodels in batch to avoid overwhelming enumerating the cursor accumulating into the
+            //batch and catchup when reac the matchbatchsize
+            await foreach (var readmodel in cursor.ToAsyncEnumerable())
+            {
+                batch.Add(readmodel);
+                if (batch.Count >= maxBatchSize)
+                {
+                    await FlushBatch(returnValue, batch, cancellationToken).ConfigureAwait(false);
+                }
+            }
+            //flush remaining batch
+            await FlushBatch(returnValue, batch, cancellationToken).ConfigureAwait(false);
+            return returnValue;
+        }
+
+        private async Task FlushBatch(List<TModel> returnValue, List<TModel> batch, CancellationToken cancellationToken)
+        {
+            if (batch.Count == 0)
+            {
+                return;
+            }
+            await _liveAtomicReadModelProcessor.CatchupBatchAsync(
+                batch,
+                cancellationToken).ConfigureAwait(false);
+            returnValue.AddRange(batch);
+            batch.Clear();
+        }
+
+        private static readonly CounterOptions FindManyByIdListAndCatchupCounter = new CounterOptions()
+        {
+            Name = "AtomicRmFindManyByIdListAndCatchup",
+            MeasurementUnit = Unit.Calls
+        };
+
+        /// <inheritdoc />
+        public async Task<IReadOnlyCollection<TModel>> FindManyByIdListAndCatchupAsync(
+            IEnumerable<string> idList,
+            int maxBatchSize = 100,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(idList);
+
+            // Dedupe IDs to avoid issues with duplicate entries in CatchupBatchAsync
+            var idArray = idList.Distinct().ToArray();
+            if (idArray.Length == 0)
+            {
+                return Array.Empty<TModel>();
+            }
+
+            JarvisFrameworkMetricsHelper.Counter.Increment(FindManyByIdListAndCatchupCounter, 1, typeof(TModel).Name);
+
+            // Step 1: Find existing readmodels from storage for the given IDs
+            var filter = Builders<TModel>.Filter.In(rm => rm.Id, idArray);
+            var cursor = await _collection.FindAsync(filter, cancellationToken: cancellationToken).ConfigureAwait(false);
+            var existingReadmodels = await cursor.ToListAsync(cancellationToken).ConfigureAwait(false);
+
+            // Step 2: Determine which IDs don't have readmodels in storage
+            var existingIds = new HashSet<string>(existingReadmodels.Select(rm => rm.Id));
+            var missingIds = idArray.Where(id => !existingIds.Contains(id)).ToList();
+
+            // Step 3: Create new readmodel instances for missing IDs
+            var newReadmodels = missingIds
+                .Select(id => _atomicReadModelFactory.Create<TModel>(id))
+                .ToList();
+
+            // Step 4: Combine existing and new readmodels
+            var allReadmodels = existingReadmodels.Concat(newReadmodels).ToList();
+
+            // Step 5: Process in batches to avoid overwhelming NStore
+            foreach (var batch in allReadmodels.Chunk(maxBatchSize))
+            {
+                await _liveAtomicReadModelProcessor.CatchupBatchAsync(
+                    batch.ToList(),
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            // Step 6: Return only readmodels that have events (AggregateVersion > 0)
+            return allReadmodels.Where(rm => rm.AggregateVersion > 0).ToList();
+        }
+
+        /// <inheritdoc />
+        public Task UpsertForceAsync(TModel model, CancellationToken cancellationToken = default)
+        {
+            return UpsertAsync(model, false, cancellationToken);
+        }
+
+        /// <inheritdoc />
+        public Task UpsertAsync(TModel model, CancellationToken cancellationToken = default)
+        {
+            return UpsertAsync(model, true, cancellationToken);
+        }
+
+        /// <summary>
+        /// This can be tricky, we need to save and honor idempotency in the more efficient
+        /// way possible
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="performAggregateVersionCheck"></param>
+        /// <returns></returns>
+        private async Task UpsertAsync(TModel model, Boolean performAggregateVersionCheck, CancellationToken cancellationToken = default)
+        {
+            if (String.IsNullOrEmpty(model.Id))
+            {
+                throw new CollectionWrapperException("Cannot save readmodel, Id property not initialized");
+            }
+
+            if (model.ModifiedWithExtraStreamEvents)
+            {
+                return; //nothing should be done, the readmodel is not in a peristable state
+            }
+
+            //we need to save the object, we first try to find and replace, if the operation 
+            //fails we have two distinct situation, the insert and the update
+            var existing = await _collection.Find(
+                    Builders<TModel>.Filter.Eq(_ => _.Id, model.Id)
+                ).Project(
+                    Builders<TModel>.Projection
+                        .Include(_ => _.AggregateVersion)
+                        .Include(_ => _.ReadModelVersion)
+                ).SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false); if (performAggregateVersionCheck
+                    && existing != null
+                    && (
+                        existing["AggregateVersion"].AsInt64 > model.AggregateVersion
+                    || (
+                            existing["AggregateVersion"].AsInt64 == model.AggregateVersion
+                            && existing["ReadModelVersion"].AsInt32 >= model.ReadModelVersion)
+                    )
+                )
+            {
+                return; //nothing to do, we already have a model with higer version
+            }
 
             //ok I'll do an upsert, the condition is different, we need to try to insert
             //if we do not have an existing element in the database.
@@ -348,56 +452,57 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 }
             }
 
-			//ok if we reach here, we incurr in concurrent exception, a record is alreay
-			//present and inserted between the two call, we need to update and let the idempotency avoid corruption
-			await UpdateAsync(model, performAggregateVersionCheck, cancellationToken).ConfigureAwait(false);
-		}
+            //ok if we reach here, a record is already present
+            //or we have a concurrent exception because two threads entered so we need to perform a standard update
+            //and let idempotency rules work.
+            await UpdateAsync(model, performAggregateVersionCheck, cancellationToken).ConfigureAwait(false);
+        }
 
-		public Task UpdateAsync(TModel model, CancellationToken cancellationToken = default)
-		{
-			return UpdateAsync(model, true, cancellationToken);
-		}
+        public Task UpdateAsync(TModel model, CancellationToken cancellationToken = default)
+        {
+            return UpdateAsync(model, true, cancellationToken);
+        }
 
-		public Task UpdateAsync(TModel model, Boolean performAggregateVersionCheck, CancellationToken cancellationToken = default)
-		{
-			if (model.ModifiedWithExtraStreamEvents)
-			{
-				return Task.CompletedTask;
-			}
+        public Task UpdateAsync(TModel model, Boolean performAggregateVersionCheck, CancellationToken cancellationToken = default)
+        {
+            if (model.ModifiedWithExtraStreamEvents)
+            {
+                return Task.CompletedTask;
+            }
 
-			var filter = Builders<TModel>.Filter.And(
-					Builders<TModel>.Filter.Eq(_ => _.Id, model.Id),
-					Builders<TModel>.Filter.Lte(_ => _.ReadModelVersion, model.ReadModelVersion)
-				);
+            var filter = Builders<TModel>.Filter.And(
+                    Builders<TModel>.Filter.Eq(_ => _.Id, model.Id),
+                    Builders<TModel>.Filter.Lte(_ => _.ReadModelVersion, model.ReadModelVersion)
+                );
 
-		if (performAggregateVersionCheck)
-		{
-			filter &= Builders<TModel>.Filter.Or(
-					Builders<TModel>.Filter.Lt(_ => _.AggregateVersion, model.AggregateVersion),
-					Builders<TModel>.Filter.Lt(_ => _.ReadModelVersion, model.ReadModelVersion)
-				);
-		}
+            if (performAggregateVersionCheck)
+            {
+                filter &= Builders<TModel>.Filter.Or(
+                        Builders<TModel>.Filter.Lt(_ => _.AggregateVersion, model.AggregateVersion),
+                        Builders<TModel>.Filter.Lt(_ => _.ReadModelVersion, model.ReadModelVersion)
+                    );
+            }
 
-		return _collection.FindOneAndReplaceAsync(
-			filter,
-			model, new FindOneAndReplaceOptions<TModel>()
-			{
-				ReturnDocument = ReturnDocument.After
-			},
-			cancellationToken);
-	}		/// <inheritdoc />
+            return _collection.FindOneAndReplaceAsync(
+                filter,
+                model, new FindOneAndReplaceOptions<TModel>()
+                {
+                    ReturnDocument = ReturnDocument.After
+                },
+                cancellationToken);
+        }		/// <inheritdoc />
 		public async Task<TModel> FindOneByIdAtCheckpointAsync(string id, long chunkPosition, CancellationToken cancellationToken = default)
-		{
-		JarvisFrameworkMetricsHelper.Counter.Increment(FindOneByIdAtCheckpointCachupCounter, 1, typeof(TModel).Name);
-		//TODO: cache somewhat readmodel in some cache database to avoid rebuilding always at version in memory.
-		var readmodel = await _liveAtomicReadModelProcessor.ProcessUntilChunkPositionAsync<TModel>(id, chunkPosition, cancellationToken);
-		if (readmodel?.AggregateVersion == 0)
-			{
-				return null;
-			}
+        {
+            JarvisFrameworkMetricsHelper.Counter.Increment(FindOneByIdAtCheckpointCachupCounter, 1, typeof(TModel).Name);
+            //TODO: cache somewhat readmodel in some cache database to avoid rebuilding always at version in memory.
+            var readmodel = await _liveAtomicReadModelProcessor.ProcessUntilChunkPositionAsync<TModel>(id, chunkPosition, cancellationToken);
+            if (readmodel?.AggregateVersion == 0)
+            {
+                return null;
+            }
 
-			return readmodel;
-		}
+            return readmodel;
+        }
 
         public async Task UpdateVersionAsync(TModel model, CancellationToken cancellationToken = default)
         {
@@ -421,6 +526,114 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         }
 
         /// <inheritdoc />
+        public async Task UpdateVersionBatchAsync(IEnumerable<TModel> models, BatchWriteOptions batchWriteOptions = null, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(models);
+
+            // Convert to list to avoid multiple enumerations
+            var modelsList = models.ToList();
+
+            if (modelsList.Count == 0)
+            {
+                return; // Nothing to process
+            }
+
+            // Validate all models have Ids and check for duplicates
+            var seenIds = new HashSet<string>();
+            var duplicateIds = new List<string>();
+
+            foreach (var model in modelsList)
+            {
+                if (String.IsNullOrEmpty(model.Id))
+                {
+                    throw new CollectionWrapperException($"Cannot update readmodel of type {typeof(TModel).Name}, Id property not initialized");
+                }
+
+                if (!seenIds.Add(model.Id))
+                {
+                    duplicateIds.Add(model.Id);
+                }
+            }
+
+            if (duplicateIds.Count > 0)
+            {
+                var duplicatesStr = string.Join(", ", duplicateIds.Distinct());
+                throw new CollectionWrapperException($"Duplicate readmodel Ids found in batch: {duplicatesStr}");
+            }
+
+            // Filter out models that should not be persisted
+            var validModels = modelsList.Where(m => !m.ModifiedWithExtraStreamEvents).ToList();
+
+            if (validModels.Count == 0)
+            {
+                return; // All models were filtered out
+            }
+
+            // Query which models already exist
+            var ids = validModels.Select(m => m.Id).ToList();
+            var existingFilter = Builders<TModel>.Filter.In(_ => _.Id, ids);
+            var existingIds = await _collection.Find(existingFilter)
+                .Project(Builders<TModel>.Projection.Include(_ => _.Id))
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            var existingIdSet = new HashSet<string>(existingIds.Select(doc => doc["_id"].AsString));
+
+            // Separate models into existing (for update) and missing (for insert)
+            var modelsToUpdate = validModels.Where(m => existingIdSet.Contains(m.Id)).ToList();
+            var modelsToInsert = validModels.Where(m => !existingIdSet.Contains(m.Id)).ToList();
+
+            // Build bulk update operations for existing models
+            if (modelsToUpdate.Count > 0)
+            {
+                var bulkOps = new List<WriteModel<TModel>>();
+
+                foreach (var model in modelsToUpdate)
+                {
+                    var filter = Builders<TModel>.Filter.Eq(_ => _.Id, model.Id);
+                    var update = Builders<TModel>.Update
+                        .Set(m => m.ProjectedPosition, model.ProjectedPosition)
+                        .Set(m => m.AggregateVersion, model.AggregateVersion)
+                        .Set(m => m.LastProcessedVersions, model.LastProcessedVersions);
+
+                    bulkOps.Add(new UpdateOneModel<TModel>(filter, update));
+                }
+
+                await BatchWriteHelper.ExecuteInChunksAsync(
+                    bulkOps,
+                    batchWriteOptions,
+                    (chunk, ct) => _collection.BulkWriteAsync(chunk, new BulkWriteOptions { IsOrdered = false }, ct),
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            // Insert missing models (fallback behavior from UpdateVersionAsync)
+            if (modelsToInsert.Count > 0)
+            {
+                await BatchWriteHelper.ExecuteInChunksAsync(
+                    modelsToInsert,
+                    batchWriteOptions,
+                    async (chunk, ct) =>
+                    {
+                        try
+                        {
+                            await _collection.InsertManyAsync(chunk, new InsertManyOptions { IsOrdered = false }, ct).ConfigureAwait(false);
+                        }
+                        catch (MongoException mex)
+                        {
+                            // Handle concurrent inserts - if another thread inserted between our check and insert,
+                            // we can safely ignore duplicate key errors
+                            if (!mex.Message.Contains(ConcurrencyException))
+                            {
+                                throw;
+                            }
+                            // Duplicate key errors are expected in concurrent scenarios and can be ignored
+                        }
+                    },
+                    cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        /// <inheritdoc />
         public async Task DeleteAsync(string id, CancellationToken cancellationToken = default)
         {
             if (String.IsNullOrEmpty(id))
@@ -430,6 +643,115 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
             var filter = Builders<TModel>.Filter.Eq(_ => _.Id, id);
             await _collection.DeleteOneAsync(filter, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc />
+        public async Task UpsertBatchAsync(IEnumerable<TModel> models, BatchWriteOptions batchWriteOptions = null, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(models);
+
+            // Convert to list to avoid multiple enumerations and to allow checking count
+            var modelsList = models.ToList();
+            
+            if (modelsList.Count == 0)
+            {
+                return; // Nothing to process
+            }
+
+            // Validate all models have Ids and check for duplicates
+            var seenIds = new HashSet<string>();
+            var duplicateIds = new List<string>();
+            
+            foreach (var model in modelsList)
+            {
+                if (String.IsNullOrEmpty(model.Id))
+                {
+                    throw new CollectionWrapperException($"Cannot save readmodel of type {typeof(TModel).Name}, Id property not initialized");
+                }
+
+                if (!seenIds.Add(model.Id))
+                {
+                    duplicateIds.Add(model.Id);
+                }
+            }
+
+            if (duplicateIds.Count > 0)
+            {
+                var duplicatesStr = string.Join(", ", duplicateIds.Distinct());
+                throw new CollectionWrapperException($"Duplicate readmodel Ids found in batch: {duplicatesStr}");
+            }
+
+            // Filter out models that should not be persisted
+            var validModels = modelsList.Where(m => !m.ModifiedWithExtraStreamEvents).ToList();
+
+            if (validModels.Count == 0)
+            {
+                return; // All models were filtered out
+            }
+
+            // For efficiency, we'll build a dictionary of existing models to check versions
+            var ids = validModels.Select(m => m.Id).ToList();
+            var existingFilter = Builders<TModel>.Filter.In(_ => _.Id, ids);
+            var existingModels = await _collection.Find(existingFilter)
+                .Project(Builders<TModel>.Projection
+                    .Include(_ => _.Id)
+                    .Include(_ => _.AggregateVersion)
+                    .Include(_ => _.ReadModelVersion))
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            // Build a dictionary for quick lookup
+            var existingVersions = existingModels.ToDictionary(
+                doc => doc["_id"].AsString,
+                doc => new { AggregateVersion = doc["AggregateVersion"].AsInt64, ReadModelVersion = doc["ReadModelVersion"].AsInt32 }
+            );
+
+            // Build the bulk write operations
+            var bulkOps = new List<WriteModel<TModel>>();
+
+            foreach (var model in validModels)
+            {
+                // Check if we should skip this model due to version conflicts
+                if (existingVersions.TryGetValue(model.Id, out var existing))
+                {
+                    // Skip if existing version is higher or equal
+                    if (existing.AggregateVersion > model.AggregateVersion
+                        || (existing.AggregateVersion == model.AggregateVersion && existing.ReadModelVersion >= model.ReadModelVersion))
+                    {
+                        continue; // Skip this model, already have newer version
+                    }
+
+                    // Build filter for replace: must match id and have lower version
+                    var replaceFilter = Builders<TModel>.Filter.And(
+                        Builders<TModel>.Filter.Eq(_ => _.Id, model.Id),
+                        Builders<TModel>.Filter.Lte(_ => _.ReadModelVersion, model.ReadModelVersion),
+                        Builders<TModel>.Filter.Or(
+                            Builders<TModel>.Filter.Lt(_ => _.AggregateVersion, model.AggregateVersion),
+                            Builders<TModel>.Filter.Lt(_ => _.ReadModelVersion, model.ReadModelVersion)
+                        )
+                    );
+
+                    bulkOps.Add(new ReplaceOneModel<TModel>(replaceFilter, model));
+                }
+                else
+                {
+                    // Model doesn't exist, use upsert to insert it
+                    var upsertFilter = Builders<TModel>.Filter.Eq(_ => _.Id, model.Id);
+                    bulkOps.Add(new ReplaceOneModel<TModel>(upsertFilter, model) { IsUpsert = true });
+                }
+            }
+
+            if (bulkOps.Count == 0)
+            {
+                return; // All models were skipped due to version checks
+            }
+
+            // Execute the bulk write operation
+            await BatchWriteHelper.ExecuteInChunksAsync(
+                bulkOps,
+                batchWriteOptions,
+                (chunk, ct) => _collection.BulkWriteAsync(chunk, new BulkWriteOptions { IsOrdered = false }, ct),
+                cancellationToken).ConfigureAwait(false);
         }
     }
 }

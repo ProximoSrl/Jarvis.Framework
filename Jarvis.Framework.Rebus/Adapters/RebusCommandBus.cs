@@ -5,6 +5,7 @@ using Jarvis.Framework.Shared.Exceptions;
 using Jarvis.Framework.Shared.Messages;
 using Rebus.Bus;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Jarvis.Framework.Rebus.Adapters
@@ -21,14 +22,14 @@ namespace Jarvis.Framework.Rebus.Adapters
             Logger = NullLogger.Instance;
         }
 
-        public async Task<ICommand> SendAsync(ICommand command, string impersonatingUser = null)
+        public async Task<ICommand> SendAsync(ICommand command, string impersonatingUser = null, CancellationToken cancellationToken = default)
         {
             PrepareCommand(command, impersonatingUser);
-            await SendCommand(command).ConfigureAwait(false);
+            await SendCommand(command, cancellationToken).ConfigureAwait(false);
             return command;
         }
 
-        private Task SendCommand(ICommand command)
+        private Task SendCommand(ICommand command, CancellationToken cancellationToken = default)
         {
             var forcedDispatchQueue = command.GetContextData(MessagesConstants.DestinationAddress);
             if (!string.IsNullOrEmpty(forcedDispatchQueue))
@@ -41,14 +42,14 @@ namespace Jarvis.Framework.Rebus.Adapters
             }
         }
 
-        public async Task<ICommand> SendLocalAsync(ICommand command, string impersonatingUser = null)
+        public async Task<ICommand> SendLocalAsync(ICommand command, string impersonatingUser = null, CancellationToken cancellationToken = default)
         {
             PrepareCommand(command, impersonatingUser);
-            await SendCommandLocal(command).ConfigureAwait(false);
+            await SendCommandLocal(command, cancellationToken).ConfigureAwait(false);
             return command;
         }
 
-        private Task SendCommandLocal(ICommand command)
+        private Task SendCommandLocal(ICommand command, CancellationToken cancellationToken = default)
         {
             var forcedDispatchQueue = command.GetContextData(MessagesConstants.DestinationAddress);
             if (!string.IsNullOrEmpty(forcedDispatchQueue))
@@ -61,13 +62,13 @@ namespace Jarvis.Framework.Rebus.Adapters
             }
         }
 
-        public async Task<ICommand> DeferAsync(TimeSpan delay, ICommand command, string impersonatingUser = null)
+        public async Task<ICommand> DeferAsync(TimeSpan delay, ICommand command, string impersonatingUser = null, CancellationToken cancellationToken = default)
         {
             PrepareCommand(command, impersonatingUser);
 
             if (delay <= TimeSpan.Zero)
             {
-                await SendCommand(command).ConfigureAwait(false);
+                await SendCommand(command, cancellationToken).ConfigureAwait(false);
             }
             else
             {

@@ -5,6 +5,7 @@ using NSubstitute;
 using NUnit.Framework;
 using System;
 using System.Security;
+using System.Threading;
 using System.Threading.Tasks;
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
 
@@ -81,12 +82,12 @@ namespace Jarvis.Framework.Tests.Kernel.Commands
 
         private class SimpleCommandHandler : AbstractCommandHandler<SimpleCommand>
         {
-            public override Task ClearAsync()
+            public override Task ClearAsync(CancellationToken cancellationToken = default)
             {
                 return Task.CompletedTask;
             }
-            
-            protected override Task Execute(SimpleCommand cmd)
+
+            protected override Task Execute(SimpleCommand cmd, CancellationToken cancellationToken = default)
             {
                 return Task.CompletedTask;
             }
@@ -99,12 +100,12 @@ namespace Jarvis.Framework.Tests.Kernel.Commands
 
         private class AdminCommandHandler : AbstractCommandHandler<AdminCommand>
         {
-            public override Task ClearAsync()
+            public override Task ClearAsync(CancellationToken cancellationToken = default)
             {
                 return Task.CompletedTask;
             }
-            
-            protected override Task Execute(AdminCommand cmd)
+
+            protected override Task Execute(AdminCommand cmd, CancellationToken cancellationToken = default)
             {
                 return Task.CompletedTask;
             }

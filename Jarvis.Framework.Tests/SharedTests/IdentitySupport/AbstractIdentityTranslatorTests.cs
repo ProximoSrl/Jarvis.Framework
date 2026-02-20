@@ -10,6 +10,7 @@ using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.Linq;
 using System.Reflection;
 
 namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
@@ -536,6 +537,262 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             Assert.That(retrievedIdentity.AsString(), Is.EqualTo(originalIdentity.AsString()));
         }
 
+        #region Batch Translation Tests
+
+        [Test]
+        public void Verify_translate_batch_creates_missing_mappings()
+        {
+            TestMapper sut = new TestMapper(_db, _identityManager);
+            var key1 = Guid.NewGuid().ToString();
+            var key2 = Guid.NewGuid().ToString();
+            var key3 = Guid.NewGuid().ToString();
+
+            var result = sut.TranslateBatchWithAutoCreate(new[] { key1, key2, key3 });
+
+            Assert.That(result.Count, Is.EqualTo(3));
+            Assert.That(result.ContainsKey(key1), Is.True);
+            Assert.That(result.ContainsKey(key2), Is.True);
+            Assert.That(result.ContainsKey(key3), Is.True);
+
+            // Verify all identities are different
+            Assert.That(result[key1].AsString(), Is.Not.EqualTo(result[key2].AsString()));
+            Assert.That(result[key2].AsString(), Is.Not.EqualTo(result[key3].AsString()));
+            Assert.That(result[key1].AsString(), Is.Not.EqualTo(result[key3].AsString()));
+
+            // Verify mappings were actually created in the database
+            var verifyResult = sut.GetMultipleMapWithoutAutoCreation(key1, key2, key3);
+            Assert.That(verifyResult.Count, Is.EqualTo(3));
+            Assert.That(verifyResult[key1].AsString(), Is.EqualTo(result[key1].AsString()));
+            Assert.That(verifyResult[key2].AsString(), Is.EqualTo(result[key2].AsString()));
+            Assert.That(verifyResult[key3].AsString(), Is.EqualTo(result[key3].AsString()));
+        }
+
+        [Test]
+        public void Verify_translate_batch_with_existing_mappings()
+        {
+            TestMapper sut = new TestMapper(_db, _identityManager);
+            var key1 = Guid.NewGuid().ToString();
+            var key2 = Guid.NewGuid().ToString();
+            var key3 = Guid.NewGuid().ToString();
+
+            // Create some mappings first
+            var id1 = sut.MapWithAutomaticCreate(key1);
+            var id2 = sut.MapWithAutomaticCreate(key2);
+
+            // Now translate batch with mix of existing and new keys
+            var result = sut.TranslateBatchWithAutoCreate(new[] { key1, key2, key3 });
+
+            Assert.That(result.Count, Is.EqualTo(3));
+            Assert.That(result[key1].AsString(), Is.EqualTo(id1.AsString()));
+            Assert.That(result[key2].AsString(), Is.EqualTo(id2.AsString()));
+            Assert.That(result.ContainsKey(key3), Is.True);
+            Assert.That(result[key3], Is.Not.Null);
+        }
+
+        [Test]
+        public void Verify_translate_batch_without_create_only_returns_existing()
+        {
+            TestMapper sut = new TestMapper(_db, _identityManager);
+            var key1 = Guid.NewGuid().ToString();
+            var key2 = Guid.NewGuid().ToString();
+            var key3 = Guid.NewGuid().ToString();
+
+            // Create only two mappings
+            var id1 = sut.MapWithAutomaticCreate(key1);
+            var id2 = sut.MapWithAutomaticCreate(key2);
+
+            // Translate batch without auto-create
+            var result = sut.TranslateBatchWithoutAutoCreate(new[] { key1, key2, key3 });
+
+            Assert.That(result.Count, Is.EqualTo(2));
+            Assert.That(result[key1].AsString(), Is.EqualTo(id1.AsString()));
+            Assert.That(result[key2].AsString(), Is.EqualTo(id2.AsString()));
+            Assert.That(result.ContainsKey(key3), Is.False);
+
+            // Verify key3 was not created in the database
+            var verifyResult = sut.GetMultipleMapWithoutAutoCreation(key3);
+            Assert.That(verifyResult.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Verify_try_translate_batch_returns_only_existing()
+        {
+            TestMapper sut = new TestMapper(_db, _identityManager);
+            var key1 = Guid.NewGuid().ToString();
+            var key2 = Guid.NewGuid().ToString();
+            var key3 = Guid.NewGuid().ToString();
+
+            // Create only two mappings
+            var id1 = sut.MapWithAutomaticCreate(key1);
+            var id2 = sut.MapWithAutomaticCreate(key2);
+
+            // Try translate batch
+            var result = sut.TryTranslateBatchKeys(new[] { key1, key2, key3 });
+
+            Assert.That(result.Count, Is.EqualTo(2));
+            Assert.That(result[key1].AsString(), Is.EqualTo(id1.AsString()));
+            Assert.That(result[key2].AsString(), Is.EqualTo(id2.AsString()));
+            Assert.That(result.ContainsKey(key3), Is.False);
+
+            // Verify key3 was not created
+            var verifyResult = sut.GetMultipleMapWithoutAutoCreation(key3);
+            Assert.That(verifyResult.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Verify_translate_batch_case_insensitive()
+        {
+            TestMapper sut = new TestMapper(_db, _identityManager);
+            var keyLower = Guid.NewGuid().ToString().ToLower();
+            var keyUpper = keyLower.ToUpper();
+            var keyMixed = keyLower.Substring(0, keyLower.Length / 2).ToUpper() + 
+                          keyLower.Substring(keyLower.Length / 2).ToLower();
+
+            // Translate with different casings of the same key
+            var result = sut.TranslateBatchWithAutoCreate(new[] { keyLower, keyUpper, keyMixed });
+
+            // Should only create one mapping (case-insensitive)
+            Assert.That(result.Count, Is.EqualTo(1));
+            
+            // All variations should map to the same identity
+            var identityValue = result.Values.First().AsString();
+            Assert.That(result[keyLower].AsString(), Is.EqualTo(identityValue));
+
+            // Verify only one record was created in the database
+            var verifyResult = sut.GetMultipleMapWithoutAutoCreation(keyLower, keyUpper, keyMixed);
+            Assert.That(verifyResult.Count, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Verify_translate_batch_with_null_throws()
+        {
+            TestMapper sut = new TestMapper(_db, _identityManager);
+            var key1 = Guid.NewGuid().ToString();
+            var key2 = Guid.NewGuid().ToString();
+
+            // Include null in the batch - should throw
+            Assert.Throws<AggregateException>(() => sut.TranslateBatchWithAutoCreate(new[] { key1, null, key2 }));
+        }
+
+        [Test]
+        public void Verify_translate_batch_empty_array_returns_empty()
+        {
+            TestMapper sut = new TestMapper(_db, _identityManager);
+
+            var result = sut.TranslateBatchWithAutoCreate(new string[] { });
+
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Verify_translate_batch_null_array_returns_empty()
+        {
+            TestMapper sut = new TestMapper(_db, _identityManager);
+
+            var result = sut.TranslateBatchWithAutoCreate(null);
+
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Verify_translate_batch_with_duplicates_in_input()
+        {
+            TestMapper sut = new TestMapper(_db, _identityManager);
+            var key1 = Guid.NewGuid().ToString();
+            var key2 = Guid.NewGuid().ToString();
+
+            // Include duplicate keys in the input
+            var result = sut.TranslateBatchWithAutoCreate(new[] { key1, key2, key1, key2 });
+
+            // Should only create two mappings
+            Assert.That(result.Count, Is.EqualTo(2));
+            Assert.That(result.ContainsKey(key1), Is.True);
+            Assert.That(result.ContainsKey(key2), Is.True);
+
+            // Verify only two records were created
+            var verifyResult = sut.GetMultipleMapWithoutAutoCreation(key1, key2);
+            Assert.That(verifyResult.Count, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void Verify_translate_batch_handles_concurrent_inserts()
+        {
+            TestMapper sut1 = new TestMapper(_db, _identityManager);
+            TestMapper sut2 = new TestMapper(_db, _identityManager);
+            
+            var key1 = Guid.NewGuid().ToString();
+            var key2 = Guid.NewGuid().ToString();
+            var key3 = Guid.NewGuid().ToString();
+
+            // First translator creates one mapping
+            sut1.MapWithAutomaticCreate(key1);
+
+            // Simulate concurrent batch operations from two different instances
+            var result1 = sut1.TranslateBatchWithAutoCreate(new[] { key1, key2, key3 });
+            var result2 = sut2.TranslateBatchWithAutoCreate(new[] { key1, key2, key3 });
+
+            // Both should return all three mappings
+            Assert.That(result1.Count, Is.EqualTo(3));
+            Assert.That(result2.Count, Is.EqualTo(3));
+
+            // The identities for the same keys should match across both results
+            Assert.That(result1[key1].AsString(), Is.EqualTo(result2[key1].AsString()));
+            Assert.That(result1[key2].AsString(), Is.EqualTo(result2[key2].AsString()));
+            Assert.That(result1[key3].AsString(), Is.EqualTo(result2[key3].AsString()));
+
+            // Verify no duplicate records were created
+            var verifyResult = sut1.GetMultipleMapWithoutAutoCreation(key1, key2, key3);
+            Assert.That(verifyResult.Count, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void Verify_translate_batch_large_set()
+        {
+            TestMapper sut = new TestMapper(_db, _identityManager);
+            
+            // Create a large batch of keys
+            var keys = Enumerable.Range(1, 100)
+                .Select(i => Guid.NewGuid().ToString())
+                .ToList();
+
+            var result = sut.TranslateBatchWithAutoCreate(keys);
+
+            Assert.That(result.Count, Is.EqualTo(100));
+            
+            // Verify all keys were mapped
+            foreach (var key in keys)
+            {
+                Assert.That(result.ContainsKey(key), Is.True);
+                Assert.That(result[key], Is.Not.Null);
+            }
+
+            // Verify all identities are unique
+            var uniqueIds = result.Values.Select(v => v.AsString()).Distinct().Count();
+            Assert.That(uniqueIds, Is.EqualTo(100));
+        }
+
+        [Test]
+        public void Verify_translate_batch_idempotent()
+        {
+            TestMapper sut = new TestMapper(_db, _identityManager);
+            var key1 = Guid.NewGuid().ToString();
+            var key2 = Guid.NewGuid().ToString();
+
+            // First batch translate
+            var result1 = sut.TranslateBatchWithAutoCreate(new[] { key1, key2 });
+
+            // Second batch translate with same keys
+            var result2 = sut.TranslateBatchWithAutoCreate(new[] { key1, key2 });
+
+            // Should return the same identities
+            Assert.That(result1[key1].AsString(), Is.EqualTo(result2[key1].AsString()));
+            Assert.That(result1[key2].AsString(), Is.EqualTo(result2[key2].AsString()));
+        }
+
+        #endregion
+
         private class TestMapper : AbstractIdentityTranslator<SampleAggregateId>
         {
             public TestMapper(IMongoDatabase systemDB, IIdentityGenerator identityGenerator) : base(systemDB, identityGenerator)
@@ -557,7 +814,7 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
                 return TryTranslate(key);
             }
 
-            public IDictionary<String, SampleAggregateId> GetMultipleMapWithoutAutoCreation(params String[] keys)
+            public IReadOnlyDictionary<String, SampleAggregateId> GetMultipleMapWithoutAutoCreation(params String[] keys)
             {
                 return base.GetMultipleMapWithoutAutoCreation(keys);
             }
@@ -595,6 +852,21 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             public MappedIdentity MapIdentityPublic(String key, SampleAggregateId identity)
             {
                 return MapIdentity(key, identity);
+            }
+
+            public IReadOnlyDictionary<String, SampleAggregateId> TranslateBatchWithAutoCreate(IEnumerable<String> keys)
+            {
+                return TranslateBatchAsync(keys, createOnMissing: true).Result;
+            }
+
+            public IReadOnlyDictionary<String, SampleAggregateId> TranslateBatchWithoutAutoCreate(IEnumerable<String> keys)
+            {
+                return TranslateBatchAsync(keys, createOnMissing: false).Result;
+            }
+
+            public IReadOnlyDictionary<String, SampleAggregateId> TryTranslateBatchKeys(IEnumerable<String> keys)
+            {
+                return TryTranslateBatchAsync(keys).Result;
             }
         }
     }

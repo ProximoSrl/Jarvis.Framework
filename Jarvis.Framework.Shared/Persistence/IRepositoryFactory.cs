@@ -20,5 +20,17 @@ namespace Jarvis.Framework.Shared.Persistence
         /// </summary>
         /// <param name="repository"></param>
         void Release(IRepository repository);
+
+        /// <summary>
+        /// Create a batch repository
+        /// </summary>
+        /// <returns></returns>
+        IBatchRepository CreateBatch();
+
+        /// <summary>
+        /// Release a batch repository
+        /// </summary>
+        /// <param name="repository"></param>
+        void Release(IBatchRepository repository);
     }
 }
