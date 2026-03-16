@@ -41,4 +41,13 @@
     <ItemGroup>
         <ProjectReference Include="..\Jarvis.Framework.Shared\Jarvis.Framework.Shared.csproj" />
     </ItemGroup>
+
+    <ItemGroup>
+        <!-- Ship LLM-oriented documentation with the package without affecting compilation. -->
+        <None Include="..\llm\**\*.md"
+              Pack="true"
+              PackagePath="contentFiles\any\any\llm\%(RecursiveDir)%(Filename)%(Extension)"
+              PackageCopyToOutput="false"
+              Visible="false" />
+    </ItemGroup>
 </Project>
