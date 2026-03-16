@@ -1,5 +1,9 @@
 # J.A.R.V.I.S. Framework - Proximo srl (c)
 
+## 7.14.0
+
+- Added skill for LLL
+
 ## 7.13.0
 
 - Added new Batch to IIDentity Manager to create identities in batch.
