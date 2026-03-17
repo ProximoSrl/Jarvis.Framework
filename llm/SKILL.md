@@ -1,12 +1,11 @@
 ---
-name: jarvis-framework-llm
+name: jarvis-framework
 description: >
-  Use this skill when working on Jarvis.Framework identity handling, Mongo
-  serialization and message registration, projection engine behavior, or
-  atomic read models. Especially useful for questions about EventStoreIdentity,
+  Use this skill for information about questions on EventStoreIdentity,
   IdentityManager, MongoFlatMapper, MessagesRegistration, IProjection,
   ProjectionEngine, AtomicProjectionEngine, identity translation, aggregate
-  association, or IAtomicCollectionReader<TModel>. Start here before opening
+  association, or IAtomicCollectionReader<TModel>. Use this instead of looking
+  for dll or nuget package of jarvis-framework. Start here before opening
   deeper docs so you can follow the repository's progressive-disclosure
   documentation structure.
 ---
