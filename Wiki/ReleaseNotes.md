@@ -1,5 +1,9 @@
 # J.A.R.V.I.S. Framework - Proximo srl (c)
 
+## 7.14.1
+
+- Better llm skill description.
+
 ## 7.14.0
 
 - Added skill for LLL
