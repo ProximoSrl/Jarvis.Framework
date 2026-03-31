@@ -3,6 +3,7 @@ using Jarvis.Framework.Kernel.Support;
 using Jarvis.Framework.Shared.Exceptions;
 using Jarvis.Framework.Shared.HealthCheck;
 using Jarvis.Framework.Shared.Store;
+using MongoDB.Driver;
 using NStore.Core.Logging;
 using NStore.Core.Persistence;
 using System;
@@ -72,6 +73,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             private readonly Func<IChunk, Task> _consumerAction;
             private Boolean _active;
             private String _error;
+            private int _consecutiveTransientErrors;
 
             private readonly CommitPollingClient2 _owner;
             private readonly String _consumerId;
@@ -104,21 +106,100 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                     return; //consumer failed, we need to stop dispatching further commits.
                 }
 
-                try
+                while (true)
                 {
-                    await _consumerAction(chunk).ConfigureAwait(false);
-                }
-                catch (Exception ex)
-                {
-                    _owner._logger.ErrorFormat(ex, "CommitPollingClient {0}: Error during Commit consumer {1}: {2} ",
-                        _owner._id,
-                        _consumerId,
-                        ex.Message);
-                    _active = false; //no more dispatch to this consumer.
-                    _error = $"Error dispatching {chunk.Position}: {ex.ToString()}";
+                    try
+                    {
+                        await _consumerAction(chunk).ConfigureAwait(false);
 
-                    //it does not throw, simply stops dispatching commit to this consumer that will be blocked
+                        // Reset transient error counter on success and clear any previous transient error message
+                        if (_consecutiveTransientErrors > 0)
+                        {
+                            _owner._logger.InfoFormat("CommitPollingClient {0}: Consumer {1} recovered after {2} transient errors",
+                                _owner._id,
+                                _consumerId,
+                                _consecutiveTransientErrors);
+                            _consecutiveTransientErrors = 0;
+                            _error = null;
+                        }
+
+                        return;
+                    }
+                    catch (Exception ex) when (IsMongoTransientException(ex))
+                    {
+                        _consecutiveTransientErrors++;
+                        var delay = GetTransientRetryDelay(_consecutiveTransientErrors);
+
+                        _owner._logger.WarnFormat(ex, "CommitPollingClient {0}: Transient error in consumer {1} for chunk {2} (attempt {3}), retrying in {4}ms: {5}",
+                            _owner._id,
+                            _consumerId,
+                            chunk.Position,
+                            _consecutiveTransientErrors,
+                            delay,
+                            ex.Message);
+
+                        _error = $"Transient error dispatching {chunk.Position} (attempt {_consecutiveTransientErrors}): {ex.Message}";
+
+                        await Task.Delay(delay).ConfigureAwait(false);
+                        // Loop back and retry
+                    }
+                    catch (Exception ex)
+                    {
+                        _owner._logger.ErrorFormat(ex, "CommitPollingClient {0}: Error during Commit consumer {1}: {2}. Will retry in 10 minutes.",
+                            _owner._id,
+                            _consumerId,
+                            ex.Message);
+                        _error = $"Error dispatching {chunk.Position} (will retry in 10 min): {ex.Message}";
+
+                        // For any non-transient exception, retry every 10 minutes — the error
+                        // may still be temporary (e.g. network partition, DNS, timeout).
+                        await Task.Delay(600_000).ConfigureAwait(false);
+                        // Loop back and retry
+                    }
                 }
+            }
+
+            /// <summary>
+            /// Returns the retry delay based on number of consecutive transient errors:
+            /// - Attempts 1-5: 1 second (brief interruption)
+            /// - Attempts 6-15: 10 seconds (longer outage)
+            /// - Attempts 16+: 60 seconds (extended outage)
+            /// </summary>
+            private static int GetTransientRetryDelay(int attempt)
+            {
+                if (attempt <= 5) return 1000;
+                if (attempt <= 15) return 10_000;
+                return 60_000;
+            }
+
+            /// <summary>
+            /// Determines if a MongoDB exception is transient (infrastructure-level)
+            /// and the operation could succeed if retried after a short delay.
+            /// </summary>
+            private static bool IsMongoTransientException(Exception ex)
+            {
+                // Walk the exception chain to find MongoDB transient exceptions
+                var current = ex;
+                while (current != null)
+                {
+                    if (current is MongoConnectionException
+                        || current is MongoConnectionPoolPausedException
+                        || current is MongoNotPrimaryException
+                        || current is MongoNodeIsRecoveringException)
+                    {
+                        return true;
+                    }
+
+                    // MongoCommandException with transient labels
+                    if (current is MongoException mongoEx && mongoEx.HasErrorLabel("TransientTransactionError"))
+                    {
+                        return true;
+                    }
+
+                    current = current.InnerException;
+                }
+
+                return false;
             }
         }
 
