@@ -1,5 +1,9 @@
 # J.A.R.V.I.S. Framework - Proximo srl (c)
 
+## vNext
+
+- Added defer UpdateVersion for Atomic Readmodels.
+
 ## 7.14.3
 
 - Fixed idempotency for Atomic Readmodels with the UpdateVersion set of operations.

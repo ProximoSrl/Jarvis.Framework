@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Threading.Tasks.Dataflow;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 {
@@ -32,6 +33,21 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         internal const int MaxNumberOfRetryToReprojectFaultedReadmodels = 3;
 
         protected readonly ILogger _logger;
+
+        #region Deferred UpdateVersion Pipeline (static per TModel)
+
+        private static BatchBlock<TModel> _deferredBatchBlock;
+        private static ActionBlock<TModel[]> _deferredActionBlock;
+        private static volatile bool _deferredPipelineInitialized;
+        private static readonly object _deferredPipelineLock = new object();
+
+        /// <summary>
+        /// Reference to the singleton wrapper instance used by the static pipeline
+        /// to call <see cref="UpdateVersionBatchAsync"/>. Captured on first initialization.
+        /// </summary>
+        private static AtomicMongoCollectionWrapper<TModel> _pipelineOwner;
+
+        #endregion
 
         private static readonly CounterOptions FindOneByIdCounter = new CounterOptions()
         {
@@ -764,5 +780,141 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 (chunk, ct) => _collection.BulkWriteAsync(chunk, new BulkWriteOptions { IsOrdered = false }, ct),
                 cancellationToken).ConfigureAwait(false);
         }
+
+        #region Deferred UpdateVersion
+
+        /// <inheritdoc />
+        public async Task DeferUpdateVersionAsync(TModel model)
+        {
+            if (model.ModifiedWithExtraStreamEvents)
+            {
+                return;
+            }
+
+            EnsureDeferredPipelineInitialized();
+
+            // SendAsync respects BoundedCapacity: if the block is full it awaits
+            // until space is available, providing natural backpressure.
+            var accepted = await _deferredBatchBlock.SendAsync(model).ConfigureAwait(false);
+            if (!accepted)
+            {
+                throw new InvalidOperationException(
+                    $"Cannot enqueue deferred UpdateVersion for {typeof(TModel).Name}: the pipeline has been completed.");
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task FlushDeferredUpdatesAsync()
+        {
+            if (!_deferredPipelineInitialized)
+            {
+                return;
+            }
+
+            // Trigger partial batch so pending items are pushed to the ActionBlock
+            _deferredBatchBlock.TriggerBatch();
+
+            // Complete the pipeline and wait for all in-flight batches to drain
+            _deferredBatchBlock.Complete();
+            await _deferredActionBlock.Completion.ConfigureAwait(false);
+
+            // Reset the static pipeline so it can be lazily re-created on next use.
+            // This is safe because after Completion the blocks are dead and cannot
+            // accept new items anyway.
+            ResetDeferredPipeline();
+        }
+
+        private void EnsureDeferredPipelineInitialized()
+        {
+            if (_deferredPipelineInitialized)
+            {
+                return;
+            }
+
+            lock (_deferredPipelineLock)
+            {
+                if (_deferredPipelineInitialized)
+                {
+                    return;
+                }
+
+                var maxBatchSize = JarvisFrameworkGlobalConfiguration.DeferredUpdateVersionMaxBatchSize;
+                var boundedCapacity = maxBatchSize * 4;
+
+                _deferredBatchBlock = new BatchBlock<TModel>(maxBatchSize,
+                    new GroupingDataflowBlockOptions
+                    {
+                        BoundedCapacity = boundedCapacity,
+                    });
+                _deferredActionBlock = new ActionBlock<TModel[]>(
+                    ProcessDeferredBatchAsync,
+                    new ExecutionDataflowBlockOptions
+                    {
+                        MaxDegreeOfParallelism = 1,
+                        BoundedCapacity = 1,
+                    });
+                _deferredBatchBlock.LinkTo(_deferredActionBlock, new DataflowLinkOptions { PropagateCompletion = true });
+
+                _pipelineOwner = this;
+
+                DeferredUpdateVersionCoordinator.Register(
+                    key: typeof(TModel),
+                    triggerBatch: () => _deferredBatchBlock?.TriggerBatch(),
+                    waitDrain: FlushDeferredUpdatesAsync,
+                    completeAndWait: FlushDeferredUpdatesAsync);
+
+                _deferredPipelineInitialized = true;
+            }
+        }
+
+        private static async Task ProcessDeferredBatchAsync(TModel[] batch)
+        {
+            if (batch.Length == 0)
+            {
+                return;
+            }
+
+            var owner = _pipelineOwner;
+            if (owner == null)
+            {
+                return;
+            }
+
+            try
+            {
+                // Deduplicate: when the same Id appears multiple times, keep only the
+                // entry with the highest AggregateVersion (version tracking is monotonic).
+                var deduplicated = batch
+                    .GroupBy(m => m.Id)
+                    .Select(g => g.OrderByDescending(m => m.AggregateVersion).First())
+                    .ToList();
+
+                await owner.UpdateVersionBatchAsync(deduplicated, cancellationToken: CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                owner._logger.ErrorFormat(ex, "Error in deferred UpdateVersion batch for {0}: {1}", typeof(TModel).Name, ex.Message);
+                // Do not rethrow: the ActionBlock must not fault. UpdateVersion is best-effort
+                // position tracking; the next changeset will update the version again.
+            }
+        }
+
+        /// <summary>
+        /// Resets the static deferred pipeline for this TModel type.
+        /// This is needed after <see cref="FlushDeferredUpdatesAsync"/> completes the blocks,
+        /// so that subsequent calls to <see cref="DeferUpdateVersionAsync"/> can create a fresh pipeline.
+        /// </summary>
+        internal static void ResetDeferredPipeline()
+        {
+            lock (_deferredPipelineLock)
+            {
+                _deferredBatchBlock = null;
+                _deferredActionBlock = null;
+                _pipelineOwner = null;
+                _deferredPipelineInitialized = false;
+            }
+        }
+
+        #endregion
     }
 }

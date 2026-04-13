@@ -651,6 +651,58 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
             }
         }
 
+        [Test]
+        public async Task UpdateVersionBatchAsync_mixed_batch_should_update_only_newer_and_skip_stale()
+        {
+            // Arrange: Two readmodels on disk at version 1
+            _aggregateIdSeed = 5200;
+            _aggregateVersion = 1;
+            var rmA = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
+            var createA = GenerateCreatedEvent(false);
+            rmA.ProcessChangeset(createA);
+            await _sut.UpsertAsync(rmA).ConfigureAwait(false);
+
+            _aggregateIdSeed = 5201;
+            _aggregateVersion = 1;
+            var rmB = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
+            var createB = GenerateCreatedEvent(false);
+            rmB.ProcessChangeset(createB);
+            await _sut.UpsertAsync(rmB).ConfigureAwait(false);
+
+            // Build in-memory copies: A is advanced to version 3, B stays at version 1 (stale)
+            _aggregateIdSeed = 5200;
+            var advancedA = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
+            advancedA.ProcessChangeset(createA);
+            var touchA = GenerateTouchedEvent(false);
+            advancedA.ProcessChangeset(touchA);
+            var notHandledA = GenerateSampleAggregateNotHandledEvent(false);
+            advancedA.ProcessChangeset(notHandledA);
+            Assert.That(advancedA.AggregateVersion, Is.EqualTo(3), "Precondition: advanced copy at version 3");
+
+            // staleB is at version 1 — same as disk, so the Lt guard should reject it
+            _aggregateIdSeed = 5201;
+            var staleB = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
+            staleB.ProcessChangeset(createB);
+            Assert.That(staleB.AggregateVersion, Is.EqualTo(1), "Precondition: stale copy at version 1");
+
+            // Act: Send a batch with one newer and one stale
+            await _sut.UpdateVersionBatchAsync(new[] { advancedA, staleB }).ConfigureAwait(false);
+
+            // Assert: A should be updated to version 3
+            var reloadedA = await _collection.FindOneByIdAsync(rmA.Id).ConfigureAwait(false);
+            Assert.That(reloadedA.AggregateVersion, Is.EqualTo(3),
+                "Readmodel A should be updated to version 3");
+            Assert.That(reloadedA.ProjectedPosition, Is.EqualTo(advancedA.ProjectedPosition),
+                "Readmodel A should have updated ProjectedPosition");
+
+            // Assert: B should remain at version 1 (stale write skipped)
+            var reloadedB = await _collection.FindOneByIdAsync(rmB.Id).ConfigureAwait(false);
+            Assert.That(reloadedB.AggregateVersion, Is.EqualTo(1),
+                "Readmodel B should remain at version 1, stale write should be skipped");
+            Assert.That(reloadedB.ProjectedPosition, Is.EqualTo(rmB.ProjectedPosition),
+                "Readmodel B should have unchanged ProjectedPosition");
+        }
+
         #endregion
     }
 }
