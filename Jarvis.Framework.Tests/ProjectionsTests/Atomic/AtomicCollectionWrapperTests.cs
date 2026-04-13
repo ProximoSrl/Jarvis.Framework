@@ -489,6 +489,111 @@ public class AtomicCollectionWrapperTests : AtomicCollectionWrapperTestsBase
         Assert.That(reloaded.LastProcessedVersions, Is.EquivalentTo(new long[] { 1 }));
     }
 
+    [Test]
+    public async Task UpdateVersionAsync_should_not_overwrite_newer_version_with_older_data()
+    {
+        // Arrange: Create and persist a readmodel at AggregateVersion=3
+        var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
+        var createChangeset = GenerateCreatedEvent(false);       // version 1
+        rm.ProcessChangeset(createChangeset);
+        var touchChangeset1 = GenerateTouchedEvent(false);       // version 2
+        rm.ProcessChangeset(touchChangeset1);
+        var notHandled1 = GenerateSampleAggregateNotHandledEvent(false); // version 3 (not handled, only updates version fields)
+        rm.ProcessChangeset(notHandled1);
+
+        // Persist the readmodel at version 3
+        await _sut.UpsertAsync(rm).ConfigureAwait(false);
+
+        // Verify it's at version 3 on disk
+        var onDisk = await _collection.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
+        Assert.That(onDisk.AggregateVersion, Is.EqualTo(3), "Precondition: readmodel on disk should be at version 3");
+
+        // Now simulate a stale copy at version 1 (e.g. from a slow/lagging thread)
+        var staleRm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
+        staleRm.ProcessChangeset(createChangeset);
+        // staleRm is now at AggregateVersion=1
+
+        // Act: Call UpdateVersionAsync with the stale copy
+        await _sut.UpdateVersionAsync(staleRm).ConfigureAwait(false);
+
+        // Assert: The version on disk must NOT be regressed
+        var reloaded = await _collection.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
+        Assert.That(reloaded.AggregateVersion, Is.EqualTo(3),
+            "UpdateVersionAsync should not overwrite AggregateVersion=3 with stale value 1");
+        Assert.That(reloaded.ProjectedPosition, Is.EqualTo(rm.ProjectedPosition),
+            "UpdateVersionAsync should not overwrite ProjectedPosition with stale value");
+    }
+
+    [Test]
+    public async Task UpdateVersionAsync_should_not_regress_projected_position()
+    {
+        // Arrange: Create readmodel and advance it through multiple events
+        var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
+        var createChangeset = GenerateCreatedEvent(false);   // commit 1
+        rm.ProcessChangeset(createChangeset);
+        var touch1 = GenerateTouchedEvent(false);            // commit 2
+        rm.ProcessChangeset(touch1);
+        var touch2 = GenerateTouchedEvent(false);            // commit 3
+        rm.ProcessChangeset(touch2);
+
+        await _sut.UpsertAsync(rm).ConfigureAwait(false);
+
+        var expectedPosition = rm.ProjectedPosition;
+        Assert.That(expectedPosition, Is.GreaterThan(0), "Precondition: ProjectedPosition should be set");
+
+        // Create a stale copy that only processed the first event
+        var staleRm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
+        staleRm.ProcessChangeset(createChangeset);
+        var stalePosition = staleRm.ProjectedPosition;
+
+        Assert.That(stalePosition, Is.LessThan(expectedPosition), "Precondition: stale position < current position");
+
+        // Act
+        await _sut.UpdateVersionAsync(staleRm).ConfigureAwait(false);
+
+        // Assert
+        var reloaded = await _collection.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
+        Assert.That(reloaded.ProjectedPosition, Is.EqualTo(expectedPosition),
+            "UpdateVersionAsync should not regress ProjectedPosition from a newer checkpoint to an older one");
+    }
+
+    [Test]
+    public async Task UpdateVersionAsync_should_not_persist_when_ModifiedWithExtraStreamEvents_is_true()
+    {
+        // Arrange: Create and persist a readmodel at version 1
+        var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
+        var createChangeset = GenerateCreatedEvent(false);
+        rm.ProcessChangeset(createChangeset);
+        await _sut.UpsertAsync(rm).ConfigureAwait(false);
+
+        // Record the original version info on disk
+        var originalOnDisk = await _collection.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
+        var originalVersion = originalOnDisk.AggregateVersion;
+        var originalPosition = originalOnDisk.ProjectedPosition;
+
+        // Advance to version 2 so we have a newer in-memory version
+        var touchChangeset = GenerateTouchedEvent(false);
+        rm.ProcessChangeset(touchChangeset);
+
+        // Process an extra-stream changeset (makes the readmodel non-persistable)
+        var extraChangeset = GenerateTouchedEvent(false);
+        rm.ProcessExtraStreamChangeset(extraChangeset);
+
+        Assert.That(rm.ModifiedWithExtraStreamEvents, Is.True, "Precondition: flag should be set");
+        Assert.That(rm.AggregateVersion, Is.GreaterThan(originalVersion),
+            "Precondition: in-memory version is now higher");
+
+        // Act: Call UpdateVersionAsync - it should skip persistence because of the flag
+        await _sut.UpdateVersionAsync(rm).ConfigureAwait(false);
+
+        // Assert: The version on disk should NOT have changed
+        var reloaded = await _collection.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
+        Assert.That(reloaded.AggregateVersion, Is.EqualTo(originalVersion),
+            "UpdateVersionAsync should not persist version data for a readmodel with ModifiedWithExtraStreamEvents=true");
+        Assert.That(reloaded.ProjectedPosition, Is.EqualTo(originalPosition),
+            "UpdateVersionAsync should not persist ProjectedPosition for a readmodel with ModifiedWithExtraStreamEvents=true");
+    }
+
     #endregion
 
     #region Reading tests

@@ -575,5 +575,82 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         }
 
         #endregion
+
+        #region Version Guard Tests
+
+        [Test]
+        public async Task UpdateVersionBatchAsync_should_not_overwrite_newer_version_with_older_data()
+        {
+            // Arrange: Create and persist a readmodel at AggregateVersion=3
+            _aggregateIdSeed = 5000;
+            _aggregateVersion = 1;
+            var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
+            var createChangeset = GenerateCreatedEvent(false);       // version 1
+            rm.ProcessChangeset(createChangeset);
+            var touchChangeset = GenerateTouchedEvent(false);        // version 2
+            rm.ProcessChangeset(touchChangeset);
+            var notHandled = GenerateSampleAggregateNotHandledEvent(false); // version 3
+            rm.ProcessChangeset(notHandled);
+
+            await _sut.UpsertAsync(rm).ConfigureAwait(false);
+
+            var onDisk = await _collection.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
+            Assert.That(onDisk.AggregateVersion, Is.EqualTo(3), "Precondition: readmodel on disk at version 3");
+
+            // Create a stale copy at version 1
+            var staleRm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
+            staleRm.ProcessChangeset(createChangeset);
+
+            // Act: Call UpdateVersionBatchAsync with the stale copy
+            await _sut.UpdateVersionBatchAsync(new[] { staleRm }).ConfigureAwait(false);
+
+            // Assert: The version on disk must NOT be regressed
+            var reloaded = await _collection.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
+            Assert.That(reloaded.AggregateVersion, Is.EqualTo(3),
+                "UpdateVersionBatchAsync should not overwrite AggregateVersion=3 with stale value 1");
+        }
+
+        [Test]
+        public async Task UpdateVersionBatchAsync_mixed_batch_should_not_regress_any_readmodel()
+        {
+            // Arrange: Create two readmodels at version 3
+            var readmodels = new List<SimpleTestAtomicReadModel>();
+            var staleReadmodels = new List<SimpleTestAtomicReadModel>();
+
+            for (int i = 0; i < 2; i++)
+            {
+                _aggregateIdSeed = 5100 + i;
+                _aggregateVersion = 1;
+                var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
+                var create = GenerateCreatedEvent(false);
+                rm.ProcessChangeset(create);
+                var touch = GenerateTouchedEvent(false);
+                rm.ProcessChangeset(touch);
+                var notHandled = GenerateSampleAggregateNotHandledEvent(false);
+                rm.ProcessChangeset(notHandled);
+                await _sut.UpsertAsync(rm).ConfigureAwait(false);
+                readmodels.Add(rm);
+
+                // Build a stale copy at version 1
+                var stale = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
+                stale.ProcessChangeset(create);
+                staleReadmodels.Add(stale);
+            }
+
+            // Act: Send stale batch
+            await _sut.UpdateVersionBatchAsync(staleReadmodels).ConfigureAwait(false);
+
+            // Assert: Neither readmodel should be regressed
+            for (int i = 0; i < 2; i++)
+            {
+                var reloaded = await _collection.FindOneByIdAsync(readmodels[i].Id).ConfigureAwait(false);
+                Assert.That(reloaded.AggregateVersion, Is.EqualTo(3),
+                    $"Readmodel {i} should not be regressed from version 3 to {reloaded.AggregateVersion} by stale batch write");
+                Assert.That(reloaded.ProjectedPosition, Is.EqualTo(readmodels[i].ProjectedPosition),
+                    $"Readmodel {i} should not have its ProjectedPosition regressed by stale batch write");
+            }
+        }
+
+        #endregion
     }
 }

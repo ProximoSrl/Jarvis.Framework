@@ -118,3 +118,4 @@ UpgradeLog*.XML
 ##docfx output
 _site/**
 api/**
+.tokensave
