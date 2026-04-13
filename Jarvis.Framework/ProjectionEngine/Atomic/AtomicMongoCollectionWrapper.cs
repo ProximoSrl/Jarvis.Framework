@@ -506,8 +506,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
         public async Task UpdateVersionAsync(TModel model, CancellationToken cancellationToken = default)
         {
+            if (model.ModifiedWithExtraStreamEvents)
+            {
+                return; //nothing should be done, the readmodel is not in a persistable state
+            }
+
             var filter = Builders<TModel>.Filter.And(
-                Builders<TModel>.Filter.Eq(_ => _.Id, model.Id)
+                Builders<TModel>.Filter.Eq(_ => _.Id, model.Id),
+                Builders<TModel>.Filter.Lt(_ => _.AggregateVersion, model.AggregateVersion)
             );
 
             var update = Builders<TModel>.Update
@@ -520,8 +526,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             {
                 //ok the readmodel is not present on disk, this is a rare situation when the
                 //readmodel was created in memory for the first time, and all received changeset
-                //does not change the readmodel, we will persist.
-                await UpsertAsync(model, false, cancellationToken);
+                //does not change the readmodel, we will persist. We pass true for version check
+                //because the document might actually exist with a higher version (in which case
+                //UpsertAsync will correctly skip the write).
+                await UpsertAsync(model, true, cancellationToken);
             }
         }
 
@@ -590,7 +598,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
                 foreach (var model in modelsToUpdate)
                 {
-                    var filter = Builders<TModel>.Filter.Eq(_ => _.Id, model.Id);
+                    var filter = Builders<TModel>.Filter.And(
+                        Builders<TModel>.Filter.Eq(_ => _.Id, model.Id),
+                        Builders<TModel>.Filter.Lt(_ => _.AggregateVersion, model.AggregateVersion)
+                    );
                     var update = Builders<TModel>.Update
                         .Set(m => m.ProjectedPosition, model.ProjectedPosition)
                         .Set(m => m.AggregateVersion, model.AggregateVersion)

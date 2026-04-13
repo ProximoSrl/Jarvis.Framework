@@ -1,5 +1,9 @@
 # J.A.R.V.I.S. Framework - Proximo srl (c)
 
+## 7.14.3
+
+- Fixed idempotency for Atomic Readmodels with the UpdateVersion set of operations.
+
 ## 7.14.1
 
 - Better llm skill description.
