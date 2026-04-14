@@ -38,6 +38,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         }
 
         /// <summary>
+        /// Default drain timeout in milliseconds used by <see cref="FlushAllAsync"/>
+        /// when the caller does not specify one.
+        /// </summary>
+        internal const int DefaultDrainTimeoutMs = 30_000;
+
+        /// <summary>
         /// Register a deferred pipeline. The <paramref name="triggerBatch"/> action
         /// will be called by the shared timer to flush partial batches.
         /// </summary>
@@ -45,13 +51,14 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// <param name="triggerBatch">Action that triggers a partial batch flush (calls BatchBlock.TriggerBatch).</param>
         /// <param name="waitDrain">
         /// Async function that waits for all currently in-flight items to be processed,
-        /// without completing (destroying) the pipeline. Called by <see cref="FlushAllAsync"/>.
+        /// without completing (destroying) the pipeline. Receives a timeout in milliseconds.
+        /// Called by <see cref="FlushAllAsync"/>.
         /// </param>
         /// <param name="completeAndWait">
         /// Async function that completes the pipeline and waits for all pending items to be processed.
         /// Called during shutdown via <see cref="StopAndFlushAllAsync"/>.
         /// </param>
-        internal static void Register(object key, Action triggerBatch, Func<Task> waitDrain, Func<Task> completeAndWait)
+        internal static void Register(object key, Action triggerBatch, Func<int, Task> waitDrain, Func<Task> completeAndWait)
         {
             _registeredPipelines[key] = new RegisteredPipeline(triggerBatch, waitDrain, completeAndWait);
             EnsureTimerStarted();
@@ -72,7 +79,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// guaranteed flush point (e.g. projection engine stop) without tearing down
         /// the coordinator.
         /// </summary>
-        internal static async Task FlushAllAsync()
+        /// <param name="drainTimeoutMs">
+        /// Maximum time in milliseconds to wait for each pipeline to drain.
+        /// Defaults to <see cref="DefaultDrainTimeoutMs"/> (30 seconds).
+        /// </param>
+        internal static async Task FlushAllAsync(int drainTimeoutMs = DefaultDrainTimeoutMs)
         {
             var pipelines = _registeredPipelines.Values.ToList();
 
@@ -98,7 +109,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             {
                 try
                 {
-                    waitTasks.Add(pipeline.WaitDrain());
+                    waitTasks.Add(pipeline.WaitDrain(drainTimeoutMs));
                 }
                 catch (Exception ex)
                 {
@@ -210,10 +221,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         private sealed class RegisteredPipeline
         {
             public Action TriggerBatch { get; }
-            public Func<Task> WaitDrain { get; }
+            public Func<int, Task> WaitDrain { get; }
             public Func<Task> CompleteAndWait { get; }
 
-            public RegisteredPipeline(Action triggerBatch, Func<Task> waitDrain, Func<Task> completeAndWait)
+            public RegisteredPipeline(Action triggerBatch, Func<int, Task> waitDrain, Func<Task> completeAndWait)
             {
                 TriggerBatch = triggerBatch;
                 WaitDrain = waitDrain;

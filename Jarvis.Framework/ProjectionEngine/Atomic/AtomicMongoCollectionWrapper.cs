@@ -36,16 +36,24 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
         #region Deferred UpdateVersion Pipeline (static per TModel)
 
-        private static BatchBlock<TModel> _deferredBatchBlock;
-        private static ActionBlock<TModel[]> _deferredActionBlock;
+        private static volatile BatchBlock<TModel> _deferredBatchBlock;
+        private static volatile ActionBlock<TModel[]> _deferredActionBlock;
         private static volatile bool _deferredPipelineInitialized;
         private static readonly object _deferredPipelineLock = new object();
+
+        /// <summary>
+        /// When non-null, <see cref="ProcessDeferredBatchAsync"/> will signal this TCS
+        /// after processing a batch if the ActionBlock's InputCount has dropped to zero.
+        /// Used by <see cref="WaitDrainAsync"/> to wait for the pipeline to drain without
+        /// polling.
+        /// </summary>
+        private static volatile TaskCompletionSource<bool> _drainTcs;
 
         /// <summary>
         /// Reference to the singleton wrapper instance used by the static pipeline
         /// to call <see cref="UpdateVersionBatchAsync"/>. Captured on first initialization.
         /// </summary>
-        private static AtomicMongoCollectionWrapper<TModel> _pipelineOwner;
+        private static volatile AtomicMongoCollectionWrapper<TModel> _pipelineOwner;
 
         #endregion
 
@@ -793,10 +801,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
             EnsureDeferredPipelineInitialized();
 
-            // SendAsync respects BoundedCapacity: if the block is full it awaits
-            // until space is available, providing natural backpressure.
-            var accepted = await _deferredBatchBlock.SendAsync(model).ConfigureAwait(false);
-            if (!accepted)
+            // Capture a local reference: the static field could be reset by a concurrent
+            // FlushDeferredUpdatesAsync (e.g. engine restart) between the check above and here.
+            var batchBlock = _deferredBatchBlock;
+            if (batchBlock == null || !await batchBlock.SendAsync(model).ConfigureAwait(false))
             {
                 throw new InvalidOperationException(
                     $"Cannot enqueue deferred UpdateVersion for {typeof(TModel).Name}: the pipeline has been completed.");
@@ -811,12 +819,21 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 return;
             }
 
+            // Capture local references: the static fields could be reset concurrently.
+            var batchBlock = _deferredBatchBlock;
+            var actionBlock = _deferredActionBlock;
+
+            if (batchBlock == null || actionBlock == null)
+            {
+                return;
+            }
+
             // Trigger partial batch so pending items are pushed to the ActionBlock
-            _deferredBatchBlock.TriggerBatch();
+            batchBlock.TriggerBatch();
 
             // Complete the pipeline and wait for all in-flight batches to drain
-            _deferredBatchBlock.Complete();
-            await _deferredActionBlock.Completion.ConfigureAwait(false);
+            batchBlock.Complete();
+            await actionBlock.Completion.ConfigureAwait(false);
 
             // Reset the static pipeline so it can be lazily re-created on next use.
             // This is safe because after Completion the blocks are dead and cannot
@@ -859,8 +876,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
                 DeferredUpdateVersionCoordinator.Register(
                     key: typeof(TModel),
-                    triggerBatch: () => _deferredBatchBlock?.TriggerBatch(),
-                    waitDrain: FlushDeferredUpdatesAsync,
+                    triggerBatch: () => { var b = _deferredBatchBlock; b?.TriggerBatch(); },  // local copy for thread safety after reset
+                    waitDrain: WaitDrainAsync,
                     completeAndWait: FlushDeferredUpdatesAsync);
 
                 _deferredPipelineInitialized = true;
@@ -897,6 +914,81 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 // Do not rethrow: the ActionBlock must not fault. UpdateVersion is best-effort
                 // position tracking; the next changeset will update the version again.
             }
+            finally
+            {
+                // Signal WaitDrainAsync if someone is waiting and the ActionBlock input is empty.
+                var actionBlock = _deferredActionBlock;
+                if (actionBlock != null && actionBlock.InputCount == 0)
+                {
+                    _drainTcs?.TrySetResult(true);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Triggers a partial batch and waits for the ActionBlock to process all
+        /// currently-queued batches. Unlike <see cref="FlushDeferredUpdatesAsync"/>,
+        /// this method does <b>not</b> complete or reset the pipeline, so it can be
+        /// called safely during a projection engine pause/restart.
+        /// </summary>
+        private static async Task WaitDrainAsync(int drainTimeoutMs)
+        {
+            if (!_deferredPipelineInitialized)
+            {
+                return;
+            }
+
+            // Capture local references in case the pipeline is reset concurrently.
+            var batchBlock = _deferredBatchBlock;
+            var actionBlock = _deferredActionBlock;
+
+            if (batchBlock == null || actionBlock == null)
+            {
+                return;
+            }
+
+            // If the ActionBlock has nothing queued and nothing will be pushed, return immediately.
+            if (actionBlock.InputCount == 0)
+            {
+                // Still trigger the batch — there might be a partial batch in the BatchBlock
+                // that hasn't reached maxBatchSize yet.
+                batchBlock.TriggerBatch();
+
+                // If after triggering there's still nothing, we're done.
+                if (actionBlock.InputCount == 0)
+                {
+                    return;
+                }
+            }
+
+            // Set up a TCS that ProcessDeferredBatchAsync will signal when InputCount drops to 0.
+            var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _drainTcs = tcs;
+
+            // Flush any partial batch waiting in the BatchBlock.
+            batchBlock.TriggerBatch();
+
+            // If the ActionBlock already drained between our check and setting the TCS,
+            // complete immediately.
+            if (actionBlock.InputCount == 0)
+            {
+                _drainTcs = null;
+                return;
+            }
+
+            // Wait for ProcessDeferredBatchAsync to signal drain, with the caller-specified deadline.
+            var completed = await Task.WhenAny(tcs.Task, Task.Delay(drainTimeoutMs)).ConfigureAwait(false);
+            _drainTcs = null;
+
+            if (completed != tcs.Task)
+            {
+                var owner = _pipelineOwner;
+                owner?._logger.WarnFormat(
+                    "WaitDrainAsync for {0} timed out after {1}ms with {2} items still queued in the ActionBlock.",
+                    typeof(TModel).Name,
+                    drainTimeoutMs,
+                    actionBlock.InputCount);
+            }
         }
 
         /// <summary>
@@ -911,6 +1003,8 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 _deferredBatchBlock = null;
                 _deferredActionBlock = null;
                 _pipelineOwner = null;
+                _drainTcs?.TrySetResult(true);
+                _drainTcs = null;
                 _deferredPipelineInitialized = false;
             }
         }

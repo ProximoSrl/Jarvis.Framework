@@ -2,7 +2,7 @@
 
 ## vNext
 
-- Added defer UpdateVersion for Atomic Readmodels.
+- Added deferred UpdateVersion batching for Atomic Readmodels.
 
 ## 7.14.3
 

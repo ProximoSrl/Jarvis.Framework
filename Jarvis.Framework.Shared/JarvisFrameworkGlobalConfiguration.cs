@@ -53,7 +53,7 @@ namespace Jarvis.Framework.Shared
         /// Flush interval in milliseconds for the deferred UpdateVersion pipeline.
         /// A single shared timer fires at this interval to trigger partial batch flushes
         /// across all AtomicMongoCollectionWrapper instances.
-        /// Default: 2000ms.
+        /// Default: 5000ms.
         /// </summary>
         public static int DeferredUpdateVersionFlushIntervalMs { get; private set; } = 5000;
 
@@ -64,6 +64,27 @@ namespace Jarvis.Framework.Shared
         /// </summary>
         public static int DeferredUpdateVersionMaxBatchSize { get; private set; } = 50;
 
+        /// <summary>
+        /// Configures the deferred UpdateVersion pipeline for Atomic Readmodels.
+        /// </summary>
+        /// <param name="flushIntervalMs">
+        /// How often (in ms) the shared timer triggers partial batch flushes.
+        /// Default: 5000ms. Must be &gt;= 100ms.
+        /// </param>
+        /// <param name="maxBatchSize">
+        /// Maximum number of items collected before an automatic flush is triggered.
+        /// Default: 50. Must be &gt;= 1.
+        /// </param>
+        /// <remarks>
+        /// <para>
+        /// Call this method during application startup, <strong>before</strong> any
+        /// <c>AtomicMongoCollectionWrapper</c> instance is used for the first time with
+        /// <c>DeferUpdateVersionAsync</c>. The timer interval is captured when the shared
+        /// coordinator timer is first started; changes made after the first deferred write
+        /// take effect only after the next full flush (e.g. after engine restart or
+        /// <c>DeferredUpdateVersionCoordinator.StopAndFlushAllAsync</c>).
+        /// </para>
+        /// </remarks>
         public static void ConfigureDeferredUpdateVersion(int flushIntervalMs = 5000, int maxBatchSize = 50)
         {
             if (flushIntervalMs < 100)
