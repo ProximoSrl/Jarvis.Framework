@@ -34,12 +34,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
         protected readonly ILogger _logger;
 
-        #region Deferred UpdateVersion Pipeline (static per TModel)
+        #region Deferred UpdateVersion Pipeline (instance-scoped)
 
-        private static volatile BatchBlock<TModel> _deferredBatchBlock;
-        private static volatile ActionBlock<TModel[]> _deferredActionBlock;
-        private static volatile bool _deferredPipelineInitialized;
-        private static readonly object _deferredPipelineLock = new object();
+        private volatile BatchBlock<TModel> _deferredBatchBlock;
+        private volatile ActionBlock<TModel[]> _deferredActionBlock;
+        private volatile bool _deferredPipelineInitialized;
+        private readonly object _deferredPipelineLock = new object();
 
         /// <summary>
         /// When non-null, <see cref="ProcessDeferredBatchAsync"/> will signal this TCS
@@ -47,13 +47,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// Used by <see cref="WaitDrainAsync"/> to wait for the pipeline to drain without
         /// polling.
         /// </summary>
-        private static volatile TaskCompletionSource<bool> _drainTcs;
-
-        /// <summary>
-        /// Reference to the singleton wrapper instance used by the static pipeline
-        /// to call <see cref="UpdateVersionBatchAsync"/>. Captured on first initialization.
-        /// </summary>
-        private static volatile AtomicMongoCollectionWrapper<TModel> _pipelineOwner;
+        private volatile TaskCompletionSource<bool> _drainTcs;
 
         #endregion
 
@@ -98,6 +92,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             _logger = logger;
             _liveAtomicReadModelProcessor = liveAtomicReadModelProcessor;
             _atomicReadModelFactory = atomicReadModelFactory;
+
+            // Wire the coordinator logger so timer-callback/flush errors are observable.
+            DeferredUpdateVersionCoordinator.SetLogger(_logger);
 
             var collectionName = CollectionNames.GetCollectionName<TModel>();
             _collection = readmodelDb.GetCollection<TModel>(collectionName);
@@ -872,11 +869,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                     });
                 _deferredBatchBlock.LinkTo(_deferredActionBlock, new DataflowLinkOptions { PropagateCompletion = true });
 
-                _pipelineOwner = this;
-
                 DeferredUpdateVersionCoordinator.Register(
-                    key: typeof(TModel),
-                    triggerBatch: () => { var b = _deferredBatchBlock; b?.TriggerBatch(); },  // local copy for thread safety after reset
+                    key: this,
+                    triggerBatch: () => { var b = _deferredBatchBlock; b?.TriggerBatch(); },
                     waitDrain: WaitDrainAsync,
                     completeAndWait: FlushDeferredUpdatesAsync);
 
@@ -884,15 +879,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             }
         }
 
-        private static async Task ProcessDeferredBatchAsync(TModel[] batch)
+        private async Task ProcessDeferredBatchAsync(TModel[] batch)
         {
             if (batch.Length == 0)
-            {
-                return;
-            }
-
-            var owner = _pipelineOwner;
-            if (owner == null)
             {
                 return;
             }
@@ -906,11 +895,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                     .Select(g => g.OrderByDescending(m => m.AggregateVersion).First())
                     .ToList();
 
-                await owner.UpdateVersionBatchAsync(deduplicated, cancellationToken: CancellationToken.None).ConfigureAwait(false);
+                await UpdateVersionBatchAsync(deduplicated, cancellationToken: CancellationToken.None).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
-                owner._logger.ErrorFormat(ex, "Error in deferred UpdateVersion batch for {0}: {1}", typeof(TModel).Name, ex.Message);
+                _logger.ErrorFormat(ex, "Error in deferred UpdateVersion batch for {0}: {1}", typeof(TModel).Name, ex.Message);
                 // Do not rethrow: the ActionBlock must not fault. UpdateVersion is best-effort
                 // position tracking; the next changeset will update the version again.
             }
@@ -931,7 +920,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         /// this method does <b>not</b> complete or reset the pipeline, so it can be
         /// called safely during a projection engine pause/restart.
         /// </summary>
-        private static async Task WaitDrainAsync(int drainTimeoutMs)
+        private async Task WaitDrainAsync(int drainTimeoutMs)
         {
             if (!_deferredPipelineInitialized)
             {
@@ -982,8 +971,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 
             if (completed != tcs.Task)
             {
-                var owner = _pipelineOwner;
-                owner?._logger.WarnFormat(
+                _logger.WarnFormat(
                     "WaitDrainAsync for {0} timed out after {1}ms with {2} items still queued in the ActionBlock.",
                     typeof(TModel).Name,
                     drainTimeoutMs,
@@ -992,17 +980,17 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         }
 
         /// <summary>
-        /// Resets the static deferred pipeline for this TModel type.
+        /// Resets the deferred pipeline for this wrapper instance.
         /// This is needed after <see cref="FlushDeferredUpdatesAsync"/> completes the blocks,
         /// so that subsequent calls to <see cref="DeferUpdateVersionAsync"/> can create a fresh pipeline.
         /// </summary>
-        internal static void ResetDeferredPipeline()
+        internal void ResetDeferredPipeline()
         {
             lock (_deferredPipelineLock)
             {
+                DeferredUpdateVersionCoordinator.Unregister(this);
                 _deferredBatchBlock = null;
                 _deferredActionBlock = null;
-                _pipelineOwner = null;
                 _drainTcs?.TrySetResult(true);
                 _drainTcs = null;
                 _deferredPipelineInitialized = false;

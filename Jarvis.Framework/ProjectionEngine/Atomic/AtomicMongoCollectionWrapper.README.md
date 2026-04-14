@@ -11,9 +11,9 @@ Each wrapper instance is bound to **one** readmodel type `TModel` and therefore 
 ```
 IAtomicCollectionReaderQueryable<TModel>   (AsQueryable, AsQueryableSecondaryPreferred)
   |
-IAtomicCollectionReader<TModel>            (FindOneById, FindOneByIdAndCatchup, FindMany, FindOneByIdAtCheckpoint, FindManyAndCatchup, FindManyByIdListAndCatchup)
+IAtomicCollectionReader<TModel>            (FindOneByIdAsync, FindOneByIdAndCatchupAsync, FindManyAsync, FindOneByIdAtCheckpointAsync, FindManyAndCatchupAsync, FindManyByIdListAndCatchupAsync)
   |
-IAtomicCollectionWrapper<TModel>           (Upsert, UpsertForce, UpsertBatch, Update, UpdateVersion, UpdateVersionBatch, Delete)
+IAtomicCollectionWrapper<TModel>           (UpsertAsync, UpsertForceAsync, UpsertBatchAsync, UpdateAsync, UpdateVersionAsync, UpdateVersionBatchAsync, DeferUpdateVersionAsync, FlushDeferredUpdatesAsync, DeleteAsync)
   |
 AtomicMongoCollectionWrapper<TModel>       (concrete implementation)
 ```

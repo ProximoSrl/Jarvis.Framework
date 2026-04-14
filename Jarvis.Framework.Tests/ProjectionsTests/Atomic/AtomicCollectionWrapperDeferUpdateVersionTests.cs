@@ -28,10 +28,9 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
         public async Task TearDown()
         {
             // Flush and stop the coordinator between tests to avoid cross-test interference.
+            // StopAndFlushAllAsync completes each wrapper's pipeline (via FlushDeferredUpdatesAsync)
+            // and clears all registrations, so the pipeline is already reset afterwards.
             await DeferredUpdateVersionCoordinator.StopAndFlushAllAsync().ConfigureAwait(false);
-
-            // Reset the static per-TModel pipeline so each test starts fresh.
-            AtomicMongoCollectionWrapper<SimpleTestAtomicReadModel>.ResetDeferredPipeline();
         }
 
         #region Basic DeferUpdateVersionAsync Tests
