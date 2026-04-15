@@ -295,6 +295,38 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         Task UpdateVersionBatchAsync(IEnumerable<TModel> models, BatchWriteOptions batchWriteOptions = null, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// <para>
+        /// Enqueues a version-only update into a batching pipeline backed by TPL Dataflow.
+        /// The method returns when the item is queued, not when it is persisted to storage.
+        /// </para>
+        /// <para>
+        /// Items are flushed to storage via <see cref="UpdateVersionBatchAsync"/> either when:
+        /// <list type="bullet">
+        /// <item><description>The batch reaches the configured max size (see <see cref="JarvisFrameworkGlobalConfiguration.DeferredUpdateVersionMaxBatchSize"/>)</description></item>
+        /// <item><description>A shared timer fires (see <see cref="JarvisFrameworkGlobalConfiguration.DeferredUpdateVersionFlushIntervalMs"/>)</description></item>
+        /// </list>
+        /// </para>
+        /// <para>
+        /// When the same readmodel Id is queued multiple times within a single batch, only the
+        /// version with the highest AggregateVersion is persisted. This makes it safe to call
+        /// this method for every changeset without worrying about duplicate writes.
+        /// </para>
+        /// </summary>
+        /// <param name="model">The readmodel instance with updated version information.</param>
+        /// <remarks>
+        /// Call <see cref="FlushDeferredUpdatesAsync"/> during shutdown to guarantee all
+        /// pending items are persisted. This method does not accept a CancellationToken
+        /// because once queued, the item should be persisted regardless.
+        /// </remarks>
+        Task DeferUpdateVersionAsync(TModel model);
+
+        /// <summary>
+        /// Flushes any pending deferred version updates and waits for them to be persisted.
+        /// This must be called during shutdown to avoid data loss.
+        /// </summary>
+        Task FlushDeferredUpdatesAsync();
+
+        /// <summary>
         /// Delete a readmodel instance from the underlying storage by its id.
         /// </summary>
         /// <param name="id">The id of the readmodel to delete</param>
