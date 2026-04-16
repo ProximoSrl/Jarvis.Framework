@@ -1,6 +1,6 @@
 # J.A.R.V.I.S. Framework - Proximo srl (c)
 
-## vNext
+## 7.15.0
 
 - Added deferred UpdateVersion batching for Atomic Readmodels.
 
