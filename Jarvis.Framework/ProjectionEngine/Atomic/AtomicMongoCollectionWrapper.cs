@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Threading.Tasks.Dataflow;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
 {
@@ -32,6 +33,23 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         internal const int MaxNumberOfRetryToReprojectFaultedReadmodels = 3;
 
         protected readonly ILogger _logger;
+
+        #region Deferred UpdateVersion Pipeline (instance-scoped)
+
+        private volatile BatchBlock<TModel> _deferredBatchBlock;
+        private volatile ActionBlock<TModel[]> _deferredActionBlock;
+        private volatile bool _deferredPipelineInitialized;
+        private readonly object _deferredPipelineLock = new object();
+
+        /// <summary>
+        /// When non-null, <see cref="ProcessDeferredBatchAsync"/> will signal this TCS
+        /// after processing a batch if the ActionBlock's InputCount has dropped to zero.
+        /// Used by <see cref="WaitDrainAsync"/> to wait for the pipeline to drain without
+        /// polling.
+        /// </summary>
+        private volatile TaskCompletionSource<bool> _drainTcs;
+
+        #endregion
 
         private static readonly CounterOptions FindOneByIdCounter = new CounterOptions()
         {
@@ -74,6 +92,9 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
             _logger = logger;
             _liveAtomicReadModelProcessor = liveAtomicReadModelProcessor;
             _atomicReadModelFactory = atomicReadModelFactory;
+
+            // Wire the coordinator logger so timer-callback/flush errors are observable.
+            DeferredUpdateVersionCoordinator.SetLogger(_logger);
 
             var collectionName = CollectionNames.GetCollectionName<TModel>();
             _collection = readmodelDb.GetCollection<TModel>(collectionName);
@@ -764,5 +785,218 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                 (chunk, ct) => _collection.BulkWriteAsync(chunk, new BulkWriteOptions { IsOrdered = false }, ct),
                 cancellationToken).ConfigureAwait(false);
         }
+
+        #region Deferred UpdateVersion
+
+        /// <inheritdoc />
+        public async Task DeferUpdateVersionAsync(TModel model)
+        {
+            if (model.ModifiedWithExtraStreamEvents)
+            {
+                return;
+            }
+
+            EnsureDeferredPipelineInitialized();
+
+            // Capture a local reference: the static field could be reset by a concurrent
+            // FlushDeferredUpdatesAsync (e.g. engine restart) between the check above and here.
+            var batchBlock = _deferredBatchBlock;
+            if (batchBlock == null || !await batchBlock.SendAsync(model).ConfigureAwait(false))
+            {
+                throw new InvalidOperationException(
+                    $"Cannot enqueue deferred UpdateVersion for {typeof(TModel).Name}: the pipeline has been completed.");
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task FlushDeferredUpdatesAsync()
+        {
+            if (!_deferredPipelineInitialized)
+            {
+                return;
+            }
+
+            // Capture local references: the static fields could be reset concurrently.
+            var batchBlock = _deferredBatchBlock;
+            var actionBlock = _deferredActionBlock;
+
+            if (batchBlock == null || actionBlock == null)
+            {
+                return;
+            }
+
+            // Trigger partial batch so pending items are pushed to the ActionBlock
+            batchBlock.TriggerBatch();
+
+            // Complete the pipeline and wait for all in-flight batches to drain
+            batchBlock.Complete();
+            await actionBlock.Completion.ConfigureAwait(false);
+
+            // Reset the static pipeline so it can be lazily re-created on next use.
+            // This is safe because after Completion the blocks are dead and cannot
+            // accept new items anyway.
+            ResetDeferredPipeline();
+        }
+
+        private void EnsureDeferredPipelineInitialized()
+        {
+            if (_deferredPipelineInitialized)
+            {
+                return;
+            }
+
+            lock (_deferredPipelineLock)
+            {
+                if (_deferredPipelineInitialized)
+                {
+                    return;
+                }
+
+                var maxBatchSize = JarvisFrameworkGlobalConfiguration.DeferredUpdateVersionMaxBatchSize;
+                var boundedCapacity = maxBatchSize * 4;
+
+                _deferredBatchBlock = new BatchBlock<TModel>(maxBatchSize,
+                    new GroupingDataflowBlockOptions
+                    {
+                        BoundedCapacity = boundedCapacity,
+                    });
+                _deferredActionBlock = new ActionBlock<TModel[]>(
+                    ProcessDeferredBatchAsync,
+                    new ExecutionDataflowBlockOptions
+                    {
+                        MaxDegreeOfParallelism = 1,
+                        BoundedCapacity = 1,
+                    });
+                _deferredBatchBlock.LinkTo(_deferredActionBlock, new DataflowLinkOptions { PropagateCompletion = true });
+
+                DeferredUpdateVersionCoordinator.Register(
+                    key: this,
+                    triggerBatch: () => { var b = _deferredBatchBlock; b?.TriggerBatch(); },
+                    waitDrain: WaitDrainAsync,
+                    completeAndWait: FlushDeferredUpdatesAsync);
+
+                _deferredPipelineInitialized = true;
+            }
+        }
+
+        private async Task ProcessDeferredBatchAsync(TModel[] batch)
+        {
+            if (batch.Length == 0)
+            {
+                return;
+            }
+
+            try
+            {
+                // Deduplicate: when the same Id appears multiple times, keep only the
+                // entry with the highest AggregateVersion (version tracking is monotonic).
+                var deduplicated = batch
+                    .GroupBy(m => m.Id)
+                    .Select(g => g.OrderByDescending(m => m.AggregateVersion).First())
+                    .ToList();
+
+                await UpdateVersionBatchAsync(deduplicated, cancellationToken: CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.ErrorFormat(ex, "Error in deferred UpdateVersion batch for {0}: {1}", typeof(TModel).Name, ex.Message);
+                // Do not rethrow: the ActionBlock must not fault. UpdateVersion is best-effort
+                // position tracking; the next changeset will update the version again.
+            }
+            finally
+            {
+                // Signal WaitDrainAsync if someone is waiting and the ActionBlock input is empty.
+                var actionBlock = _deferredActionBlock;
+                if (actionBlock != null && actionBlock.InputCount == 0)
+                {
+                    _drainTcs?.TrySetResult(true);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Triggers a partial batch and waits for the ActionBlock to process all
+        /// currently-queued batches. Unlike <see cref="FlushDeferredUpdatesAsync"/>,
+        /// this method does <b>not</b> complete or reset the pipeline, so it can be
+        /// called safely during a projection engine pause/restart.
+        /// </summary>
+        private async Task WaitDrainAsync(int drainTimeoutMs)
+        {
+            if (!_deferredPipelineInitialized)
+            {
+                return;
+            }
+
+            // Capture local references in case the pipeline is reset concurrently.
+            var batchBlock = _deferredBatchBlock;
+            var actionBlock = _deferredActionBlock;
+
+            if (batchBlock == null || actionBlock == null)
+            {
+                return;
+            }
+
+            // If the ActionBlock has nothing queued and nothing will be pushed, return immediately.
+            if (actionBlock.InputCount == 0)
+            {
+                // Still trigger the batch — there might be a partial batch in the BatchBlock
+                // that hasn't reached maxBatchSize yet.
+                batchBlock.TriggerBatch();
+
+                // If after triggering there's still nothing, we're done.
+                if (actionBlock.InputCount == 0)
+                {
+                    return;
+                }
+            }
+
+            // Set up a TCS that ProcessDeferredBatchAsync will signal when InputCount drops to 0.
+            var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _drainTcs = tcs;
+
+            // Flush any partial batch waiting in the BatchBlock.
+            batchBlock.TriggerBatch();
+
+            // If the ActionBlock already drained between our check and setting the TCS,
+            // complete immediately.
+            if (actionBlock.InputCount == 0)
+            {
+                _drainTcs = null;
+                return;
+            }
+
+            // Wait for ProcessDeferredBatchAsync to signal drain, with the caller-specified deadline.
+            var completed = await Task.WhenAny(tcs.Task, Task.Delay(drainTimeoutMs)).ConfigureAwait(false);
+            _drainTcs = null;
+
+            if (completed != tcs.Task)
+            {
+                _logger.WarnFormat(
+                    "WaitDrainAsync for {0} timed out after {1}ms with {2} items still queued in the ActionBlock.",
+                    typeof(TModel).Name,
+                    drainTimeoutMs,
+                    actionBlock.InputCount);
+            }
+        }
+
+        /// <summary>
+        /// Resets the deferred pipeline for this wrapper instance.
+        /// This is needed after <see cref="FlushDeferredUpdatesAsync"/> completes the blocks,
+        /// so that subsequent calls to <see cref="DeferUpdateVersionAsync"/> can create a fresh pipeline.
+        /// </summary>
+        internal void ResetDeferredPipeline()
+        {
+            lock (_deferredPipelineLock)
+            {
+                DeferredUpdateVersionCoordinator.Unregister(this);
+                _deferredBatchBlock = null;
+                _deferredActionBlock = null;
+                _drainTcs?.TrySetResult(true);
+                _drainTcs = null;
+                _deferredPipelineInitialized = false;
+            }
+        }
+
+        #endregion
     }
 }

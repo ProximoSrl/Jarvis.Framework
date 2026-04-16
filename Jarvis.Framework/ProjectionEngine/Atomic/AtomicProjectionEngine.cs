@@ -368,6 +368,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                     _started = false;
                     await _tplBroadcaster.Completion;
                 }
+
+                // Drain all deferred UpdateVersion batches that are still in memory.
+                // FlushAllAsync leaves the coordinator timer and registrations intact,
+                // so the engine can be restarted without re-initializing the pipelines.
+                await DeferredUpdateVersionCoordinator.FlushAllAsync().ConfigureAwait(false);
             }
         }
 
