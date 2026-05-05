@@ -378,11 +378,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 _logger.DebugFormat("Sequence of commit not consecutive (probably holes), last dispatched {0} receiving {1}",
                 lastCheckpointDispatched[slotName], chkpoint);
             }
-            lastCheckpointDispatched[slotName] = chkpoint;
 
             if (chkpoint <= startCheckpoint)
             {
-                //Already dispatched, skip it.
+                //Already dispatched, skip it. Still update lastCheckpointDispatched so sequence
+                //tracking remains correct for subsequent chunks.
+                lastCheckpointDispatched[slotName] = chkpoint;
                 Interlocked.Decrement(ref _countOfConcurrentDispatchingCommit);
                 return;
             }
@@ -485,6 +486,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine
                 someEventDispatched: someProjectionProcessedTheEvent).ConfigureAwait(false);
 
             await _notifyCommitHandled.SetDispatched(slotName, chunk).ConfigureAwait(false);
+
+            // Update only after successful dispatch so that a retry of the same chunk
+            // (after a transient or non-transient error) does not trigger a false
+            // "Sequence broken" error.
+            lastCheckpointDispatched[slotName] = chkpoint;
 
             // ok in multithread wihout locks!
             if (_maxDispatchedCheckpoint < chkpoint)

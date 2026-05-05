@@ -1,5 +1,10 @@
 # J.A.R.V.I.S. Framework - Proximo srl (c)
 
+## 7.15.1
+
+- Fixed "Sequence broken" false error in ProjectionEngine when a slot retries a failed chunk dispatch after a transient or non-transient error.
+
+
 ## 7.15.0
 
 - Added deferred UpdateVersion batching for Atomic Readmodels.
