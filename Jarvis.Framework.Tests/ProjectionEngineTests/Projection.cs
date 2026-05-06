@@ -212,6 +212,43 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         }
     }
 
+    /// <summary>
+    /// A projection that throws <see cref="InvalidOperationException"/> on its first
+    /// dispatch call. Set <see cref="ShouldFail"/> to false to let subsequent calls succeed.
+    /// Used to test retry-without-sequence-broken scenarios.
+    /// </summary>
+    [ProjectionInfo("default")]
+    public class FailingOnFirstCallProjection : AbstractProjection,
+        IEventHandler<SampleAggregateCreated>
+    {
+        private readonly ICollectionWrapper<SampleReadModel, string> _collection;
+
+        public Boolean ShouldFail { get; set; } = true;
+
+        public FailingOnFirstCallProjection(ICollectionWrapper<SampleReadModel, string> collection)
+        {
+            _collection = collection;
+            _collection.Attach(this, false);
+        }
+
+        public override Task DropAsync() => _collection.DropAsync();
+
+        public override Task SetUpAsync() => Task.CompletedTask;
+
+        public Task On(SampleAggregateCreated e)
+        {
+            if (ShouldFail)
+                throw new InvalidOperationException("Simulated projection failure");
+
+            return _collection.InsertAsync(e, new SampleReadModel()
+            {
+                Id = e.AggregateId.AsString(),
+                IsInRebuild = base.IsRebuilding,
+                Timestamp = DateTime.Now.Ticks
+            });
+        }
+    }
+
     public class PocoPayloadObject
     {
         public PocoPayloadObject(string propertyString, int propertyInt)
