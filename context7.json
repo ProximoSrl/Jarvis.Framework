@@ -1,4 +1,43 @@
 {
-  "url": "https://context7.com/proximosrl/jarvis.framework",
-  "public_key": "pk_CZ2MIduVt5BsAxFsWVhKZ"
+  "$schema": "https://context7.com/schema/context7.json",
+  "projectTitle": "Jarvis.Framework",
+  "description": "A .NET CQRS/ES framework built on NStore and MongoDB providing strongly typed aggregate identities, projection engines, atomic read models, and Rebus-based messaging.",
+  "folders": [
+    "Wiki",
+    "llm"
+  ],
+  "excludeFolders": [
+    "bin",
+    "obj",
+    "artifacts",
+    "TestResults",
+    "packages",
+    "Jarvis.Framework.Tests",
+    "Jarvis.Framework.TestHelpers",
+    "Tools",
+    ".git",
+    ".github/workflows",
+    ".vscode",
+    ".idea",
+    "scripts",
+    "ci"
+  ],
+  "excludeFiles": [
+    "SECURITY.md"
+  ],
+  "rules": [
+    "Call MongoFlatMapper.EnableFlatMapping() before calling MessagesRegistration.RegisterAssembly(...); reversing the order causes IIdentity values to be stored as nested Mongo documents instead of flat strings.",
+    "Define aggregate ids by inheriting from EventStoreIdentity, then register them with IdentityManager before generating or parsing any ids.",
+    "Generate new aggregate ids through IdentityManager.New<T>() or NewAsync<T>(); never construct EventStoreIdentity instances directly.",
+    "Read atomic read models through IAtomicCollectionReader<TModel>; do not query the underlying Mongo collection directly as the reader handles catch-up and version gating.",
+    "The primary LLM documentation lives under llm/; follow the progressive-disclosure structure — start with an overview README, then follow links only when deeper detail is needed.",
+    "Projection dispatch uses slots as the unit of ordered processing; inspect ProjectionEngine and IConcurrentCheckpointTracker before debugging individual projection handlers.",
+    "Use Castle.Windsor as the IoC container; the framework registers its own components and expects Windsor to resolve IProjection and IAtomicReadModel implementations."
+  ],
+  "previousVersions": [
+    { "tag": "7.15.1" },
+    { "tag": "7.15.0" },
+    { "tag": "7.14.3" },
+    { "tag": "7.14.0" }
+  ]
 }
