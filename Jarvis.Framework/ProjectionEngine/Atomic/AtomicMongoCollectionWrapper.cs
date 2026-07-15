@@ -895,10 +895,16 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
                     .Select(g => g.OrderByDescending(m => m.AggregateVersion).First())
                     .ToList();
 
+                // Publish intent before MongoDB can make the new projected position visible.
+                // The matching success/failure notification below closes the awaited handoff
+                // without leaving a visibility-to-wakeup gap.
+                await DeferredUpdateVersionCoordinator.NotifyDeferredUpdatesPersistingAsync(typeof(TModel)).ConfigureAwait(false);
                 await UpdateVersionBatchAsync(deduplicated, cancellationToken: CancellationToken.None).ConfigureAwait(false);
+                await DeferredUpdateVersionCoordinator.NotifyDeferredUpdatesPersistedAsync(typeof(TModel)).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
+                await DeferredUpdateVersionCoordinator.NotifyDeferredUpdatesPersistenceFailedAsync(typeof(TModel)).ConfigureAwait(false);
                 _logger.ErrorFormat(ex, "Error in deferred UpdateVersion batch for {0}: {1}", typeof(TModel).Name, ex.Message);
                 // Do not rethrow: the ActionBlock must not fault. UpdateVersion is best-effort
                 // position tracking; the next changeset will update the version again.

@@ -366,6 +366,81 @@ namespace Jarvis.Framework.Tests.ProjectionsTests.Atomic
                 "Partial batch should be flushed by the shared timer");
         }
 
+        [Test]
+        public async Task Deferred_flush_should_notify_once_after_the_batch_is_persisted()
+        {
+            var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
+            rm.ProcessChangeset(GenerateCreatedEvent(false));
+            await _sut.UpsertAsync(rm).ConfigureAwait(false);
+            rm.ProcessChangeset(GenerateSampleAggregateNotHandledEvent(false));
+
+            var notifications = new List<string>();
+            Action<Type> persistingHandler = type =>
+            {
+                var beforeWrite = _collection.FindOneByIdAsync(rm.Id).GetAwaiter().GetResult();
+                notifications.Add($"persisting:{type.Name}:{beforeWrite.AggregateVersion}");
+            };
+            Action<Type> persistedHandler = type =>
+            {
+                var afterWrite = _collection.FindOneByIdAsync(rm.Id).GetAwaiter().GetResult();
+                notifications.Add($"persisted:{type.Name}:{afterWrite.AggregateVersion}");
+            };
+            DeferredUpdateVersionCoordinator.DeferredUpdatesPersisting += persistingHandler;
+            DeferredUpdateVersionCoordinator.DeferredUpdatesPersisted += persistedHandler;
+            try
+            {
+                await _sut.DeferUpdateVersionAsync(rm).ConfigureAwait(false);
+                await _sut.FlushDeferredUpdatesAsync().ConfigureAwait(false);
+
+                var persisted = await _collection.FindOneByIdAsync(rm.Id).ConfigureAwait(false);
+                Assert.That(persisted.AggregateVersion, Is.EqualTo(rm.AggregateVersion));
+                Assert.That(persisted.ProjectedPosition, Is.EqualTo(rm.ProjectedPosition));
+                Assert.That(notifications, Is.EqualTo(new[]
+                {
+                    $"persisting:{nameof(SimpleTestAtomicReadModel)}:{rm.AggregateVersion - 1}",
+                    $"persisted:{nameof(SimpleTestAtomicReadModel)}:{rm.AggregateVersion}",
+                }));
+            }
+            finally
+            {
+                DeferredUpdateVersionCoordinator.DeferredUpdatesPersisting -= persistingHandler;
+                DeferredUpdateVersionCoordinator.DeferredUpdatesPersisted -= persistedHandler;
+            }
+        }
+
+        [Test]
+        public async Task Failed_deferred_batch_should_not_notify_persistence()
+        {
+            var rm = new SimpleTestAtomicReadModel(new SampleAggregateId(_aggregateIdSeed));
+            rm.ProcessChangeset(GenerateCreatedEvent(false));
+            rm.SetPropertyValue(_ => _.Id, string.Empty);
+
+            var notifications = new List<string>();
+            Action<Type> persistingHandler = type => notifications.Add($"persisting:{type.Name}");
+            Action<Type> persistedHandler = type => notifications.Add($"persisted:{type.Name}");
+            Action<Type> failedHandler = type => notifications.Add($"failed:{type.Name}");
+            DeferredUpdateVersionCoordinator.DeferredUpdatesPersisting += persistingHandler;
+            DeferredUpdateVersionCoordinator.DeferredUpdatesPersisted += persistedHandler;
+            DeferredUpdateVersionCoordinator.DeferredUpdatesPersistenceFailed += failedHandler;
+            try
+            {
+                await _sut.DeferUpdateVersionAsync(rm).ConfigureAwait(false);
+                await _sut.FlushDeferredUpdatesAsync().ConfigureAwait(false);
+
+                Assert.That(notifications, Is.EqualTo(new[]
+                {
+                    $"persisting:{nameof(SimpleTestAtomicReadModel)}",
+                    $"failed:{nameof(SimpleTestAtomicReadModel)}",
+                }));
+            }
+            finally
+            {
+                DeferredUpdateVersionCoordinator.DeferredUpdatesPersisting -= persistingHandler;
+                DeferredUpdateVersionCoordinator.DeferredUpdatesPersisted -= persistedHandler;
+                DeferredUpdateVersionCoordinator.DeferredUpdatesPersistenceFailed -= failedHandler;
+            }
+        }
+
         #endregion
 
         #region FlushDeferredUpdatesAsync Tests

@@ -32,6 +32,44 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         private static volatile bool _timerStarted;
         private static ILogger _logger = NullLogger.Instance;
 
+        /// <summary>
+        /// Raised immediately before a deferred version-update batch is persisted. This event is
+        /// process-local; consumers can use it to register wakeup intent before MongoDB makes the
+        /// new <see cref="IAtomicReadModel.ProjectedPosition"/> visible.
+        /// </summary>
+        public static event Action<Type> DeferredUpdatesPersisting;
+
+        /// <summary>
+        /// Raised after a deferred version-update batch has been persisted successfully.
+        /// This event is process-local. Consumers can use it to complete the pre-persistence
+        /// intent and refresh read-side processes that depend on the new position.
+        /// </summary>
+        public static event Action<Type> DeferredUpdatesPersisted;
+
+        /// <summary>
+        /// Raised when a deferred version-update batch fails after
+        /// <see cref="DeferredUpdatesPersisting"/>. This event is process-local and allows
+        /// consumers to clear the pre-persistence intent without scheduling a wakeup.
+        /// </summary>
+        public static event Action<Type> DeferredUpdatesPersistenceFailed;
+
+        /// <summary>
+        /// Awaitable counterpart of <see cref="DeferredUpdatesPersisting"/>. Distributed consumers
+        /// use this hook to install intent on every active process before persistence can make data
+        /// visible. Subscriber failures are isolated in the same way as synchronous notifications.
+        /// </summary>
+        public static event Func<Type, Task> DeferredUpdatesPersistingAsync;
+
+        /// <summary>
+        /// Awaitable counterpart of <see cref="DeferredUpdatesPersisted"/>.
+        /// </summary>
+        public static event Func<Type, Task> DeferredUpdatesPersistedAsync;
+
+        /// <summary>
+        /// Awaitable counterpart of <see cref="DeferredUpdatesPersistenceFailed"/>.
+        /// </summary>
+        public static event Func<Type, Task> DeferredUpdatesPersistenceFailedAsync;
+
         internal static void SetLogger(ILogger logger)
         {
             _logger = logger ?? NullLogger.Instance;
@@ -70,6 +108,87 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         internal static void Unregister(object key)
         {
             _registeredPipelines.TryRemove(key, out _);
+        }
+
+        internal static void NotifyDeferredUpdatesPersisting(Type readmodelType)
+        {
+            Notify(DeferredUpdatesPersisting, readmodelType, "starting deferred UpdateVersion persistence");
+        }
+
+        internal static void NotifyDeferredUpdatesPersisted(Type readmodelType)
+        {
+            Notify(DeferredUpdatesPersisted, readmodelType, "notifying deferred UpdateVersion persistence");
+        }
+
+        internal static void NotifyDeferredUpdatesPersistenceFailed(Type readmodelType)
+        {
+            Notify(DeferredUpdatesPersistenceFailed, readmodelType, "notifying failed deferred UpdateVersion persistence");
+        }
+
+        internal static Task NotifyDeferredUpdatesPersistingAsync(Type readmodelType)
+        {
+            NotifyDeferredUpdatesPersisting(readmodelType);
+            return NotifyAsync(DeferredUpdatesPersistingAsync, readmodelType, "starting deferred UpdateVersion persistence asynchronously");
+        }
+
+        internal static Task NotifyDeferredUpdatesPersistedAsync(Type readmodelType)
+        {
+            NotifyDeferredUpdatesPersisted(readmodelType);
+            return NotifyAsync(DeferredUpdatesPersistedAsync, readmodelType, "notifying deferred UpdateVersion persistence asynchronously");
+        }
+
+        internal static Task NotifyDeferredUpdatesPersistenceFailedAsync(Type readmodelType)
+        {
+            NotifyDeferredUpdatesPersistenceFailed(readmodelType);
+            return NotifyAsync(DeferredUpdatesPersistenceFailedAsync, readmodelType, "notifying failed deferred UpdateVersion persistence asynchronously");
+        }
+
+        private static void Notify(Action<Type> handlers, Type readmodelType, string operation)
+        {
+            if (handlers == null)
+            {
+                return;
+            }
+
+            foreach (Action<Type> handler in handlers.GetInvocationList())
+            {
+                try
+                {
+                    handler(readmodelType);
+                }
+                catch (Exception ex)
+                {
+                    _logger.ErrorFormat(
+                        ex,
+                        "Error {0} for readmodel {1}",
+                        operation,
+                        readmodelType?.Name);
+                }
+            }
+        }
+
+        private static async Task NotifyAsync(Func<Type, Task> handlers, Type readmodelType, string operation)
+        {
+            if (handlers == null)
+            {
+                return;
+            }
+
+            foreach (Func<Type, Task> handler in handlers.GetInvocationList())
+            {
+                try
+                {
+                    await handler(readmodelType).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    _logger.ErrorFormat(
+                        ex,
+                        "Error {0} for readmodel {1}",
+                        operation,
+                        readmodelType?.Name);
+                }
+            }
         }
 
         /// <summary>
@@ -129,6 +248,12 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Atomic
         {
             StopTimer();
             _registeredPipelines.Clear();
+            DeferredUpdatesPersisting = null;
+            DeferredUpdatesPersisted = null;
+            DeferredUpdatesPersistenceFailed = null;
+            DeferredUpdatesPersistingAsync = null;
+            DeferredUpdatesPersistedAsync = null;
+            DeferredUpdatesPersistenceFailedAsync = null;
         }
 
         private static void EnsureTimerStarted()
