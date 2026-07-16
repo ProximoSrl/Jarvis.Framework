@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
         <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
         <DebugType>full</DebugType>
         <DebugSymbols>true</DebugSymbols>
@@ -35,7 +35,6 @@
         <PackageReference Include="NStore.Core" />
         <PackageReference Include="NStore.Domain" />
         <PackageReference Include="NStore.Persistence.Mongo" />
-        <PackageReference Include="System.Threading.Tasks.Dataflow" />
     </ItemGroup>
 
     <ItemGroup>

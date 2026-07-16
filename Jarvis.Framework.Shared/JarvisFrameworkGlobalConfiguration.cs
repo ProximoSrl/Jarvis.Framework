@@ -14,19 +14,9 @@ namespace Jarvis.Framework.Shared
         /// </summary>
         public static Boolean DisableJarvisLogForNonCommandType { get; private set; } = true;
 
-        /// <summary>
-        /// Due to an anomaly in the driver.
-        /// </summary>
-        public static Boolean MongoDbAsyncDisabled { get; private set; }
-
         static JarvisFrameworkGlobalConfiguration()
         {
             AtomicProjectionEngineOptimizedCatchup = true;
-        }
-
-        public static void DisableMongoDbAsync()
-        {
-            MongoDbAsyncDisabled = true;
         }
 
         public static void EnableOfflineEventsReadmodelIdempotencyCheck()
