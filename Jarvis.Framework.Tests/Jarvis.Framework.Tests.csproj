@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
 
         <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
         <langversion>latest</langversion>
@@ -12,7 +12,6 @@
         <PackageReference Include="Castle.Core" />
         <PackageReference Include="Castle.LoggingFacility" />
         <PackageReference Include="Castle.Windsor" />
-        <PackageReference Include="Microsoft.CSharp" />
         <PackageReference Include="Microsoft.SourceLink.GitHub">
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -29,7 +28,6 @@
         <PackageReference Include="NUnit" />
         <PackageReference Include="NUnit3TestAdapter" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" />
-        <PackageReference Include="System.Runtime.CompilerServices.Unsafe" />
     </ItemGroup>
 
     <!-- Transform app.config XML files: https://github.com/microsoft/msbuild/issues/2746 -->

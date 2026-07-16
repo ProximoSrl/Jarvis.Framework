@@ -317,6 +317,27 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         }
 
         [Test]
+        public async Task Verify_out_of_order_checkpoint_cannot_regress_durable_slot()
+        {
+            var projection = new Projection(Substitute.For<ICollectionWrapper<SampleReadModel, String>>());
+            var projections = new IProjection[] { projection };
+
+            _concurrentCheckpointTrackerSut = new ConcurrentCheckpointTracker(_db, 60);
+            _concurrentCheckpointTrackerSut.SetUp(projections, 1, false);
+            await _concurrentCheckpointTrackerSut
+                .UpdateSlotAndSetCheckpointAsync("default", new[] { "Projection" }, 100, true)
+                .ConfigureAwait(false);
+            await _concurrentCheckpointTrackerSut
+                .UpdateSlotAndSetCheckpointAsync("default", new[] { "Projection" }, 90, true)
+                .ConfigureAwait(false);
+
+            var durableCheckpoint = _checkPoints.AsQueryable().Single(checkpoint => checkpoint.Slot == "default");
+            Assert.That(durableCheckpoint.Current, Is.EqualTo(100));
+            Assert.That(durableCheckpoint.Value, Is.EqualTo(100));
+            Assert.That(_concurrentCheckpointTrackerSut.GetCheckpoint(projection), Is.EqualTo(100));
+        }
+
+        [Test]
         public async Task Verify_non_dispatched_event_are_not_written_to_disk()
         {
             //Two projection in the same slot
@@ -409,6 +430,31 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
 
             //in memory checkpoint should be updated.
             Assert.That(_concurrentCheckpointTrackerSut.GetCheckpoint(projections[0]), Is.EqualTo(892));
+        }
+
+        [Test]
+        public async Task Rebuild_started_drains_queued_checkpoint_before_resetting_current()
+        {
+            var projection = new Projection(Substitute.For<ICollectionWrapper<SampleReadModel, String>>());
+            var tracker = new ConcurrentCheckpointTracker(
+                _checkPoints,
+                60,
+                TimeSpan.FromSeconds(30));
+            tracker.SetUp(new[] { projection }, 1, false);
+
+            // Keep the write in the batcher's collection window so RebuildStarted
+            // must establish the ordering boundary explicitly.
+            var queuedWrite = tracker.UpdateSlotAndSetCheckpointAsync(
+                "default",
+                new[] { projection.Info.CommonName },
+                42,
+                true);
+
+            tracker.RebuildStarted(projection, 0);
+            await queuedWrite.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+
+            var checkpoint = _checkPoints.FindOneById(projection.Info.CommonName);
+            Assert.That(checkpoint.Current, Is.Null);
         }
 
         [Test]

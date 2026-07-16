@@ -42,3 +42,9 @@ flushes rebuilt state back to storage.
 
 If the problem is about projection lifecycle or replay orchestration, inspect
 projection engine code before diving into individual projection implementations.
+
+## Performance notes
+
+- [Durable checkpoint bulk-write batching](checkpoint-bulk-write-batching.md)
+  explains why live projection checkpoints use cross-slot MongoDB batching and
+  documents its durability, failure, telemetry, and benchmark constraints.
