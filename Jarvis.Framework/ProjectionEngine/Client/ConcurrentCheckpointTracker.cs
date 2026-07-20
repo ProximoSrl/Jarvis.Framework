@@ -7,6 +7,7 @@ using MongoDB.Driver;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,18 +15,37 @@ using System.Threading.Tasks;
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 {
     /// <inheritdoc />
-    public class ConcurrentCheckpointTracker : IConcurrentCheckpointTracker
+    /// <remarks>
+    /// The tracker never writes to MongoDB on the hot path. Every checkpoint update goes to a local,
+    /// crash-safe medium (<see cref="FileSystemCheckpointDurableStore"/>) and to the in-memory value;
+    /// a single timer periodically pushes the in-memory state to MongoDB. On startup the tracker
+    /// reconciles MongoDB with the local medium, keeping whichever is greater, so a crash between two
+    /// flushes never replays already-dispatched side effects. <see cref="FlushCheckpointAsync"/> forces
+    /// a flush on demand (it is also called on graceful shutdown).
+    /// </remarks>
+    public class ConcurrentCheckpointTracker : IConcurrentCheckpointTracker, IDisposable
     {
         private readonly IMongoCollection<Checkpoint> _checkpoints;
-        private readonly DurableCheckpointWriteBatcher _durableCheckpointWriteBatcher;
-
-        private ConcurrentDictionary<string, Int64> _checkpointTracker;
 
         /// <summary>
-        /// This contains last time a slot was flushed, this is needed for
-        /// the optimization not to flush checkpoint every dispatched event.
+        /// Local crash-safe medium that holds the last dispatched checkpoint of each slot. Injected
+        /// (the default is a <see cref="FileSystemCheckpointDurableStore"/>); always present.
         /// </summary>
-        private ConcurrentDictionary<string, FlushSlotInfo> _lastFlushForEachSlot;
+        private readonly ICheckpointDurableStore _durableStore;
+
+        /// <summary>
+        /// Periodic MongoDB flush timer. Null when the automatic timer is disabled (a non-positive
+        /// interval, or disabled for tests that drive <see cref="FlushCheckpointAsync"/> manually).
+        /// </summary>
+        private readonly System.Timers.Timer _flushTimer;
+
+        /// <summary>
+        /// Serializes every MongoDB flush (timer, explicit and shutdown) and fences a rebuild
+        /// reset so that only one thread ever writes checkpoints to MongoDB at a time.
+        /// </summary>
+        private readonly SemaphoreSlim _flushGate = new SemaphoreSlim(1, 1);
+
+        private ConcurrentDictionary<string, Int64> _checkpointTracker;
 
         /// <summary>
         /// Used for Metrics.NET.
@@ -55,27 +75,42 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         private List<string> _checkpointErrors;
 
+        private int _flushNotDispatchedTimeoutInSeconds = 60;
+
+        private volatile bool _disposed;
+
         /// <summary>
-        /// This is the time after the checkpoint in database is updated even if
-        /// the slot did not dispatched any events for processed commit. We need to
-        /// flush every X seconds because if a slot does not process any events, the
-        /// checkpoint will never be updated and when the projection service restart
-        /// it will re-dispatch lots of unnecessary events.
+        /// Interval, in seconds, of the timer that pushes the in-memory checkpoint state to MongoDB.
+        /// Because MongoDB is not updated on every dispatched commit (that is the whole point of the
+        /// local durable medium), this timer guarantees the durable MongoDB copy is refreshed
+        /// periodically.
         /// </summary>
-        /// <remarks>A negative or zero value actively disable deferred flush returning
-        /// the checkpoint to the standard / classic operation mode.</remarks>
-        public Int32 FlushNotDispatchedTimeoutInSeconds { get; set; } = 60;
+        /// <remarks>A negative or zero value disables the automatic timer: checkpoints are then
+        /// persisted to MongoDB only on an explicit <see cref="FlushCheckpointAsync"/> or on
+        /// shutdown. It does NOT change how the hot path works: updates always go to the local
+        /// durable medium and the in-memory value.</remarks>
+        public Int32 FlushNotDispatchedTimeoutInSeconds
+        {
+            get => _flushNotDispatchedTimeoutInSeconds;
+            set
+            {
+                _flushNotDispatchedTimeoutInSeconds = value;
+                if (_flushTimer != null && value > 0)
+                {
+                    _flushTimer.Interval = value * 1000d;
+                }
+            }
+        }
 
         private List<Checkpoint> _initialCollectionContent;
-
-        private bool DeferredFlushEnabled => FlushNotDispatchedTimeoutInSeconds > 0;
 
         public ConcurrentCheckpointTracker(
             IMongoDatabase db,
             int flushNotDispatchedTimeoutInSeconds)
             : this(
                 db?.GetCollection<Checkpoint>("checkpoints") ?? throw new ArgumentNullException(nameof(db)),
-                flushNotDispatchedTimeoutInSeconds)
+                flushNotDispatchedTimeoutInSeconds,
+                new FileSystemCheckpointDurableStore(GetStoreBaseDirectory()))
         {
             _checkpoints.Indexes.CreateOne(
                     new CreateIndexModel<Checkpoint>(
@@ -86,32 +121,39 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         internal ConcurrentCheckpointTracker(
             IMongoCollection<Checkpoint> checkpoints,
-            int flushNotDispatchedTimeoutInSeconds)
-            : this(
-                checkpoints,
-                flushNotDispatchedTimeoutInSeconds,
-                TimeSpan.FromMilliseconds(1))
-        {
-        }
-
-        internal ConcurrentCheckpointTracker(
-            IMongoCollection<Checkpoint> checkpoints,
             int flushNotDispatchedTimeoutInSeconds,
-            TimeSpan checkpointCollectionWindow)
+            ICheckpointDurableStore durableStore)
         {
             _checkpoints = checkpoints ?? throw new ArgumentNullException(nameof(checkpoints));
-            _durableCheckpointWriteBatcher = new DurableCheckpointWriteBatcher(
-                checkpointCollectionWindow,
-                ExecuteCheckpointBatchAsync);
+            _durableStore = durableStore ?? throw new ArgumentNullException(nameof(durableStore));
             Logger = NullLogger.Instance;
+            _flushNotDispatchedTimeoutInSeconds = flushNotDispatchedTimeoutInSeconds;
             Clear();
-            FlushNotDispatchedTimeoutInSeconds = flushNotDispatchedTimeoutInSeconds;
+
+            if (_flushNotDispatchedTimeoutInSeconds > 0)
+            {
+                _flushTimer = new System.Timers.Timer(_flushNotDispatchedTimeoutInSeconds * 1000d)
+                {
+                    AutoReset = true,
+                };
+                _flushTimer.Elapsed += OnFlushTimerElapsed;
+                _flushTimer.Start();
+            }
+        }
+
+        /// <summary>
+        /// Default local durable store location: a fixed "jarvis-framework-checkpoints" folder under
+        /// the operating system temporary directory. Inject a custom <see cref="ICheckpointDurableStore"/>
+        /// (for example one pointing at a per-database directory) when a different location is needed.
+        /// </summary>
+        private static string GetStoreBaseDirectory()
+        {
+            return Path.Combine(Path.GetTempPath(), "jarvis-framework-checkpoints");
         }
 
         private void Clear()
         {
             _checkpointTracker = new ConcurrentDictionary<string, Int64>();
-            _lastFlushForEachSlot = new ConcurrentDictionary<string, FlushSlotInfo>();
             _checkpointSlotTracker = new ConcurrentDictionary<string, Int64>();
             _projectionToSlot = new ConcurrentDictionary<String, String>();
             _slotRebuildTracker = new ConcurrentDictionary<string, bool>();
@@ -177,6 +219,11 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                 Add(projection, projectionStartFormCheckpointValue);
             }
 
+            // Reconcile MongoDB (loaded above into the in-memory tracker by Add) with the local
+            // durable medium: whichever is greater is the real last-dispatched checkpoint. This is
+            // the crash-recovery step that lets MongoDB be updated at a slow pace.
+            ReconcileWithDurableStore();
+
             // mark db
             if (version > currentVersion)
             {
@@ -202,6 +249,18 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             }
         }
 
+        private void ReconcileWithDurableStore()
+        {
+            foreach (var projectionToSlot in _projectionToSlot)
+            {
+                var durableValue = _durableStore.Read(projectionToSlot.Value);
+                _checkpointTracker.AddOrUpdate(
+                    projectionToSlot.Key,
+                    _ => durableValue,
+                    (_, current) => Math.Max(current, durableValue));
+            }
+        }
+
         private double GetCheckpointMaxCount()
         {
             return _checkpointSlotTracker.Max(k => k.Value);
@@ -214,41 +273,51 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         public void RebuildStarted(IProjection projection, Int64 lastCommit)
         {
-            // Rebuild changes Current to null, which intentionally opens the
-            // monotonic filter to the next rebuild write. Fence the cold-path
-            // queue first so an older pre-rebuild token cannot use that null arm;
-            // this host has no synchronization context, so sync-over-async is safe.
-            _durableCheckpointWriteBatcher.DrainAsync().GetAwaiter().GetResult();
-
-            var projectionName = projection.Info.CommonName;
-            _checkpoints.UpdateOne(
-                Builders<Checkpoint>.Filter.Eq("_id", projectionName),
-                Builders<Checkpoint>.Update.Set(x => x.RebuildStart, DateTime.UtcNow)
-                                    .Set(x => x.RebuildStop, null)
-                                    .Set(x => x.RebuildTotalSeconds, 0)
-                                    .Set(x => x.RebuildActualSeconds, 0)
-                                    .Set(x => x.Current, null)
-                                    .Set(x => x.Events, 0)
-                                    .Set(x => x.Details, null)
-            );
-            //Check if some commit was deleted and lastCommitId in Eventstore 
-            //is lower than the latest dispatched commit.
-            var trackerLastValue = _checkpointTracker[projection.Info.CommonName];
-            if (trackerLastValue > 0)
+            // Rebuild changes Current to null, which intentionally opens the monotonic filter to
+            // the next rebuild write. Fence the flush (timer / explicit) first so no older token
+            // can be written to MongoDB after Current is reset; this host has no synchronization
+            // context, so sync-over-async is safe.
+            _flushGate.Wait();
+            try
             {
-                //new projection, it has no dispatched checkpoint.
-                _slotRebuildTracker[_projectionToSlot[projectionName]] = true;
-            }
-            if (lastCommit < trackerLastValue)
-            {
-                _checkpointTracker[projection.Info.CommonName] = lastCommit;
+                var projectionName = projection.Info.CommonName;
                 _checkpoints.UpdateOne(
-                   Builders<Checkpoint>.Filter.Eq("_id", projectionName),
-                   Builders<Checkpoint>.Update.Set(x => x.Value, lastCommit));
+                    Builders<Checkpoint>.Filter.Eq("_id", projectionName),
+                    Builders<Checkpoint>.Update.Set(x => x.RebuildStart, DateTime.UtcNow)
+                                        .Set(x => x.RebuildStop, null)
+                                        .Set(x => x.RebuildTotalSeconds, 0)
+                                        .Set(x => x.RebuildActualSeconds, 0)
+                                        .Set(x => x.Current, null)
+                                        .Set(x => x.Events, 0)
+                                        .Set(x => x.Details, null)
+                );
+                //Check if some commit was deleted and lastCommitId in Eventstore
+                //is lower than the latest dispatched commit.
+                var trackerLastValue = _checkpointTracker[projection.Info.CommonName];
+                if (trackerLastValue > 0)
+                {
+                    //new projection, it has no dispatched checkpoint.
+                    _slotRebuildTracker[_projectionToSlot[projectionName]] = true;
+                }
+                if (lastCommit < trackerLastValue)
+                {
+                    _checkpointTracker[projection.Info.CommonName] = lastCommit;
+                    _checkpoints.UpdateOne(
+                       Builders<Checkpoint>.Filter.Eq("_id", projectionName),
+                       Builders<Checkpoint>.Update.Set(x => x.Value, lastCommit));
+                }
+                _higherCheckpointToDispatchInRebuild = Math.Max(
+                    _higherCheckpointToDispatchInRebuild,
+                    Math.Min(trackerLastValue, lastCommit));
+
+                // Keep the local durable medium aligned with the (possibly lowered) checkpoint so
+                // that a restart does not resurrect a pre-rebuild token via max() reconciliation.
+                _durableStore.Reset(_projectionToSlot[projectionName], _checkpointTracker[projectionName]);
             }
-            _higherCheckpointToDispatchInRebuild = Math.Max(
-                _higherCheckpointToDispatchInRebuild,
-                Math.Min(trackerLastValue, lastCommit));
+            finally
+            {
+                _flushGate.Release();
+            }
         }
 
         public void RebuildEnded(IProjection projection, ProjectionMetrics.Meter meter)
@@ -266,69 +335,36 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             checkpoint.RebuildActualSeconds = (double)meter.TotalElapsed / TimeSpan.TicksPerSecond;
             checkpoint.Details = meter;
             checkpoint.Signature = projection.Info.Signature;
+
+            // Current/Value in MongoDB may lag behind the value reached during the rebuild (only
+            // the timer pushes them). Persist the authoritative in-memory value as part of this
+            // same save so the rebuilt checkpoint is durable immediately.
+            if (_checkpointTracker.TryGetValue(projectionName, out var inMemory))
+            {
+                checkpoint.Value = Math.Max(checkpoint.Value, inMemory);
+                checkpoint.Current = Math.Max(checkpoint.Current ?? 0, inMemory);
+            }
+
             _checkpoints.Save(checkpoint, checkpoint.Id);
         }
 
-        public async Task UpdateSlotAndSetCheckpointAsync(
+        public Task UpdateSlotAndSetCheckpointAsync(
             string slotName,
             IEnumerable<String> projectionNameList,
             Int64 valueCheckpointToken,
             bool someEventDispatched)
         {
-            //we do not want to update mongodb if the event was not dispatched on the slot, this
-            //because if we re-dispatch again (in case of immediate shutdown) we do not have side effects
-            //Clearly if we do not have enabled deferred flush, we should always update mongo
-            bool shouldUpdateMongodb = someEventDispatched || !DeferredFlushEnabled;
+            // Never touch MongoDB on the hot path. Record the checkpoint on the local crash-safe
+            // medium and update the in-memory value. fsync only when the slot actually produced
+            // side effects: those must never be replayed after a crash, while a non-dispatched
+            // checkpoint can safely be lost and re-dispatched.
+            _durableStore.Record(slotName, valueCheckpointToken, flushToDisk: someEventDispatched);
+            UpdateInMemoryCheckpoint(projectionNameList, valueCheckpointToken);
+            return Task.CompletedTask;
+        }
 
-            //if we determined that we should not update mongo, we need to check if some time passed
-            //because we want to flush every X seconds even if the slot
-            if (!shouldUpdateMongodb)
-            {
-                if (!_lastFlushForEachSlot.TryGetValue(slotName, out var lastFlushInfo))
-                {
-                    //ok we never flushed the slot, we can simply assume that time tracking starts from now.
-                    lastFlushInfo = new FlushSlotInfo()
-                    {
-                        LastFlush = DateTime.UtcNow,
-                        PendingFlush = true,
-                    };
-                    _lastFlushForEachSlot[slotName] = lastFlushInfo;
-                }
-
-                var checkpointToWrite = valueCheckpointToken;
-                lock (lastFlushInfo.Gate)
-                {
-                    //flush is pending and we store actual checkpoint token.
-                    lastFlushInfo.PendingFlush = true;
-                    // A deferred flush may observe several tokens for the same slot;
-                    // retain the highest one so it never enqueues an older checkpoint.
-                    lastFlushInfo.ActualCheckpoint = Math.Max(lastFlushInfo.ActualCheckpoint, valueCheckpointToken);
-
-                    //ok now we have last flush time, we need to determine if we really want to flush because
-                    //too much time passed. Dispatching in a certain amount of time is a safe assumption.
-                    if (DateTime.UtcNow.Subtract(lastFlushInfo.LastFlush).TotalSeconds > FlushNotDispatchedTimeoutInSeconds) //time elapsed
-                    {
-                        shouldUpdateMongodb = true;
-                        lastFlushInfo.LastFlush = DateTime.UtcNow;
-                        // Keep the maximum collected token when the timed path writes immediately.
-                        checkpointToWrite = lastFlushInfo.ActualCheckpoint;
-                        //we are going to flush pending flush become false.
-                        lastFlushInfo.PendingFlush = false;
-                    }
-                }
-
-                valueCheckpointToken = checkpointToWrite;
-            }
-
-            //Update slot only if it is needed, this will greatly reduce the concurrency and resource lock on the checkpoint collection.
-            //Distinct slots completing within the small collection window share one MongoDB bulk write. Requests for
-            //the same slot remain separate and ordered in the durable checkpoint coordinator.
-            if (shouldUpdateMongodb)
-            {
-                await _durableCheckpointWriteBatcher
-                    .EnqueueAsync(slotName, valueCheckpointToken)
-                    .ConfigureAwait(false);
-            }
+        private void UpdateInMemoryCheckpoint(IEnumerable<String> projectionNameList, Int64 valueCheckpointToken)
+        {
             foreach (var projectionName in projectionNameList)
             {
                 _checkpointTracker.AddOrUpdate(
@@ -338,98 +374,17 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             }
         }
 
-        /// <summary>
-        /// Persists a distinct-slot checkpoint batch using the asynchronous MongoDB driver API.
-        /// </summary>
-        /// <param name="writes">One durable checkpoint request for each distinct slot in the batch.</param>
-        /// <returns></returns>
-        private async Task<IReadOnlyDictionary<int, Exception>> ExecuteCheckpointBatchAsync(
-            IReadOnlyList<DurableCheckpointWriteBatcher.DurableCheckpointWrite> writes)
-        {
-            var models = CreateCheckpointWriteModels(writes);
-            try
-            {
-                var result = await _checkpoints.BulkWriteAsync(
-                    models,
-                    new BulkWriteOptions { IsOrdered = false },
-                    CancellationToken.None).ConfigureAwait(false);
-
-                EnsureAcknowledged(result, writes.Count);
-                return DurableCheckpointWriteBatcher.EmptyFailures;
-            }
-            catch (MongoBulkWriteException<Checkpoint> ex) when (CanIdentifySuccessfulRequests(ex, writes.Count))
-            {
-                return ex.WriteErrors.ToDictionary(error => error.Index, _ => (Exception)ex);
-            }
-        }
-
-        private static List<WriteModel<Checkpoint>> CreateCheckpointWriteModels(
-            IReadOnlyList<DurableCheckpointWriteBatcher.DurableCheckpointWrite> writes)
-        {
-            // There is one update model for each distinct slot head. The
-            // monotonic filter makes retries after an ambiguous bulk safe: an
-            // older token can be acknowledged as a no-op, but cannot regress it.
-            return writes
-                .Select(write => (WriteModel<Checkpoint>)new UpdateManyModel<Checkpoint>(
-                    CreateMonotonicSlotFilter(write.SlotName, write.CheckpointToken),
-                    Builders<Checkpoint>.Update
-                        .Set(checkpoint => checkpoint.Current, write.CheckpointToken)
-                        .Set(checkpoint => checkpoint.Value, write.CheckpointToken)))
-                .ToList();
-        }
-
         private static FilterDefinition<Checkpoint> CreateMonotonicSlotFilter(
             string slotName,
             long valueCheckpointToken)
         {
+            // The monotonic filter makes the timed flush idempotent and safe against reordering:
+            // an older token can be re-applied as a no-op but never regresses the slot.
             return Builders<Checkpoint>.Filter.Eq(checkpoint => checkpoint.Slot, slotName) &
                 (
                     Builders<Checkpoint>.Filter.Lt(checkpoint => checkpoint.Current, valueCheckpointToken) |
                     Builders<Checkpoint>.Filter.Eq(checkpoint => checkpoint.Current, null)
                 );
-        }
-
-        private static void EnsureAcknowledged(BulkWriteResult<Checkpoint> result, int expectedRequestCount)
-        {
-            if (!result.IsAcknowledged || result.RequestCount != expectedRequestCount)
-            {
-                throw new InvalidOperationException(
-                    $"MongoDB did not acknowledge all checkpoint writes. Expected {expectedRequestCount}, acknowledged {result.RequestCount}.");
-            }
-        }
-
-        private static bool CanIdentifySuccessfulRequests(
-            MongoBulkWriteException<Checkpoint> exception,
-            int expectedRequestCount)
-        {
-            return CanIdentifySuccessfulRequests(
-                exception.Result?.IsAcknowledged == true,
-                exception.Result?.RequestCount ?? -1,
-                exception.WriteErrors.Select(error => error.Index).ToArray(),
-                exception.WriteConcernError != null,
-                exception.UnprocessedRequests.Count,
-                expectedRequestCount);
-        }
-
-        internal static bool CanIdentifySuccessfulRequests(
-            bool resultIsAcknowledged,
-            int resultRequestCount,
-            IReadOnlyCollection<int> indexedErrorIndexes,
-            bool hasWriteConcernError,
-            int unprocessedRequestCount,
-            int expectedRequestCount)
-        {
-            // Unordered bulk writes can partially apply before MongoDB reports an
-            // error. Split the failure only when the driver proves that every
-            // request was processed and each error maps to one valid index;
-            // otherwise the outcome is ambiguous and the whole batch must fail.
-            return !hasWriteConcernError &&
-                resultIsAcknowledged &&
-                resultRequestCount == expectedRequestCount &&
-                unprocessedRequestCount == 0 &&
-                indexedErrorIndexes.Count > 0 &&
-                indexedErrorIndexes.All(index => index >= 0 && index < expectedRequestCount) &&
-                indexedErrorIndexes.Distinct().Count() == indexedErrorIndexes.Count;
         }
 
         public async Task UpdateProjectionCheckpointAsync(
@@ -454,6 +409,33 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             {
                 // we do not need to create a null checkpoint the caller can know what to do with a null checkpoint
                 return null;
+            }
+
+            // MongoDB lags behind the in-memory/durable value, so overlay the authoritative
+            // in-memory checkpoint (already reconciled with the durable medium at SetUp) onto the
+            // returned document. This is what makes the projection engine resume from the real
+            // position instead of replaying commits.
+            //
+            // The one case we must not touch is an interrupted rebuild, signalled by
+            // Current == null while Value > 0: leaving it as-is lets the engine detect the
+            // interrupted rebuild and refuse to start. A null Current with Value == 0 is just a
+            // projection that dispatched but never flushed yet, and MUST be recovered from the
+            // durable value, otherwise its already-dispatched commits would be replayed.
+            if (_checkpointTracker.TryGetValue(projection.Info.CommonName, out var inMemory))
+            {
+                bool interruptedRebuild = checkpoint.Current == null && checkpoint.Value > 0;
+                if (!interruptedRebuild)
+                {
+                    long durableCurrent = checkpoint.Current ?? 0;
+                    if (inMemory > durableCurrent)
+                    {
+                        checkpoint.Current = inMemory;
+                    }
+                    if (inMemory > checkpoint.Value)
+                    {
+                        checkpoint.Value = inMemory;
+                    }
+                }
             }
 
             return checkpoint;
@@ -487,88 +469,122 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         public async Task FlushCheckpointAsync()
         {
-            //Fence writes from callers that have already completed projection side effects before
-            //adding deferred checkpoints, then drain the deferred writes as part of the same flush.
-            await _durableCheckpointWriteBatcher.DrainAsync().ConfigureAwait(false);
+            await _flushGate.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                await FlushPendingToMongoAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Logger.ErrorFormat(ex, "Error during flush of checkpoints");
+            }
+            finally
+            {
+                _flushGate.Release();
+            }
+        }
 
-            if (!DeferredFlushEnabled)
+        /// <summary>
+        /// Pushes the current in-memory checkpoint of every slot to MongoDB in a single unordered
+        /// bulk write. Must be called while holding <see cref="_flushGate"/>, guaranteeing a single
+        /// writer. Because the write uses the monotonic filter it is idempotent, so flushing every
+        /// slot on each tick (even unchanged ones) is safe and a failure simply retries next time.
+        /// </summary>
+        private Task FlushPendingToMongoAsync()
+        {
+            var slotTokens = new Dictionary<string, long>(StringComparer.Ordinal);
+            foreach (var projectionCheckpoint in _checkpointTracker)
+            {
+                if (!_projectionToSlot.TryGetValue(projectionCheckpoint.Key, out var slot))
+                {
+                    continue;
+                }
+                if (!slotTokens.TryGetValue(slot, out var current) || projectionCheckpoint.Value > current)
+                {
+                    slotTokens[slot] = projectionCheckpoint.Value;
+                }
+            }
+
+            var models = slotTokens
+                .Where(slotToken => slotToken.Value > 0)
+                .Select(slotToken => (WriteModel<Checkpoint>)new UpdateManyModel<Checkpoint>(
+                    CreateMonotonicSlotFilter(slotToken.Key, slotToken.Value),
+                    Builders<Checkpoint>.Update
+                        .Set(checkpoint => checkpoint.Current, slotToken.Value)
+                        .Set(checkpoint => checkpoint.Value, slotToken.Value)))
+                .ToList();
+
+            if (models.Count == 0)
+            {
+                return Task.CompletedTask;
+            }
+
+            return _checkpoints.BulkWriteAsync(
+                models,
+                new BulkWriteOptions { IsOrdered = false },
+                CancellationToken.None);
+        }
+
+        private void OnFlushTimerElapsed(object sender, System.Timers.ElapsedEventArgs e)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            // Skip this tick if another flush (explicit or a rebuild fence) is already running:
+            // a single-threaded, non-overlapping flush is exactly what we want.
+            if (!_flushGate.Wait(0))
             {
                 return;
             }
 
             try
             {
-                // The first drain fences writes already queued. Deferred writes
-                // are then enqueued together and the second drain waits for all
-                // of those newly queued requests to be acknowledged.
-                var pendingFlushes = new List<(string SlotName, long CheckpointToken, FlushSlotInfo SlotInfo)>();
-                foreach (var flush in _lastFlushForEachSlot)
-                {
-                    lock (flush.Value.Gate)
-                    {
-                        if (!flush.Value.PendingFlush)
-                        {
-                            continue;
-                        }
-
-                        // Snapshot and clear before enqueueing. A dispatch that arrives
-                        // after this lock is released sets PendingFlush again, so it is
-                        // picked up by the next flush; clearing after enqueue could erase
-                        // that newer token.
-                        pendingFlushes.Add((
-                            flush.Key,
-                            flush.Value.ActualCheckpoint,
-                            flush.Value));
-                        flush.Value.PendingFlush = false;
-                    }
-                }
-
-                var flushTasks = pendingFlushes.Select(FlushDeferredCheckpointAsync);
-
-                await Task.WhenAll(flushTasks).ConfigureAwait(false);
-                await _durableCheckpointWriteBatcher.DrainAsync().ConfigureAwait(false);
+                FlushPendingToMongoAsync().GetAwaiter().GetResult();
             }
             catch (Exception ex)
             {
-                Logger.ErrorFormat(ex, "Error during flush of checkpoints");
+                Logger.ErrorFormat(ex, "Error during timed flush of checkpoints");
+            }
+            finally
+            {
+                _flushGate.Release();
             }
         }
 
-        private async Task FlushDeferredCheckpointAsync(
-            (string SlotName, long CheckpointToken, FlushSlotInfo SlotInfo) flush)
+        public void Dispose()
         {
+            if (_disposed)
+            {
+                return;
+            }
+            _disposed = true;
+
+            if (_flushTimer != null)
+            {
+                _flushTimer.Stop();
+                _flushTimer.Elapsed -= OnFlushTimerElapsed;
+                _flushTimer.Dispose();
+            }
+
+            // Final flush so in-memory progress is persisted before we let go of the process.
+            _flushGate.Wait();
             try
             {
-                await _durableCheckpointWriteBatcher
-                    .EnqueueAsync(flush.SlotName, flush.CheckpointToken)
-                    .ConfigureAwait(false);
+                FlushPendingToMongoAsync().GetAwaiter().GetResult();
             }
-            catch
+            catch (Exception ex)
             {
-                lock (flush.SlotInfo.Gate)
-                {
-                    // Restore only this failed request. A dispatch racing with the
-                    // flush may already have supplied a newer token; retain it while
-                    // ensuring the slot remains eligible for the next flush.
-                    flush.SlotInfo.ActualCheckpoint = Math.Max(
-                        flush.SlotInfo.ActualCheckpoint,
-                        flush.CheckpointToken);
-                    flush.SlotInfo.PendingFlush = true;
-                }
-
-                throw;
+                Logger.ErrorFormat(ex, "Error during final flush of checkpoints on dispose");
             }
-        }
+            finally
+            {
+                _flushGate.Release();
+            }
 
-        private class FlushSlotInfo
-        {
-            public readonly object Gate = new();
-
-            public DateTime LastFlush { get; set; }
-
-            public Boolean PendingFlush { get; set; }
-
-            public long ActualCheckpoint { get; set; }
+            _durableStore.Dispose();
+            _flushGate.Dispose();
         }
     }
 }

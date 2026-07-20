@@ -24,6 +24,7 @@ using NSubstitute;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -45,6 +46,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
         protected ConcurrentCheckpointTracker _tracker;
         protected MongoDirectConcurrentCheckpointStatusChecker _statusChecker;
         protected WindsorContainer _container;
+        private string _checkpointStoreDir;
 
         protected ICommitPollingClientFactory _pollingClientFactory;
 
@@ -130,6 +132,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
         public virtual void OneTimeTearDown()
         {
             Engine.Stop();
+            _tracker?.Dispose();
 #pragma warning disable S2696 // Instance members should not write to "static" fields
             CollectionNames.Customize = name => name;
 #pragma warning restore S2696 // Instance members should not write to "static" fields
@@ -147,8 +150,24 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
         protected async Task ConfigureProjectionEngineAsync(Boolean dropCheckpoints = true)
         {
             Engine?.Stop();
-            if (dropCheckpoints) _checkpoints.Drop();
-            _tracker = new ConcurrentCheckpointTracker(Database, 60);
+            _tracker?.Dispose();
+            if (dropCheckpoints)
+            {
+                _checkpoints.Drop();
+                // Fresh local durable-store directory whenever checkpoints are dropped so a re-init
+                // starts clean and isolated from other tests; reused across a restart
+                // (dropCheckpoints: false) so the startup reconciliation can recover the checkpoint.
+                _checkpointStoreDir = Path.Combine(
+                    Path.GetTempPath(),
+                    "jarvis-fw-checkpoint-tests",
+                    Guid.NewGuid().ToString("N"));
+            }
+            // Short auto-flush interval (1s) so the cross-process status checker (which reads
+            // MongoDB) observes dispatched checkpoints promptly in these end-to-end tests.
+            _tracker = new ConcurrentCheckpointTracker(
+                _checkpoints,
+                1,
+                new FileSystemCheckpointDurableStore(_checkpointStoreDir));
             _statusChecker = new MongoDirectConcurrentCheckpointStatusChecker(Database);
 
             var tenantId = new TenantId("engine");

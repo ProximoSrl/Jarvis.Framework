@@ -92,6 +92,9 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             Assert.That(projected, Is.False);
 
             await Engine.UpdateAndWaitAsync().ConfigureAwait(false);
+            //MongoDB is refreshed by the periodic flush; force it so the cross-process status
+            //checker (which reads MongoDB) observes the just-dispatched checkpoint deterministically.
+            await _tracker.FlushCheckpointAsync().ConfigureAwait(false);
             Assert.That(_statusChecker.IsCheckpointProjectedByAllProjection(lastPosition), Is.True);
         }
     }
