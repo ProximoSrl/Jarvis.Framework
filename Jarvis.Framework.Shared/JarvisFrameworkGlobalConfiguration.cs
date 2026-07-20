@@ -14,9 +14,42 @@ namespace Jarvis.Framework.Shared
         /// </summary>
         public static Boolean DisableJarvisLogForNonCommandType { get; private set; } = true;
 
+        /// <summary>
+        /// <para>
+        /// Controls whether <see cref="Jarvis.Framework.Shared.Commands.Tracking.MongoDbMessagesTracker"/>
+        /// persists the "Dispatched" status of a message (the <c>DispatchedAt</c> timestamp) into the
+        /// jarvis-log.messages collection.
+        /// </para>
+        /// <para>
+        /// Historically every dispatch notification produced a write to MongoDB. That write is expensive
+        /// and rarely needed, so by default it is now <strong>skipped</strong> (value <c>false</c>).
+        /// Set this to <c>true</c> (via <see cref="EnableTrackMessageDispatched"/>) to restore the old
+        /// behavior of recording the dispatch timestamp.
+        /// </para>
+        /// </summary>
+        public static Boolean TrackMessageDispatched { get; private set; }
+
         static JarvisFrameworkGlobalConfiguration()
         {
             AtomicProjectionEngineOptimizedCatchup = true;
+        }
+
+        /// <summary>
+        /// Re-enables persisting the "Dispatched" status in <see cref="Jarvis.Framework.Shared.Commands.Tracking.MongoDbMessagesTracker"/>
+        /// (the legacy behavior). See <see cref="TrackMessageDispatched"/>.
+        /// </summary>
+        public static void EnableTrackMessageDispatched()
+        {
+            TrackMessageDispatched = true;
+        }
+
+        /// <summary>
+        /// Disables persisting the "Dispatched" status in <see cref="Jarvis.Framework.Shared.Commands.Tracking.MongoDbMessagesTracker"/>
+        /// (the default behavior). See <see cref="TrackMessageDispatched"/>.
+        /// </summary>
+        public static void DisableTrackMessageDispatched()
+        {
+            TrackMessageDispatched = false;
         }
 
         public static void EnableOfflineEventsReadmodelIdempotencyCheck()

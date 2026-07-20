@@ -377,6 +377,14 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
         /// <inheritdoc/>
         public bool Dispatched(Guid messageId, DateTime dispatchedAt)
         {
+            //By default we skip persisting the dispatched status: it is an expensive write that is
+            //rarely needed. The legacy behavior can be restored globally with
+            //JarvisFrameworkGlobalConfiguration.EnableTrackMessageDispatched().
+            if (!JarvisFrameworkGlobalConfiguration.TrackMessageDispatched)
+            {
+                return true;
+            }
+
             try
             {
                 var id = messageId.ToString();
