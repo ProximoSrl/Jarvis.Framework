@@ -35,6 +35,15 @@ namespace Jarvis.Framework.Tests.BusTests
         public void SetUp()
         {
             sut.Drop();
+            //The dispatch tracking flag is a global static: make sure every test starts from the default (disabled).
+            JarvisFrameworkGlobalConfiguration.DisableTrackMessageDispatched();
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            //Never let the global flag leak into other tests/fixtures.
+            JarvisFrameworkGlobalConfiguration.DisableTrackMessageDispatched();
         }
 
         [Test]
@@ -162,6 +171,69 @@ namespace Jarvis.Framework.Tests.BusTests
                 Assert.That(track.Success, Is.True);
                 Assert.That(track.ExecutionCount, Is.EqualTo(1));
             }
+        }
+
+        [Test]
+        public void Dispatched_does_not_write_by_default()
+        {
+            SampleTestCommand cmd = new SampleTestCommand(1);
+            sut.Started(cmd);
+
+            var dispatchedAt = new DateTime(2020, 01, 01, 12, 0, 0, DateTimeKind.Utc);
+            var result = sut.Dispatched(cmd.MessageId, dispatchedAt);
+
+            //Default behavior: nothing is persisted but the call still reports success to the caller.
+            Assert.That(result, Is.True);
+
+            var track = _messages.AsQueryable().Single(t => t.MessageId == cmd.MessageId.ToString());
+            Assert.That(track.DispatchedAt, Is.Null, "DispatchedAt must not be written when dispatch tracking is disabled");
+        }
+
+        [Test]
+        public void Dispatched_does_not_write_even_if_record_missing_by_default()
+        {
+            //When disabled the method must be a pure no-op: it must not touch mongo at all, so it must
+            //not upsert or create any document for an unknown message id.
+            var result = sut.Dispatched(Guid.NewGuid(), new DateTime(2020, 01, 01, 12, 0, 0, DateTimeKind.Utc));
+
+            Assert.That(result, Is.True);
+            Assert.That(_messages.Find(_ => true).ToList(), Is.Empty, "No document should be created when dispatch tracking is disabled");
+        }
+
+        [Test]
+        public void Dispatched_writes_when_tracking_enabled()
+        {
+            JarvisFrameworkGlobalConfiguration.EnableTrackMessageDispatched();
+
+            SampleTestCommand cmd = new SampleTestCommand(1);
+            sut.Started(cmd);
+
+            var dispatchedAt = new DateTime(2020, 01, 01, 12, 0, 0, DateTimeKind.Utc);
+            var result = sut.Dispatched(cmd.MessageId, dispatchedAt);
+
+            Assert.That(result, Is.True, "First dispatch should report that the record was modified");
+
+            var track = _messages.AsQueryable().Single(t => t.MessageId == cmd.MessageId.ToString());
+            Assert.That(track.DispatchedAt, Is.EqualTo(dispatchedAt));
+        }
+
+        [Test]
+        public void Dispatched_when_tracking_enabled_is_idempotent()
+        {
+            JarvisFrameworkGlobalConfiguration.EnableTrackMessageDispatched();
+
+            SampleTestCommand cmd = new SampleTestCommand(1);
+            sut.Started(cmd);
+
+            var dispatchedAt = new DateTime(2020, 01, 01, 12, 0, 0, DateTimeKind.Utc);
+            var firstResult = sut.Dispatched(cmd.MessageId, dispatchedAt);
+            var secondResult = sut.Dispatched(cmd.MessageId, dispatchedAt.AddMinutes(5));
+
+            Assert.That(firstResult, Is.True, "First dispatch should modify the record");
+            Assert.That(secondResult, Is.False, "A message already dispatched should not be modified again");
+
+            var track = _messages.AsQueryable().Single(t => t.MessageId == cmd.MessageId.ToString());
+            Assert.That(track.DispatchedAt, Is.EqualTo(dispatchedAt), "DispatchedAt must keep the first dispatch value");
         }
     }
 }
