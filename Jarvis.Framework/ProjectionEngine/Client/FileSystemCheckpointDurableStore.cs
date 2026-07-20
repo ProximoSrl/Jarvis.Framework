@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 
 namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 {
@@ -108,6 +109,17 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         private readonly ConcurrentDictionary<string, SlotHandle> _handles =
             new ConcurrentDictionary<string, SlotHandle>(StringComparer.Ordinal);
 
+        /// <summary>
+        /// Serializes slot-handle creation and disposal. The handle lookup on the hot path stays
+        /// lock-free (see <see cref="GetHandle"/>); this gate is only taken on a slot's first touch.
+        /// </summary>
+        private readonly object _openGate = new object();
+
+        /// <summary>Test-only counter of actual file opens, to assert a slot is opened exactly once.</summary>
+        private int _openCount;
+
+        internal int OpenCountForTests => Volatile.Read(ref _openCount);
+
         private volatile bool _disposed;
 
         public FileSystemCheckpointDurableStore(string directory)
@@ -211,6 +223,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                 throw new ObjectDisposedException(nameof(FileSystemCheckpointDurableStore));
             }
 
+            // Lock-free fast path: once a slot's handle exists it is reused for the store's lifetime.
             if (_handles.TryGetValue(slotName, out var existing))
             {
                 return existing;
@@ -222,11 +235,31 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                 return null;
             }
 
-            return _handles.GetOrAdd(slotName, _ => OpenHandle(path));
+            // Serialize creation with a double-checked lock. ConcurrentDictionary.GetOrAdd does NOT
+            // guarantee its factory runs only once, so two threads first-touching the same slot could
+            // each open a FileStream (FileShare.ReadWrite lets both succeed) and leak the one that loses
+            // the race. This gate guarantees exactly one open per slot; it is only taken on first touch.
+            lock (_openGate)
+            {
+                if (_disposed)
+                {
+                    throw new ObjectDisposedException(nameof(FileSystemCheckpointDurableStore));
+                }
+                if (_handles.TryGetValue(slotName, out existing))
+                {
+                    return existing;
+                }
+
+                var handle = OpenHandle(path);
+                _handles[slotName] = handle;
+                return handle;
+            }
         }
 
-        private static SlotHandle OpenHandle(string path)
+        private SlotHandle OpenHandle(string path)
         {
+            Interlocked.Increment(ref _openCount);
+
             // FileShare.ReadWrite so a second instance can open the same file (production has a
             // single writer; some tests open the same file from more than one instance). Each
             // instance seeds its own cache from disk at open time.
@@ -342,28 +375,34 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
 
         public void Dispose()
         {
-            if (_disposed)
+            // Take the creation gate so a concurrent first-touch cannot open a handle that this loop
+            // would then miss and leak. Lock order is always _openGate -> handle.Gate (the hot path
+            // never takes _openGate while holding handle.Gate), so this cannot deadlock.
+            lock (_openGate)
             {
-                return;
-            }
-            _disposed = true;
-
-            foreach (var handle in _handles.Values)
-            {
-                lock (handle.Gate)
+                if (_disposed)
                 {
-                    try
-                    {
-                        handle.Stream.Flush(flushToDisk: true);
-                    }
-                    catch
-                    {
-                        // best effort on shutdown
-                    }
-                    handle.Stream.Dispose();
+                    return;
                 }
+                _disposed = true;
+
+                foreach (var handle in _handles.Values)
+                {
+                    lock (handle.Gate)
+                    {
+                        try
+                        {
+                            handle.Stream.Flush(flushToDisk: true);
+                        }
+                        catch
+                        {
+                            // best effort on shutdown
+                        }
+                        handle.Stream.Dispose();
+                    }
+                }
+                _handles.Clear();
             }
-            _handles.Clear();
         }
 
         private sealed class SlotHandle

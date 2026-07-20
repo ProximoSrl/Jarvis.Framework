@@ -30,6 +30,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         private IMongoCollection<Checkpoint> _checkPoints;
         private string _storeDir;
         private List<ConcurrentCheckpointTracker> _trackersToDispose;
+        private List<string> _seedFoldersToDelete;
 
         [SetUp]
         public void SetUp()
@@ -46,6 +47,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             // leak checkpoints across tests (MongoDB is dropped above, the local store must too).
             _storeDir = Path.Combine(Path.GetTempPath(), "jarvis-fw-checkpoint-tests", Guid.NewGuid().ToString("N"));
             _trackersToDispose = new List<ConcurrentCheckpointTracker>();
+            _seedFoldersToDelete = new List<string>();
         }
 
         [TearDown]
@@ -56,14 +58,24 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
                 try { tracker.Dispose(); } catch { /* best effort */ }
             }
             _trackersToDispose.Clear();
-            try
+            var foldersToDelete = new List<string> { _storeDir };
+            foldersToDelete.AddRange(_seedFoldersToDelete);
+            foreach (var folder in foldersToDelete)
             {
-                if (_storeDir != null && Directory.Exists(_storeDir))
+                try
                 {
-                    Directory.Delete(_storeDir, recursive: true);
+                    if (folder != null && Directory.Exists(folder))
+                    {
+                        Directory.Delete(folder, recursive: true);
+                    }
                 }
+                catch { /* best effort */ }
             }
-            catch { /* best effort */ }
+        }
+
+        private static string GetSeedFolder(string seed)
+        {
+            return Path.Combine(Path.GetTempPath(), "jarvis-framework-checkpoints", seed);
         }
 
         /// <summary>
@@ -542,6 +554,67 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             // The resume point exposed to the projection engine must reflect the recovered value.
             var fullCheckpoint = secondRun.GetFullCheckpoint(projection);
             Assert.That(fullCheckpoint.Current, Is.EqualTo(500));
+        }
+
+        [Test]
+        public async Task In_memory_status_check_reflects_dispatched_checkpoint_without_a_flush()
+        {
+            //Two projections in two different slots.
+            var projection1 = new Projection(Substitute.For<ICollectionWrapper<SampleReadModel, String>>());
+            var projection3 = new Projection3(Substitute.For<ICollectionWrapper<SampleReadModel3, String>>());
+            var projections = new IProjection[] { projection1, projection3 };
+
+            _concurrentCheckpointTrackerSut = CreateTracker(60);
+            _concurrentCheckpointTrackerSut.SetUp(projections, 1, false);
+
+            //Advance only one slot: the in-memory checker must know the other is still behind, even
+            //though nothing has been flushed to MongoDB yet.
+            await _concurrentCheckpointTrackerSut.UpdateSlotAndSetCheckpointAsync(
+                projection1.Info.SlotName, new[] { projection1.Info.CommonName }, 100, true).ConfigureAwait(false);
+
+            Assert.That(_concurrentCheckpointTrackerSut.IsCheckpointProjectedByAllProjection(100), Is.False);
+
+            //A cross-process (MongoDB) checker cannot even see the first slot yet, because no flush happened.
+            var mongoChecker = new MongoDirectConcurrentCheckpointStatusChecker(_db);
+            Assert.That(mongoChecker.IsCheckpointProjectedByAllProjection(100), Is.False,
+                "MongoDB must still lag until a flush happens");
+
+            //Advance the second slot too, still without any flush.
+            await _concurrentCheckpointTrackerSut.UpdateSlotAndSetCheckpointAsync(
+                projection3.Info.SlotName, new[] { projection3.Info.CommonName }, 100, true).ConfigureAwait(false);
+
+            //All tracked projections have now dispatched up to 100 in memory.
+            Assert.That(_concurrentCheckpointTrackerSut.IsCheckpointProjectedByAllProjection(100), Is.True);
+            Assert.That(_concurrentCheckpointTrackerSut.IsCheckpointProjectedByAllProjection(101), Is.False);
+        }
+
+        [Test]
+        public void Store_folder_seed_is_created_in_mongo_stable_and_inert()
+        {
+            //Public constructor path: the durable-store folder is derived from a per-database seed
+            //persisted in the checkpoints collection. -1 disables the auto-flush timer.
+            var firstRun = new ConcurrentCheckpointTracker(_db, -1);
+            _trackersToDispose.Add(firstRun);
+
+            var seedDoc = _checkPoints.FindOneById(ConcurrentCheckpointTracker.CheckpointStoreSeedId);
+            Assert.That(seedDoc, Is.Not.Null, "the seed document must be created");
+            Assert.That(seedDoc.Signature, Is.Not.Null.And.Not.Empty, "the seed must carry a folder name");
+            Assert.That(seedDoc.Active, Is.False, "the seed must be inactive so status/slot scans ignore it");
+            Assert.That(seedDoc.Slot, Is.Null, "the seed must have no slot");
+            _seedFoldersToDelete.Add(GetSeedFolder(seedDoc.Signature));
+
+            //A restart against the SAME database must resolve the same seed (same folder).
+            var secondRun = new ConcurrentCheckpointTracker(_db, -1);
+            _trackersToDispose.Add(secondRun);
+            var seedDoc2 = _checkPoints.FindOneById(ConcurrentCheckpointTracker.CheckpointStoreSeedId);
+            Assert.That(seedDoc2.Signature, Is.EqualTo(seedDoc.Signature), "the seed must be stable across restarts");
+
+            //The seed document must not be seen as a projection nor create a phantom slot.
+            var projection = new Projection(Substitute.For<ICollectionWrapper<SampleReadModel, String>>());
+            var slotStatus = new SlotStatusManager(_db, new[] { projection.Info });
+            var status = slotStatus.GetSlotsStatus();
+            Assert.That(status.AllSlots, Is.EquivalentTo(new[] { projection.Info.SlotName }),
+                "the seed document must not create a phantom slot");
         }
 
         [Test]
