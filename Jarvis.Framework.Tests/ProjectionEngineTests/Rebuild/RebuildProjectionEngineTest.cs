@@ -1,4 +1,4 @@
-﻿using Castle.Core.Logging;
+using Castle.Core.Logging;
 using Jarvis.Framework.Kernel.Engine;
 using Jarvis.Framework.Kernel.Events;
 using Jarvis.Framework.Kernel.ProjectionEngine;
@@ -27,6 +27,7 @@ using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
@@ -60,6 +61,26 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         protected ConcurrentCheckpointTracker _tracker;
         private ProjectionEventInspector _inspector;
 
+        /// <summary>
+        /// Per-test local durable-store directory, shared by the tracker created in setup and any
+        /// throwaway tracker a test builds to seed a checkpoint, so seeding is visible via the store
+        /// while staying isolated from other tests.
+        /// </summary>
+        private string _checkpointStoreDir;
+
+        /// <summary>
+        /// Builds a tracker with a durable store pointing at the per-test directory. The auto-flush
+        /// timer is off (interval &lt;= 0): rebuild persists to MongoDB directly through RebuildEnded,
+        /// so no periodic flush is needed here.
+        /// </summary>
+        protected ConcurrentCheckpointTracker CreateRebuildTracker()
+        {
+            return new ConcurrentCheckpointTracker(
+                _db.GetCollection<Checkpoint>("checkpoints"),
+                -1,
+                new FileSystemCheckpointDurableStore(_checkpointStoreDir));
+        }
+
         [SetUp]
         public virtual void TestFixtureSetUp()
         {
@@ -69,6 +90,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             var client = new MongoClient(url.CreateMongoClientSettings());
             _db = client.GetDatabase(url.DatabaseName);
             _db.Drop();
+            _checkpointStoreDir = Path.Combine(Path.GetTempPath(), "jarvis-fw-checkpoint-tests", Guid.NewGuid().ToString("N"));
 
             _identityConverter = new IdentityManager(new CounterService(_db));
             _identityConverter.RegisterIdentitiesFromAssembly(typeof(SampleAggregateId).Assembly);
@@ -107,7 +129,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             _projections = BuildProjections().ToArray();
 
             //now configure RebuildProjectionEngine
-            _tracker = new ConcurrentCheckpointTracker(_db, 60);
+            _tracker = CreateRebuildTracker();
             _tracker.SetUp(_projections, 1, false);
             _inspector = new ProjectionEventInspector();
             _inspector.AddAssembly(Assembly.GetExecutingAssembly());
@@ -204,7 +226,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             await CreateAggregate(3).ConfigureAwait(false);
 
             //prepare the tracker
-            ConcurrentCheckpointTracker thisTracker = new ConcurrentCheckpointTracker(_db, 60);
+            ConcurrentCheckpointTracker thisTracker = CreateRebuildTracker();
             thisTracker.SetUp(new[] { _projection }, 1, false);
             await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection.Info.SlotName, new[] { _projection.Info.CommonName }, 2, true); //Set the projection as dispatched
 
@@ -235,7 +257,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         {
             await CreateAggregate().ConfigureAwait(false);
 
-            ConcurrentCheckpointTracker thisTracker = new ConcurrentCheckpointTracker(_db, 60);
+            ConcurrentCheckpointTracker thisTracker = CreateRebuildTracker();
             thisTracker.SetUp(new[] { _projection1, _projection3 }, 1, false);
             await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection1.Info.SlotName, new[] { _projection1.Info.CommonName }, 1, true);
             await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection3.Info.SlotName, new[] { _projection3.Info.CommonName }, 1, true);
@@ -255,7 +277,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             await CreateAggregate(3).ConfigureAwait(false);
 
             //prepare the tracker
-            ConcurrentCheckpointTracker thisTracker = new ConcurrentCheckpointTracker(_db, 60);
+            ConcurrentCheckpointTracker thisTracker = CreateRebuildTracker();
             thisTracker.SetUp(new[] { _projection1, _projection3 }, 1, false);
             await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection1.Info.SlotName, new[] { _projection1.Info.CommonName }, 2, true);
             await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection3.Info.SlotName, new[] { _projection3.Info.CommonName }, 1, true);
@@ -300,7 +322,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
             await CreateAggregate(2).ConfigureAwait(false);
             await CreateAggregate(3).ConfigureAwait(false);
 
-            ConcurrentCheckpointTracker thisTracker = new ConcurrentCheckpointTracker(_db, 60);
+            ConcurrentCheckpointTracker thisTracker = CreateRebuildTracker();
             thisTracker.SetUp(new IProjection[] { _projection1, _projection3 }, 1, false);
             await thisTracker.UpdateSlotAndSetCheckpointAsync(((IProjection)_projection1).Info.SlotName, new[] { ((IProjection)_projection1).Info.CommonName }, 1, true);
             await thisTracker.UpdateSlotAndSetCheckpointAsync(((IProjection)_projection3).Info.SlotName, new[] { ((IProjection)_projection3).Info.CommonName }, 1, true);
@@ -343,7 +365,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.Rebuild
         {
             await CreateAggregate().ConfigureAwait(false);
 
-            ConcurrentCheckpointTracker thisTracker = new ConcurrentCheckpointTracker(_db, 60);
+            ConcurrentCheckpointTracker thisTracker = CreateRebuildTracker();
             thisTracker.SetUp(new[] { _projection1, _projection3 }, 1, false);
             await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection1.Info.SlotName, new[] { _projection1.Info.CommonName }, 1, true);
             await thisTracker.UpdateSlotAndSetCheckpointAsync(_projection3.Info.SlotName, new[] { _projection3.Info.CommonName }, 1, true);

@@ -1,4 +1,4 @@
-﻿using Jarvis.Framework.Kernel.Events;
+using Jarvis.Framework.Kernel.Events;
 using Jarvis.Framework.Kernel.ProjectionEngine;
 using Jarvis.Framework.Kernel.ProjectionEngine.Client;
 using Jarvis.Framework.Shared.Helpers;
@@ -9,7 +9,9 @@ using MongoDB.Driver;
 using NSubstitute;
 using NUnit.Framework;
 using System;
+using System.Collections.Generic;
 using System.Configuration;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -26,6 +28,8 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         private ConcurrentCheckpointTracker _concurrentCheckpointTrackerSut;
         private SlotStatusManager _slotStatusCheckerSut;
         private IMongoCollection<Checkpoint> _checkPoints;
+        private string _storeDir;
+        private List<ConcurrentCheckpointTracker> _trackersToDispose;
 
         [SetUp]
         public void SetUp()
@@ -38,6 +42,44 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             _checkPoints.Drop();
             _slotStatusCheckerSut = null;
             _concurrentCheckpointTrackerSut = null;
+            // Each test gets its own local durable-store directory so the crash-safe files never
+            // leak checkpoints across tests (MongoDB is dropped above, the local store must too).
+            _storeDir = Path.Combine(Path.GetTempPath(), "jarvis-fw-checkpoint-tests", Guid.NewGuid().ToString("N"));
+            _trackersToDispose = new List<ConcurrentCheckpointTracker>();
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            foreach (var tracker in _trackersToDispose)
+            {
+                try { tracker.Dispose(); } catch { /* best effort */ }
+            }
+            _trackersToDispose.Clear();
+            try
+            {
+                if (_storeDir != null && Directory.Exists(_storeDir))
+                {
+                    Directory.Delete(_storeDir, recursive: true);
+                }
+            }
+            catch { /* best effort */ }
+        }
+
+        /// <summary>
+        /// Builds a tracker against the test collection, injecting a durable store that points at an
+        /// isolated per-test directory. The flush timer interval is long (60s) so it never fires
+        /// during a test; tests drive <see cref="ConcurrentCheckpointTracker.FlushCheckpointAsync"/>
+        /// explicitly for deterministic assertions.
+        /// </summary>
+        private ConcurrentCheckpointTracker CreateTracker(int flushTimeoutSeconds = 60)
+        {
+            var tracker = new ConcurrentCheckpointTracker(
+                _checkPoints,
+                flushTimeoutSeconds,
+                new FileSystemCheckpointDurableStore(_storeDir));
+            _trackersToDispose.Add(tracker);
+            return tracker;
         }
 
         [Test]
@@ -204,7 +246,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
 
             _checkPoints.InsertMany(new[] { checkpoint1, checkpoint2, });
 
-            _concurrentCheckpointTrackerSut = new ConcurrentCheckpointTracker(_db, 60);
+            _concurrentCheckpointTrackerSut = CreateTracker(60);
             _slotStatusCheckerSut = new SlotStatusManager(_db, projections.Select(p => p.Info).ToArray());
             var status = _slotStatusCheckerSut.GetSlotsStatus();
 
@@ -227,7 +269,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
 
             _checkPoints.InsertMany(new[] { checkpoint1, checkpoint2, });
 
-            _concurrentCheckpointTrackerSut = new ConcurrentCheckpointTracker(_db, 60);
+            _concurrentCheckpointTrackerSut = CreateTracker(60);
             _slotStatusCheckerSut = new SlotStatusManager(_db, projections.Select(p => p.Info).ToArray());
             var status = _slotStatusCheckerSut.GetProjectionChangeInfo();
 
@@ -254,7 +296,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
 
             _checkPoints.InsertMany(new[] { checkpoint1, checkpoint2, checkpoint3 });
 
-            _concurrentCheckpointTrackerSut = new ConcurrentCheckpointTracker(_db, 60);
+            _concurrentCheckpointTrackerSut = CreateTracker(60);
             _slotStatusCheckerSut = new SlotStatusManager(_db, projections.Select(p => p.Info).ToArray());
             var status = _slotStatusCheckerSut.GetSlotsStatus();
 
@@ -272,7 +314,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
 
             var projections = new IProjection[] { projection1, projection2, projection3 };
 
-            _concurrentCheckpointTrackerSut = new ConcurrentCheckpointTracker(_db, 60);
+            _concurrentCheckpointTrackerSut = CreateTracker(60);
             _slotStatusCheckerSut = new SlotStatusManager(_db, projections.Select(p => p.Info).ToArray());
             var status = _slotStatusCheckerSut.GetSlotsStatus();
 
@@ -292,7 +334,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
 
             _checkPoints.InsertMany(new[] { checkpoint1, });
 
-            _concurrentCheckpointTrackerSut = new ConcurrentCheckpointTracker(_db, 60);
+            _concurrentCheckpointTrackerSut = CreateTracker(60);
             _slotStatusCheckerSut = new SlotStatusManager(_db, projections.Select(p => p.Info).ToArray());
             var status = _slotStatusCheckerSut.GetSlotsStatus();
             Assert.That(status.SlotsThatNeedsRebuild, Has.Count.EqualTo(1));
@@ -306,9 +348,12 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
 
             var projections = new IProjection[] { projection1 };
 
-            _concurrentCheckpointTrackerSut = new ConcurrentCheckpointTracker(_db, 60);
+            _concurrentCheckpointTrackerSut = CreateTracker(60);
             _concurrentCheckpointTrackerSut.SetUp(projections, 1, false);
             await _concurrentCheckpointTrackerSut.UpdateSlotAndSetCheckpointAsync("default", new[] { "Projection" }, 891, true).ConfigureAwait(false);
+
+            //In deferred mode the dispatched checkpoint reaches MongoDB only on flush.
+            await _concurrentCheckpointTrackerSut.FlushCheckpointAsync().ConfigureAwait(false);
 
             var allDbCheckpoints = _checkPoints.AsQueryable().Where(c => c.Slot == "default").ToList();
             Assert.That(allDbCheckpoints.Single().Slot, Is.EqualTo("default"));
@@ -322,7 +367,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             var projection = new Projection(Substitute.For<ICollectionWrapper<SampleReadModel, String>>());
             var projections = new IProjection[] { projection };
 
-            _concurrentCheckpointTrackerSut = new ConcurrentCheckpointTracker(_db, 60);
+            _concurrentCheckpointTrackerSut = CreateTracker(60);
             _concurrentCheckpointTrackerSut.SetUp(projections, 1, false);
             await _concurrentCheckpointTrackerSut
                 .UpdateSlotAndSetCheckpointAsync("default", new[] { "Projection" }, 100, true)
@@ -331,6 +376,8 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
                 .UpdateSlotAndSetCheckpointAsync("default", new[] { "Projection" }, 90, true)
                 .ConfigureAwait(false);
 
+            await _concurrentCheckpointTrackerSut.FlushCheckpointAsync().ConfigureAwait(false);
+
             var durableCheckpoint = _checkPoints.AsQueryable().Single(checkpoint => checkpoint.Slot == "default");
             Assert.That(durableCheckpoint.Current, Is.EqualTo(100));
             Assert.That(durableCheckpoint.Value, Is.EqualTo(100));
@@ -338,49 +385,32 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         }
 
         [Test]
-        public async Task Verify_non_dispatched_event_are_not_written_to_disk()
+        public async Task Verify_updates_are_not_written_to_mongo_until_flush()
         {
             //Two projection in the same slot
             var projection1 = new Projection(Substitute.For<ICollectionWrapper<SampleReadModel, String>>());
 
             var projections = new IProjection[] { projection1 };
 
-            _concurrentCheckpointTrackerSut = new ConcurrentCheckpointTracker(_db, 60);
+            _concurrentCheckpointTrackerSut = CreateTracker(60);
             _concurrentCheckpointTrackerSut.SetUp(projections, 1, false);
+
+            //In deferred mode neither a dispatched nor a non-dispatched update touches MongoDB
+            //on the hot path: they go to the local durable medium and the in-memory value only.
             await _concurrentCheckpointTrackerSut.UpdateSlotAndSetCheckpointAsync("default", new[] { "Projection" }, 891, true).ConfigureAwait(false);
-
-            //now update slot, but tell the manager that you do not dispatched the event.
             await _concurrentCheckpointTrackerSut.UpdateSlotAndSetCheckpointAsync("default", new[] { "Projection" }, 892, false).ConfigureAwait(false);
-            var allDbCheckpoints = _checkPoints.AsQueryable().Where(c => c.Slot == "default").ToList();
-            Assert.That(allDbCheckpoints.Single().Slot, Is.EqualTo("default"));
-            Assert.That(allDbCheckpoints.Single().Current, Is.EqualTo(891));
-            Assert.That(allDbCheckpoints.Single().Value, Is.EqualTo(891));
 
-            //in memory checkpoint should be updated.
+            var beforeFlush = _checkPoints.AsQueryable().Where(c => c.Slot == "default").ToList();
+            Assert.That(beforeFlush.Single().Current ?? 0, Is.EqualTo(0), "MongoDB must not be updated before a flush");
+
+            //in memory checkpoint reflects the latest value immediately.
             Assert.That(_concurrentCheckpointTrackerSut.GetCheckpoint(projections[0]), Is.EqualTo(892));
-        }
 
-        [Test]
-        public async Task Verify_disable_dispatching()
-        {
-            //Two projection in the same slot
-            var projection1 = new Projection(Substitute.For<ICollectionWrapper<SampleReadModel, String>>());
-
-            var projections = new IProjection[] { projection1 };
-
-            _concurrentCheckpointTrackerSut = new ConcurrentCheckpointTracker(_db, -1);
-            _concurrentCheckpointTrackerSut.SetUp(projections, 1, false);
-            await _concurrentCheckpointTrackerSut.UpdateSlotAndSetCheckpointAsync("default", new[] { "Projection" }, 891, true).ConfigureAwait(false);
-
-            //now update slot, but tell the manager that you do not dispatched the event.
-            await _concurrentCheckpointTrackerSut.UpdateSlotAndSetCheckpointAsync("default", new[] { "Projection" }, 892, false).ConfigureAwait(false);
-            var allDbCheckpoints = _checkPoints.AsQueryable().Where(c => c.Slot == "default").ToList();
-            Assert.That(allDbCheckpoints.Single().Slot, Is.EqualTo("default"));
-            Assert.That(allDbCheckpoints.Single().Current, Is.EqualTo(892), "deferred flush is dispatched we expect checpoint to be updated");
-            Assert.That(allDbCheckpoints.Single().Value, Is.EqualTo(892), "deferred flush is dispatched we expect checpoint to be updated");
-
-            //in memory checkpoint should be updated.
-            Assert.That(_concurrentCheckpointTrackerSut.GetCheckpoint(projections[0]), Is.EqualTo(892));
+            //after a flush the latest value is durably persisted to MongoDB.
+            await _concurrentCheckpointTrackerSut.FlushCheckpointAsync().ConfigureAwait(false);
+            var afterFlush = _checkPoints.AsQueryable().Where(c => c.Slot == "default").ToList();
+            Assert.That(afterFlush.Single().Current, Is.EqualTo(892));
+            Assert.That(afterFlush.Single().Value, Is.EqualTo(892));
         }
 
         [Test]
@@ -391,7 +421,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
 
             var projections = new IProjection[] { projection1 };
 
-            _concurrentCheckpointTrackerSut = new ConcurrentCheckpointTracker(_db, 60);
+            _concurrentCheckpointTrackerSut = CreateTracker(60);
             _concurrentCheckpointTrackerSut.SetUp(projections, 1, false);
             await _concurrentCheckpointTrackerSut.UpdateSlotAndSetCheckpointAsync("default", new[] { "Projection" }, 891, true).ConfigureAwait(false);
 
@@ -416,7 +446,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
 
             var projections = new IProjection[] { projection1 };
 
-            _concurrentCheckpointTrackerSut = new ConcurrentCheckpointTracker(_db, 60);
+            _concurrentCheckpointTrackerSut = CreateTracker(60);
             _concurrentCheckpointTrackerSut.SetUp(projections, 1, false);
 
             //We dispatch a single event not tracked, current is still null, then we want to flush
@@ -433,65 +463,85 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         }
 
         [Test]
-        public async Task Rebuild_started_drains_queued_checkpoint_before_resetting_current()
+        public async Task Rebuild_started_resets_current_and_flush_does_not_resurrect_it()
         {
             var projection = new Projection(Substitute.For<ICollectionWrapper<SampleReadModel, String>>());
-            var tracker = new ConcurrentCheckpointTracker(
-                _checkPoints,
-                60,
-                TimeSpan.FromSeconds(30));
+            var tracker = CreateTracker(60);
             tracker.SetUp(new[] { projection }, 1, false);
 
-            // Keep the write in the batcher's collection window so RebuildStarted
-            // must establish the ordering boundary explicitly.
-            var queuedWrite = tracker.UpdateSlotAndSetCheckpointAsync(
+            await tracker.UpdateSlotAndSetCheckpointAsync(
                 "default",
                 new[] { projection.Info.CommonName },
                 42,
-                true);
+                true).ConfigureAwait(false);
 
+            // RebuildStarted resets Current to null. It must fence the flush and lower the local
+            // state so a subsequent flush cannot write the pre-rebuild token back.
             tracker.RebuildStarted(projection, 0);
-            await queuedWrite.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+            await tracker.FlushCheckpointAsync().ConfigureAwait(false);
 
             var checkpoint = _checkPoints.FindOneById(projection.Info.CommonName);
             Assert.That(checkpoint.Current, Is.Null);
         }
 
         [Test]
-        public async Task Verify_non_dispatched_event_are_written_to_disk_after_timeout()
+        public async Task Verify_flush_persists_latest_checkpoint_to_mongo()
         {
-            //Two projection in the same slot
             var projection1 = new Projection(Substitute.For<ICollectionWrapper<SampleReadModel, String>>());
-
             var projections = new IProjection[] { projection1 };
 
-            _concurrentCheckpointTrackerSut = new ConcurrentCheckpointTracker(_db, 60);
+            _concurrentCheckpointTrackerSut = CreateTracker(60);
             _concurrentCheckpointTrackerSut.SetUp(projections, 1, false);
-            _concurrentCheckpointTrackerSut.FlushNotDispatchedTimeoutInSeconds = 1; //flush after one second
+
             await _concurrentCheckpointTrackerSut.UpdateSlotAndSetCheckpointAsync("default", new[] { "Projection" }, 891, true).ConfigureAwait(false);
+            await _concurrentCheckpointTrackerSut.FlushCheckpointAsync().ConfigureAwait(false);
 
-            //now update slot, but tell the manager that you do not dispatched the event.
+            var afterFirstFlush = _checkPoints.AsQueryable().Where(c => c.Slot == "default").ToList();
+            Assert.That(afterFirstFlush.Single().Current, Is.EqualTo(891));
+            Assert.That(afterFirstFlush.Single().Value, Is.EqualTo(891));
+
+            //A later non-dispatched advance is not persisted until the next flush.
             await _concurrentCheckpointTrackerSut.UpdateSlotAndSetCheckpointAsync("default", new[] { "Projection" }, 892, false).ConfigureAwait(false);
-            var allDbCheckpoints = _checkPoints.AsQueryable().Where(c => c.Slot == "default").ToList();
-            Assert.That(allDbCheckpoints.Single().Slot, Is.EqualTo("default"));
-            Assert.That(allDbCheckpoints.Single().Current, Is.EqualTo(891));
-            Assert.That(allDbCheckpoints.Single().Value, Is.EqualTo(891));
-
-            //in memory checkpoint should be updated.
+            var beforeSecondFlush = _checkPoints.AsQueryable().Where(c => c.Slot == "default").ToList();
+            Assert.That(beforeSecondFlush.Single().Current, Is.EqualTo(891));
             Assert.That(_concurrentCheckpointTrackerSut.GetCheckpoint(projections[0]), Is.EqualTo(892));
 
-            //now wait, then retry to write
-            await Task.Delay(1500).ConfigureAwait(false); //not spectactular but works :D
-            await _concurrentCheckpointTrackerSut.UpdateSlotAndSetCheckpointAsync("default", new[] { "Projection" }, 893, false).ConfigureAwait(false);
+            await _concurrentCheckpointTrackerSut.FlushCheckpointAsync().ConfigureAwait(false);
+            var afterSecondFlush = _checkPoints.AsQueryable().Where(c => c.Slot == "default").ToList();
+            Assert.That(afterSecondFlush.Single().Current, Is.EqualTo(892));
+            Assert.That(afterSecondFlush.Single().Value, Is.EqualTo(892));
+            Assert.That(_concurrentCheckpointTrackerSut.GetCheckpoint(projections[0]), Is.EqualTo(892));
+        }
 
-            //Now everything should be flushed.
-            allDbCheckpoints = _checkPoints.AsQueryable().Where(c => c.Slot == "default").ToList();
-            Assert.That(allDbCheckpoints.Single().Slot, Is.EqualTo("default"));
-            Assert.That(allDbCheckpoints.Single().Current, Is.EqualTo(893));
-            Assert.That(allDbCheckpoints.Single().Value, Is.EqualTo(893));
+        [Test]
+        public async Task Restart_reconciles_from_durable_store_when_mongo_lags()
+        {
+            var projection = new Projection(Substitute.For<ICollectionWrapper<SampleReadModel, String>>());
+            var projections = new IProjection[] { projection };
 
-            //in memory checkpoint should be updated.
-            Assert.That(_concurrentCheckpointTrackerSut.GetCheckpoint(projections[0]), Is.EqualTo(893));
+            // First "run": dispatch a checkpoint but never flush to MongoDB (simulates a crash
+            // between two timed flushes). The durable local store keeps the value.
+            var firstRun = CreateTracker(60);
+            firstRun.SetUp(projections, 1, false);
+            await firstRun.UpdateSlotAndSetCheckpointAsync("default", new[] { "Projection" }, 500, true).ConfigureAwait(false);
+
+            var mongoBeforeRestart = _checkPoints.FindOneById("Projection");
+            Assert.That(mongoBeforeRestart.Current ?? 0, Is.EqualTo(0), "MongoDB should still be behind (no flush happened)");
+
+            // Second "run": a brand new tracker with a store pointing at the SAME directory
+            // reconciles the durable value with the (lagging) MongoDB value, keeping the greater one.
+            var secondRun = new ConcurrentCheckpointTracker(
+                _checkPoints,
+                60,
+                new FileSystemCheckpointDurableStore(_storeDir));
+            _trackersToDispose.Add(secondRun);
+            secondRun.SetUp(projections, 1, false);
+
+            Assert.That(secondRun.GetCheckpoint(projection), Is.EqualTo(500), "restart must recover the dispatched checkpoint from the durable store");
+
+            // The resume point exposed to the projection engine must reflect the recovered value.
+            var fullCheckpoint = secondRun.GetFullCheckpoint(projection);
+            Assert.That(fullCheckpoint.Current, Is.EqualTo(500));
         }
 
         [Test]
@@ -508,7 +558,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
 
             _checkPoints.InsertMany(new[] { checkpoint1, });
 
-            _concurrentCheckpointTrackerSut = new ConcurrentCheckpointTracker(_db, 60);
+            _concurrentCheckpointTrackerSut = CreateTracker(60);
             _slotStatusCheckerSut = new SlotStatusManager(_db, projections.Select(p => p.Info).ToArray());
             var status = _slotStatusCheckerSut.GetProjectionChangeInfo();
             var singleProjectionStatus = status.Single();
@@ -531,7 +581,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
 
             _checkPoints.InsertMany(new[] { checkpoint1, });
 
-            _concurrentCheckpointTrackerSut = new ConcurrentCheckpointTracker(_db, 60);
+            _concurrentCheckpointTrackerSut = CreateTracker(60);
             _slotStatusCheckerSut = new SlotStatusManager(_db, projections.Select(p => p.Info).ToArray());
             var status = _slotStatusCheckerSut.GetProjectionChangeInfo();
             var singleProjectionStatus = status.Single();
@@ -554,7 +604,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
 
             _checkPoints.InsertMany(new[] { checkpoint1, });
 
-            _concurrentCheckpointTrackerSut = new ConcurrentCheckpointTracker(_db, 60);
+            _concurrentCheckpointTrackerSut = CreateTracker(60);
             _slotStatusCheckerSut = new SlotStatusManager(_db, projections.Select(p => p.Info).ToArray());
             var status = _slotStatusCheckerSut.GetProjectionChangeInfo();
             var singleProjectionStatus = status.Single();
@@ -599,7 +649,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
             var p1 = new Projection3(writer1);
 
             var projections = new IProjection[] { p1 };
-            _concurrentCheckpointTrackerSut = new ConcurrentCheckpointTracker(_db, 60);
+            _concurrentCheckpointTrackerSut = CreateTracker(60);
             _slotStatusCheckerSut = new SlotStatusManager(_db, projections.Select(p => p.Info).ToArray());
 
             return p1;
@@ -607,7 +657,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
 
         private void SetupOneProjectionNew()
         {
-            _concurrentCheckpointTrackerSut = new ConcurrentCheckpointTracker(_db, 60);
+            _concurrentCheckpointTrackerSut = CreateTracker(60);
             var rebuildContext = new RebuildContext(false);
             var storageFactory = new MongoStorageFactory(_db, rebuildContext);
             var writer1 = new CollectionWrapper<SampleReadModel, string>(storageFactory, new NotifyToNobody());
@@ -631,7 +681,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         /// </summary>
         private void SetupOneProjectionWithCurrentNull()
         {
-            _concurrentCheckpointTrackerSut = new ConcurrentCheckpointTracker(_db, 60);
+            _concurrentCheckpointTrackerSut = CreateTracker(60);
             var rebuildContext = new RebuildContext(false);
             var storageFactory = new MongoStorageFactory(_db, rebuildContext);
             var writer1 = new CollectionWrapper<SampleReadModel, string>(storageFactory, new NotifyToNobody());
@@ -650,7 +700,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
 
         private void SetupOneProjectionChangedSignature()
         {
-            _concurrentCheckpointTrackerSut = new ConcurrentCheckpointTracker(_db, 60);
+            _concurrentCheckpointTrackerSut = CreateTracker(60);
             var rebuildContext = new RebuildContext(false);
             var storageFactory = new MongoStorageFactory(_db, rebuildContext);
             var writer1 = new CollectionWrapper<SampleReadModel, string>(storageFactory, new NotifyToNobody());
@@ -694,7 +744,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
 
             _slotStatusCheckerSut = new SlotStatusManager(_db, projections.Select(p => p.Info).ToArray());
 
-            _concurrentCheckpointTrackerSut = new ConcurrentCheckpointTracker(_db, 60);
+            _concurrentCheckpointTrackerSut = CreateTracker(60);
             _concurrentCheckpointTrackerSut.SetUp(projections, 1, false);
             return projections;
         }
