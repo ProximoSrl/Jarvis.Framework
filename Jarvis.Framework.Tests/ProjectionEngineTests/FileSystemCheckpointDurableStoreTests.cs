@@ -87,6 +87,21 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests
         }
 
         [Test]
+        public void Concurrent_first_touch_of_the_same_slot_opens_the_file_exactly_once()
+        {
+            using var store = new FileSystemCheckpointDurableStore(_directory);
+
+            // Hammer the very first touch of one slot from many threads at once: without a creation
+            // guard, ConcurrentDictionary.GetOrAdd could open (and leak) more than one handle.
+            System.Threading.Tasks.Parallel.For(1, 129, i => store.Record("slot", i, flushToDisk: false));
+
+            Assert.That(store.OpenCountForTests, Is.EqualTo(1), "the slot file must be opened exactly once");
+            //Writes are serialized and monotonic, so the surviving value is the maximum recorded.
+            Assert.That(store.Read("slot"), Is.EqualTo(128));
+            Assert.That(Directory.GetFiles(_directory, "*.chk"), Has.Length.EqualTo(1));
+        }
+
+        [Test]
         public void A_torn_write_of_the_newest_record_falls_back_to_the_previous_value()
         {
             string filePath;

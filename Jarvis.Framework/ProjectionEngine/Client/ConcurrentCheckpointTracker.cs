@@ -23,7 +23,7 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
     /// flushes never replays already-dispatched side effects. <see cref="FlushCheckpointAsync"/> forces
     /// a flush on demand (it is also called on graceful shutdown).
     /// </remarks>
-    public class ConcurrentCheckpointTracker : IConcurrentCheckpointTracker, IDisposable
+    public class ConcurrentCheckpointTracker : IConcurrentCheckpointTracker, IConcurrentCheckpointStatusChecker, IDisposable
     {
         private readonly IMongoCollection<Checkpoint> _checkpoints;
 
@@ -109,10 +109,24 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             int flushNotDispatchedTimeoutInSeconds)
             : this(
                 db?.GetCollection<Checkpoint>("checkpoints") ?? throw new ArgumentNullException(nameof(db)),
-                flushNotDispatchedTimeoutInSeconds,
-                new FileSystemCheckpointDurableStore(GetStoreBaseDirectory()))
+                flushNotDispatchedTimeoutInSeconds)
         {
-            _checkpoints.Indexes.CreateOne(
+        }
+
+        /// <summary>
+        /// Builds the tracker with the default file-system durable store, whose folder is derived from a
+        /// per-database seed (see <see cref="GetStoreBaseDirectory"/>) so that two projection services
+        /// pointing at different databases on the same host never share the same slot file.
+        /// </summary>
+        private ConcurrentCheckpointTracker(
+            IMongoCollection<Checkpoint> checkpoints,
+            int flushNotDispatchedTimeoutInSeconds)
+            : this(
+                checkpoints,
+                flushNotDispatchedTimeoutInSeconds,
+                new FileSystemCheckpointDurableStore(GetStoreBaseDirectory(checkpoints)))
+        {
+            checkpoints.Indexes.CreateOne(
                     new CreateIndexModel<Checkpoint>(
                         Builders<Checkpoint>.IndexKeys.Ascending(x => x.Slot)
                     )
@@ -142,13 +156,38 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
         }
 
         /// <summary>
-        /// Default local durable store location: a fixed "jarvis-framework-checkpoints" folder under
-        /// the operating system temporary directory. Inject a custom <see cref="ICheckpointDurableStore"/>
-        /// (for example one pointing at a per-database directory) when a different location is needed.
+        /// Well-known id of the document, stored in the checkpoints collection, that seeds the local
+        /// durable-store folder name. It is not a projection: it is left inactive
+        /// (<see cref="Checkpoint.Active"/> == false) and has no slot, so every projection scan
+        /// (status checker, slot status manager, metrics) ignores it.
         /// </summary>
-        private static string GetStoreBaseDirectory()
+        internal const string CheckpointStoreSeedId = "jarvis.framework.checkpoint.store.seed";
+
+        /// <summary>
+        /// Default local durable-store location: a per-database subfolder of "jarvis-framework-checkpoints"
+        /// under the operating system temporary directory. The subfolder name is a stable seed persisted
+        /// in the checkpoints collection, so the same database always resolves to the same folder across
+        /// restarts, while two different databases never collide on the same slot files (which would let
+        /// one recover the other's checkpoint through the startup max() reconciliation). Inject a custom
+        /// <see cref="ICheckpointDurableStore"/> to override the location entirely.
+        /// </summary>
+        private static string GetStoreBaseDirectory(IMongoCollection<Checkpoint> checkpoints)
         {
-            return Path.Combine(Path.GetTempPath(), "jarvis-framework-checkpoints");
+            var seedDocument = checkpoints.FindOneById(CheckpointStoreSeedId);
+            string seed = seedDocument?.Signature;
+            if (String.IsNullOrWhiteSpace(seed))
+            {
+                seed = Guid.NewGuid().ToString("N");
+                // Upsert without overwriting: SetOnInsert only writes the seed on the insert branch, so
+                // if another process created it first we keep its value. Re-read to converge on the winner.
+                checkpoints.UpdateOne(
+                    Builders<Checkpoint>.Filter.Eq(c => c.Id, CheckpointStoreSeedId),
+                    Builders<Checkpoint>.Update.SetOnInsert(c => c.Signature, seed),
+                    new UpdateOptions { IsUpsert = true });
+                seed = checkpoints.FindOneById(CheckpointStoreSeedId)?.Signature ?? seed;
+            }
+
+            return Path.Combine(Path.GetTempPath(), "jarvis-framework-checkpoints", seed);
         }
 
         private void Clear()
@@ -465,6 +504,29 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
             bool isReplay = currentCheckpointValue <= lastDispatchedValue || RebuildSettings.ContinuousRebuild;
             _checkpointSlotTracker[_projectionToSlot[projectionName]] = _higherCheckpointToDispatchInRebuild - currentCheckpointValue;
             return new CheckPointReplayStatus(isLast, isReplay);
+        }
+
+        /// <summary>
+        /// In-process check backed by the always-current in-memory checkpoint of every tracked
+        /// (active) projection, so it never lags behind the periodic MongoDB flush and needs no forced
+        /// flush to be accurate. Only projections registered in the last <see cref="SetUp"/> are
+        /// considered, so a projection that is no longer active is correctly ignored.
+        /// </summary>
+        /// <remarks>Use <see cref="MongoDirectConcurrentCheckpointStatusChecker"/> instead when the
+        /// caller is a DIFFERENT process (a monitor, an admin tool): it reads MongoDB directly because
+        /// it has no access to this in-memory state, and therefore only observes values already flushed
+        /// by the timer or an explicit <see cref="FlushCheckpointAsync"/>.</remarks>
+        public bool IsCheckpointProjectedByAllProjection(Int64 checkpointToken)
+        {
+            foreach (var lastDispatched in _checkpointTracker.Values)
+            {
+                if (lastDispatched < checkpointToken)
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         public async Task FlushCheckpointAsync()
