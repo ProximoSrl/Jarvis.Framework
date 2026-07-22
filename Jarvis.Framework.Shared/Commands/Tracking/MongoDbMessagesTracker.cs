@@ -268,7 +268,7 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
                         }
                         else
                         {
-                            Logger.WarnFormat("Command id {0} received completed event but ExecutionStartTimeList is empty", command.MessageId);
+                            Logger.DebugFormat("Command id {0} received completed event but ExecutionStartTimeList is empty", command.MessageId);
                         }
                     }
                 }
@@ -363,7 +363,7 @@ namespace Jarvis.Framework.Shared.Commands.Tracking
                         }
                         else
                         {
-                            Logger.WarnFormat("Command id {0} received completed event but ExecutionStartTimeList is empty", trackMessage.MessageId);
+                            Logger.DebugFormat("Command id {0} received completed event but ExecutionStartTimeList is empty", trackMessage.MessageId);
                         }
                     }
                 }
