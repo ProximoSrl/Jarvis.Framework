@@ -97,7 +97,7 @@ public class AtomicReadmodelProjectorHelperBatchTests : AtomicProjectionEngineTe
 
         // Only the SampleAggregate event should be processed
         Assert.That(results.Count, Is.EqualTo(1));
-        Assert.That(results[0].Readmodel.Id, Is.EqualTo(((DomainEvent)sampleCs.Events[0]).AggregateId));
+        Assert.That(results[0].Readmodel.Id, Is.EqualTo(((DomainEvent)sampleCs.Events[0]).AggregateId.ToString()));
     }
 
     [Test]

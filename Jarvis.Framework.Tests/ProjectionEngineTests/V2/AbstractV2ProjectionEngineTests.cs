@@ -56,8 +56,7 @@ namespace Jarvis.Framework.Tests.ProjectionEngineTests.V2
             _container = new WindsorContainer();
             _container.AddFacility<TypedFactoryFacility>();
 
-            _container.AddFacility<LoggingFacility>(f =>
-                f.LogUsing(LoggerImplementation.Null));
+            _container.AddFacility<LoggingFacility>(f => f.LogUsing<NullLogFactory>());
 
             _container.Resolve<ILoggerFactory>();
 
