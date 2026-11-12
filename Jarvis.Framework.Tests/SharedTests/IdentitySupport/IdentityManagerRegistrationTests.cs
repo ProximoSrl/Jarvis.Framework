@@ -76,6 +76,27 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
         }
 
         [Test]
+        public void Identities_with_same_tag_in_different_namespaces_are_rejected()
+        {
+            var name = "NamespaceClash" + Guid.NewGuid().ToString("N") + "Id";
+            var sut = new IdentityManager(null);
+            var firstAssembly = BuildIdentityAssembly("NamespaceA." + name);
+            sut.RegisterIdentitiesFromAssembly(firstAssembly);
+
+            var ex = Assert.Throws<JarvisFrameworkEngineException>(
+                () => sut.RegisterIdentitiesFromAssembly(BuildIdentityAssembly("NamespaceB." + name)));
+
+            Assert.That(ex.Message, Does.Contain("NamespaceB." + name));
+            Assert.That(ex.Message, Does.Contain("NamespaceA." + name));
+            Assert.That(ex.Message, Does.Contain("identity tags must be unique"));
+            // the first registration is untouched.
+            var identity = sut.ToIdentity(name[..^2] + "_1");
+            Assert.That(identity.GetType().FullName, Is.EqualTo("NamespaceA." + name));
+            // registering again the first assembly is still allowed.
+            Assert.DoesNotThrow(() => sut.RegisterIdentitiesFromAssembly(firstAssembly));
+        }
+
+        [Test]
         public void Registering_the_same_assembly_twice_is_allowed()
         {
             var assembly = BuildIdentityAssembly("RegisteredTwice" + Guid.NewGuid().ToString("N") + "Id");

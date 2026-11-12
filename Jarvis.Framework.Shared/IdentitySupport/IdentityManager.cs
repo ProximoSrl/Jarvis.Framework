@@ -105,15 +105,18 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             {
                 var tag = EventStoreIdentity.GetTagForIdentityClass(ic);
 
-                // Tags are case insensitive: two identities whose tags differ only in casing would
-                // silently replace each other's factory (the last registered wins).
+                // Tags are unique and case insensitive: two different identities with the same tag
+                // (same class name in different namespaces, or names that differ only in casing)
+                // would silently replace each other's factory (the last registered wins).
+                // The tag is compared again because the mapping is also keyed by class name.
                 if (_tagToTypeMapping.TryGetValue(tag, out var registeredType)
                     && registeredType != ic
                     && EventStoreIdentity.GetTagForIdentityClass(registeredType) is var registeredTag
-                    && string.Equals(registeredTag, tag, StringComparison.OrdinalIgnoreCase)
-                    && !string.Equals(registeredTag, tag, StringComparison.Ordinal))
+                    && string.Equals(registeredTag, tag, StringComparison.OrdinalIgnoreCase))
                 {
-                    var message = $"Identity {ic.FullName} has tag {tag} that differs only in casing from tag {registeredTag} of identity {registeredType.FullName}, identity tags are case insensitive\n";
+                    var message = string.Equals(registeredTag, tag, StringComparison.Ordinal)
+                        ? $"Identity {ic.FullName} has the same tag {tag} of identity {registeredType.FullName}, identity tags must be unique\n"
+                        : $"Identity {ic.FullName} has tag {tag} that differs only in casing from tag {registeredTag} of identity {registeredType.FullName}, identity tags are case insensitive\n";
                     Logger.Error(message);
                     sb.Append(message);
                     continue;
