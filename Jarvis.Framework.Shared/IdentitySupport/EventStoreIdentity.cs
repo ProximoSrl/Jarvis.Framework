@@ -70,7 +70,11 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             return tag;
         }
 
-        public override string GetTag()
+        /// <summary>
+        /// Sealed: the tag depends only on the concrete type, equality and the cached string
+        /// representation rely on this invariant.
+        /// </summary>
+        public sealed override string GetTag()
         {
             return GetTagForIdentityClass(GetType());
         }
@@ -189,13 +193,20 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         /// <paramref name="identityAsString"/> with the numeric constructor: if the string is
         /// canonical it becomes the cached representation, so the identity does not rebuild an
         /// identical string on the first ToString(). A non canonical string (different tag casing,
-        /// leading zeros, sign, spaces) is ignored. The caller guarantees that the string was
-        /// parsed to the tag and the id of this instance.
+        /// leading zeros, sign, spaces) is ignored. The string is ignored also when the identity
+        /// does not hold the id parsed from it: a derived numeric constructor can change the value
+        /// it receives, and the cached string must always describe the actual id.
         /// </summary>
         /// <param name="identityAsString">The string the identity was parsed from.</param>
         /// <param name="separatorIndex">Index of <see cref="Separator"/> in the string.</param>
-        internal void SeedStringRepresentation(string identityAsString, int separatorIndex)
+        /// <param name="parsedId">The id parsed from the string and passed to the constructor.</param>
+        internal void SeedStringRepresentation(string identityAsString, int separatorIndex, long parsedId)
         {
+            if (Id != parsedId)
+            {
+                return;
+            }
+
             var span = identityAsString.AsSpan();
             if (IsCanonical(span[..separatorIndex], GetTag(), span[(separatorIndex + 1)..]))
             {
@@ -228,27 +239,37 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         /// </summary>
         private string _fullyQualifiedId;
 
-        public override string ToString()
+        /// <summary>
+        /// Sealed: the string representation is always Tag_Id, so two identities of the same
+        /// type with the same id have the same string (equality compares only type and id).
+        /// </summary>
+        public sealed override string ToString()
         {
             return _fullyQualifiedId ??= Format(GetTag(), Id);
         }
 
         /// <summary>
-        /// Full string representation of the identity (Tag_123). There is no setter because an
-        /// identity is immutable: serialization must go through the flat identity serializers
-        /// (<see cref="MongoFlatMapper.EnableFlatMapping(bool)"/>), that build the identity with
-        /// its constructor, a serializer cannot populate an existing instance.
+        /// Full string representation of the identity (Tag_123). The setter is private because an
+        /// identity is immutable, it exists only for serializers that populate the identity through
+        /// reflection (e.g. Newtonsoft with object-shaped json <c>{"Id":"Tag_123"}</c>). The flat identity
+        /// serializers (<see cref="MongoFlatMapper.EnableFlatMapping(bool)"/>) are still the preferred
+        /// way, they build the identity with its constructor.
         /// </summary>
         [BsonId]
         [JsonProperty("Id")]
-        public virtual string FullyQualifiedId
+        public string FullyQualifiedId
         {
             get { return ToString(); }
+            // Private: the identity is immutable for the outside world, but serializers that
+            // create the identity with a parameterless constructor and then populate it (Newtonsoft
+            // honors non public setters thanks to [JsonProperty]) need it to restore the right id.
+            // Assign keeps the cached string representation in sync with the id.
+            private set { Assign(value); }
         }
 
         public const char Separator = '_';
 
-        public override string AsString()
+        public sealed override string AsString()
         {
             return FullyQualifiedId;
         }

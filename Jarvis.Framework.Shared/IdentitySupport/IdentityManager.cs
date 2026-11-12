@@ -83,7 +83,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             var identity = factory(id);
             if (identity is EventStoreIdentity eventStoreIdentity)
             {
-                eventStoreIdentity.SeedStringRepresentation(identityAsString, separatorIndex);
+                eventStoreIdentity.SeedStringRepresentation(identityAsString, separatorIndex, id);
             }
             return identity;
         }
@@ -114,6 +114,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                         sb.AppendFormat(message);
                         continue; //move to the next type, or everythign will crash.
                     }
+
                     var activator = FastReflectionHelper.GetActivator(ctor);
 
                     _longBasedFactories[tag] = (id) => (IIdentity)activator(new object[] { id });

@@ -8,7 +8,7 @@
   - Equality between identities (`Equals`, `==`, `!=`) no longer boxes the id, `Equals(IIdentity)` compares type and id without generating the string representation and returns false for null instead of throwing.
   - `EventStoreIdentity` now caches its string representation, repeated `ToString`, `AsString` and `FullyQualifiedId` calls return the same instance without allocating (costs one reference field per identity).
   - `IdentityManager.ToIdentity` and `TryParse` reuse the input string as the string representation of the identity when it is already canonical (correct tag casing, no leading zeros), so a deserialized identity does not rebuild an identical string.
-- `AbstractIdentity<TKey>.Id` setter is now protected and `EventStoreIdentity.FullyQualifiedId` setter was removed, identities are immutable and flat mapping is mandatory (see breaking changes).
+- Identities are immutable: `AbstractIdentity<TKey>.Id` setter is now `private protected` and `EventStoreIdentity.FullyQualifiedId` setter is private (kept for serializers), `EventStoreIdentity.GetTag`, `AsString` and `ToString` are sealed (see breaking changes).
 - Added static `EventStoreIdentity.TryGetTag(ReadOnlySpan<char> id, out string tag)` to get the tag of an identity in string form without allocating, it returns the cached instance of the tag.
 - `IIdentityConverter.TryGetTag` now returns the cached instance of the tag with the correct casing (see breaking changes).
 

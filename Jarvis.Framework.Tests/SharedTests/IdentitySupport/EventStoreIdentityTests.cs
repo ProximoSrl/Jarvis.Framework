@@ -1,5 +1,6 @@
 ﻿using Jarvis.Framework.Shared.IdentitySupport;
 using Jarvis.Framework.Tests.EngineTests;
+using Newtonsoft.Json;
 using NUnit.Framework;
 using System;
 
@@ -481,15 +482,31 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             var setter = typeof(SampleAggregateId).GetProperty(nameof(SampleAggregateId.Id)).SetMethod;
 
             Assert.That(setter.IsPublic, Is.False, "Identities are immutable, Id setter must not be public");
-            Assert.That(setter.IsFamily, Is.True);
+            Assert.That(setter.IsFamilyAndAssembly, Is.True, "Id setter must be private protected, identities outside the framework assign the id only through the constructor");
         }
 
         [Test]
-        public void Fully_qualified_id_has_no_setter()
+        public void Fully_qualified_id_setter_is_private()
         {
             var property = typeof(EventStoreIdentity).GetProperty(nameof(EventStoreIdentity.FullyQualifiedId));
 
-            Assert.That(property.SetMethod, Is.Null, "Identities are immutable, FullyQualifiedId must be read only");
+            Assert.That(property.SetMethod, Is.Not.Null, "Serializers need the setter to populate an identity");
+            Assert.That(property.SetMethod.IsPrivate, Is.True, "Identities are immutable, FullyQualifiedId setter must be private");
+        }
+
+        [Test]
+        public void Json_populates_identity_through_private_fully_qualified_id_setter()
+        {
+            // Same path Newtonsoft follows when it creates an identity with a parameterless
+            // constructor and then sets the members: { "Id" : "Tag_123" } must restore the id.
+            var id = new SampleAggregateId(1);
+            _ = id.ToString(); // fill the cache with the old value.
+
+            JsonConvert.PopulateObject("{\"Id\":\"SampleAggregate_42\"}", id);
+
+            Assert.That(id.Id, Is.EqualTo(42));
+            Assert.That(id.AsString(), Is.EqualTo("SampleAggregate_42"), "cached string must follow the new id");
+            Assert.That(id, Is.EqualTo(new SampleAggregateId(42)));
         }
 
         [Test]
