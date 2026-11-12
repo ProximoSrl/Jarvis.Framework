@@ -2,6 +2,8 @@
 
 ## 7.17.0
 
+- `EventStoreIdentity.FullyQualifiedId` setter is now protected for the same reason, it is used only by serializers that populate the identity through reflection.
+- `AbstractIdentity<TKey>.Id` setter is now protected: an identity is immutable, the value can be assigned only by the identity class itself (constructor). Code that changed the `Id` of an existing identity must create a new identity instead.
 - `IIdentityConverter.TryGetTag` (IdentityManager) returns the tag with the registered casing and not with the casing used in the id passed as argument: `TryGetTag("document_12", out tag)` now returns `Document` instead of `document`.
 
 ## 7.13.0

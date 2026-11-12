@@ -70,7 +70,22 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             {
                 throw new JarvisFrameworkIdentityException(string.Format("{0} not registered in IdentityManager", tagSpan.ToString()));
             }
-            return factory(id);
+            return Create(factory, id, identityAsString, pos);
+        }
+
+        /// <summary>
+        /// Creates the identity with the numeric factory, then hands the original string to the
+        /// identity: when it is canonical it is reused as the string form of the identity, that
+        /// would otherwise allocate an identical string on the first ToString().
+        /// </summary>
+        private static IIdentity Create(Func<long, IIdentity> factory, long id, string identityAsString, int separatorIndex)
+        {
+            var identity = factory(id);
+            if (identity is EventStoreIdentity eventStoreIdentity)
+            {
+                eventStoreIdentity.SeedStringRepresentation(identityAsString, separatorIndex);
+            }
+            return identity;
         }
 
         public TIdentity ToIdentity<TIdentity>(string identityAsString) where TIdentity : IIdentity
@@ -193,13 +208,14 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         public bool TryParse<T>(string id, out T typedIdentity) where T : IIdentity
         {
             typedIdentity = default;
-            if (!TryParseParts(id, out string _, out var longId, out var factoryFunc))
+            if (!TryParseParts(id, out string registeredTag, out var longId, out var factoryFunc))
             {
                 return false;
             }
 
             //ok we can generate the id but we need to check if returned id is of the correct type.
-            var createdIdentity = factoryFunc(longId);
+            // The separator is right after the tag, that has the same length of the registered one.
+            var createdIdentity = Create(factoryFunc, longId, id, registeredTag.Length);
             if (createdIdentity is T correctIdentity)
             {
                 typedIdentity = correctIdentity;

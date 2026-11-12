@@ -436,5 +436,124 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             Assert.That(equal, Is.True);
             Assert.That(allocated, Is.EqualTo(0));
         }
+
+        [Test]
+        public void String_representation_is_cached_and_same_instance_is_returned()
+        {
+            var id = new SampleAggregateId(42);
+
+            var first = id.ToString();
+
+            Assert.That(first, Is.EqualTo("SampleAggregate_42"));
+            Assert.That(id.ToString(), Is.SameAs(first));
+            Assert.That(id.AsString(), Is.SameAs(first));
+            Assert.That(id.FullyQualifiedId, Is.SameAs(first));
+            string implicitConversion = id;
+            Assert.That(implicitConversion, Is.SameAs(first));
+        }
+
+        [Test]
+        public void String_representation_does_not_allocate_after_first_call()
+        {
+            var id = new SampleAggregateId(42);
+            // warmup, to exclude jit and first call allocations
+            _ = id.ToString();
+            _ = id.AsString();
+            _ = id.FullyQualifiedId;
+            string warmup = id;
+
+            var before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 1000; i++)
+            {
+                _ = id.ToString();
+                _ = id.AsString();
+                _ = id.FullyQualifiedId;
+                string converted = id;
+            }
+            var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+            Assert.That(allocated, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Id_cannot_be_set_from_outside_the_identity()
+        {
+            var setter = typeof(SampleAggregateId).GetProperty(nameof(SampleAggregateId.Id)).SetMethod;
+
+            Assert.That(setter.IsPublic, Is.False, "Identities are immutable, Id setter must not be public");
+            Assert.That(setter.IsFamily, Is.True);
+        }
+
+        [Test]
+        public void Changing_fully_qualified_id_updates_cached_string()
+        {
+            var id = new SampleAggregateId(42);
+            _ = id.ToString();
+
+            SetFullyQualifiedIdAsSerializer(id, "SampleAggregate_77");
+
+            Assert.That(id.Id, Is.EqualTo(77));
+            Assert.That(id.ToString(), Is.EqualTo("SampleAggregate_77"));
+            Assert.That(id.AsString(), Is.EqualTo("SampleAggregate_77"));
+
+            SetFullyQualifiedIdAsSerializer(id, "sampleaggregate_078");
+            Assert.That(id.ToString(), Is.EqualTo("SampleAggregate_78"));
+        }
+
+        [Test]
+        public void Construction_from_canonical_string_reuses_input_instance()
+        {
+            var number = "42";
+            var input = "SampleAggregate_" + number; //built at runtime, not an interned literal.
+
+            var id = new SampleAggregateId(input);
+
+            Assert.That(id.AsString(), Is.SameAs(input));
+            Assert.That(id.ToString(), Is.SameAs(input));
+            Assert.That(id.FullyQualifiedId, Is.SameAs(input));
+            Assert.That(id.Id, Is.EqualTo(42));
+        }
+
+        [Test]
+        public void Setting_fully_qualified_id_from_canonical_string_reuses_input_instance()
+        {
+            var number = "0";
+            var input = "SampleAggregate_" + number;
+            var id = new SampleAggregateId(1);
+            _ = id.ToString();
+
+            SetFullyQualifiedIdAsSerializer(id, input);
+
+            Assert.That(id.AsString(), Is.SameAs(input));
+            Assert.That(id.Id, Is.EqualTo(0));
+        }
+
+        [TestCase("sampleaggregate_42")]
+        [TestCase("SAMPLEAGGREGATE_42")]
+        [TestCase("SampleAggregate_042")]
+        [TestCase("SampleAggregate_+42")]
+        [TestCase("SampleAggregate_ 42")]
+        [TestCase("SampleAggregate_42 ")]
+        [TestCase("42")]
+        [TestCase("042")]
+        public void Construction_from_non_canonical_string_yields_canonical_representation(string input)
+        {
+            var id = new SampleAggregateId(input);
+
+            Assert.That(id.AsString(), Is.EqualTo("SampleAggregate_42"));
+            Assert.That(id.ToString(), Is.EqualTo("SampleAggregate_42"));
+            Assert.That(id.FullyQualifiedId, Is.EqualTo("SampleAggregate_42"));
+            Assert.That(id.AsString(), Is.Not.SameAs(input));
+        }
+
+        /// <summary>
+        /// FullyQualifiedId setter is not public, it is used only by serializers through reflection.
+        /// </summary>
+        private static void SetFullyQualifiedIdAsSerializer(EventStoreIdentity id, string value)
+        {
+            var setter = typeof(EventStoreIdentity).GetProperty(nameof(EventStoreIdentity.FullyQualifiedId)).SetMethod;
+            Assert.That(setter.IsPublic, Is.False, "Identities are immutable, FullyQualifiedId setter must not be public");
+            setter.Invoke(id, new object[] { value });
+        }
     }
 }

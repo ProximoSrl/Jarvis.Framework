@@ -13,9 +13,14 @@ namespace Jarvis.Framework.Shared.IdentitySupport
     [Serializable]
     public abstract class AbstractIdentity<TKey> : IIdentity
     {
+        /// <summary>
+        /// Value of the identity. An identity is immutable for the external world, only
+        /// the identity class itself can assign the value. An inheritor that caches values
+        /// derived from the id is responsible for refreshing them when it assigns the id.
+        /// </summary>
         [BsonIgnore]
         [JsonIgnore]
-        public TKey Id { get; set; }
+        public TKey Id { get; protected set; }
 
         public virtual string AsString()
         {

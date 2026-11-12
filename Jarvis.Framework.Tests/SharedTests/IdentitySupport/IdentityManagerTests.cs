@@ -235,6 +235,56 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             Assert.That(tag, Is.SameAs(EventStoreIdentity.GetTagForIdentityClass<TestId>()));
         }
 
+        [Test]
+        public void To_identity_from_canonical_string_reuses_input_instance()
+        {
+            var number = "42";
+            var input = "Test_" + number; //built at runtime, not an interned literal.
+
+            var id = sut.ToIdentity(input);
+
+            Assert.That(id, Is.TypeOf<TestId>());
+            Assert.That(id.AsString(), Is.SameAs(input));
+            Assert.That(id.ToString(), Is.SameAs(input));
+        }
+
+        [Test]
+        public void Try_parse_from_canonical_string_reuses_input_instance()
+        {
+            var number = "42";
+            var input = "Test_" + number; //built at runtime, not an interned literal.
+
+            var result = sut.TryParse<TestId>(input, out var id);
+
+            Assert.That(result, Is.True);
+            Assert.That(id.AsString(), Is.SameAs(input));
+        }
+
+        [TestCase("test_42")]
+        [TestCase("TEST_42")]
+        [TestCase("Test_042")]
+        [TestCase("Test_+42")]
+        [TestCase("Test_ 42")]
+        [TestCase("Test_42 ")]
+        public void To_identity_from_non_canonical_string_yields_canonical_representation(string input)
+        {
+            var id = sut.ToIdentity(input);
+
+            Assert.That(id.AsString(), Is.EqualTo("Test_42"));
+            Assert.That(id.ToString(), Is.EqualTo("Test_42"));
+        }
+
+        [TestCase("test_42")]
+        [TestCase("TEST_42")]
+        [TestCase("Test_042")]
+        public void Try_parse_from_non_canonical_string_yields_canonical_representation(string input)
+        {
+            var result = sut.TryParse<TestId>(input, out var id);
+
+            Assert.That(result, Is.True);
+            Assert.That(id.AsString(), Is.EqualTo("Test_42"));
+        }
+
         [TestCase("Test", typeof(TestId))]
         [TestCase("test", typeof(TestId))]
         [TestCase("TEST", typeof(TestId))]

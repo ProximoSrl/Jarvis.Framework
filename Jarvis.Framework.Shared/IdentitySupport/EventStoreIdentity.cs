@@ -127,6 +127,8 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                     throw new JarvisFrameworkIdentityException(string.Format("invalid identity value {0}, id must be positive", identityAsString));
                 }
                 Id = numericId;
+                // no tag in the input, the string representation must be rebuilt on demand.
+                _fullyQualifiedId = null;
                 return;
             }
 
@@ -149,13 +151,56 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                     throw new JarvisFrameworkIdentityException(string.Format("invalid identity value {0}, id must be positive", identityAsString));
                 }
                 //this is the standard happy path to create identity.
-                // Need to convert span to string only for the tag comparison
                 Id = id;
+
+                // The cached string must always follow the id: if the input is already in canonical
+                // form we reuse it as the cached representation, so no new string is ever built,
+                // otherwise the cache is cleared and the string is rebuilt on demand.
+                _fullyQualifiedId = IsCanonical(tagSpan, thisTag, idSpan) ? identityAsString : null;
                 return;
             }
 
             //if we reach here the id is not valid
             throw new JarvisFrameworkIdentityException(string.Format("invalid identity value {0}", identityAsString));
+        }
+
+        /// <summary>
+        /// True if the input is exactly what <see cref="Format(string, long)"/> would produce:
+        /// tag with the same casing, only ascii digits and no leading zero (unless the value is "0").
+        /// </summary>
+        private static bool IsCanonical(ReadOnlySpan<char> tagSpan, string thisTag, ReadOnlySpan<char> idSpan)
+        {
+            if (!tagSpan.Equals(thisTag, StringComparison.Ordinal))
+                return false;
+
+            if (idSpan.Length == 0 || (idSpan[0] == '0' && idSpan.Length > 1))
+                return false;
+
+            foreach (var ch in idSpan)
+            {
+                if (!char.IsAsciiDigit(ch))
+                    return false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Used by <see cref="IdentityManager"/> after it created this identity from
+        /// <paramref name="identityAsString"/> with the numeric constructor: if the string is
+        /// canonical it becomes the cached representation, so the identity does not rebuild an
+        /// identical string on the first ToString(). A non canonical string (different tag casing,
+        /// leading zeros, sign, spaces) is ignored. The caller guarantees that the string was
+        /// parsed to the tag and the id of this instance.
+        /// </summary>
+        /// <param name="identityAsString">The string the identity was parsed from.</param>
+        /// <param name="separatorIndex">Index of <see cref="Separator"/> in the string.</param>
+        internal void SeedStringRepresentation(string identityAsString, int separatorIndex)
+        {
+            var span = identityAsString.AsSpan();
+            if (IsCanonical(span[..separatorIndex], GetTag(), span[(separatorIndex + 1)..]))
+            {
+                _fullyQualifiedId = identityAsString;
+            }
         }
 
         public static string Format(Type type, long value)
@@ -175,17 +220,31 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             return id?.ToString();
         }
 
+        /// <summary>
+        /// Cached full string representation (Tag_123). The id of an existing instance changes
+        /// only in <see cref="Assign(string)"/>, that updates this field explicitly.
+        /// No locking: two threads can compute the string at the same time, but the result is
+        /// identical and reference assignment is atomic, so the worst case is a duplicate string.
+        /// </summary>
+        private string _fullyQualifiedId;
+
         public override string ToString()
         {
-            return Format(GetTag(), Id);
+            return _fullyQualifiedId ??= Format(GetTag(), Id);
         }
 
+        /// <summary>
+        /// Full string representation of the identity (Tag_123). The setter is not public because an
+        /// identity is immutable: it exists only for serializers that do not use the flat identity
+        /// serializers and populate the object through reflection (it cannot be private because the
+        /// property is virtual).
+        /// </summary>
         [BsonId]
         [JsonProperty("Id")]
         public virtual string FullyQualifiedId
         {
             get { return ToString(); }
-            set { Assign(value); }
+            protected set { Assign(value); }
         }
 
         public const char Separator = '_';

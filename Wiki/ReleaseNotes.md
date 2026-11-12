@@ -6,6 +6,9 @@
   - `IdentityManager.ToIdentity`, `TryParse` and `TryGetTag` parse the identity with spans, no more substring / StringBuilder allocations (used by every BSON / JSON deserialization of an identity).
   - `EventStoreIdentity.Format` (and so `ToString`, `AsString`, `FullyQualifiedId`) and `AbstractIdentityBsonSerializer` no longer box the id nor parse a format string.
   - Equality between identities (`Equals`, `==`, `!=`) no longer boxes the id, `Equals(IIdentity)` compares type and id without generating the string representation and returns false for null instead of throwing.
+  - `EventStoreIdentity` now caches its string representation, repeated `ToString`, `AsString` and `FullyQualifiedId` calls return the same instance without allocating (costs one reference field per identity).
+  - `IdentityManager.ToIdentity` and `TryParse` reuse the input string as the string representation of the identity when it is already canonical (correct tag casing, no leading zeros), so a deserialized identity does not rebuild an identical string.
+- `AbstractIdentity<TKey>.Id` and `EventStoreIdentity.FullyQualifiedId` setters are now protected, identities are immutable (see breaking changes).
 - Added static `EventStoreIdentity.TryGetTag(ReadOnlySpan<char> id, out string tag)` to get the tag of an identity in string form without allocating, it returns the cached instance of the tag.
 - `IIdentityConverter.TryGetTag` now returns the cached instance of the tag with the correct casing (see breaking changes).
 
