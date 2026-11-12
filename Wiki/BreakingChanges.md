@@ -2,8 +2,8 @@
 
 ## 7.17.0
 
-- `EventStoreIdentity.FullyQualifiedId` setter is now protected for the same reason, it is used only by serializers that populate the identity through reflection.
 - `AbstractIdentity<TKey>.Id` setter is now protected: an identity is immutable, the value can be assigned only by the identity class itself (constructor). Code that changed the `Id` of an existing identity must create a new identity instead.
+- `EventStoreIdentity.FullyQualifiedId` setter was removed for the same reason, the property is now read only. The setter existed only for serializers that populate the identity through reflection, so flat mapping is now mandatory: `MongoFlatMapper.EnableFlatMapping` must be called at startup, an identity can no longer be deserialized by Mongo without it. A class that overrides `FullyQualifiedId` must remove its setter.
 - `IIdentityConverter.TryGetTag` (IdentityManager) returns the tag with the registered casing and not with the casing used in the id passed as argument: `TryGetTag("document_12", out tag)` now returns `Document` instead of `document`.
 
 ## 7.13.0

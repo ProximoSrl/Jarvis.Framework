@@ -221,8 +221,8 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         }
 
         /// <summary>
-        /// Cached full string representation (Tag_123). The id of an existing instance changes
-        /// only in <see cref="Assign(string)"/>, that updates this field explicitly.
+        /// Cached full string representation (Tag_123). The id is assigned by the constructors,
+        /// <see cref="Assign(string)"/> updates this field explicitly together with the id.
         /// No locking: two threads can compute the string at the same time, but the result is
         /// identical and reference assignment is atomic, so the worst case is a duplicate string.
         /// </summary>
@@ -234,17 +234,16 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         }
 
         /// <summary>
-        /// Full string representation of the identity (Tag_123). The setter is not public because an
-        /// identity is immutable: it exists only for serializers that do not use the flat identity
-        /// serializers and populate the object through reflection (it cannot be private because the
-        /// property is virtual).
+        /// Full string representation of the identity (Tag_123). There is no setter because an
+        /// identity is immutable: serialization must go through the flat identity serializers
+        /// (<see cref="MongoFlatMapper.EnableFlatMapping(bool)"/>), that build the identity with
+        /// its constructor, a serializer cannot populate an existing instance.
         /// </summary>
         [BsonId]
         [JsonProperty("Id")]
         public virtual string FullyQualifiedId
         {
             get { return ToString(); }
-            protected set { Assign(value); }
         }
 
         public const char Separator = '_';

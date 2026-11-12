@@ -485,19 +485,11 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
         }
 
         [Test]
-        public void Changing_fully_qualified_id_updates_cached_string()
+        public void Fully_qualified_id_has_no_setter()
         {
-            var id = new SampleAggregateId(42);
-            _ = id.ToString();
+            var property = typeof(EventStoreIdentity).GetProperty(nameof(EventStoreIdentity.FullyQualifiedId));
 
-            SetFullyQualifiedIdAsSerializer(id, "SampleAggregate_77");
-
-            Assert.That(id.Id, Is.EqualTo(77));
-            Assert.That(id.ToString(), Is.EqualTo("SampleAggregate_77"));
-            Assert.That(id.AsString(), Is.EqualTo("SampleAggregate_77"));
-
-            SetFullyQualifiedIdAsSerializer(id, "sampleaggregate_078");
-            Assert.That(id.ToString(), Is.EqualTo("SampleAggregate_78"));
+            Assert.That(property.SetMethod, Is.Null, "Identities are immutable, FullyQualifiedId must be read only");
         }
 
         [Test]
@@ -512,20 +504,6 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             Assert.That(id.ToString(), Is.SameAs(input));
             Assert.That(id.FullyQualifiedId, Is.SameAs(input));
             Assert.That(id.Id, Is.EqualTo(42));
-        }
-
-        [Test]
-        public void Setting_fully_qualified_id_from_canonical_string_reuses_input_instance()
-        {
-            var number = "0";
-            var input = "SampleAggregate_" + number;
-            var id = new SampleAggregateId(1);
-            _ = id.ToString();
-
-            SetFullyQualifiedIdAsSerializer(id, input);
-
-            Assert.That(id.AsString(), Is.SameAs(input));
-            Assert.That(id.Id, Is.EqualTo(0));
         }
 
         [TestCase("sampleaggregate_42")]
@@ -544,16 +522,6 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             Assert.That(id.ToString(), Is.EqualTo("SampleAggregate_42"));
             Assert.That(id.FullyQualifiedId, Is.EqualTo("SampleAggregate_42"));
             Assert.That(id.AsString(), Is.Not.SameAs(input));
-        }
-
-        /// <summary>
-        /// FullyQualifiedId setter is not public, it is used only by serializers through reflection.
-        /// </summary>
-        private static void SetFullyQualifiedIdAsSerializer(EventStoreIdentity id, string value)
-        {
-            var setter = typeof(EventStoreIdentity).GetProperty(nameof(EventStoreIdentity.FullyQualifiedId)).SetMethod;
-            Assert.That(setter.IsPublic, Is.False, "Identities are immutable, FullyQualifiedId setter must not be public");
-            setter.Invoke(id, new object[] { value });
         }
     }
 }
