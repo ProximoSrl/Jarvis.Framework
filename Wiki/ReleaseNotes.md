@@ -5,10 +5,12 @@
 - Reduced string allocations in the identity system:
   - `IdentityManager.ToIdentity`, `TryParse` and `TryGetTag` parse the identity with spans, no more substring / StringBuilder allocations (used by every BSON / JSON deserialization of an identity).
   - `EventStoreIdentity.Format` (and so `ToString`, `AsString`, `FullyQualifiedId`) and `AbstractIdentityBsonSerializer` no longer box the id nor parse a format string.
-  - Equality between identities (`Equals`, `==`, `!=`) no longer boxes the id, `Equals(IIdentity)` compares type and id without generating the string representation and returns false for null instead of throwing.
-  - `EventStoreIdentity` now caches its string representation, repeated `ToString`, `AsString` and `FullyQualifiedId` calls return the same instance without allocating (costs one reference field per identity).
+  - Equality between identities (`Equals`, `==`, `!=`) no longer boxes the id. `EventStoreIdentity.Equals(IIdentity)` compares type and id without generating the string representation; for other `AbstractIdentity<TKey>` inheritors it still compares type and `AsString()`. `Equals(IIdentity)` returns false for null instead of throwing.
+  - `EventStoreIdentity` now caches its string representation, repeated `ToString`, `AsString` and `FullyQualifiedId` calls return the same instance without allocating (costs one reference field per identity). The cache is published atomically, concurrent first calls return the same instance.
   - `IdentityManager.ToIdentity` and `TryParse` reuse the input string as the string representation of the identity when it is already canonical (correct tag casing, no leading zeros), so a deserialized identity does not rebuild an identical string.
-- Identities are immutable: `AbstractIdentity<TKey>.Id` setter is now `private protected` and `EventStoreIdentity.FullyQualifiedId` setter is private (kept for serializers), `EventStoreIdentity.GetTag`, `AsString` and `ToString` are sealed (see breaking changes).
+- Identities are immutable: `AbstractIdentity<TKey>.Id` setter is now `private protected`, `EventStoreIdentity.Assign` is private and `EventStoreIdentity.FullyQualifiedId` setter is private (kept for serializers, existing JSON and BSON data is still read correctly). `EventStoreIdentity.GetTag`, `AsString`, `ToString` and `Equals(IIdentity)` are sealed (see breaking changes).
+- `IdentityManager.RegisterIdentitiesFromAssembly` rejects identities whose tags differ only in casing (see breaking changes).
+- `EventStoreIdentity.GetTagForIdentityClass` is safe when many threads use an identity type for the first time: all of them receive the same tag instance and the tag is immediately resolvable by `TryGetTag` / `Normalize`.
 - Added static `EventStoreIdentity.TryGetTag(ReadOnlySpan<char> id, out string tag)` to get the tag of an identity in string form without allocating, it returns the cached instance of the tag.
 - `IIdentityConverter.TryGetTag` now returns the cached instance of the tag with the correct casing (see breaking changes).
 
