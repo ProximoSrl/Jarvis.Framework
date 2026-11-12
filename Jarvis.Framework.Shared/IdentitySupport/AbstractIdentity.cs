@@ -107,7 +107,12 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             }
         }
 
-        public bool Equals(AbstractIdentity<TKey> other)
+        /// <summary>
+        /// Reached by <see cref="Equals(object)"/>, == and != (so by Dictionary / HashSet keys
+        /// too): compares id and tag. Virtual so an inheritor whose tag depends only on the
+        /// concrete type can compare type and id without asking the tag (<see cref="EventStoreIdentity"/>).
+        /// </summary>
+        public virtual bool Equals(AbstractIdentity<TKey> other)
         {
             if (other != null)
             {

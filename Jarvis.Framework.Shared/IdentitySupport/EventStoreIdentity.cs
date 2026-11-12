@@ -110,11 +110,20 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         /// </summary>
         public sealed override bool Equals(IIdentity other)
         {
+            // Same concrete type implies an EventStoreIdentity, the typed overload checks it.
+            return other is AbstractIdentity<long> typed && Equals(typed);
+        }
+
+        /// <summary>
+        /// Equals(object), == and != of the base class (so Dictionary / HashSet keys too) end
+        /// here: same comparison of <see cref="Equals(IIdentity)"/>, concrete type and id, without
+        /// the two GetTag() lookups of the base implementation. Sealed for the same reason.
+        /// </summary>
+        public sealed override bool Equals(AbstractIdentity<long> other)
+        {
             if (other is null) return false;
             if (ReferenceEquals(this, other)) return true;
-            return GetType() == other.GetType()
-                && other is EventStoreIdentity typed
-                && Id == typed.Id;
+            return GetType() == other.GetType() && Id == other.Id;
         }
 
         protected EventStoreIdentity(long id)
