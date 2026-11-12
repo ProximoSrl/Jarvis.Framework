@@ -513,7 +513,8 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
         public void Concurrent_first_to_string_returns_one_instance()
         {
             const int identityCount = 200;
-            var threadCount = Math.Max(4, Environment.ProcessorCount);
+            // Capped: a few threads are enough to provoke the race, thread starts must not scale with the host.
+            var threadCount = Math.Clamp(Environment.ProcessorCount, 4, 8);
 
             for (int i = 0; i < identityCount; i++)
             {

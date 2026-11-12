@@ -316,6 +316,11 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             // create the identity with a parameterless constructor and then populate it (Newtonsoft
             // honors non public setters thanks to [JsonProperty]) need it to restore the right id.
             // Assign keeps the cached string representation in sync with the id.
+            // Not thread safe on purpose: a serializer populates an identity it has just created,
+            // before any other thread can see it, and once published the identity never changes
+            // (Assign and the Id setter are private). Coordinating Assign with the cache publication
+            // of ToString() would cost a lock or an extra allocation on every identity for a
+            // scenario that cannot happen.
             private set { Assign(value); }
         }
 

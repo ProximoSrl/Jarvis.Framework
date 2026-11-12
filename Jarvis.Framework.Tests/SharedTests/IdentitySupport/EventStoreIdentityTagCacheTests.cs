@@ -39,7 +39,8 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
         public void Concurrent_first_use_returns_one_instance_and_reverse_mapping_is_always_visible()
         {
             const int typeCount = 50;
-            var threadCount = Math.Max(4, Environment.ProcessorCount);
+            // Capped: a few threads are enough to provoke the race, thread starts must not scale with the host.
+            var threadCount = Math.Clamp(Environment.ProcessorCount, 4, 8);
 
             for (int i = 0; i < typeCount; i++)
             {
