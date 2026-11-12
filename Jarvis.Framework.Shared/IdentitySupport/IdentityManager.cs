@@ -132,9 +132,8 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                         continue; //move to the next type, or everythign will crash.
                     }
 
-                    var activator = FastReflectionHelper.GetActivator(ctor);
-
-                    _longBasedFactories[tag] = (id) => (IIdentity)activator(new object[] { id });
+                    // Typed activator: creating an identity does not allocate an object[] nor box the id.
+                    _longBasedFactories[tag] = FastReflectionHelper.GetActivator<long, IIdentity>(ctor);
                     _tagToTypeMapping[tag] = ic;
 
                     // Also register by the full class name for convenience
@@ -226,14 +225,13 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         public bool TryParse<T>(string id, out T typedIdentity) where T : IIdentity
         {
             typedIdentity = default;
-            if (!TryParseParts(id, out string registeredTag, out var longId, out var factoryFunc))
+            if (!TryParseParts(id, out _, out var longId, out var factoryFunc, out var separatorIndex))
             {
                 return false;
             }
 
             //ok we can generate the id but we need to check if returned id is of the correct type.
-            // The separator is right after the tag, that has the same length of the registered one.
-            var createdIdentity = Create(factoryFunc, longId, id, registeredTag.Length);
+            var createdIdentity = Create(factoryFunc, longId, id, separatorIndex);
             if (createdIdentity is T correctIdentity)
             {
                 typedIdentity = correctIdentity;
@@ -257,7 +255,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
         public bool TryGetTag(string id, out string tag)
         {
-            if (TryParseParts(id, out var registeredTag, out _, out _))
+            if (TryParseParts(id, out var registeredTag, out _, out _, out _))
             {
                 // Return the tag instance cached at registration (correct casing), no allocation.
                 tag = registeredTag;
@@ -280,12 +278,13 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         }
 
         /// <summary>
-        /// Validates the identity string and resolves numeric id and factory working only on spans,
-        /// no allocation is performed.
+        /// Validates the identity string and resolves numeric id, factory and position of the
+        /// separator working only on spans, no allocation is performed.
         /// </summary>
-        private bool TryParseParts(string id, out string registeredTag, out long longId, out Func<long, IIdentity> factoryFunc)
+        private bool TryParseParts(string id, out string registeredTag, out long longId, out Func<long, IIdentity> factoryFunc, out int separatorIndex)
         {
             longId = 0;
+            separatorIndex = -1;
             registeredTag = null;
             factoryFunc = null;
             if (string.IsNullOrEmpty(id))
@@ -300,6 +299,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             {
                 return false;
             }
+            separatorIndex = pos;
 
             //everything after the separator must be a digit
             var numberSpan = span[(pos + 1)..];
