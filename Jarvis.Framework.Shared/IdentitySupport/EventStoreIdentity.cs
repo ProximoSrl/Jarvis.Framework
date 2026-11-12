@@ -165,7 +165,9 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
         public static string Format(string tag, long value)
         {
-            return string.Format("{0}{1}{2}", tag, Separator, value);
+            // Interpolation formats the long directly in the handler buffer: no boxing of
+            // separator and value and no format string parsing, only the result string is allocated.
+            return $"{tag}{Separator}{value}";
         }
 
         public static implicit operator string(EventStoreIdentity id)
@@ -229,6 +231,40 @@ namespace Jarvis.Framework.Shared.IdentitySupport
           
             // No matching type found, return null to indicate unknown identity type
             return null;
+        }
+
+        /// <summary>
+        /// Extracts the tag from an identity in string form (ex: Document_42) without allocating:
+        /// the string returned in <paramref name="tag"/> is the unique cached instance of the tag
+        /// with the correct casing (the same returned by <see cref="GetTagForIdentityClass(Type)"/>),
+        /// whatever the casing used in <paramref name="id"/>.
+        /// </summary>
+        /// <param name="id">Full identity, tag + separator + numeric part. A string can be
+        /// passed directly, null or empty values simply return false.</param>
+        /// <param name="tag">Cached tag instance, null if the method returns false.</param>
+        /// <returns>True if the id has the form tag_digits and the tag belongs to a known
+        /// identity type. A type is known after it was registered in the IdentityManager or
+        /// after its tag was requested at least once. The numeric part is checked only to be
+        /// composed by digits, overflow is not verified.</returns>
+        public static bool TryGetTag(ReadOnlySpan<char> id, out string tag)
+        {
+            tag = null;
+
+            var separatorIndex = id.IndexOf(Separator);
+            if (separatorIndex < 1 || separatorIndex == id.Length - 1)
+            {
+                // no separator, no tag or no numeric part
+                return false;
+            }
+
+            foreach (var ch in id[(separatorIndex + 1)..])
+            {
+                if (!char.IsAsciiDigit(ch))
+                    return false;
+            }
+
+            var spanLookup = tagToCorrectCaseMap.GetAlternateLookup<ReadOnlySpan<char>>();
+            return spanLookup.TryGetValue(id[..separatorIndex], out tag);
         }
     }
 }

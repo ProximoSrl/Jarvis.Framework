@@ -1,6 +1,7 @@
 using MongoDB.Bson.Serialization.Attributes;
 using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 
 namespace Jarvis.Framework.Shared.IdentitySupport
 {
@@ -87,7 +88,9 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         {
             if (other != null)
             {
-                return other.Id.Equals(Id) && other.GetTag() == GetTag();
+                // EqualityComparer avoids boxing the id, Id.Equals(Id) on a generic type
+                // resolves to Object.Equals(object) and allocates for value types.
+                return EqualityComparer<TKey>.Default.Equals(other.Id, Id) && other.GetTag() == GetTag();
             }
 
             return false;
@@ -95,7 +98,14 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
         public bool Equals(IIdentity other)
         {
-            return this.GetType() == other.GetType() && this.AsString() == other.AsString();
+            if (other is null) return false;
+            if (ReferenceEquals(this, other)) return true;
+
+            // Same concrete type means same tag, it is enough to compare the id without
+            // generating the string representation of both identities.
+            return this.GetType() == other.GetType()
+                && other is AbstractIdentity<TKey> typed
+                && EqualityComparer<TKey>.Default.Equals(Id, typed.Id);
         }
 
         public static bool operator ==(AbstractIdentity<TKey> left, AbstractIdentity<TKey> right)

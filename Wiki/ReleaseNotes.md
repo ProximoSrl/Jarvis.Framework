@@ -1,5 +1,14 @@
 # J.A.R.V.I.S. Framework - Proximo srl (c)
 
+## vNext
+
+- Reduced string allocations in the identity system:
+  - `IdentityManager.ToIdentity`, `TryParse` and `TryGetTag` parse the identity with spans, no more substring / StringBuilder allocations (used by every BSON / JSON deserialization of an identity).
+  - `EventStoreIdentity.Format` (and so `ToString`, `AsString`, `FullyQualifiedId`) and `AbstractIdentityBsonSerializer` no longer box the id nor parse a format string.
+  - Equality between identities (`Equals`, `==`, `!=`) no longer boxes the id, `Equals(IIdentity)` compares type and id without generating the string representation and returns false for null instead of throwing.
+- Added static `EventStoreIdentity.TryGetTag(ReadOnlySpan<char> id, out string tag)` to get the tag of an identity in string form without allocating, it returns the cached instance of the tag.
+- `IIdentityConverter.TryGetTag` now returns the cached instance of the tag with the correct casing (see breaking changes).
+
 ## 7.15.1
 
 - Fixed "Sequence broken" false error in ProjectionEngine when a slot retries a failed chunk dispatch after a transient or non-transient error.

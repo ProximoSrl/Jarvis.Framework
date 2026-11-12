@@ -347,5 +347,94 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             // Should preserve "00042" not convert to "42"
             Assert.That(normalized, Is.EqualTo("SampleAggregate_00042"));
         }
+
+        [TestCase("SampleAggregate_42")]
+        [TestCase("sampleaggregate_42")]
+        [TestCase("SAMPLEAGGREGATE_0")]
+        public void TryGetTag_returns_cached_tag_instance(string id)
+        {
+            var expected = EventStoreIdentity.GetTagForIdentityClass<SampleAggregateId>();
+
+            var result = EventStoreIdentity.TryGetTag(id, out var tag);
+
+            Assert.That(result, Is.True);
+            Assert.That(tag, Is.SameAs(expected), "Tag must be the cached instance, not a new string");
+        }
+
+        [TestCase(null)]
+        [TestCase("")]
+        [TestCase("42")]
+        [TestCase("_42")]
+        [TestCase("SampleAggregate")]
+        [TestCase("SampleAggregate_")]
+        [TestCase("SampleAggregate_4a")]
+        [TestCase("SampleAggregate_-4")]
+        [TestCase("SampleAggregate_4_2")]
+        [TestCase("ThisTagIsNotKnown_42")]
+        public void TryGetTag_returns_false_for_invalid_or_unknown_identities(string id)
+        {
+            _ = EventStoreIdentity.GetTagForIdentityClass<SampleAggregateId>();
+
+            var result = EventStoreIdentity.TryGetTag(id, out var tag);
+
+            Assert.That(result, Is.False);
+            Assert.That(tag, Is.Null);
+        }
+
+        [Test]
+        public void TryGetTag_does_not_allocate()
+        {
+            _ = EventStoreIdentity.GetTagForIdentityClass<SampleAggregateId>();
+            const string id = "sampleaggregate_42";
+            // warmup, to exclude jit and first call allocations
+            EventStoreIdentity.TryGetTag(id, out _);
+
+            var before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 1000; i++)
+            {
+                EventStoreIdentity.TryGetTag(id, out _);
+            }
+            var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+            Assert.That(allocated, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Equals_as_IIdentity_compares_type_and_id()
+        {
+            IIdentity id = new SampleAggregateId(42);
+
+            Assert.That(id.Equals((IIdentity)new SampleAggregateId(42)), Is.True);
+            Assert.That(id.Equals(id), Is.True);
+            Assert.That(id.Equals((IIdentity)new SampleAggregateId(43)), Is.False);
+            Assert.That(id.Equals((IIdentity)new TestId(42)), Is.False, "Same numeric id but different type");
+            Assert.That(id.Equals((IIdentity)null), Is.False);
+        }
+
+        [Test]
+        public void Equals_does_not_allocate()
+        {
+            var first = new SampleAggregateId(42);
+            var second = new SampleAggregateId(42);
+            IIdentity firstAsInterface = first;
+            IIdentity secondAsInterface = second;
+            // warmup, to exclude jit and first call allocations
+            _ = firstAsInterface.Equals(secondAsInterface);
+            _ = first.Equals(second);
+            _ = first == second;
+
+            var equal = true;
+            var before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 1000; i++)
+            {
+                equal &= firstAsInterface.Equals(secondAsInterface);
+                equal &= first.Equals(second);
+                equal &= first == second;
+            }
+            var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+            Assert.That(equal, Is.True);
+            Assert.That(allocated, Is.EqualTo(0));
+        }
     }
 }

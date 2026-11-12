@@ -224,6 +224,17 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             Assert.That(tag, Is.EqualTo(expectedTag));
         }
 
+        [TestCase("Test_42")]
+        [TestCase("test_42")]
+        [TestCase("TEST_42")]
+        public void Verify_try_get_tag_returns_cached_tag_with_correct_casing(string id)
+        {
+            var result = sut.TryGetTag(id, out string tag);
+
+            Assert.That(result, Is.True);
+            Assert.That(tag, Is.SameAs(EventStoreIdentity.GetTagForIdentityClass<TestId>()));
+        }
+
         [TestCase("Test", typeof(TestId))]
         [TestCase("test", typeof(TestId))]
         [TestCase("TEST", typeof(TestId))]

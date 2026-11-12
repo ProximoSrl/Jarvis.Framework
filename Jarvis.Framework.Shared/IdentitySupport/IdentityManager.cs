@@ -22,11 +22,18 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         private readonly Dictionary<string, Type> _tagToTypeMapping =
             new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase);
 
+        /// <summary>
+        /// Span based view of <see cref="_longBasedFactories"/>, allows to lookup a factory
+        /// from a slice of the original identity string without allocating the tag substring.
+        /// </summary>
+        private readonly Dictionary<string, Func<long, IIdentity>>.AlternateLookup<ReadOnlySpan<char>> _longBasedFactoriesBySpan;
+
         public ILogger Logger { get; set; }
 
         public IdentityManager(IReservableCounterService reservableCounterService)
         {
             _reservableCounterService = reservableCounterService;
+            _longBasedFactoriesBySpan = _longBasedFactories.GetAlternateLookup<ReadOnlySpan<char>>();
             Logger = NullLogger.Instance;
         }
 
@@ -40,14 +47,16 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             if (String.IsNullOrEmpty(identityAsString))
                 return null;
 
-            int pos = identityAsString.IndexOf(EventStoreIdentity.Separator);
+            // Parse on spans: no substring is allocated for tag or numeric part in the happy path.
+            var span = identityAsString.AsSpan();
+            int pos = span.IndexOf(EventStoreIdentity.Separator);
             if (pos == -1)
             {
                 throw new JarvisFrameworkIdentityException(string.Format("invalid identity value {0}", identityAsString));
             }
 
-            var tag = identityAsString.Substring(0, pos);
-            if (!long.TryParse(identityAsString.Substring(pos + 1), out var id))
+            var tagSpan = span[..pos];
+            if (!long.TryParse(span[(pos + 1)..], out var id))
             {
                 throw new JarvisFrameworkIdentityException(string.Format("invalid identity value {0}", identityAsString));
             }
@@ -57,9 +66,9 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                 throw new JarvisFrameworkIdentityException(string.Format("invalid identity value {0} - id value greater than long.maxvalue", identityAsString));
             }
 
-            if (!_longBasedFactories.TryGetValue(tag, out Func<long, IIdentity> factory))
+            if (!_longBasedFactoriesBySpan.TryGetValue(tagSpan, out Func<long, IIdentity> factory))
             {
-                throw new JarvisFrameworkIdentityException(string.Format("{0} not registered in IdentityManager", tag));
+                throw new JarvisFrameworkIdentityException(string.Format("{0} not registered in IdentityManager", tagSpan.ToString()));
             }
             return factory(id);
         }
@@ -184,7 +193,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         public bool TryParse<T>(string id, out T typedIdentity) where T : IIdentity
         {
             typedIdentity = default;
-            if (!TryGetTag(id, out var tag, out var longId, out var factoryFunc))
+            if (!TryParseParts(id, out string _, out var longId, out var factoryFunc))
             {
                 return false;
             }
@@ -214,7 +223,15 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
         public bool TryGetTag(string id, out string tag)
         {
-            return TryGetTag(id, out tag, out var _, out var __);
+            if (TryParseParts(id, out var registeredTag, out _, out _))
+            {
+                // Return the tag instance cached at registration (correct casing), no allocation.
+                tag = registeredTag;
+                return true;
+            }
+
+            tag = String.Empty;
+            return false;
         }
 
         public Type GetIdentityTypeByTag(string tag)
@@ -228,10 +245,14 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             return type;
         }
 
-        private bool TryGetTag(string id, out string tag, out long longId, out Func<long, IIdentity> factoryFunc)
+        /// <summary>
+        /// Validates the identity string and resolves numeric id and factory working only on spans,
+        /// no allocation is performed.
+        /// </summary>
+        private bool TryParseParts(string id, out string registeredTag, out long longId, out Func<long, IIdentity> factoryFunc)
         {
             longId = 0;
-            tag = String.Empty;
+            registeredTag = null;
             factoryFunc = null;
             if (string.IsNullOrEmpty(id))
             {
@@ -239,37 +260,31 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             }
 
             //then we check for the separator, if not present is not an id.
-            var pos = id.IndexOf(EventStoreIdentity.Separator);
+            var span = id.AsSpan();
+            var pos = span.IndexOf(EventStoreIdentity.Separator);
             if (pos < 1)
             {
                 return false;
             }
 
             //everything after the separator must be a digit
-            StringBuilder sb = new StringBuilder(20);
-            for (int i = pos + 1; i < id.Length; i++)
+            var numberSpan = span[(pos + 1)..];
+            foreach (var ch in numberSpan)
             {
-                if (!char.IsDigit(id[i]))
+                if (!char.IsDigit(ch))
                 {
                     return false;
                 }
-
-                sb.Append(id[i]);
             }
 
             //now we need to parse the long id
-            if (!long.TryParse(sb.ToString(), out longId))
+            if (!long.TryParse(numberSpan, out longId))
             {
                 return false;
             }
 
-            tag = id.Substring(0, pos);
-            if (!_longBasedFactories.TryGetValue(tag, out factoryFunc))
-            {
-                tag = string.Empty;
-                return false;
-            }
-            return true;
+            // registeredTag is the key stored in the dictionary, the cached tag with correct casing.
+            return _longBasedFactoriesBySpan.TryGetValue(span[..pos], out registeredTag, out factoryFunc);
         }
     }
 }

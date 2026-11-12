@@ -1,5 +1,9 @@
 # Version 7
 
+## 7.17.0
+
+- `IIdentityConverter.TryGetTag` (IdentityManager) returns the tag with the registered casing and not with the casing used in the id passed as argument: `TryGetTag("document_12", out tag)` now returns `Document` instead of `document`.
+
 ## 7.13.0
 
 - IDentityManager now require an IReservableCounter service.
