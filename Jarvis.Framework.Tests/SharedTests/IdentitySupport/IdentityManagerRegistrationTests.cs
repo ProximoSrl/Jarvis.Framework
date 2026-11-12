@@ -55,12 +55,35 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             Assert.That(identity.ToString(), Is.EqualTo("NormalizingCtor_43"));
         }
 
+        [Test]
+        public void Seeding_does_not_replace_string_already_cached_by_the_constructor()
+        {
+            // The (long id) constructor calls ToString(): the string it produced may already have
+            // been handed out (e.g. logged), seeding with the parsed input must not replace it.
+            var assembly = BuildIdentityAssembly("ToStringInCtorId", callToStringInConstructor: true);
+            var sut = new IdentityManager(null);
+            sut.RegisterIdentitiesFromAssembly(assembly);
+            var number = "42";
+            var input = "ToStringInCtor_" + number; //built at runtime, not an interned literal.
+
+            var identity = (EventStoreIdentity)sut.ToIdentity(input);
+
+            var first = identity.ToString();
+            Assert.That(first, Is.EqualTo(input));
+            Assert.That(first, Is.Not.SameAs(input), "the string cached by the constructor was replaced by the parsed input");
+            Assert.That(identity.ToString(), Is.SameAs(first));
+        }
+
         /// <summary>
         /// Emits <c>public class {name} : EventStoreIdentity</c> with a public (long id) constructor
-        /// that calls base(id + idOffset) and, optionally, a private parameterless constructor that
-        /// calls base(1).
+        /// that calls base(id + idOffset), then optionally ToString(), and, optionally, a private
+        /// parameterless constructor that calls base(1).
         /// </summary>
-        internal static Assembly BuildIdentityAssembly(string typeName, bool withParameterlessConstructor = false, long idOffset = 0)
+        internal static Assembly BuildIdentityAssembly(
+            string typeName,
+            bool withParameterlessConstructor = false,
+            long idOffset = 0,
+            bool callToStringInConstructor = false)
         {
             var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(
                 new AssemblyName("DynamicIdentities_" + Guid.NewGuid().ToString("N")),
@@ -86,6 +109,12 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
                 il.Emit(OpCodes.Add);
             }
             il.Emit(OpCodes.Call, baseLongConstructor);
+            if (callToStringInConstructor)
+            {
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Callvirt, typeof(object).GetMethod(nameof(ToString), Type.EmptyTypes));
+                il.Emit(OpCodes.Pop);
+            }
             il.Emit(OpCodes.Ret);
 
             if (withParameterlessConstructor)

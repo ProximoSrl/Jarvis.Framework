@@ -2,6 +2,7 @@ using MongoDB.Bson.Serialization.Attributes;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Concurrent;
+using System.Threading;
 
 namespace Jarvis.Framework.Shared.IdentitySupport
 {
@@ -123,11 +124,12 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         /// <summary>
         /// Assign the identity to the object, actually this method performs an extended validation
         /// of the string passed as parameter, rejecting anything that has not a correct format for this
-        /// specific identity.
+        /// specific identity. Private: an identity is immutable, only the string constructor and the
+        /// private <see cref="FullyQualifiedId"/> setter (used by serializers) can call it.
         /// </summary>
         /// <param name="identityAsString"></param>
         /// <exception cref="JarvisFrameworkIdentityException"></exception>
-        protected void Assign(string identityAsString)
+        private void Assign(string identityAsString)
         {
             var span = identityAsString.AsSpan();
             var separatorIndex = span.IndexOf(Separator);
@@ -218,7 +220,9 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         /// identical string on the first ToString(). A non canonical string (different tag casing,
         /// leading zeros, sign, spaces) is ignored. The string is ignored also when the identity
         /// does not hold the id parsed from it: a derived numeric constructor can change the value
-        /// it receives, and the cached string must always describe the actual id.
+        /// it receives, and the cached string must always describe the actual id. A cache already
+        /// filled (the constructor called ToString()) is preserved: the instance already returned
+        /// to someone must stay the one returned by every later call.
         /// </summary>
         /// <param name="identityAsString">The string the identity was parsed from.</param>
         /// <param name="separatorIndex">Index of <see cref="Separator"/> in the string.</param>
@@ -233,7 +237,8 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             var span = identityAsString.AsSpan();
             if (IsCanonical(span[..separatorIndex], GetTag(), span[(separatorIndex + 1)..]))
             {
-                _fullyQualifiedId = identityAsString;
+                // Seed only an empty cache, never replace an instance already handed out.
+                Interlocked.CompareExchange(ref _fullyQualifiedId, identityAsString, null);
             }
         }
 
@@ -257,8 +262,9 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         /// <summary>
         /// Cached full string representation (Tag_123). The id is assigned by the constructors,
         /// <see cref="Assign(string)"/> updates this field explicitly together with the id.
-        /// No locking: two threads can compute the string at the same time, but the result is
-        /// identical and reference assignment is atomic, so the worst case is a duplicate string.
+        /// Once filled it never changes: the first value published wins (lock free compare
+        /// exchange), so every call returns the same instance even when many threads call
+        /// ToString() for the first time together.
         /// </summary>
         private string _fullyQualifiedId;
 
@@ -268,7 +274,16 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         /// </summary>
         public sealed override string ToString()
         {
-            return _fullyQualifiedId ??= Format(GetTag(), Id);
+            return _fullyQualifiedId ?? PublishStringRepresentation(Format(GetTag(), Id));
+        }
+
+        /// <summary>
+        /// Publishes <paramref name="value"/> as cached representation only if no other thread
+        /// published one first, and returns the published instance.
+        /// </summary>
+        private string PublishStringRepresentation(string value)
+        {
+            return Interlocked.CompareExchange(ref _fullyQualifiedId, value, null) ?? value;
         }
 
         /// <summary>

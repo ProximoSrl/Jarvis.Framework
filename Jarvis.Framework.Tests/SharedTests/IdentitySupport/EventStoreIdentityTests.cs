@@ -3,6 +3,9 @@ using Jarvis.Framework.Tests.EngineTests;
 using Newtonsoft.Json;
 using NUnit.Framework;
 using System;
+using System.Linq;
+using System.Reflection;
+using System.Threading;
 
 namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
 {
@@ -492,6 +495,44 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
 
             Assert.That(property.SetMethod, Is.Not.Null, "Serializers need the setter to populate an identity");
             Assert.That(property.SetMethod.IsPrivate, Is.True, "Identities are immutable, FullyQualifiedId setter must be private");
+        }
+
+        [Test]
+        public void Assign_is_private()
+        {
+            // A protected Assign would let a derived identity change Id (and hash code) after
+            // construction, breaking dictionaries and sets that contain the identity.
+            var assign = typeof(EventStoreIdentity).GetMethod(
+                "Assign", BindingFlags.Instance | BindingFlags.NonPublic, new[] { typeof(string) });
+
+            Assert.That(assign, Is.Not.Null);
+            Assert.That(assign.IsPrivate, Is.True, "Identities are immutable, Assign must be private");
+        }
+
+        [Test]
+        public void Concurrent_first_to_string_returns_one_instance()
+        {
+            const int identityCount = 200;
+            var threadCount = Math.Max(4, Environment.ProcessorCount);
+
+            for (int i = 0; i < identityCount; i++)
+            {
+                var id = new SampleAggregateId(i + 1); // numeric constructor: nothing cached yet.
+                using var barrier = new Barrier(threadCount);
+                var results = new string[threadCount];
+
+                // Dedicated threads: the barrier needs all of them running at the same time.
+                var threads = Enumerable.Range(0, threadCount).Select(t => new Thread(() =>
+                {
+                    barrier.SignalAndWait();
+                    results[t] = id.ToString();
+                })).ToArray();
+                foreach (var thread in threads) thread.Start();
+                foreach (var thread in threads) Assert.That(thread.Join(TimeSpan.FromSeconds(10)), Is.True, "thread did not complete");
+
+                Assert.That(results.All(r => ReferenceEquals(r, results[0])), Is.True, "racing first calls returned different string instances");
+                Assert.That(id.ToString(), Is.SameAs(results[0]), "later calls must return the instance published by the first calls");
+            }
         }
 
         [Test]
