@@ -1,6 +1,4 @@
-using Fasterflect;
 using Jarvis.Framework.Shared.Events;
-using Jarvis.Framework.Shared.Helpers;
 using NStore.Core.Persistence;
 using NStore.Domain;
 using System.Collections.Generic;
@@ -58,7 +56,10 @@ namespace Jarvis.Framework.Kernel.ProjectionEngine.Client
                     evt.EventPosition = eventPosition++;
                 }
 
-                evt?.SetPropertyValue(d => d.IsLastEventOfCommit, true);
+                if (evt != null)
+                {
+                    evt.IsLastEventOfCommit = true;
+                }
             }
         }
     }

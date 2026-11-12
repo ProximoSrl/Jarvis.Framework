@@ -35,7 +35,9 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         /// </para>
         /// </summary>
         /// <param name="id"></param>
-        /// <param name="tag"></param>
+        /// <param name="tag">The tag with the correct casing, whatever the casing used in
+        /// <paramref name="id"/>. It is the cached instance of the tag, no string is allocated.
+        /// Empty string if the method returns false.</param>
         /// <returns></returns>
         bool TryGetTag(string id, out string tag);
 

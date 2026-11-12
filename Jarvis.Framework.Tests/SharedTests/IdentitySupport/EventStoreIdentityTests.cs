@@ -1,7 +1,11 @@
 ﻿using Jarvis.Framework.Shared.IdentitySupport;
 using Jarvis.Framework.Tests.EngineTests;
+using Newtonsoft.Json;
 using NUnit.Framework;
 using System;
+using System.Linq;
+using System.Reflection;
+using System.Threading;
 
 namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
 {
@@ -346,6 +350,237 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
 
             // Should preserve "00042" not convert to "42"
             Assert.That(normalized, Is.EqualTo("SampleAggregate_00042"));
+        }
+
+        [TestCase("SampleAggregate_42")]
+        [TestCase("sampleaggregate_42")]
+        [TestCase("SAMPLEAGGREGATE_0")]
+        public void TryGetTag_returns_cached_tag_instance(string id)
+        {
+            var expected = EventStoreIdentity.GetTagForIdentityClass<SampleAggregateId>();
+
+            var result = EventStoreIdentity.TryGetTag(id, out var tag);
+
+            Assert.That(result, Is.True);
+            Assert.That(tag, Is.SameAs(expected), "Tag must be the cached instance, not a new string");
+        }
+
+        [TestCase(null)]
+        [TestCase("")]
+        [TestCase("42")]
+        [TestCase("_42")]
+        [TestCase("SampleAggregate")]
+        [TestCase("SampleAggregate_")]
+        [TestCase("SampleAggregate_4a")]
+        [TestCase("SampleAggregate_-4")]
+        [TestCase("SampleAggregate_4_2")]
+        [TestCase("ThisTagIsNotKnown_42")]
+        public void TryGetTag_returns_false_for_invalid_or_unknown_identities(string id)
+        {
+            _ = EventStoreIdentity.GetTagForIdentityClass<SampleAggregateId>();
+
+            var result = EventStoreIdentity.TryGetTag(id, out var tag);
+
+            Assert.That(result, Is.False);
+            Assert.That(tag, Is.Null);
+        }
+
+        [Test]
+        public void TryGetTag_does_not_allocate()
+        {
+            _ = EventStoreIdentity.GetTagForIdentityClass<SampleAggregateId>();
+            const string id = "sampleaggregate_42";
+            // warmup, to exclude jit and first call allocations
+            EventStoreIdentity.TryGetTag(id, out _);
+
+            var before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 1000; i++)
+            {
+                EventStoreIdentity.TryGetTag(id, out _);
+            }
+            var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+            Assert.That(allocated, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Equals_as_IIdentity_compares_type_and_id()
+        {
+            IIdentity id = new SampleAggregateId(42);
+
+            Assert.That(id.Equals((IIdentity)new SampleAggregateId(42)), Is.True);
+            Assert.That(id.Equals(id), Is.True);
+            Assert.That(id.Equals((IIdentity)new SampleAggregateId(43)), Is.False);
+            Assert.That(id.Equals((IIdentity)new TestId(42)), Is.False, "Same numeric id but different type");
+            Assert.That(id.Equals((IIdentity)null), Is.False);
+        }
+
+        [Test]
+        public void Equals_does_not_allocate()
+        {
+            var first = new SampleAggregateId(42);
+            var second = new SampleAggregateId(42);
+            IIdentity firstAsInterface = first;
+            IIdentity secondAsInterface = second;
+            // warmup, to exclude jit and first call allocations
+            _ = firstAsInterface.Equals(secondAsInterface);
+            _ = first.Equals(second);
+            _ = first == second;
+
+            var equal = true;
+            var before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 1000; i++)
+            {
+                equal &= firstAsInterface.Equals(secondAsInterface);
+                equal &= first.Equals(second);
+                equal &= first == second;
+            }
+            var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+            Assert.That(equal, Is.True);
+            Assert.That(allocated, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void String_representation_is_cached_and_same_instance_is_returned()
+        {
+            var id = new SampleAggregateId(42);
+
+            var first = id.ToString();
+
+            Assert.That(first, Is.EqualTo("SampleAggregate_42"));
+            Assert.That(id.ToString(), Is.SameAs(first));
+            Assert.That(id.AsString(), Is.SameAs(first));
+            Assert.That(id.FullyQualifiedId, Is.SameAs(first));
+            string implicitConversion = id;
+            Assert.That(implicitConversion, Is.SameAs(first));
+        }
+
+        [Test]
+        public void String_representation_does_not_allocate_after_first_call()
+        {
+            var id = new SampleAggregateId(42);
+            // warmup, to exclude jit and first call allocations
+            _ = id.ToString();
+            _ = id.AsString();
+            _ = id.FullyQualifiedId;
+            string warmup = id;
+
+            var before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 1000; i++)
+            {
+                _ = id.ToString();
+                _ = id.AsString();
+                _ = id.FullyQualifiedId;
+                string converted = id;
+            }
+            var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+            Assert.That(allocated, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Id_cannot_be_set_from_outside_the_identity()
+        {
+            var setter = typeof(SampleAggregateId).GetProperty(nameof(SampleAggregateId.Id)).SetMethod;
+
+            Assert.That(setter.IsPublic, Is.False, "Identities are immutable, Id setter must not be public");
+            Assert.That(setter.IsFamilyAndAssembly, Is.True, "Id setter must be private protected, identities outside the framework assign the id only through the constructor");
+        }
+
+        [Test]
+        public void Fully_qualified_id_setter_is_private()
+        {
+            var property = typeof(EventStoreIdentity).GetProperty(nameof(EventStoreIdentity.FullyQualifiedId));
+
+            Assert.That(property.SetMethod, Is.Not.Null, "Serializers need the setter to populate an identity");
+            Assert.That(property.SetMethod.IsPrivate, Is.True, "Identities are immutable, FullyQualifiedId setter must be private");
+        }
+
+        [Test]
+        public void Assign_is_private()
+        {
+            // A protected Assign would let a derived identity change Id (and hash code) after
+            // construction, breaking dictionaries and sets that contain the identity.
+            var assign = typeof(EventStoreIdentity).GetMethod(
+                "Assign", BindingFlags.Instance | BindingFlags.NonPublic, new[] { typeof(string) });
+
+            Assert.That(assign, Is.Not.Null);
+            Assert.That(assign.IsPrivate, Is.True, "Identities are immutable, Assign must be private");
+        }
+
+        [Test]
+        public void Concurrent_first_to_string_returns_one_instance()
+        {
+            const int identityCount = 200;
+            // Capped: a few threads are enough to provoke the race, thread starts must not scale with the host.
+            var threadCount = Math.Clamp(Environment.ProcessorCount, 4, 8);
+
+            for (int i = 0; i < identityCount; i++)
+            {
+                var id = new SampleAggregateId(i + 1); // numeric constructor: nothing cached yet.
+                using var barrier = new Barrier(threadCount);
+                var results = new string[threadCount];
+
+                // Dedicated threads: the barrier needs all of them running at the same time.
+                var threads = Enumerable.Range(0, threadCount).Select(t => new Thread(() =>
+                {
+                    barrier.SignalAndWait();
+                    results[t] = id.ToString();
+                })).ToArray();
+                foreach (var thread in threads) thread.Start();
+                foreach (var thread in threads) Assert.That(thread.Join(TimeSpan.FromSeconds(10)), Is.True, "thread did not complete");
+
+                Assert.That(results.All(r => ReferenceEquals(r, results[0])), Is.True, "racing first calls returned different string instances");
+                Assert.That(id.ToString(), Is.SameAs(results[0]), "later calls must return the instance published by the first calls");
+            }
+        }
+
+        [Test]
+        public void Json_populates_identity_through_private_fully_qualified_id_setter()
+        {
+            // Same path Newtonsoft follows when it creates an identity with a parameterless
+            // constructor and then sets the members: { "Id" : "Tag_123" } must restore the id.
+            var id = new SampleAggregateId(1);
+            _ = id.ToString(); // fill the cache with the old value.
+
+            JsonConvert.PopulateObject("{\"Id\":\"SampleAggregate_42\"}", id);
+
+            Assert.That(id.Id, Is.EqualTo(42));
+            Assert.That(id.AsString(), Is.EqualTo("SampleAggregate_42"), "cached string must follow the new id");
+            Assert.That(id, Is.EqualTo(new SampleAggregateId(42)));
+        }
+
+        [Test]
+        public void Construction_from_canonical_string_reuses_input_instance()
+        {
+            var number = "42";
+            var input = "SampleAggregate_" + number; //built at runtime, not an interned literal.
+
+            var id = new SampleAggregateId(input);
+
+            Assert.That(id.AsString(), Is.SameAs(input));
+            Assert.That(id.ToString(), Is.SameAs(input));
+            Assert.That(id.FullyQualifiedId, Is.SameAs(input));
+            Assert.That(id.Id, Is.EqualTo(42));
+        }
+
+        [TestCase("sampleaggregate_42")]
+        [TestCase("SAMPLEAGGREGATE_42")]
+        [TestCase("SampleAggregate_042")]
+        [TestCase("SampleAggregate_+42")]
+        [TestCase("SampleAggregate_ 42")]
+        [TestCase("SampleAggregate_42 ")]
+        [TestCase("42")]
+        [TestCase("042")]
+        public void Construction_from_non_canonical_string_yields_canonical_representation(string input)
+        {
+            var id = new SampleAggregateId(input);
+
+            Assert.That(id.AsString(), Is.EqualTo("SampleAggregate_42"));
+            Assert.That(id.ToString(), Is.EqualTo("SampleAggregate_42"));
+            Assert.That(id.FullyQualifiedId, Is.EqualTo("SampleAggregate_42"));
+            Assert.That(id.AsString(), Is.Not.SameAs(input));
         }
     }
 }

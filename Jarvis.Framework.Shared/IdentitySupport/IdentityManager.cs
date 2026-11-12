@@ -22,11 +22,18 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         private readonly Dictionary<string, Type> _tagToTypeMapping =
             new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase);
 
+        /// <summary>
+        /// Span based view of <see cref="_longBasedFactories"/>, allows to lookup a factory
+        /// from a slice of the original identity string without allocating the tag substring.
+        /// </summary>
+        private readonly Dictionary<string, Func<long, IIdentity>>.AlternateLookup<ReadOnlySpan<char>> _longBasedFactoriesBySpan;
+
         public ILogger Logger { get; set; }
 
         public IdentityManager(IReservableCounterService reservableCounterService)
         {
             _reservableCounterService = reservableCounterService;
+            _longBasedFactoriesBySpan = _longBasedFactories.GetAlternateLookup<ReadOnlySpan<char>>();
             Logger = NullLogger.Instance;
         }
 
@@ -40,14 +47,16 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             if (String.IsNullOrEmpty(identityAsString))
                 return null;
 
-            int pos = identityAsString.IndexOf(EventStoreIdentity.Separator);
+            // Parse on spans: no substring is allocated for tag or numeric part in the happy path.
+            var span = identityAsString.AsSpan();
+            int pos = span.IndexOf(EventStoreIdentity.Separator);
             if (pos == -1)
             {
                 throw new JarvisFrameworkIdentityException(string.Format("invalid identity value {0}", identityAsString));
             }
 
-            var tag = identityAsString.Substring(0, pos);
-            if (!long.TryParse(identityAsString.Substring(pos + 1), out var id))
+            var tagSpan = span[..pos];
+            if (!long.TryParse(span[(pos + 1)..], out var id))
             {
                 throw new JarvisFrameworkIdentityException(string.Format("invalid identity value {0}", identityAsString));
             }
@@ -57,11 +66,26 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                 throw new JarvisFrameworkIdentityException(string.Format("invalid identity value {0} - id value greater than long.maxvalue", identityAsString));
             }
 
-            if (!_longBasedFactories.TryGetValue(tag, out Func<long, IIdentity> factory))
+            if (!_longBasedFactoriesBySpan.TryGetValue(tagSpan, out Func<long, IIdentity> factory))
             {
-                throw new JarvisFrameworkIdentityException(string.Format("{0} not registered in IdentityManager", tag));
+                throw new JarvisFrameworkIdentityException(string.Format("{0} not registered in IdentityManager", tagSpan.ToString()));
             }
-            return factory(id);
+            return Create(factory, id, identityAsString, pos);
+        }
+
+        /// <summary>
+        /// Creates the identity with the numeric factory, then hands the original string to the
+        /// identity: when it is canonical it is reused as the string form of the identity, that
+        /// would otherwise allocate an identical string on the first ToString().
+        /// </summary>
+        private static IIdentity Create(Func<long, IIdentity> factory, long id, string identityAsString, int separatorIndex)
+        {
+            var identity = factory(id);
+            if (identity is EventStoreIdentity eventStoreIdentity)
+            {
+                eventStoreIdentity.SeedStringRepresentation(identityAsString, separatorIndex, id);
+            }
+            return identity;
         }
 
         public TIdentity ToIdentity<TIdentity>(string identityAsString) where TIdentity : IIdentity
@@ -81,6 +105,23 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             {
                 var tag = EventStoreIdentity.GetTagForIdentityClass(ic);
 
+                // Tags are unique and case insensitive: two different identities with the same tag
+                // (same class name in different namespaces, or names that differ only in casing)
+                // would silently replace each other's factory (the last registered wins).
+                // The tag is compared again because the mapping is also keyed by class name.
+                if (_tagToTypeMapping.TryGetValue(tag, out var registeredType)
+                    && registeredType != ic
+                    && EventStoreIdentity.GetTagForIdentityClass(registeredType) is var registeredTag
+                    && string.Equals(registeredTag, tag, StringComparison.OrdinalIgnoreCase))
+                {
+                    var message = string.Equals(registeredTag, tag, StringComparison.Ordinal)
+                        ? $"Identity {ic.FullName} has the same tag {tag} of identity {registeredType.FullName}, identity tags must be unique\n"
+                        : $"Identity {ic.FullName} has tag {tag} that differs only in casing from tag {registeredTag} of identity {registeredType.FullName}, identity tags are case insensitive\n";
+                    Logger.Error(message);
+                    sb.Append(message);
+                    continue;
+                }
+
                 {
                     var ctor = ic.Constructor(new Type[] { typeof(long) });
                     if (ctor == null)
@@ -90,9 +131,9 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                         sb.AppendFormat(message);
                         continue; //move to the next type, or everythign will crash.
                     }
-                    var activator = FastReflectionHelper.GetActivator(ctor);
 
-                    _longBasedFactories[tag] = (id) => (IIdentity)activator(new object[] { id });
+                    // Typed activator: creating an identity does not allocate an object[] nor box the id.
+                    _longBasedFactories[tag] = FastReflectionHelper.GetActivator<long, IIdentity>(ctor);
                     _tagToTypeMapping[tag] = ic;
 
                     // Also register by the full class name for convenience
@@ -184,13 +225,13 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         public bool TryParse<T>(string id, out T typedIdentity) where T : IIdentity
         {
             typedIdentity = default;
-            if (!TryGetTag(id, out var tag, out var longId, out var factoryFunc))
+            if (!TryParseParts(id, out _, out var longId, out var factoryFunc, out var separatorIndex))
             {
                 return false;
             }
 
             //ok we can generate the id but we need to check if returned id is of the correct type.
-            var createdIdentity = factoryFunc(longId);
+            var createdIdentity = Create(factoryFunc, longId, id, separatorIndex);
             if (createdIdentity is T correctIdentity)
             {
                 typedIdentity = correctIdentity;
@@ -214,7 +255,15 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
         public bool TryGetTag(string id, out string tag)
         {
-            return TryGetTag(id, out tag, out var _, out var __);
+            if (TryParseParts(id, out var registeredTag, out _, out _, out _))
+            {
+                // Return the tag instance cached at registration (correct casing), no allocation.
+                tag = registeredTag;
+                return true;
+            }
+
+            tag = String.Empty;
+            return false;
         }
 
         public Type GetIdentityTypeByTag(string tag)
@@ -228,10 +277,15 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             return type;
         }
 
-        private bool TryGetTag(string id, out string tag, out long longId, out Func<long, IIdentity> factoryFunc)
+        /// <summary>
+        /// Validates the identity string and resolves numeric id, factory and position of the
+        /// separator working only on spans, no allocation is performed.
+        /// </summary>
+        private bool TryParseParts(string id, out string registeredTag, out long longId, out Func<long, IIdentity> factoryFunc, out int separatorIndex)
         {
             longId = 0;
-            tag = String.Empty;
+            separatorIndex = -1;
+            registeredTag = null;
             factoryFunc = null;
             if (string.IsNullOrEmpty(id))
             {
@@ -239,37 +293,32 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             }
 
             //then we check for the separator, if not present is not an id.
-            var pos = id.IndexOf(EventStoreIdentity.Separator);
+            var span = id.AsSpan();
+            var pos = span.IndexOf(EventStoreIdentity.Separator);
             if (pos < 1)
             {
                 return false;
             }
+            separatorIndex = pos;
 
             //everything after the separator must be a digit
-            StringBuilder sb = new StringBuilder(20);
-            for (int i = pos + 1; i < id.Length; i++)
+            var numberSpan = span[(pos + 1)..];
+            foreach (var ch in numberSpan)
             {
-                if (!char.IsDigit(id[i]))
+                if (!char.IsDigit(ch))
                 {
                     return false;
                 }
-
-                sb.Append(id[i]);
             }
 
             //now we need to parse the long id
-            if (!long.TryParse(sb.ToString(), out longId))
+            if (!long.TryParse(numberSpan, out longId))
             {
                 return false;
             }
 
-            tag = id.Substring(0, pos);
-            if (!_longBasedFactories.TryGetValue(tag, out factoryFunc))
-            {
-                tag = string.Empty;
-                return false;
-            }
-            return true;
+            // registeredTag is the key stored in the dictionary, the cached tag with correct casing.
+            return _longBasedFactoriesBySpan.TryGetValue(span[..pos], out registeredTag, out factoryFunc);
         }
     }
 }
