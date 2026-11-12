@@ -1,3 +1,4 @@
+using Jarvis.Framework.Shared.Exceptions;
 using Jarvis.Framework.Shared.IdentitySupport;
 using NUnit.Framework;
 using System;
@@ -53,6 +54,35 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             Assert.That(identity.Id, Is.EqualTo(43));
             Assert.That(identity.AsString(), Is.EqualTo("NormalizingCtor_43"));
             Assert.That(identity.ToString(), Is.EqualTo("NormalizingCtor_43"));
+        }
+
+        [Test]
+        public void Identities_whose_tags_differ_only_in_casing_are_rejected()
+        {
+            var suffix = Guid.NewGuid().ToString("N");
+            var firstName = "CaseClash" + suffix + "Id";
+            var secondName = "CASECLASH" + suffix.ToUpperInvariant() + "Id";
+            var sut = new IdentityManager(null);
+            sut.RegisterIdentitiesFromAssembly(BuildIdentityAssembly(firstName));
+
+            var ex = Assert.Throws<JarvisFrameworkEngineException>(
+                () => sut.RegisterIdentitiesFromAssembly(BuildIdentityAssembly(secondName)));
+
+            Assert.That(ex.Message, Does.Contain(secondName));
+            Assert.That(ex.Message, Does.Contain("differs only in casing"));
+            // the first registration is untouched.
+            var identity = sut.ToIdentity("caseclash" + suffix + "_1");
+            Assert.That(identity.GetType().Name, Is.EqualTo(firstName));
+        }
+
+        [Test]
+        public void Registering_the_same_assembly_twice_is_allowed()
+        {
+            var assembly = BuildIdentityAssembly("RegisteredTwice" + Guid.NewGuid().ToString("N") + "Id");
+            var sut = new IdentityManager(null);
+            sut.RegisterIdentitiesFromAssembly(assembly);
+
+            Assert.DoesNotThrow(() => sut.RegisterIdentitiesFromAssembly(assembly));
         }
 
         [Test]

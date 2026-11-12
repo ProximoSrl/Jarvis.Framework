@@ -119,16 +119,18 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             return false;
         }
 
-        public bool Equals(IIdentity other)
+        /// <summary>
+        /// Two identities are equal when they have the same concrete type and the same string
+        /// representation: an inheritor can override GetTag() / AsString() using instance state,
+        /// so two instances with the same id can have different representations. An inheritor
+        /// whose representation depends only on type and id can override this method with a
+        /// faster comparison (<see cref="EventStoreIdentity"/>).
+        /// </summary>
+        public virtual bool Equals(IIdentity other)
         {
             if (other is null) return false;
             if (ReferenceEquals(this, other)) return true;
-
-            // Same concrete type means same tag, it is enough to compare the id without
-            // generating the string representation of both identities.
-            return this.GetType() == other.GetType()
-                && other is AbstractIdentity<TKey> typed
-                && EqualityComparer<TKey>.Default.Equals(Id, typed.Id);
+            return this.GetType() == other.GetType() && this.AsString() == other.AsString();
         }
 
         public static bool operator ==(AbstractIdentity<TKey> left, AbstractIdentity<TKey> right)

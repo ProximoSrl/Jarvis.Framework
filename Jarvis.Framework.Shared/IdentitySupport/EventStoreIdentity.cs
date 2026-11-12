@@ -103,6 +103,20 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             return GetTagForIdentityClass(GetType());
         }
 
+        /// <summary>
+        /// GetTag(), AsString() and ToString() are sealed, the representation is always Tag_Id:
+        /// same concrete type and same id means same string, so the id is compared without
+        /// generating any string. Sealed: a derived identity cannot change equality.
+        /// </summary>
+        public sealed override bool Equals(IIdentity other)
+        {
+            if (other is null) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return GetType() == other.GetType()
+                && other is EventStoreIdentity typed
+                && Id == typed.Id;
+        }
+
         protected EventStoreIdentity(long id)
         {
             if (id < 0)
