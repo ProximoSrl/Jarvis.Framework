@@ -60,7 +60,7 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
         /// that calls base(id + idOffset) and, optionally, a private parameterless constructor that
         /// calls base(1).
         /// </summary>
-        private static Assembly BuildIdentityAssembly(string typeName, bool withParameterlessConstructor, long idOffset = 0)
+        internal static Assembly BuildIdentityAssembly(string typeName, bool withParameterlessConstructor = false, long idOffset = 0)
         {
             var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(
                 new AssemblyName("DynamicIdentities_" + Guid.NewGuid().ToString("N")),

@@ -56,18 +56,41 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
         public static string GetTagForIdentityClass(Type identityType)
         {
-            if (!classTags.TryGetValue(identityType, out string tag))
+            if (classTags.TryGetValue(identityType, out string tag))
             {
-                var tn = identityType.Name;
-                if (!tn.EndsWith("Id"))
-                {
-                    throw new JarvisFrameworkIdentityException(string.Format("Wrong Identity class name: {0} Class name should end with Id", tn));
-                }
-                tag = tn[..^2];
-                classTags.TryAdd(identityType, tag);
-                tagToCorrectCaseMap.TryAdd(tag, tag);
+                return tag;
             }
-            return tag;
+            return AddTagForIdentityClass(identityType);
+        }
+
+        /// <summary>
+        /// Slow path of <see cref="GetTagForIdentityClass(Type)"/>, safe when many threads use a
+        /// type for the first time together:
+        /// <list type="bullet">
+        /// <item>the reverse mapping (tag to correct case tag) is published before the type to tag
+        /// mapping, so whoever finds the tag in <see cref="classTags"/> can already resolve it with
+        /// <see cref="TryGetTag(ReadOnlySpan{char}, out string)"/> and <see cref="Normalize(string)"/>;</item>
+        /// <item>GetOrAdd makes every thread use the instance that won the race, both maps hold
+        /// the same string instance and every caller receives it.</item>
+        /// </list>
+        /// </summary>
+        private static string AddTagForIdentityClass(Type identityType)
+        {
+            var tn = identityType.Name;
+            if (!tn.EndsWith("Id"))
+            {
+                throw new JarvisFrameworkIdentityException(string.Format("Wrong Identity class name: {0} Class name should end with Id", tn));
+            }
+            var candidate = tn[..^2];
+
+            var tag = tagToCorrectCaseMap.GetOrAdd(candidate, candidate);
+            if (!string.Equals(tag, candidate, StringComparison.Ordinal))
+            {
+                // The reverse map is case insensitive: another class whose name differs only in
+                // casing already owns it. This class keeps its own tag, as it always did.
+                tag = candidate;
+            }
+            return classTags.GetOrAdd(identityType, tag);
         }
 
         /// <summary>
