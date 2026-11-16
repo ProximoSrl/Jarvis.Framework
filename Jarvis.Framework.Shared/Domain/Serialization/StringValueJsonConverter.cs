@@ -8,8 +8,8 @@ namespace Jarvis.Framework.Shared.Domain.Serialization
 {
     public class StringValueJsonConverter : JsonConverter
     {
-        private static readonly ConcurrentDictionary<Type, FastReflectionHelper.ObjectActivator> _activators
-            = new ConcurrentDictionary<Type, FastReflectionHelper.ObjectActivator>();
+        private static readonly ConcurrentDictionary<Type, Func<string, object>> _activators
+            = new ConcurrentDictionary<Type, Func<string, object>>();
 
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
         {
@@ -21,15 +21,15 @@ namespace Jarvis.Framework.Shared.Domain.Serialization
         {
             if (reader.TokenType == JsonToken.String)
             {
-                FastReflectionHelper.ObjectActivator activator;
+                Func<string, object> activator;
                 if (!_activators.TryGetValue(objectType, out activator))
                 {
                     var ctor = objectType.Constructor(new Type[] { typeof(string) });
-                    activator = FastReflectionHelper.GetActivator(ctor);
+                    activator = FastReflectionHelper.GetActivator<string, object>(ctor);
                     _activators[objectType] = activator;
                 }
 
-                var typedId = activator(new object[] { Convert.ToString((object)reader.Value) });
+                var typedId = activator(Convert.ToString((object)reader.Value));
                 return typedId;
             }
             return null;

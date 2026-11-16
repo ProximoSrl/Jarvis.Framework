@@ -104,7 +104,7 @@ namespace Jarvis.Framework.Shared.IdentitySupport.Serialization
             }
             else
             {
-                context.Writer.WriteString(String.Format("{0}_{1}", value.GetTag(), value.Id));
+                context.Writer.WriteString($"{value.GetTag()}_{value.Id}");
             }
         }
     }

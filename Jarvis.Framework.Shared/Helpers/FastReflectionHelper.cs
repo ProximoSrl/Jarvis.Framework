@@ -53,5 +53,29 @@ namespace Jarvis.Framework.Shared.Helpers
         }
 
         public delegate object ObjectActivator(params object[] args);
+
+        /// <summary>
+        /// Typed version of <see cref="GetActivator(ConstructorInfo)"/> for a constructor with a
+        /// single argument: compiles <c>arg => new T(arg)</c>. The argument is passed with its
+        /// own type, so calling the activator does not allocate an object[] nor box a value type
+        /// argument. Prefer this one when the type of the argument is known at compile time.
+        /// </summary>
+        /// <typeparam name="TArg">Type of the single argument of the constructor.</typeparam>
+        /// <typeparam name="TResult">Type returned by the activator, the class that declares the
+        /// constructor must be assignable to it.</typeparam>
+        public static Func<TArg, TResult> GetActivator<TArg, TResult>(ConstructorInfo ctor)
+        {
+            ParameterInfo[] paramsInfo = ctor.GetParameters();
+            if (paramsInfo.Length != 1 || paramsInfo[0].ParameterType != typeof(TArg))
+            {
+                throw new ArgumentException(
+                    $"Constructor of {ctor.DeclaringType?.FullName} must have a single argument of type {typeof(TArg).FullName}",
+                    nameof(ctor));
+            }
+
+            ParameterExpression arg = Expression.Parameter(typeof(TArg), "arg");
+            Expression body = Expression.Convert(Expression.New(ctor, arg), typeof(TResult));
+            return Expression.Lambda<Func<TArg, TResult>>(body, arg).Compile();
+        }
     }
 }

@@ -1,6 +1,7 @@
 using MongoDB.Bson.Serialization.Attributes;
 using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 
 namespace Jarvis.Framework.Shared.IdentitySupport
 {
@@ -12,9 +13,32 @@ namespace Jarvis.Framework.Shared.IdentitySupport
     [Serializable]
     public abstract class AbstractIdentity<TKey> : IIdentity
     {
+        /// <summary>
+        /// Constructor for inheritors that assign the id themselves, only classes of this
+        /// assembly can do it (<see cref="EventStoreIdentity"/>).
+        /// </summary>
+        private protected AbstractIdentity()
+        {
+        }
+
+        /// <summary>
+        /// Creates the identity with its value, it is the only way an identity defined
+        /// outside this assembly can assign the id.
+        /// </summary>
+        protected AbstractIdentity(TKey id)
+        {
+            Id = id;
+        }
+
+        /// <summary>
+        /// Value of the identity. An identity is immutable: inheritors outside this assembly
+        /// pass the value to the constructor and cannot change it afterwards. Inside this assembly
+        /// an inheritor that caches values derived from the id (<see cref="EventStoreIdentity"/>)
+        /// is responsible for refreshing them when it assigns the id.
+        /// </summary>
         [BsonIgnore]
         [JsonIgnore]
-        public TKey Id { get; set; }
+        public TKey Id { get; private protected set; }
 
         public virtual string AsString()
         {
@@ -83,18 +107,34 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             }
         }
 
-        public bool Equals(AbstractIdentity<TKey> other)
+        /// <summary>
+        /// Reached by <see cref="Equals(object)"/>, == and != (so by Dictionary / HashSet keys
+        /// too): compares id and tag. Virtual so an inheritor whose tag depends only on the
+        /// concrete type can compare type and id without asking the tag (<see cref="EventStoreIdentity"/>).
+        /// </summary>
+        public virtual bool Equals(AbstractIdentity<TKey> other)
         {
             if (other != null)
             {
-                return other.Id.Equals(Id) && other.GetTag() == GetTag();
+                // EqualityComparer avoids boxing the id, Id.Equals(Id) on a generic type
+                // resolves to Object.Equals(object) and allocates for value types.
+                return EqualityComparer<TKey>.Default.Equals(other.Id, Id) && other.GetTag() == GetTag();
             }
 
             return false;
         }
 
-        public bool Equals(IIdentity other)
+        /// <summary>
+        /// Two identities are equal when they have the same concrete type and the same string
+        /// representation: an inheritor can override GetTag() / AsString() using instance state,
+        /// so two instances with the same id can have different representations. An inheritor
+        /// whose representation depends only on type and id can override this method with a
+        /// faster comparison (<see cref="EventStoreIdentity"/>).
+        /// </summary>
+        public virtual bool Equals(IIdentity other)
         {
+            if (other is null) return false;
+            if (ReferenceEquals(this, other)) return true;
             return this.GetType() == other.GetType() && this.AsString() == other.AsString();
         }
 

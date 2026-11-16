@@ -2,6 +2,7 @@ using MongoDB.Bson.Serialization.Attributes;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Concurrent;
+using System.Threading;
 
 namespace Jarvis.Framework.Shared.IdentitySupport
 {
@@ -56,23 +57,73 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
         public static string GetTagForIdentityClass(Type identityType)
         {
-            if (!classTags.TryGetValue(identityType, out string tag))
+            if (classTags.TryGetValue(identityType, out string tag))
             {
-                var tn = identityType.Name;
-                if (!tn.EndsWith("Id"))
-                {
-                    throw new JarvisFrameworkIdentityException(string.Format("Wrong Identity class name: {0} Class name should end with Id", tn));
-                }
-                tag = tn[..^2];
-                classTags.TryAdd(identityType, tag);
-                tagToCorrectCaseMap.TryAdd(tag, tag);
+                return tag;
             }
-            return tag;
+            return AddTagForIdentityClass(identityType);
         }
 
-        public override string GetTag()
+        /// <summary>
+        /// Slow path of <see cref="GetTagForIdentityClass(Type)"/>, safe when many threads use a
+        /// type for the first time together:
+        /// <list type="bullet">
+        /// <item>the reverse mapping (tag to correct case tag) is published before the type to tag
+        /// mapping, so whoever finds the tag in <see cref="classTags"/> can already resolve it with
+        /// <see cref="TryGetTag(ReadOnlySpan{char}, out string)"/> and <see cref="Normalize(string)"/>;</item>
+        /// <item>GetOrAdd makes every thread use the instance that won the race, both maps hold
+        /// the same string instance and every caller receives it.</item>
+        /// </list>
+        /// </summary>
+        private static string AddTagForIdentityClass(Type identityType)
+        {
+            var tn = identityType.Name;
+            if (!tn.EndsWith("Id"))
+            {
+                throw new JarvisFrameworkIdentityException(string.Format("Wrong Identity class name: {0} Class name should end with Id", tn));
+            }
+            var candidate = tn[..^2];
+
+            var tag = tagToCorrectCaseMap.GetOrAdd(candidate, candidate);
+            if (!string.Equals(tag, candidate, StringComparison.Ordinal))
+            {
+                // The reverse map is case insensitive: another class whose name differs only in
+                // casing already owns it. This class keeps its own tag, as it always did.
+                tag = candidate;
+            }
+            return classTags.GetOrAdd(identityType, tag);
+        }
+
+        /// <summary>
+        /// Sealed: the tag depends only on the concrete type, equality and the cached string
+        /// representation rely on this invariant.
+        /// </summary>
+        public sealed override string GetTag()
         {
             return GetTagForIdentityClass(GetType());
+        }
+
+        /// <summary>
+        /// GetTag(), AsString() and ToString() are sealed, the representation is always Tag_Id:
+        /// same concrete type and same id means same string, so the id is compared without
+        /// generating any string. Sealed: a derived identity cannot change equality.
+        /// </summary>
+        public sealed override bool Equals(IIdentity other)
+        {
+            // Same concrete type implies an EventStoreIdentity, the typed overload checks it.
+            return other is AbstractIdentity<long> typed && Equals(typed);
+        }
+
+        /// <summary>
+        /// Equals(object), == and != of the base class (so Dictionary / HashSet keys too) end
+        /// here: same comparison of <see cref="Equals(IIdentity)"/>, concrete type and id, without
+        /// the two GetTag() lookups of the base implementation. Sealed for the same reason.
+        /// </summary>
+        public sealed override bool Equals(AbstractIdentity<long> other)
+        {
+            if (other is null) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return GetType() == other.GetType() && Id == other.Id;
         }
 
         protected EventStoreIdentity(long id)
@@ -96,11 +147,12 @@ namespace Jarvis.Framework.Shared.IdentitySupport
         /// <summary>
         /// Assign the identity to the object, actually this method performs an extended validation
         /// of the string passed as parameter, rejecting anything that has not a correct format for this
-        /// specific identity.
+        /// specific identity. Private: an identity is immutable, only the string constructor and the
+        /// private <see cref="FullyQualifiedId"/> setter (used by serializers) can call it.
         /// </summary>
         /// <param name="identityAsString"></param>
         /// <exception cref="JarvisFrameworkIdentityException"></exception>
-        protected void Assign(string identityAsString)
+        private void Assign(string identityAsString)
         {
             var span = identityAsString.AsSpan();
             var separatorIndex = span.IndexOf(Separator);
@@ -127,6 +179,8 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                     throw new JarvisFrameworkIdentityException(string.Format("invalid identity value {0}, id must be positive", identityAsString));
                 }
                 Id = numericId;
+                // no tag in the input, the string representation must be rebuilt on demand.
+                _fullyQualifiedId = null;
                 return;
             }
 
@@ -149,13 +203,66 @@ namespace Jarvis.Framework.Shared.IdentitySupport
                     throw new JarvisFrameworkIdentityException(string.Format("invalid identity value {0}, id must be positive", identityAsString));
                 }
                 //this is the standard happy path to create identity.
-                // Need to convert span to string only for the tag comparison
                 Id = id;
+
+                // The cached string must always follow the id: if the input is already in canonical
+                // form we reuse it as the cached representation, so no new string is ever built,
+                // otherwise the cache is cleared and the string is rebuilt on demand.
+                _fullyQualifiedId = IsCanonical(tagSpan, thisTag, idSpan) ? identityAsString : null;
                 return;
             }
 
             //if we reach here the id is not valid
             throw new JarvisFrameworkIdentityException(string.Format("invalid identity value {0}", identityAsString));
+        }
+
+        /// <summary>
+        /// True if the input is exactly what <see cref="Format(string, long)"/> would produce:
+        /// tag with the same casing, only ascii digits and no leading zero (unless the value is "0").
+        /// </summary>
+        private static bool IsCanonical(ReadOnlySpan<char> tagSpan, string thisTag, ReadOnlySpan<char> idSpan)
+        {
+            if (!tagSpan.Equals(thisTag, StringComparison.Ordinal))
+                return false;
+
+            if (idSpan.Length == 0 || (idSpan[0] == '0' && idSpan.Length > 1))
+                return false;
+
+            foreach (var ch in idSpan)
+            {
+                if (!char.IsAsciiDigit(ch))
+                    return false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Used by <see cref="IdentityManager"/> after it created this identity from
+        /// <paramref name="identityAsString"/> with the numeric constructor: if the string is
+        /// canonical it becomes the cached representation, so the identity does not rebuild an
+        /// identical string on the first ToString(). A non canonical string (different tag casing,
+        /// leading zeros, sign, spaces) is ignored. The string is ignored also when the identity
+        /// does not hold the id parsed from it: a derived numeric constructor can change the value
+        /// it receives, and the cached string must always describe the actual id. A cache already
+        /// filled (the constructor called ToString()) is preserved: the instance already returned
+        /// to someone must stay the one returned by every later call.
+        /// </summary>
+        /// <param name="identityAsString">The string the identity was parsed from.</param>
+        /// <param name="separatorIndex">Index of <see cref="Separator"/> in the string.</param>
+        /// <param name="parsedId">The id parsed from the string and passed to the constructor.</param>
+        internal void SeedStringRepresentation(string identityAsString, int separatorIndex, long parsedId)
+        {
+            if (Id != parsedId)
+            {
+                return;
+            }
+
+            var span = identityAsString.AsSpan();
+            if (IsCanonical(span[..separatorIndex], GetTag(), span[(separatorIndex + 1)..]))
+            {
+                // Seed only an empty cache, never replace an instance already handed out.
+                Interlocked.CompareExchange(ref _fullyQualifiedId, identityAsString, null);
+            }
         }
 
         public static string Format(Type type, long value)
@@ -165,7 +272,9 @@ namespace Jarvis.Framework.Shared.IdentitySupport
 
         public static string Format(string tag, long value)
         {
-            return string.Format("{0}{1}{2}", tag, Separator, value);
+            // Interpolation formats the long directly in the handler buffer: no boxing of
+            // separator and value and no format string parsing, only the result string is allocated.
+            return $"{tag}{Separator}{value}";
         }
 
         public static implicit operator string(EventStoreIdentity id)
@@ -173,22 +282,60 @@ namespace Jarvis.Framework.Shared.IdentitySupport
             return id?.ToString();
         }
 
-        public override string ToString()
+        /// <summary>
+        /// Cached full string representation (Tag_123). The id is assigned by the constructors,
+        /// <see cref="Assign(string)"/> updates this field explicitly together with the id.
+        /// Once filled it never changes: the first value published wins (lock free compare
+        /// exchange), so every call returns the same instance even when many threads call
+        /// ToString() for the first time together.
+        /// </summary>
+        private string _fullyQualifiedId;
+
+        /// <summary>
+        /// Sealed: the string representation is always Tag_Id, so two identities of the same
+        /// type with the same id have the same string (equality compares only type and id).
+        /// </summary>
+        public sealed override string ToString()
         {
-            return Format(GetTag(), Id);
+            return _fullyQualifiedId ?? PublishStringRepresentation(Format(GetTag(), Id));
         }
 
+        /// <summary>
+        /// Publishes <paramref name="value"/> as cached representation only if no other thread
+        /// published one first, and returns the published instance.
+        /// </summary>
+        private string PublishStringRepresentation(string value)
+        {
+            return Interlocked.CompareExchange(ref _fullyQualifiedId, value, null) ?? value;
+        }
+
+        /// <summary>
+        /// Full string representation of the identity (Tag_123). The setter is private because an
+        /// identity is immutable, it exists only for serializers that populate the identity through
+        /// reflection (e.g. Newtonsoft with object-shaped json <c>{"Id":"Tag_123"}</c>). The flat identity
+        /// serializers (<see cref="MongoFlatMapper.EnableFlatMapping(bool)"/>) are still the preferred
+        /// way, they build the identity with its constructor.
+        /// </summary>
         [BsonId]
         [JsonProperty("Id")]
-        public virtual string FullyQualifiedId
+        public string FullyQualifiedId
         {
             get { return ToString(); }
-            set { Assign(value); }
+            // Private: the identity is immutable for the outside world, but serializers that
+            // create the identity with a parameterless constructor and then populate it (Newtonsoft
+            // honors non public setters thanks to [JsonProperty]) need it to restore the right id.
+            // Assign keeps the cached string representation in sync with the id.
+            // Not thread safe on purpose: a serializer populates an identity it has just created,
+            // before any other thread can see it, and once published the identity never changes
+            // (Assign and the Id setter are private). Coordinating Assign with the cache publication
+            // of ToString() would cost a lock or an extra allocation on every identity for a
+            // scenario that cannot happen.
+            private set { Assign(value); }
         }
 
         public const char Separator = '_';
 
-        public override string AsString()
+        public sealed override string AsString()
         {
             return FullyQualifiedId;
         }
@@ -229,6 +376,40 @@ namespace Jarvis.Framework.Shared.IdentitySupport
           
             // No matching type found, return null to indicate unknown identity type
             return null;
+        }
+
+        /// <summary>
+        /// Extracts the tag from an identity in string form (ex: Document_42) without allocating:
+        /// the string returned in <paramref name="tag"/> is the unique cached instance of the tag
+        /// with the correct casing (the same returned by <see cref="GetTagForIdentityClass(Type)"/>),
+        /// whatever the casing used in <paramref name="id"/>.
+        /// </summary>
+        /// <param name="id">Full identity, tag + separator + numeric part. A string can be
+        /// passed directly, null or empty values simply return false.</param>
+        /// <param name="tag">Cached tag instance, null if the method returns false.</param>
+        /// <returns>True if the id has the form tag_digits and the tag belongs to a known
+        /// identity type. A type is known after it was registered in the IdentityManager or
+        /// after its tag was requested at least once. The numeric part is checked only to be
+        /// composed by digits, overflow is not verified.</returns>
+        public static bool TryGetTag(ReadOnlySpan<char> id, out string tag)
+        {
+            tag = null;
+
+            var separatorIndex = id.IndexOf(Separator);
+            if (separatorIndex < 1 || separatorIndex == id.Length - 1)
+            {
+                // no separator, no tag or no numeric part
+                return false;
+            }
+
+            foreach (var ch in id[(separatorIndex + 1)..])
+            {
+                if (!char.IsAsciiDigit(ch))
+                    return false;
+            }
+
+            var spanLookup = tagToCorrectCaseMap.GetAlternateLookup<ReadOnlySpan<char>>();
+            return spanLookup.TryGetValue(id[..separatorIndex], out tag);
         }
     }
 }
