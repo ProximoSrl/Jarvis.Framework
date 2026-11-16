@@ -80,9 +80,8 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             return "MyAbstractIdentity";
         }
 
-        public MyAbstractIdentityId(Int64 id)
+        public MyAbstractIdentityId(Int64 id) : base(id)
         {
-            Id = id;
         }
     }
 
@@ -93,9 +92,8 @@ namespace Jarvis.Framework.Tests.SharedTests.IdentitySupport
             return "TestAbstract";
         }
 
-        public TestAbstractId(Int64 id)
+        public TestAbstractId(Int64 id) : base(id)
         {
-            Id = id;
         }
     }
 

@@ -1,5 +1,21 @@
 # J.A.R.V.I.S. Framework - Proximo srl (c)
 
+## vNext
+
+- Reduced string allocations in the identity system:
+  - `IdentityManager.ToIdentity`, `TryParse` and `TryGetTag` parse the identity with spans, no more substring / StringBuilder allocations (used by every BSON / JSON deserialization of an identity).
+  - `EventStoreIdentity.Format` (and so `ToString`, `AsString`, `FullyQualifiedId`) and `AbstractIdentityBsonSerializer` no longer box the id nor parse a format string.
+  - Equality between identities (`Equals`, `==`, `!=`) no longer boxes the id. `EventStoreIdentity.Equals(IIdentity)` compares type and id without generating the string representation; for other `AbstractIdentity<TKey>` inheritors it still compares type and `AsString()`. `Equals(IIdentity)` returns false for null instead of throwing.
+  - `EventStoreIdentity` uses the same type and id comparison for `Equals(object)`, `Equals(AbstractIdentity<long>)`, `==`, `!=` and so for `Dictionary` / `HashSet` keys: no more two tag lookups for each comparison. The result does not change: a tag belongs to a single identity type, so comparing the type is the same as comparing the tag. `AbstractIdentity<TKey>.Equals(AbstractIdentity<TKey>)` is now `virtual`, other inheritors still compare id and tag.
+  - `EventStoreIdentity` now caches its string representation, repeated `ToString`, `AsString` and `FullyQualifiedId` calls return the same instance without allocating (costs one reference field per identity). The cache is published atomically, concurrent first calls return the same instance.
+  - `IdentityManager.ToIdentity` and `TryParse` reuse the input string as the string representation of the identity when it is already canonical (correct tag casing, no leading zeros), so a deserialized identity does not rebuild an identical string.
+  - `IdentityManager` creates identities with a typed factory compiled once for each identity type at registration: `ToIdentity`, `TryParse`, `New`, `NewAsync` and `NewManyAsync` no longer allocate an `object[]` nor box the id for every identity created.
+- Identities are immutable: `AbstractIdentity<TKey>.Id` setter is now `private protected`, `EventStoreIdentity.Assign` is private and `EventStoreIdentity.FullyQualifiedId` setter is private (kept for serializers, existing JSON and BSON data is still read correctly). `EventStoreIdentity.GetTag`, `AsString`, `ToString` and `Equals(IIdentity)` are sealed (see breaking changes).
+- `IdentityManager.RegisterIdentitiesFromAssembly` rejects two different identities with the same tag: same class name in different namespaces, or tags that differ only in casing (see breaking changes).
+- `EventStoreIdentity.GetTagForIdentityClass` is safe when many threads use an identity type for the first time: all of them receive the same tag instance and the tag is immediately resolvable by `TryGetTag` / `Normalize`.
+- Added static `EventStoreIdentity.TryGetTag(ReadOnlySpan<char> id, out string tag)` to get the tag of an identity in string form without allocating, it returns the cached instance of the tag.
+- `IIdentityConverter.TryGetTag` now returns the cached instance of the tag with the correct casing (see breaking changes).
+
 ## 7.15.1
 
 - Fixed "Sequence broken" false error in ProjectionEngine when a slot retries a failed chunk dispatch after a transient or non-transient error.

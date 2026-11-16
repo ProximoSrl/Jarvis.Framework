@@ -40,7 +40,7 @@ namespace Jarvis.Framework.Kernel.Engine
             var domainEvent = @event as DomainEvent;
             if (domainEvent == null)
                 throw new JarvisFrameworkEngineException("Raised Events should inherits from DomainEvent class, invalid event type: " + @event.GetType().FullName);
-            domainEvent.SetPropertyValue(d => d.AggregateId, GetJarvisId());
+            domainEvent.AggregateId = GetJarvisId();
             BeforeEmitEvent(@event);
             base.Emit(@event);
         }

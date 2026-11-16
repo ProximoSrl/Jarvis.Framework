@@ -1,5 +1,16 @@
 # Version 7
 
+## 7.17.0
+
+- `AbstractIdentity<TKey>.Id` setter is now `private protected`: an identity is immutable, only the framework base classes can assign the value. Code that changed the `Id` of an existing identity must create a new identity instead. A class that derives directly from `AbstractIdentity<TKey>` and assigned `Id` in its constructor must call the new constructor `base(id)` instead; the parameterless constructor of `AbstractIdentity<TKey>` is no longer accessible outside the framework. Identities that derive from `EventStoreIdentity` are not affected (they already pass the id to the base constructor).
+- `EventStoreIdentity.FullyQualifiedId` setter is now private for the same reason. Code that assigned `FullyQualifiedId` must create a new identity instead. The setter is kept for serializers that populate the identity through reflection, so serialized data is not affected and no migration is needed:
+  - Newtonsoft honors it thanks to `[JsonProperty("Id")]`: object-shaped json `{"Id":"Document_42"}` (Rebus messages, commands) still deserializes correctly.
+  - The Mongo class map serializer honors it thanks to `[BsonId]`: documents written without flat mapping (`{"_id":"Document_42"}`) are still read correctly. Flat mapping (`MongoFlatMapper.EnableFlatMapping`) stays optional, as before; if you enable it on an existing database, existing non flat data must be migrated, see [mongo serializers](Usage/mongoserializers.md) for the setup order.
+- `EventStoreIdentity.Assign(string)` is now `private`: a derived identity could use it to change `Id` (and so its hash code) after construction, breaking dictionaries and sets that contain the identity. Pass the value to the base constructor instead.
+- `EventStoreIdentity.GetTag()`, `AsString()`, `ToString()` and `Equals(IIdentity)` are now `sealed`, and `FullyQualifiedId` is no longer `virtual`. `AbstractIdentity<TKey>.Equals(IIdentity)` is now `virtual` and still compares type and `AsString()`, `EventStoreIdentity` overrides it comparing only type and id. The tag depends only on the concrete type and the string representation is always `Tag_Id`: equality between identities compares only the concrete type and the numeric id (no string is built), and the string is cached, so a derived identity must not change them. A derived identity that overrides one of these members no longer compiles: remove the override.
+- `IdentityManager.RegisterIdentitiesFromAssembly` throws if two different identities have the same tag, that is the same class name in different namespaces (ex: `NamespaceA.FooId` and `NamespaceB.FooId`) or tags that differ only in casing (ex: `FooId` and `FOOId`): tags are unique and case insensitive, before this version the last registered identity silently replaced the factory of the other.
+- `IIdentityConverter.TryGetTag` (IdentityManager) returns the tag with the registered casing and not with the casing used in the id passed as argument: `TryGetTag("document_12", out tag)` now returns `Document` instead of `document`.
+
 ## 7.13.0
 
 - IDentityManager now require an IReservableCounter service.
